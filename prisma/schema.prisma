@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum MovieStatus {
+  DRAFT
+  CATALOG
+  EXCLUDED
+}
+
+enum StorageType {
+  LOCAL
+  EXTERNAL
+}
+
+model Storage {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  type      StorageType @default(LOCAL)
+  path      String?
+  createdAt DateTime    @default(now())
+
+  movies Movie[]
+
+  @@index([type])
+}
+
+model Movie {
+  id              Int         @id @default(autoincrement())
+  title           String
+  year            Int?
+  description     String?
+  durationSeconds Int?
+  filePath        String?
+  fileSize        Int?
+  fileMtime       DateTime?
+  fileHash        String?
+  status          MovieStatus @default(DRAFT)
+  coverPath       String?
+  rating          Int?
+  watchedAt       DateTime?
+  storageId       Int?
+  releaseType     String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  storage        Storage?       @relation(fields: [storageId], references: [id], onDelete: SetNull)
+  genres         Genre[]
+  videoTrack     VideoTrack?
+  audioTracks    AudioTrack[]
+  subtitleTracks SubtitleTrack[]
+
+  @@index([status])
+  @@index([fileHash])
+  @@index([rating])
+  @@index([watchedAt])
+  @@index([storageId])
+  @@index([releaseType])
+  @@index([durationSeconds])
+}
+
+model Genre {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  movies    Movie[]
+  createdAt DateTime @default(now())
+
+  @@index([name])
+}
+
+model VideoTrack {
+  id              Int     @id @default(autoincrement())
+  movieId         Int     @unique
+  streamIndex     Int
+  width           Int?
+  height          Int?
+  resolutionLabel String?
+  codec           String?
+  hdr             String?
+  fps             String?
+  bitrate         Int?
+  movie           Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([resolutionLabel])
+}
+
+model AudioTrack {
+  id            Int     @id @default(autoincrement())
+  movieId       Int
+  streamIndex   Int
+  codec         String?
+  profile       String?
+  channels      Int?
+  channelLayout String?
+  bitrate       Int?
+  language      String?
+  title            String?
+  translationType  String?
+  isDefault        Boolean @default(false)
+  movie            Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([language])
+  @@index([channelLayout])
+  @@index([translationType])
+}
+
+model SubtitleTrack {
+  id          Int     @id @default(autoincrement())
+  movieId     Int
+  streamIndex Int
+  codec       String?
+  codecLabel  String?
+  language    String?
+  title       String?
+  isDefault   Boolean @default(false)
+  forced      Boolean @default(false)
+  movie       Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([language])
+}
+
+model Setting {
+  key   String @id
+  value String
+}

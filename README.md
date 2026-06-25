@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Film Catalog
 
-## Getting Started
+Домашний каталог фильмов на Next.js 16 + SQLite. Сканирует папку с видеофайлами, определяет технические параметры через ffprobe, позволяет вручную дополнять метаданные и обложки.
 
-First, run the development server:
+## Требования
+
+- **Node.js** 20+
+- **FFmpeg** с `ffprobe` в PATH
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# macOS
+brew install ffmpeg
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Быстрый старт
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run db:migrate
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Откройте [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Настройка папки сканирования
 
-To learn more about Next.js, take a look at the following resources:
+Два способа:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Через UI** — страница «Скан» (`/scan`), укажите абсолютный путь к папке с фильмами.
+2. **Через `.env`**:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```env
+DATABASE_URL="file:./data/catalog.db"
+SCAN_ROOT="/path/to/your/movies"
+```
 
-## Deploy on Vercel
+## Где хранятся данные
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Путь | Содержимое |
+|------|------------|
+| `./data/catalog.db` | SQLite база |
+| `./data/covers/` | Обложки фильмов |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Папка `data/` в `.gitignore`.
+
+## Возможности
+
+- Рекурсивное сканирование видеофайлов (один файл = один фильм)
+- Автоопределение: разрешение, кодек, HDR, FPS, битрейт видео, продолжительность
+- Аудиодорожки: кодек (AC3/E-AC3/TrueHD/DTS…), профиль (Atmos/HD MA…), формат (2.0/5.1/7.1), битрейт, язык
+- Субтитры: тип (SRT/ASS/PGS/VobSub…), язык, forced
+- Жанры: несколько жанров на фильм, фильтр по жанрам в каталоге
+- Черновики (Draft) → апрув в каталог
+- Дедупликация: быстрая проверка size+mtime, хэш префикса при конфликте
+- Личная оценка (1–10) и дата просмотра
+- Фильтры: жанр, разрешение, язык аудио, формат звука, оценка, просмотренность, сортировка по продолжительности
+- Загрузка обложек локально
+
+## Скрипты
+
+```bash
+npm run dev          # dev-сервер
+npm run build        # production build
+npm run db:migrate   # миграции Prisma
+npm run db:studio    # Prisma Studio
+```
+
+## Стек
+
+- Next.js 16 (App Router)
+- Prisma 7 + SQLite (better-sqlite3 adapter)
+- Tailwind CSS v4
+- ffprobe (execa)
+- zod, lucide-react, motion
