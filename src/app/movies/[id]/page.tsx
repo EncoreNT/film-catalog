@@ -299,72 +299,79 @@ export default async function MoviePage({ params }: PageProps) {
                   return (
                     <div
                       key={track.id}
-                      className="grid grid-cols-[20px_56px_minmax(96px,1fr)_minmax(110px,1.4fr)_60px_72px] items-center gap-x-2 gap-y-1 border-b border-border/60 py-2.5 last:border-0 last:pb-1"
+                      className="border-b border-border/60 py-2.5 last:border-0 last:pb-1"
                     >
-                      <span className="flex items-center">
-                        {track.isDefault ? (
-                          <Star
-                            className="h-3.5 w-3.5 fill-accent text-accent"
-                            aria-label="Главная дорожка"
-                          />
-                        ) : null}
-                      </span>
-                      <span className="flex items-center">
-                        {langLabel ? (
-                          <span
-                            className={`font-mono rounded-md px-2 py-1 text-xs tracking-wide ${
-                              track.language === "rus"
-                                ? "bg-bg-elevated text-text"
-                                : "text-muted"
-                            }`}
-                          >
-                            {langLabel}
-                          </span>
-                        ) : (
-                          <span className="font-mono text-sm text-faint">—</span>
-                        )}
-                      </span>
-                      <span className="flex items-center">
-                        {translation ? (
-                          <span className="font-mono-tech rounded-md border border-border bg-bg-surface px-2 py-1 text-[0.65rem] text-muted">
-                            {translation}
-                          </span>
-                        ) : (
-                          <span className="font-mono text-sm text-faint">—</span>
-                        )}
-                      </span>
-                      <span className="flex items-center">
-                        {formatLabel ? (
-                          is3D ? (
-                            <SpecTag
-                              kind="audio-3d"
-                              icon={<Waves className="h-3.5 w-3.5" />}
-                              note={codecFull(track.codec) ?? undefined}
+                      <div className="grid grid-cols-[20px_56px_minmax(96px,1fr)_minmax(110px,1.4fr)_60px_72px] items-center gap-x-2 gap-y-1">
+                        <span className="flex items-center">
+                          {track.isDefault ? (
+                            <Star
+                              className="h-3.5 w-3.5 fill-accent text-accent"
+                              aria-label="Главная дорожка"
+                            />
+                          ) : null}
+                        </span>
+                        <span className="flex items-center">
+                          {langLabel ? (
+                            <span
+                              className={`font-mono rounded-md px-2 py-1 text-xs tracking-wide ${
+                                track.language === "rus"
+                                  ? "bg-bg-elevated text-text"
+                                  : "text-muted"
+                              }`}
                             >
-                              {formatLabel}
-                            </SpecTag>
+                              {langLabel}
+                            </span>
                           ) : (
-                            <SpecTag
-                              kind="audio"
-                              note={codecFull(track.codec) ?? undefined}
-                            >
-                              {formatLabel}
-                            </SpecTag>
-                          )
-                        ) : (
-                          <span className="font-mono text-sm text-faint">—</span>
-                        )}
-                      </span>
-                      <span className="flex items-center">
-                        {track.channelLayout && track.channelLayout !== "other" ? (
-                          <SpecTag kind="channel">{track.channelLayout}</SpecTag>
-                        ) : (
-                          <span className="font-mono text-sm text-faint">—</span>
-                        )}
-                      </span>
-                      <span className="font-mono text-right text-xs text-muted tabular-nums">
-                        {bitrate ?? "—"}
-                      </span>
+                            <span className="font-mono text-sm text-faint">—</span>
+                          )}
+                        </span>
+                        <span className="flex items-center">
+                          {translation ? (
+                            <span className="font-mono-tech rounded-md border border-border bg-bg-surface px-2 py-1 text-[0.65rem] text-muted">
+                              {translation}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-sm text-faint">—</span>
+                          )}
+                        </span>
+                        <span className="flex items-center">
+                          {formatLabel ? (
+                            is3D ? (
+                              <SpecTag
+                                kind="audio-3d"
+                                icon={<Waves className="h-3.5 w-3.5" />}
+                                note={codecFull(track.codec) ?? undefined}
+                              >
+                                {formatLabel}
+                              </SpecTag>
+                            ) : (
+                              <SpecTag
+                                kind="audio"
+                                note={codecFull(track.codec) ?? undefined}
+                              >
+                                {formatLabel}
+                              </SpecTag>
+                            )
+                          ) : (
+                            <span className="font-mono text-sm text-faint">—</span>
+                          )}
+                        </span>
+                        <span className="flex items-center">
+                          {track.channelLayout && track.channelLayout !== "other" ? (
+                            <SpecTag kind="channel">{track.channelLayout}</SpecTag>
+                          ) : (
+                            <span className="font-mono text-sm text-faint">—</span>
+                          )}
+                        </span>
+                        <span className="font-mono text-right text-xs text-muted tabular-nums">
+                          {bitrate ?? "—"}
+                        </span>
+                      </div>
+                      {track.title ? (
+                        <p className="font-mono-tech mt-1 truncate pl-[78px] text-xs text-faint" title={track.title}>
+                          {track.title}
+                        </p>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -412,7 +419,7 @@ export default async function MoviePage({ params }: PageProps) {
             ) : (
               <ul className="space-y-2 text-sm">
                 {movie.subtitleTracks.map((track) => (
-                  <li key={track.id} className="flex flex-wrap gap-2">
+                  <li key={track.id} className="flex flex-wrap items-center gap-2">
                     <span className="font-mono-tech text-text">
                       {track.codecLabel ?? track.codec ?? "—"}
                     </span>
@@ -420,6 +427,14 @@ export default async function MoviePage({ params }: PageProps) {
                     <span>{track.language ?? "—"}</span>
                     {track.forced ? (
                       <span className="font-mono-tech text-accent">forced</span>
+                    ) : null}
+                    {track.title ? (
+                      <span
+                        className="font-mono-tech truncate text-faint"
+                        title={track.title}
+                      >
+                        · {track.title}
+                      </span>
                     ) : null}
                   </li>
                 ))}

@@ -2,6 +2,7 @@ import { readdir, stat } from "fs/promises";
 import path from "path";
 import { prisma } from "./prisma";
 import { probeMediaFile } from "./ffprobe";
+import { saveEmbeddedCoverFromProbe } from "./cover-storage";
 import { parseMovieName } from "./name-parser";
 import { computeFileHashPrefix } from "./file-hash";
 import { MovieStatus } from "@/generated/prisma/client";
@@ -144,7 +145,13 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
         summary.errors.push(
           `${fileName}: ffprobe failed — ${err instanceof Error ? err.message : "unknown"}`,
         );
-        probe = { durationSeconds: null, video: null, audio: [], subtitles: [] };
+        probe = {
+          durationSeconds: null,
+          video: null,
+          audio: [],
+          subtitles: [],
+          embeddedCover: null,
+        };
       }
 
       if (movedMovie) {
@@ -159,6 +166,12 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
           },
         });
         await upsertTracks(movedMovie.id, probe);
+        await saveEmbeddedCoverFromProbe(
+          movedMovie.id,
+          filePath,
+          probe,
+          !!movedMovie.coverPath,
+        );
         summary.moved++;
         continue;
       }
@@ -174,6 +187,12 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
           },
         });
         await upsertTracks(existing.id, probe);
+        await saveEmbeddedCoverFromProbe(
+          existing.id,
+          filePath,
+          probe,
+          !!existing.coverPath,
+        );
         summary.updated++;
         continue;
       }
@@ -192,6 +211,7 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
         },
       });
       await upsertTracks(movie.id, probe);
+      await saveEmbeddedCoverFromProbe(movie.id, filePath, probe, false);
       summary.newDrafts++;
     } catch (err) {
       summary.errors.push(

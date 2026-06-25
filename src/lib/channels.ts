@@ -49,7 +49,19 @@ export function channelsToLayout(
   return null;
 }
 
-export function normalizeCodec(codec?: string | null): string | null {
+/**
+ * Normalize a raw ffprobe codec to the catalog's codec vocabulary.
+ *
+ * For DTS the codec_name ffprobe emits is just "dts"; the lossless/object
+ * variants (DTS-HD MA, DTS:X, DTS-HD HRA) only appear in the separate
+ * `profile` field. Pass that profile in so a "dts" stream carrying
+ * "DTS-HD MA + DTS:X" is promoted to the "dts-hd" codec, which is the
+ * branch detectAudioProfile() needs to resolve the DTS:X/HD MA profile.
+ */
+export function normalizeCodec(
+  codec?: string | null,
+  profile?: string | null,
+): string | null {
   if (!codec) return null;
   const c = codec.toLowerCase();
   if (c.includes("eac3") || c === "e-ac3") return "eac3";
@@ -57,6 +69,22 @@ export function normalizeCodec(codec?: string | null): string | null {
   if (c.includes("ac3") || c === "ac-3") return "ac3";
   if (c.includes("dts-hd") || c.includes("dtshd")) return "dts-hd";
   if (c.includes("dts:x") || c.includes("dtsx")) return "dts-hd";
+  if (c === "dts") {
+    const p = (profile ?? "").toLowerCase();
+    if (
+      p.includes("dts-hd") ||
+      p.includes("dtshd") ||
+      p.includes("dts:x") ||
+      p.includes("dtsx") ||
+      p.includes("hd ma") ||
+      p.includes("hdma") ||
+      p.includes("hd hra") ||
+      p.includes("hra")
+    ) {
+      return "dts-hd";
+    }
+    return "dts";
+  }
   if (c.includes("dts")) return "dts";
   if (c.includes("aac")) return "aac";
   if (c.includes("flac")) return "flac";
@@ -71,8 +99,9 @@ export function detectAudioProfile(
   channelLayout: string | null,
   streamTitle?: string | null,
   tags?: Record<string, string>,
+  ffprobeProfile?: string | null,
 ): string | null {
-  const haystack = [streamTitle, tags?.title, tags?.handler_name]
+  const haystack = [streamTitle, tags?.title, tags?.handler_name, ffprobeProfile]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();

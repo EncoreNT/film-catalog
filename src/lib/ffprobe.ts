@@ -39,17 +39,30 @@ export interface ProbedSubtitleTrack {
   forced: boolean;
 }
 
+export interface ProbedEmbeddedCover {
+  streamIndex: number;
+  width: number | null;
+  height: number | null;
+  /** ffprobe tags.filename, e.g. "Cover" or "cover.jpg" */
+  filename: string | null;
+  /** ffprobe tags.mimetype, e.g. "image/jpeg" */
+  mimetype: string | null;
+}
+
 export interface ProbeResult {
   durationSeconds: number | null;
   video: ProbedVideoTrack | null;
   audio: ProbedAudioTrack[];
   subtitles: ProbedSubtitleTrack[];
+  /** Best embedded attached picture (poster preferred over small thumbs). */
+  embeddedCover: ProbedEmbeddedCover | null;
 }
 
 interface FfprobeStream {
   index: number;
   codec_type?: string;
   codec_name?: string;
+  profile?: string;
   width?: number;
   height?: number;
   channels?: number;
@@ -57,7 +70,11 @@ interface FfprobeStream {
   bit_rate?: string;
   r_frame_rate?: string;
   avg_frame_rate?: string;
-  disposition?: { default?: number; forced?: number };
+  disposition?: {
+    default?: number;
+    forced?: number;
+    attached_pic?: number;
+  };
   tags?: Record<string, string>;
 }
 
@@ -87,6 +104,19 @@ function bpsToKbps(bitRate?: string | null): number | null {
   const bps = parseInt(bitRate, 10);
   if (Number.isNaN(bps)) return null;
   return Math.round(bps / 1000);
+}
+
+/**
+ * Resolve a stream's bitrate in kbps. MKV files usually omit the
+ * stream-level bit_rate and instead report it via the _STATISTICS tags
+ * written by mkvmerge, most reliably tags.BPS. Prefer bit_rate when ffprobe
+ * provides it, then fall back to the BPS tag.
+ */
+function streamBitrateKbps(stream: FfprobeStream): number | null {
+  const fromBitRate = bpsToKbps(stream.bit_rate);
+  if (fromBitRate != null) return fromBitRate;
+  const tags = stream.tags ?? {};
+  return bpsToKbps(tags.BPS ?? tags.bps ?? tags["BPS-eng"] ?? null);
 }
 
 function parseDurationSeconds(
@@ -182,6 +212,58 @@ function subtitleCodecLabel(codec?: string): string | null {
   return SUBTITLE_CODEC_LABELS[key] ?? codec.toUpperCase();
 }
 
+/**
+ * Pick the best embedded attached picture to use as a poster.
+ *
+ * Posters are portrait (height > width, ~2:3); small landscape thumbnails are
+ * leftovers. Prefer the largest portrait image, then fall back to the largest
+ * image overall. Returns null when there are no attached pics.
+ */
+function pickEmbeddedCover(
+  streams: FfprobeStream[],
+): ProbedEmbeddedCover | null {
+  const pics = streams.filter((s) => s.disposition?.attached_pic === 1);
+  if (pics.length === 0) return null;
+
+  const score = (s: FfprobeStream): number => {
+    const w = s.width ?? 0;
+    const h = s.height ?? 0;
+    const area = w * h;
+    const portrait = h > w ? 1_000_000_000 : 0; // portrait always beats landscape
+    return portrait + area;
+  };
+
+  const best = [...pics].sort((a, b) => score(b) - score(a))[0];
+  if (!best) return null;
+  const tags = best.tags ?? {};
+  return {
+    streamIndex: best.index,
+    width: best.width ?? null,
+    height: best.height ?? null,
+    filename: tags.filename ?? null,
+    mimetype: tags.mimetype ?? null,
+  };
+}
+
+const COVER_MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/avif": ".avif",
+  "image/bmp": ".bmp",
+};
+
+function coverExtFor(cover: ProbedEmbeddedCover): string {
+  const mime = (cover.mimetype ?? "").toLowerCase();
+  if (COVER_MIME_TO_EXT[mime]) return COVER_MIME_TO_EXT[mime];
+  const fromName = cover.filename?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+  if (fromName && COVER_MIME_TO_EXT[`image/${fromName === "jpg" ? "jpeg" : fromName}`]) {
+    return `.${fromName}`;
+  }
+  return ".jpg";
+}
+
 function normalizeLanguage(lang?: string | null): string | null {
   if (!lang) return null;
   const l = lang.toLowerCase().trim();
@@ -224,9 +306,15 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
   const data = JSON.parse(stdout) as FfprobeOutput;
   const streams = data.streams ?? [];
 
-  const videoStream = streams.find((s) => s.codec_type === "video");
+  const isAttachedPic = (s: FfprobeStream) =>
+    s.disposition?.attached_pic === 1;
+
+  const videoStream = streams.find(
+    (s) => s.codec_type === "video" && !isAttachedPic(s),
+  );
   const audioStreams = streams.filter((s) => s.codec_type === "audio");
   const subtitleStreams = streams.filter((s) => s.codec_type === "subtitle");
+  const embeddedCover = pickEmbeddedCover(streams);
 
   let video: ProbedVideoTrack | null = null;
   if (videoStream) {
@@ -240,12 +328,12 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
       codec: videoStream.codec_name ?? null,
       hdr: detectHdr(videoStream, streams),
       fps: parseFps(videoStream),
-      bitrate: bpsToKbps(videoStream.bit_rate),
+      bitrate: streamBitrateKbps(videoStream),
     };
   }
 
   const audio: ProbedAudioTrack[] = audioStreams.map((s) => {
-    const codec = normalizeCodec(s.codec_name);
+    const codec = normalizeCodec(s.codec_name, s.profile);
     const channelLayout = channelsToLayout(s.channels, s.channel_layout);
     const tags = s.tags ?? {};
     return {
@@ -256,10 +344,11 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
         channelLayout,
         tags.title,
         tags,
+        s.profile,
       ),
       channels: s.channels ?? null,
       channelLayout,
-      bitrate: bpsToKbps(s.bit_rate),
+      bitrate: streamBitrateKbps(s),
       language: normalizeLanguage(tags.language),
       title: tags.title ?? null,
       isDefault: s.disposition?.default === 1,
@@ -285,7 +374,45 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
     video,
     audio,
     subtitles,
+    embeddedCover,
   };
+}
+
+/**
+ * Extract an embedded attached picture to a buffer using ffmpeg
+ * (`-map 0:<streamIndex> -c copy`). Returns null when there is no embedded
+ * cover or ffmpeg is unavailable. The ffmpeg call is guarded by a timeout so
+ * a slow network-mounted source can't stall a scan.
+ */
+export async function extractEmbeddedCover(
+  filePath: string,
+  cover: ProbedEmbeddedCover,
+): Promise<{ buffer: Buffer; ext: string } | null> {
+  try {
+    const result = await execa(
+      "ffmpeg",
+      [
+        "-v",
+        "quiet",
+        "-i",
+        filePath,
+        "-map",
+        `0:${cover.streamIndex}`,
+        "-c",
+        "copy",
+        "-f",
+        "image2",
+        "-y",
+        "pipe:1",
+      ],
+      { encoding: "buffer", timeout: 60_000, maxBuffer: 12 * 1024 * 1024 },
+    );
+    const buffer = Buffer.from(result.stdout);
+    if (!buffer || buffer.length === 0) return null;
+    return { buffer, ext: coverExtFor(cover) };
+  } catch {
+    return null;
+  }
 }
 
 export async function isFfprobeAvailable(): Promise<boolean> {

@@ -8,6 +8,7 @@ import {
 import { movieCreateSchema } from "@/lib/validators";
 import { MovieStatus } from "@/generated/prisma/client";
 import { probeMediaFile } from "@/lib/ffprobe";
+import { maybeExtractEmbeddedCover } from "@/lib/cover-storage";
 import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
 import { access } from "fs/promises";
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
         video: probe.video,
         audio: probe.audio,
         subtitles: probe.subtitles,
+        embeddedCover: probe.embeddedCover,
       });
     }
 
@@ -131,6 +133,17 @@ export async function POST(request: NextRequest) {
       },
       include: movieInclude,
     });
+
+    // When the caller skipped probing (e.g. the Add form, which autofills
+    // from a probeOnly call), still try to pull an embedded poster out of the
+    // file. Best-effort: failures never block movie creation.
+    if (data.filePath?.trim() && !movie.coverPath) {
+      try {
+        await maybeExtractEmbeddedCover(movie.id, data.filePath, false);
+      } catch {
+        // ignore — cover extraction is non-fatal
+      }
+    }
 
     return NextResponse.json(movie, { status: 201 });
   } catch (err) {
