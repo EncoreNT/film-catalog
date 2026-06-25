@@ -85,6 +85,8 @@ async function CatalogContent({
       movies={movies}
       total={total}
       totalCount={totalCount}
+      page={page}
+      limit={limit}
       facets={{
         resolutions: resolutions.map((r) => ({
           value: r.resolutionLabel,

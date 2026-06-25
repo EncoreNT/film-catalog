@@ -7,9 +7,10 @@ import { FilterBar } from "./FilterBar";
 import { EmptyCatalog } from "./EmptyCatalog";
 import { AddMovieForm } from "./AddMovieForm";
 import { Modal } from "./primitives/Modal";
+import { Pagination } from "./Pagination";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Film, Clapperboard, Plus, ScanSearch } from "lucide-react";
+import { Film, Clapperboard, Plus, ScanSearch, Loader2 } from "lucide-react";
 
 function pluralFilm(n: number): string {
   const mod100 = n % 100;
@@ -124,6 +125,8 @@ interface MovieCatalogProps {
   };
   total: number;
   totalCount: number;
+  page: number;
+  limit: number;
   catalogCount?: number;
   draftCount?: number;
 }
@@ -133,6 +136,8 @@ export function MovieCatalog({
   facets,
   total,
   totalCount,
+  page,
+  limit,
   catalogCount = 0,
   draftCount = 0,
 }: MovieCatalogProps) {
@@ -142,6 +147,9 @@ export function MovieCatalog({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [extraMovies, setExtraMovies] = useState<MovieWithTracks[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedPages, setLoadedPages] = useState(0);
 
   const toggleSelect = (id: number, checked: boolean) => {
     setSelected((prev) => {
@@ -164,6 +172,38 @@ export function MovieCatalog({
       router.refresh();
     } finally {
       setBulkLoading(false);
+    }
+  };
+
+  const pages = Math.max(1, Math.ceil(total / limit));
+  const allMovies = [...movies, ...extraMovies];
+  const shownCount = allMovies.length;
+  const canLoadMore = page + loadedPages < pages && shownCount < total;
+
+  const buildHref = (p: number) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (p === 1) sp.delete("page");
+    else sp.set("page", String(p));
+    const qs = sp.toString();
+    return qs ? `/?${qs}` : "/";
+  };
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const nextPage = page + loadedPages + 1;
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.set("page", String(nextPage));
+      sp.set("limit", String(limit));
+      const res = await fetch(`/api/movies?${sp.toString()}`);
+      if (!res.ok) throw new Error("Network error");
+      const data = (await res.json()) as { movies: MovieWithTracks[] };
+      setExtraMovies((prev) => [...prev, ...data.movies]);
+      setLoadedPages((prev) => prev + 1);
+    } catch {
+      // ignore — пользователь может повторить
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -190,7 +230,7 @@ export function MovieCatalog({
         {total} {pluralFilm(total)}
       </p>
 
-      {movies.length === 0 ? (
+      {allMovies.length === 0 ? (
         hasAnyMovies ? (
           <div className="surface-card flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
             <p className="font-display text-2xl font-semibold">
@@ -204,17 +244,44 @@ export function MovieCatalog({
           <EmptyCatalog isDraftView={isDraftView} />
         )
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {movies.map((movie, index) => (
-            <MovieCard
-              key={movie.id}
-              movie={movie}
-              index={index}
-              selected={selected.has(movie.id)}
-              onSelect={toggleSelect}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {allMovies.map((movie, index) => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                index={index}
+                selected={selected.has(movie.id)}
+                onSelect={toggleSelect}
+              />
+            ))}
+          </div>
+
+          {canLoadMore && (
+            <div className="mt-10 flex justify-center">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="focus-ring flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-bg-surface px-5 py-2.5 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:text-accent hover:shadow-[0_0_20px_var(--accent-glow)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingMore ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Plus className="h-4 w-4" aria-hidden />
+                )}
+                Показать ещё
+                <span className="text-faint">
+                  ({shownCount} из {total})
+                </span>
+              </button>
+            </div>
+          )}
+
+          {pages > 1 && (
+            <Pagination page={page} pages={pages} buildHref={buildHref} />
+          )}
+        </>
       )}
 
       <Modal
