@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
-
-type RouteContext = { params: Promise<{ id: string }> };
+import {
+  isErrorResponse,
+  jsonError,
+  parseRouteId,
+  type RouteContext,
+} from "@/lib/api-utils";
 
 const COVERS_DIR = path.join(process.cwd(), "data", "covers");
 
@@ -31,15 +35,12 @@ async function saveCover(movieId: number, buffer: Buffer, ext: string) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
-  const movieId = parseInt(id, 10);
-  if (Number.isNaN(movieId)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  }
+  const movieId = await parseRouteId(context.params);
+  if (isErrorResponse(movieId)) return movieId;
 
   const movie = await prisma.movie.findUnique({ where: { id: movieId } });
   if (!movie) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Фильм не найден", 404);
   }
 
   const contentType = request.headers.get("content-type") ?? "";

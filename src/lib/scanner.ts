@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 import { probeMediaFile } from "./ffprobe";
 import { parseMovieName } from "./name-parser";
 import { computeFileHashPrefix } from "./file-hash";
+import { syncMovieTracksFromProbe } from "./movie-tracks";
 import { MovieStatus } from "@/generated/prisma/client";
 
 const VIDEO_EXTENSIONS = new Set([
@@ -52,34 +53,6 @@ async function walkVideoFiles(dir: string): Promise<string[]> {
     }
   }
   return results;
-}
-
-async function upsertTracks(
-  movieId: number,
-  probe: Awaited<ReturnType<typeof probeMediaFile>>,
-) {
-  await prisma.audioTrack.deleteMany({ where: { movieId } });
-  await prisma.subtitleTrack.deleteMany({ where: { movieId } });
-
-  if (probe.video) {
-    await prisma.videoTrack.upsert({
-      where: { movieId },
-      create: { movieId, ...probe.video },
-      update: { ...probe.video },
-    });
-  }
-
-  if (probe.audio.length > 0) {
-    await prisma.audioTrack.createMany({
-      data: probe.audio.map((a) => ({ movieId, ...a })),
-    });
-  }
-
-  if (probe.subtitles.length > 0) {
-    await prisma.subtitleTrack.createMany({
-      data: probe.subtitles.map((s) => ({ movieId, ...s })),
-    });
-  }
 }
 
 export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
@@ -158,7 +131,7 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
             durationSeconds: probe.durationSeconds,
           },
         });
-        await upsertTracks(movedMovie.id, probe);
+        await syncMovieTracksFromProbe(prisma,movedMovie.id, probe);
         summary.moved++;
         continue;
       }
@@ -173,7 +146,7 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
             durationSeconds: probe.durationSeconds,
           },
         });
-        await upsertTracks(existing.id, probe);
+        await syncMovieTracksFromProbe(prisma,existing.id, probe);
         summary.updated++;
         continue;
       }
@@ -191,7 +164,7 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
           status: MovieStatus.DRAFT,
         },
       });
-      await upsertTracks(movie.id, probe);
+      await syncMovieTracksFromProbe(prisma,movie.id, probe);
       summary.newDrafts++;
     } catch (err) {
       summary.errors.push(

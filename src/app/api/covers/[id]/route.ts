@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
-
-type RouteContext = { params: Promise<{ id: string }> };
+import {
+  isErrorResponse,
+  jsonError,
+  parseRouteId,
+  type RouteContext,
+} from "@/lib/api-utils";
 
 const MIME: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -15,15 +19,12 @@ const MIME: Record<string, string> = {
 };
 
 export async function GET(_request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
-  const movieId = parseInt(id, 10);
-  if (Number.isNaN(movieId)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  }
+  const movieId = await parseRouteId(context.params);
+  if (isErrorResponse(movieId)) return movieId;
 
   const movie = await prisma.movie.findUnique({ where: { id: movieId } });
   if (!movie?.coverPath) {
-    return NextResponse.json({ error: "No cover" }, { status: 404 });
+    return jsonError("Обложка не найдена", 404);
   }
 
   const filePath = path.join(process.cwd(), "data", movie.coverPath);
@@ -39,6 +40,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       },
     });
   } catch {
-    return NextResponse.json({ error: "Cover file missing" }, { status: 404 });
+    return jsonError("Файл обложки отсутствует", 404);
   }
 }

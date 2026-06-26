@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "motion/react";
 import { MonitorPlay, Star, Sun, Waves } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { formatDuration } from "@/lib/format";
@@ -34,15 +33,9 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const duration = formatDuration(movie.durationSeconds);
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.25,
-        delay: Math.min(index * 0.04, 0.4),
-        ease: [0.16, 1, 0.3, 1],
-      }}
-      className="group relative"
+    <article
+      className="group relative animate-[movieCardIn_0.25s_ease-out_both]"
+      style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
     >
       <Link href={`/movies/${movie.id}`} className="focus-ring block rounded-[var(--radius)]">
         <div
@@ -91,7 +84,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
+              loading={index < 4 ? "eager" : "lazy"}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center p-4 text-center">
@@ -208,6 +201,6 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
           </div>
         </div>
       </Link>
-    </motion.article>
+    </article>
   );
 }

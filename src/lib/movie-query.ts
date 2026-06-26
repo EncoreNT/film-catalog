@@ -64,13 +64,19 @@ export function buildMovieWhere(
     }
   }
 
-  if (query.watched === "watched") {
-    where.watchedAt = { not: null };
+  const hasWatchedRange = Boolean(query.watchedFrom || query.watchedTo);
+  if (query.watched === "unwatched" && hasWatchedRange) {
+    // Unwatched movies cannot match a watched-date range.
+    where.id = -1;
+  } else if (query.watched === "watched") {
+    where.watchedAt = {
+      not: null,
+      ...(query.watchedFrom ? { gte: new Date(query.watchedFrom) } : {}),
+      ...(query.watchedTo ? { lte: new Date(query.watchedTo) } : {}),
+    };
   } else if (query.watched === "unwatched") {
     where.watchedAt = null;
-  }
-
-  if (query.watchedFrom || query.watchedTo) {
+  } else if (hasWatchedRange) {
     where.watchedAt = {
       ...(query.watchedFrom ? { gte: new Date(query.watchedFrom) } : {}),
       ...(query.watchedTo ? { lte: new Date(query.watchedTo) } : {}),
@@ -95,31 +101,48 @@ export function buildMovieWhere(
     };
   }
 
+  const audioTrackFilters: Prisma.MovieWhereInput[] = [];
+
   if (query.premiumAudio === "true") {
-    where.audioTracks = {
-      some: {
-        isDefault: true,
-        language: "rus",
-        profile: { in: ["Atmos", "DTS:X MA"] },
+    audioTrackFilters.push({
+      audioTracks: {
+        some: {
+          isDefault: true,
+          language: "rus",
+          profile: { in: ["Atmos", "DTS:X MA"] },
+        },
       },
-    };
+    });
+  }
+
+  if (query.language || query.channelLayout) {
+    const langs = query.language?.split(",").filter(Boolean);
+    const layouts = query.channelLayout?.split(",").filter(Boolean);
+    audioTrackFilters.push({
+      audioTracks: {
+        some: {
+          ...(langs?.length ? { language: { in: langs } } : {}),
+          ...(layouts?.length ? { channelLayout: { in: layouts } } : {}),
+        },
+      },
+    });
+  }
+
+  if (audioTrackFilters.length === 1) {
+    Object.assign(where, audioTrackFilters[0]);
+  } else if (audioTrackFilters.length > 1) {
+    const existingAnd = Array.isArray(where.AND)
+      ? where.AND
+      : where.AND
+        ? [where.AND]
+        : [];
+    where.AND = [...existingAnd, ...audioTrackFilters];
   }
 
   if (query.subtitleLang) {
     const langs = query.subtitleLang.split(",").filter(Boolean);
     where.subtitleTracks = {
       some: { language: { in: langs } },
-    };
-  }
-
-  if (query.language || query.channelLayout) {
-    const langs = query.language?.split(",").filter(Boolean);
-    const layouts = query.channelLayout?.split(",").filter(Boolean);
-    where.audioTracks = {
-      some: {
-        ...(langs?.length ? { language: { in: langs } } : {}),
-        ...(layouts?.length ? { channelLayout: { in: layouts } } : {}),
-      },
     };
   }
 

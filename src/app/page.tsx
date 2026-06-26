@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
   buildMovieOrder,
@@ -6,8 +7,33 @@ import {
   parseListQuery,
 } from "@/lib/movie-query";
 import { movieInclude } from "@/lib/movie-include";
+import {
+  getArchiveMetrics,
+  getStatusCounts,
+} from "@/lib/archive-metrics";
+import {
+  getCatalogFacets,
+  getCatalogGenreFacets,
+} from "@/lib/catalog-facets";
 import { MovieCatalog } from "@/components/MovieCatalog";
-import { MovieStatus } from "@/generated/prisma/client";
+
+const getCachedArchiveMetrics = unstable_cache(
+  getArchiveMetrics,
+  ["archive-metrics"],
+  { revalidate: 60 },
+);
+
+const getCachedCatalogFacets = unstable_cache(
+  getCatalogFacets,
+  ["catalog-facets"],
+  { revalidate: 60 },
+);
+
+const getCachedCatalogGenreFacets = unstable_cache(
+  getCatalogGenreFacets,
+  ["catalog-genre-facets"],
+  { revalidate: 60 },
+);
 
 interface HomeProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -30,23 +56,13 @@ async function CatalogContent({
   const limit = query.limit ?? 48;
   const skip = (page - 1) * limit;
 
-  const catalogWhere = { status: MovieStatus.CATALOG };
-
   const [
     movies,
     total,
-    totalCount,
-    catalogCount,
-    draftCount,
-    archiveFourK,
-    archiveHdr10,
-    archiveRussianAtmos,
-    archiveElite,
-    resolutions,
-    audioLanguages,
-    subtitleLanguages,
-    channelLayouts,
-    genres,
+    { totalCount, catalogCount, draftCount },
+    archiveMetrics,
+    facets,
+    genreFacets,
   ] = await Promise.all([
     prisma.movie.findMany({
       where,
@@ -56,78 +72,10 @@ async function CatalogContent({
       include: movieInclude,
     }),
     prisma.movie.count({ where }),
-    prisma.movie.count(),
-    prisma.movie.count({ where: { status: MovieStatus.CATALOG } }),
-    prisma.movie.count({ where: { status: MovieStatus.DRAFT } }),
-    prisma.movie.count({
-      where: {
-        ...catalogWhere,
-        videoTrack: { resolutionLabel: "4K" },
-      },
-    }),
-    prisma.movie.count({
-      where: {
-        ...catalogWhere,
-        videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } },
-      },
-    }),
-    prisma.movie.count({
-      where: {
-        ...catalogWhere,
-        audioTracks: {
-          some: {
-            isDefault: true,
-            language: "rus",
-            profile: { in: ["Atmos", "DTS:X MA"] },
-          },
-        },
-      },
-    }),
-    // Elite tier — all three premium badges at once:
-    // 4K resolution AND any HDR (not SDR, incl. Dolby Vision) AND Russian default Atmos/DTS:X.
-    prisma.movie.count({
-      where: {
-        ...catalogWhere,
-        AND: [
-          { videoTrack: { resolutionLabel: "4K" } },
-          { videoTrack: { hdr: { notIn: ["SDR"] } } },
-          {
-            audioTracks: {
-              some: {
-                isDefault: true,
-                language: "rus",
-                profile: { in: ["Atmos", "DTS:X MA"] },
-              },
-            },
-          },
-        ],
-      },
-    }),
-    prisma.videoTrack.groupBy({
-      by: ["resolutionLabel"],
-      _count: true,
-      where: { resolutionLabel: { not: null } },
-    }),
-    prisma.audioTrack.groupBy({
-      by: ["language"],
-      _count: true,
-      where: { language: { not: null } },
-    }),
-    prisma.subtitleTrack.groupBy({
-      by: ["language"],
-      _count: true,
-      where: { language: { not: null } },
-    }),
-    prisma.audioTrack.groupBy({
-      by: ["channelLayout"],
-      _count: true,
-      where: { channelLayout: { not: null } },
-    }),
-    prisma.genre.findMany({
-      where: { movies: { some: { status: MovieStatus.CATALOG } } },
-      select: { name: true, _count: { select: { movies: true } } },
-      orderBy: { name: "asc" },
-    }),
+    getStatusCounts(),
+    getCachedArchiveMetrics(),
+    getCachedCatalogFacets(),
+    getCachedCatalogGenreFacets(),
   ]);
 
   return (
@@ -138,35 +86,12 @@ async function CatalogContent({
       page={page}
       limit={limit}
       facets={{
-        resolutions: resolutions.map((r) => ({
-          value: r.resolutionLabel,
-          count: r._count,
-        })),
-        audioLanguages: audioLanguages.map((r) => ({
-          value: r.language,
-          count: r._count,
-        })),
-        subtitleLanguages: subtitleLanguages.map((r) => ({
-          value: r.language,
-          count: r._count,
-        })),
-        channelLayouts: channelLayouts.map((r) => ({
-          value: r.channelLayout,
-          count: r._count,
-        })),
-        genres: genres.map((g) => ({
-          value: g.name,
-          count: g._count.movies,
-        })),
+        ...facets,
+        genres: genreFacets,
       }}
       catalogCount={catalogCount}
       draftCount={draftCount}
-      archiveMetrics={{
-        fourK: archiveFourK,
-        hdr10: archiveHdr10,
-        russianAtmos: archiveRussianAtmos,
-        elite: archiveElite,
-      }}
+      archiveMetrics={archiveMetrics}
     />
   );
 }

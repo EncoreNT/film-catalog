@@ -287,12 +287,3 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
     subtitles,
   };
 }
-
-export async function isFfprobeAvailable(): Promise<boolean> {
-  try {
-    await execa("ffprobe", ["-version"]);
-    return true;
-  } catch {
-    return false;
-  }
-}

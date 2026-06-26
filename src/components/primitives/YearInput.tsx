@@ -4,10 +4,9 @@ import { useId, useState, type ReactNode } from "react";
 import { Minus, Plus } from "lucide-react";
 import { InfoHint } from "./InfoHint";
 
-/** Earliest accepted release year (first motion-picture films). */
-export const MIN_YEAR = 1888;
+const MIN_YEAR = 1888;
 /** Latest accepted release year (allow upcoming releases). */
-export const MAX_YEAR = new Date().getFullYear() + 1;
+const MAX_YEAR = new Date().getFullYear() + 1;
 
 interface YearInputProps {
   /** Stored year (source of truth). */

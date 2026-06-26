@@ -85,3 +85,12 @@ export function parseMovieName(
     releaseType: parseReleaseType(releaseSource),
   };
 }
+
+/** Parse title/year/release from a full file path. */
+export function parseMoviePath(filePath: string): ParsedName {
+  const segments = filePath.replace(/\\/g, "/").split("/").filter(Boolean);
+  const fileName = segments[segments.length - 1] ?? filePath;
+  const parentFolder =
+    segments.length > 1 ? segments[segments.length - 2] : undefined;
+  return parseMovieName(fileName, parentFolder);
+}

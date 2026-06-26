@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { MovieCard } from "./MovieCard";
 import { FilterBar } from "./FilterBar";
 import { EmptyCatalog } from "./EmptyCatalog";
-import { AddMovieForm } from "./AddMovieForm";
 import { Modal } from "./primitives/Modal";
 import { Pagination } from "./Pagination";
 import { Select } from "./primitives/Select";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowDownUp, Loader2, MonitorPlay, Plus, ScanSearch, Sparkles, Sun, Waves } from "lucide-react";
+
+const AddMovieForm = dynamic(
+  () => import("./AddMovieForm").then((module) => module.AddMovieForm),
+  { ssr: false },
+);
 
 const SORT_OPTIONS = [
   { value: "title", label: "Название" },

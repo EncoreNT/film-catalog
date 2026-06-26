@@ -5,34 +5,17 @@ import { movieUpdateSchema } from "@/lib/validators";
 import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
 import { computeFileHashPrefix } from "@/lib/file-hash";
-
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function GET(_request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
-  const movieId = parseInt(id, 10);
-  if (Number.isNaN(movieId)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  }
-
-  const movie = await prisma.movie.findUnique({
-    where: { id: movieId },
-    include: movieInclude,
-  });
-
-  if (!movie) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  return NextResponse.json(movie);
-}
+import { syncMovieTracks } from "@/lib/movie-tracks";
+import {
+  isErrorResponse,
+  jsonError,
+  parseRouteId,
+  type RouteContext,
+} from "@/lib/api-utils";
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
-  const movieId = parseInt(id, 10);
-  if (Number.isNaN(movieId)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  }
+  const movieId = await parseRouteId(context.params);
+  if (isErrorResponse(movieId)) return movieId;
 
   try {
     const body = await request.json();
@@ -64,10 +47,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           fileMtime = fileStat.mtime;
           fileHash = await computeFileHashPrefix(trimmed);
         } catch {
-          return NextResponse.json(
-            { error: "Файл не найден по указанному пути" },
-            { status: 400 },
-          );
+          return jsonError("Файл не найден по указанному пути", 400);
         }
       } else {
         fileSize = null;
@@ -76,95 +56,59 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
     }
 
-    await prisma.movie.update({
-      where: { id: movieId },
-      data: {
-        ...movieData,
-        filePath:
-          filePath === undefined ? undefined : filePath ? filePath : null,
-        fileSize,
-        fileMtime,
-        fileHash,
-        storageId:
-          storageId === undefined ? undefined : storageId ? storageId : null,
-        watchedAt:
-          watchedAt === undefined
-            ? undefined
-            : watchedAt
-              ? new Date(watchedAt)
-              : null,
-        genres:
-          genreRows === null
-            ? undefined
-            : { set: genreRows.map((g) => ({ id: g.id })) },
-      },
-    });
-
-    if (videoTrack) {
-      await prisma.videoTrack.upsert({
-        where: { movieId },
-        create: { movieId, streamIndex: 0, ...videoTrack },
-        update: videoTrack,
+    const movie = await prisma.$transaction(async (tx) => {
+      await tx.movie.update({
+        where: { id: movieId },
+        data: {
+          ...movieData,
+          filePath:
+            filePath === undefined ? undefined : filePath ? filePath : null,
+          fileSize,
+          fileMtime,
+          fileHash,
+          storageId:
+            storageId === undefined ? undefined : storageId ? storageId : null,
+          watchedAt:
+            watchedAt === undefined
+              ? undefined
+              : watchedAt
+                ? new Date(watchedAt)
+                : null,
+          genres:
+            genreRows === null
+              ? undefined
+              : { set: genreRows.map((g) => ({ id: g.id })) },
+        },
       });
-    }
 
-    if (audioTracks) {
-      await prisma.audioTrack.deleteMany({ where: { movieId } });
-      if (audioTracks.length > 0) {
-        await prisma.audioTrack.createMany({
-          data: audioTracks.map((t) => ({
-            movieId,
-            streamIndex: t.streamIndex,
-            codec: t.codec ?? null,
-            profile: t.profile ?? null,
-            channels: t.channels ?? null,
-            channelLayout: t.channelLayout ?? null,
-            bitrate: t.bitrate ?? null,
-            language: t.language ?? null,
-            translationType: t.translationType ?? null,
-            title: t.title ?? null,
-            isDefault: t.isDefault ?? false,
-          })),
+      if (
+        videoTrack !== undefined ||
+        audioTracks !== undefined ||
+        subtitleTracks !== undefined
+      ) {
+        await syncMovieTracks(tx, movieId, {
+          videoTrack: videoTrack ?? undefined,
+          audioTracks,
+          subtitleTracks,
         });
       }
-    }
 
-    if (subtitleTracks) {
-      await prisma.subtitleTrack.deleteMany({ where: { movieId } });
-      if (subtitleTracks.length > 0) {
-        await prisma.subtitleTrack.createMany({
-          data: subtitleTracks.map((t) => ({
-            movieId,
-            streamIndex: t.streamIndex,
-            codec: t.codec ?? null,
-            codecLabel: t.codecLabel ?? null,
-            language: t.language ?? null,
-            title: t.title ?? null,
-            isDefault: t.isDefault ?? false,
-            forced: t.forced ?? false,
-          })),
-        });
-      }
-    }
-
-    const movie = await prisma.movie.findUnique({
-      where: { id: movieId },
-      include: movieInclude,
+      return tx.movie.findUnique({
+        where: { id: movieId },
+        include: movieInclude,
+      });
     });
 
     return NextResponse.json(movie);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Update failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const message = err instanceof Error ? err.message : "Не удалось обновить фильм";
+    return jsonError(message, 400);
   }
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
-  const movieId = parseInt(id, 10);
-  if (Number.isNaN(movieId)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  }
+  const movieId = await parseRouteId(context.params);
+  if (isErrorResponse(movieId)) return movieId;
 
   await prisma.movie.delete({ where: { id: movieId } });
   return NextResponse.json({ ok: true });
