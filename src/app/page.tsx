@@ -30,12 +30,17 @@ async function CatalogContent({
   const limit = query.limit ?? 48;
   const skip = (page - 1) * limit;
 
+  const catalogWhere = { status: MovieStatus.CATALOG };
+
   const [
     movies,
     total,
     totalCount,
     catalogCount,
     draftCount,
+    archiveFourK,
+    archiveHdr10,
+    archiveRussianAtmos,
     resolutions,
     audioLanguages,
     subtitleLanguages,
@@ -53,6 +58,30 @@ async function CatalogContent({
     prisma.movie.count(),
     prisma.movie.count({ where: { status: MovieStatus.CATALOG } }),
     prisma.movie.count({ where: { status: MovieStatus.DRAFT } }),
+    prisma.movie.count({
+      where: {
+        ...catalogWhere,
+        videoTrack: { resolutionLabel: "4K" },
+      },
+    }),
+    prisma.movie.count({
+      where: {
+        ...catalogWhere,
+        videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } },
+      },
+    }),
+    prisma.movie.count({
+      where: {
+        ...catalogWhere,
+        audioTracks: {
+          some: {
+            isDefault: true,
+            language: "rus",
+            profile: { in: ["Atmos", "DTS:X MA"] },
+          },
+        },
+      },
+    }),
     prisma.videoTrack.groupBy({
       by: ["resolutionLabel"],
       _count: true,
@@ -111,6 +140,11 @@ async function CatalogContent({
       }}
       catalogCount={catalogCount}
       draftCount={draftCount}
+      archiveMetrics={{
+        fourK: archiveFourK,
+        hdr10: archiveHdr10,
+        russianAtmos: archiveRussianAtmos,
+      }}
     />
   );
 }
@@ -121,7 +155,7 @@ export default async function Home({ searchParams }: HomeProps) {
   return (
     <Suspense
       fallback={
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 12 }).map((_, i) => (
             <div
               key={i}

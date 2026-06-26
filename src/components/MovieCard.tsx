@@ -3,24 +3,31 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { MonitorPlay, Star, Sun, Waves } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
-import { formatDuration, formatVideoTicket } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { genreLabel } from "@/lib/dictionaries";
+import { PremiumBadge } from "./PremiumBadge";
+import { SpecTag } from "./SpecTag";
+import {
+  catalogCardTags,
+  is4K,
+  premiumAudio,
+  premiumHDR,
+} from "@/lib/spec-tags";
 
 interface MovieCardProps {
   movie: MovieWithTracks;
-  selected?: boolean;
-  onSelect?: (id: number, selected: boolean) => void;
   index?: number;
 }
 
-export function MovieCard({
-  movie,
-  selected,
-  onSelect,
-  index = 0,
-}: MovieCardProps) {
+export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const coverUrl = movie.coverPath ? `/api/covers/${movie.id}` : null;
+  const premium4K = is4K(movie);
+  const premiumHdr = premiumHDR(movie);
+  const premiumAtmos = premiumAudio(movie);
+  const footerTags = catalogCardTags(movie);
+  const duration = formatDuration(movie.durationSeconds);
 
   return (
     <motion.article
@@ -33,32 +40,14 @@ export function MovieCard({
       }}
       className="group relative"
     >
-      {onSelect ? (
-        <label className="absolute left-2 top-2 z-20 flex h-11 w-11 cursor-pointer items-center justify-center">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={(e) => onSelect(movie.id, e.target.checked)}
-            className="focus-ring h-5 w-5 cursor-pointer accent-accent"
-            aria-label={`Выбрать ${movie.title}`}
-          />
-        </label>
-      ) : null}
-
-      {movie.rating != null ? (
-        <span className="font-mono-tech absolute right-2 top-2 z-20 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-accent shadow-[0_0_16px_var(--accent-glow)]">
-          {movie.rating}/10
-        </span>
-      ) : null}
-
       <Link href={`/movies/${movie.id}`} className="focus-ring block rounded-[var(--radius)]">
-        <div className="relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-gradient-to-b from-bg-elevated to-bg-base transition-all duration-300 group-hover:scale-[1.03] group-hover:border-accent/50 group-hover:shadow-[0_0_36px_var(--accent-glow)]">
+        <div className="relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-gradient-to-b from-bg-elevated to-bg-base transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/50 group-hover:shadow-[0_0_40px_var(--accent-glow)]">
           {coverUrl ? (
             <Image
               src={coverUrl}
               alt={`Обложка: ${movie.title}`}
               fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
             />
@@ -72,7 +61,7 @@ export function MovieCard({
                     "radial-gradient(ellipse 80% 60% at 50% 30%, var(--accent-soft) 0%, transparent 70%)",
                 }}
               />
-              <p className="font-display relative text-lg font-bold leading-tight text-text">
+              <p className="font-display relative text-lg font-bold leading-tight text-text sm:text-xl">
                 {movie.title}
               </p>
               {movie.year ? (
@@ -82,43 +71,65 @@ export function MovieCard({
               ) : null}
             </div>
           )}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-deep via-bg-deep/85 to-transparent p-3 pt-14">
-            <h3 className="font-display line-clamp-2 text-sm font-semibold leading-snug text-text">
-              {movie.title}
-            </h3>
-            <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-              <p className="font-mono-tech text-[0.65rem] text-muted">
-                {formatVideoTicket(movie)}
-              </p>
-              {movie.durationSeconds ? (
-                <>
-                  <span className="font-mono-tech text-[0.6rem] text-faint">·</span>
-                  <span className="font-mono-tech text-[0.65rem] text-muted">
-                    {formatDuration(movie.durationSeconds)}
-                  </span>
-                </>
+
+          {(premium4K || premiumHdr || premiumAtmos) && (
+            <div className="absolute left-2 top-2 z-10 flex max-w-[calc(100%-3.5rem)] flex-col gap-1">
+              {premium4K ? (
+                <PremiumBadge
+                  size="sm"
+                  icon={<MonitorPlay className="h-2.5 w-2.5" />}
+                  label="4K"
+                />
               ) : null}
-              {movie.storage?.type === "EXTERNAL" ? (
-                <span
-                  className="font-mono-tech text-[0.6rem] text-accent/80"
-                  title={`Внешний диск: ${movie.storage.name}`}
-                  aria-label={`Внешний диск: ${movie.storage.name}`}
-                >
-                  ▣
-                </span>
+              {premiumHdr ? (
+                <PremiumBadge
+                  size="sm"
+                  icon={<Sun className="h-2.5 w-2.5" />}
+                  label={premiumHdr.label}
+                />
               ) : null}
-              {!movie.filePath ? (
-                <span
-                  className="font-mono-tech text-[0.6rem] text-faint"
-                  title="Файл не указан"
-                  aria-label="Файл не указан"
-                >
-                  ◌
-                </span>
+              {premiumAtmos ? (
+                <PremiumBadge
+                  size="sm"
+                  icon={<Waves className="h-2.5 w-2.5" />}
+                  label={premiumAtmos.label}
+                />
               ) : null}
             </div>
-            {movie.genres.length > 0 ? (
-              <div className="mt-1.5 flex flex-wrap gap-1">
+          )}
+
+          {movie.rating != null ? (
+            <span
+              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)]"
+              aria-label={`Оценка ${movie.rating} из 10`}
+              title={`Оценка ${movie.rating} из 10`}
+            >
+              {movie.rating}
+              <Star className="h-3 w-3 fill-accent text-accent" aria-hidden />
+            </span>
+          ) : null}
+
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-deep via-bg-deep/92 to-transparent px-3 pb-3 pt-16">
+            <h3 className="font-display line-clamp-2 text-base font-semibold leading-snug text-text sm:text-lg">
+              {movie.title}
+            </h3>
+
+            {footerTags.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {footerTags.map((tag) => (
+                  <SpecTag
+                    key={`${tag.kind}-${tag.label}`}
+                    kind={tag.kind}
+                    note={tag.note}
+                  >
+                    {tag.label}
+                  </SpecTag>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {movie.genres.slice(0, 2).map((g) => (
                   <span
                     key={g.id}
@@ -127,8 +138,31 @@ export function MovieCard({
                     {genreLabel(g.name) ?? g.name}
                   </span>
                 ))}
+                {movie.storage?.type === "EXTERNAL" ? (
+                  <span
+                    className="font-mono-tech text-[0.6rem] text-accent/80"
+                    title={`Внешний диск: ${movie.storage.name}`}
+                    aria-label={`Внешний диск: ${movie.storage.name}`}
+                  >
+                    ▣
+                  </span>
+                ) : null}
+                {!movie.filePath ? (
+                  <span
+                    className="font-mono-tech text-[0.6rem] text-faint"
+                    title="Файл не указан"
+                    aria-label="Файл не указан"
+                  >
+                    ◌
+                  </span>
+                ) : null}
               </div>
-            ) : null}
+              {duration ? (
+                <span className="font-mono-tech shrink-0 text-[0.65rem] text-muted">
+                  {duration}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       </Link>

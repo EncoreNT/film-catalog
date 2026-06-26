@@ -77,10 +77,24 @@ export function buildMovieWhere(
     };
   }
 
-  if (query.resolution) {
-    const resolutions = query.resolution.split(",").filter(Boolean);
+  if (query.resolution || query.hdr) {
+    const resolutions = query.resolution?.split(",").filter(Boolean);
+    const hdrValues = query.hdr?.split(",").filter(Boolean);
     where.videoTrack = {
-      resolutionLabel: { in: resolutions },
+      ...(resolutions?.length
+        ? { resolutionLabel: { in: resolutions } }
+        : {}),
+      ...(hdrValues?.length ? { hdr: { in: hdrValues } } : {}),
+    };
+  }
+
+  if (query.premiumAudio === "true") {
+    where.audioTracks = {
+      some: {
+        isDefault: true,
+        language: "rus",
+        profile: { in: ["Atmos", "DTS:X MA"] },
+      },
     };
   }
 

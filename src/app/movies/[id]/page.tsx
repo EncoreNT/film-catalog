@@ -25,8 +25,10 @@ import { genreLabel } from "@/lib/dictionaries";
 import {
   codecFull,
   codecShort,
+  formatAudioLabel,
   is4K,
   premiumAudio,
+  premiumHDR,
   secondaryTags,
   translationShort,
   videoBitrateLabel,
@@ -55,7 +57,8 @@ export default async function MoviePage({ params }: PageProps) {
   const vPixels = videoResolutionPixels(movie);
   const premium4K = is4K(movie);
   const premiumAtmos = premiumAudio(movie);
-  const showPremiumStrip = premium4K || premiumAtmos != null;
+  const premiumHdr = premiumHDR(movie);
+  const showPremiumStrip = premium4K || premiumAtmos != null || premiumHdr != null;
 
   return (
     <div className="space-y-10">
@@ -133,6 +136,13 @@ export default async function MoviePage({ params }: PageProps) {
                     label="4K"
                     sublabel="Ultra HD"
                     tag={vPixels ?? undefined}
+                  />
+                ) : null}
+                {premiumHdr ? (
+                  <PremiumBadge
+                    icon={<Sun className="h-4 w-4" />}
+                    label={premiumHdr.label}
+                    sublabel={premiumHdr.sublabel}
                   />
                 ) : null}
                 {premiumAtmos ? (
@@ -279,14 +289,7 @@ export default async function MoviePage({ params }: PageProps) {
                       : null;
                   const is3D =
                     profile === "Atmos" || profile === "DTS:X MA";
-                  const formatLabel =
-                    profile === "Atmos"
-                      ? "Dolby Atmos"
-                      : profile === "DTS:X MA"
-                        ? "DTS:X"
-                        : profile === "HD MA"
-                          ? "DTS-HD MA"
-                          : codecShort(track.codec);
+                  const formatLabel = formatAudioLabel(track);
                   const langLabel = track.language
                     ? track.language.toUpperCase()
                     : null;

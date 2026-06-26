@@ -8,6 +8,8 @@ interface RatingStepperProps {
   onChange: (value: number | null) => void;
   min?: number;
   max?: number;
+  /** Inline compact mode: hides the label row, slimmer control — for toolbars. */
+  compact?: boolean;
 }
 
 export function RatingStepper({
@@ -16,6 +18,7 @@ export function RatingStepper({
   onChange,
   min = 1,
   max = 10,
+  compact,
 }: RatingStepperProps) {
   const current = value ?? 0;
   const canDecrement = current > min;
@@ -33,10 +36,15 @@ export function RatingStepper({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm text-muted">{label}</label>
+    <div className={compact ? "relative" : "flex flex-col gap-2"}>
+      {compact ? null : (
+        <label className="text-sm text-muted">{label}</label>
+      )}
       <div
-        className={`focus-ring flex min-h-11 items-center justify-between gap-1 rounded-[var(--radius-sm)] border bg-bg-elevated px-1.5 py-1 transition-all duration-200 ${
+        title={compact ? label : undefined}
+        className={`focus-ring flex items-center justify-between gap-1 rounded-[var(--radius-sm)] border bg-bg-elevated px-1.5 transition-all duration-200 ${
+          compact ? "min-h-9 py-1" : "min-h-11 py-1"
+        } ${
           value != null
             ? "border-accent/40 shadow-[0_0_16px_var(--accent-glow)]"
             : "border-border hover:border-border-strong"
