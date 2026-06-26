@@ -13,6 +13,7 @@ import { Select } from "./primitives/Select";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowDownUp, Loader2, MonitorPlay, Plus, ScanSearch, Sparkles, Sun, Waves } from "lucide-react";
+import { motion, AnimatePresence, MotionConfig } from "motion/react";
 
 const AddMovieForm = dynamic(
   () => import("./AddMovieForm").then((module) => module.AddMovieForm),
@@ -280,7 +281,7 @@ export function MovieCatalog({
   const isDraftView = status.includes("DRAFT") && !status.includes("CATALOG");
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       {/* Compact header — title + actions in one line, metrics as chips below */}
       <section className="mb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -477,9 +478,32 @@ export function MovieCatalog({
       ) : (
         <>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-            {allMovies.map((movie, index) => (
-              <MovieCard key={movie.id} movie={movie} index={index} />
-            ))}
+            <AnimatePresence mode="popLayout">
+              {allMovies.map((movie, index) => (
+                <motion.div
+                  key={movie.id}
+                  layout
+                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    transition: {
+                      duration: 0.25,
+                      ease: [0.16, 1, 0.3, 1],
+                      delay: Math.min(index * 0.04, 0.4),
+                    },
+                  }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.96,
+                    transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
+                  }}
+                >
+                  <MovieCard movie={movie} index={index} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
           {canLoadMore && (
@@ -517,6 +541,6 @@ export function MovieCatalog({
       >
         <AddMovieForm onDone={() => setAddOpen(false)} />
       </Modal>
-    </>
+    </MotionConfig>
   );
 }
