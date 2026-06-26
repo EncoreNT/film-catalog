@@ -41,6 +41,7 @@ async function CatalogContent({
     archiveFourK,
     archiveHdr10,
     archiveRussianAtmos,
+    archiveElite,
     resolutions,
     audioLanguages,
     subtitleLanguages,
@@ -80,6 +81,26 @@ async function CatalogContent({
             profile: { in: ["Atmos", "DTS:X MA"] },
           },
         },
+      },
+    }),
+    // Elite tier — all three premium badges at once:
+    // 4K resolution AND any HDR (not SDR, incl. Dolby Vision) AND Russian default Atmos/DTS:X.
+    prisma.movie.count({
+      where: {
+        ...catalogWhere,
+        AND: [
+          { videoTrack: { resolutionLabel: "4K" } },
+          { videoTrack: { hdr: { notIn: ["SDR"] } } },
+          {
+            audioTracks: {
+              some: {
+                isDefault: true,
+                language: "rus",
+                profile: { in: ["Atmos", "DTS:X MA"] },
+              },
+            },
+          },
+        ],
       },
     }),
     prisma.videoTrack.groupBy({
@@ -144,6 +165,7 @@ async function CatalogContent({
         fourK: archiveFourK,
         hdr10: archiveHdr10,
         russianAtmos: archiveRussianAtmos,
+        elite: archiveElite,
       }}
     />
   );

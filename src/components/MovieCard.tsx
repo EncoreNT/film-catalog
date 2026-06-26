@@ -12,6 +12,7 @@ import { SpecTag } from "./SpecTag";
 import {
   catalogCardTags,
   is4K,
+  isAnyHDR,
   premiumAudio,
   premiumHDR,
 } from "@/lib/spec-tags";
@@ -26,6 +27,9 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const premium4K = is4K(movie);
   const premiumHdr = premiumHDR(movie);
   const premiumAtmos = premiumAudio(movie);
+  const isTopTier = Boolean(
+    premium4K && isAnyHDR(movie) && premiumAtmos,
+  );
   const footerTags = catalogCardTags(movie);
   const duration = formatDuration(movie.durationSeconds);
 
@@ -41,7 +45,45 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
       className="group relative"
     >
       <Link href={`/movies/${movie.id}`} className="focus-ring block rounded-[var(--radius)]">
-        <div className="relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-gradient-to-b from-bg-elevated to-bg-base transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/50 group-hover:shadow-[0_0_40px_var(--accent-glow)]">
+        <div
+          className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border bg-gradient-to-b from-bg-elevated to-bg-base transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/50 group-hover:shadow-[0_0_40px_var(--accent-glow)] ${
+            isTopTier
+              ? "border-accent/45 shadow-[0_0_0_1px_var(--accent-glow),0_8px_30px_-6px_rgba(232,176,90,0.55),0_0_50px_var(--accent-glow)] sm:-translate-y-1"
+              : "border-border-strong"
+          }`}
+        >
+          {isTopTier ? (
+            <>
+              {/* Spotlight cone — projector beam from top-left corner */}
+              <span
+                className="pointer-events-none absolute inset-0 z-0"
+                aria-hidden
+                style={{
+                  background:
+                    "conic-gradient(from 200deg at 0% 0%, var(--accent-soft) 0deg, rgba(232,176,90,0.16) 14deg, transparent 32deg)",
+                  mixBlendMode: "screen",
+                }}
+              />
+              {/* Warm top wash — the lit wall behind the beam */}
+              <span
+                className="pointer-events-none absolute inset-x-0 top-0 z-0 h-2/3"
+                aria-hidden
+                style={{
+                  background:
+                    "radial-gradient(ellipse 75% 55% at 12% -8%, rgba(246,200,120,0.22) 0%, transparent 62%)",
+                }}
+              />
+              {/* Faint film grain over the lit area */}
+              <span
+                className="pointer-events-none absolute inset-0 z-0 opacity-[0.07]"
+                aria-hidden
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,0.5) 3px 4px)",
+                }}
+              />
+            </>
+          ) : null}
           {coverUrl ? (
             <Image
               src={coverUrl}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { MovieCard } from "./MovieCard";
 import { FilterBar } from "./FilterBar";
@@ -11,7 +12,7 @@ import { Pagination } from "./Pagination";
 import { Select } from "./primitives/Select";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowDownUp, Loader2, Plus, ScanSearch } from "lucide-react";
+import { ArrowDownUp, Loader2, MonitorPlay, Plus, ScanSearch, Sparkles, Sun, Waves } from "lucide-react";
 
 const SORT_OPTIONS = [
   { value: "title", label: "Название" },
@@ -40,32 +41,121 @@ interface ArchiveMetrics {
   fourK: number;
   hdr10: number;
   russianAtmos: number;
+  elite: number;
 }
 
-function MetricChip({
-  count,
-  label,
-  onClick,
-  active,
-}: {
+interface QualityGaugeProps {
   count: number;
+  total: number;
   label: string;
-  onClick: () => void;
+  caption?: string;
+  icon: ReactNode;
   active: boolean;
-}) {
+  elite?: boolean;
+  onClick: () => void;
+}
+
+function pct(count: number, total: number): number {
+  if (!total) return 0;
+  return Math.min(100, Math.round((count / total) * 100));
+}
+
+/**
+ * Quality gauge — a single instrument in the archive quality panel.
+ * Big tabular counter, icon, a thin progress bar showing the share of the
+ * catalog that carries this quality mark, and an active (filtered) glow state.
+ */
+function QualityGauge({
+  count,
+  total,
+  label,
+  caption,
+  icon,
+  active,
+  elite = false,
+  onClick,
+}: QualityGaugeProps) {
+  const share = pct(count, total);
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`focus-ring font-mono-tech inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs transition-all duration-200 ${
-        active
-          ? "border-accent/50 bg-accent/10 text-accent"
-          : "border-border bg-bg-surface text-muted hover:border-accent/30 hover:text-text"
-      }`}
       aria-pressed={active}
+      title={`${label}: ${count}${caption ? ` ${caption}` : ""} · ${share}% архива`}
+      className={`focus-ring group relative flex min-h-[5.5rem] cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius)] border p-3 text-left transition-all duration-200 ${
+        active
+          ? elite
+            ? "border-accent/70 bg-gradient-to-br from-accent/12 to-transparent shadow-[0_0_28px_var(--accent-glow)] ring-1 ring-accent/60"
+            : "border-accent/55 bg-bg-surface shadow-[0_0_28px_var(--accent-glow)] ring-1 ring-accent/40"
+          : "border-border bg-bg-surface hover:border-accent/40 hover:bg-bg-surface-hover"
+      }`}
     >
-      <span className="font-semibold tabular-nums">{count}</span>
-      <span className="opacity-70">{label}</span>
+      <span
+        className="pointer-events-none absolute inset-0 opacity-60"
+        aria-hidden
+        style={{
+          background: active
+            ? "radial-gradient(ellipse 90% 140% at 10% 0%, var(--accent-soft) 0%, transparent 70%)"
+            : "radial-gradient(ellipse 80% 120% at 0% 0%, var(--accent-soft) 0%, transparent 70%)",
+        }}
+      />
+      <span
+        className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+          active
+            ? "bg-accent/25 text-accent-bright"
+            : "bg-accent/15 text-accent"
+        }`}
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <span className="relative flex min-w-0 flex-1 flex-col">
+        <span className="flex items-baseline gap-1.5">
+          <span
+            className="font-display text-2xl font-bold tabular-nums leading-none text-text transition-colors"
+            style={active ? { color: "var(--accent-bright)" } : undefined}
+          >
+            {count}
+          </span>
+          <span className="font-mono-tech text-[0.6rem] text-faint">
+            / {total}
+          </span>
+        </span>
+        <span
+          className={`font-display mt-0.5 text-sm font-semibold leading-tight text-text ${
+            elite ? "whitespace-normal" : "truncate"
+          }`}
+        >
+          {label}
+        </span>
+        {caption ? (
+          <span className="font-mono-tech mt-0.5 truncate text-[0.6rem] text-muted">
+            {caption}
+          </span>
+        ) : null}
+        <span
+          className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-border"
+          aria-hidden
+        >
+          <span
+            className="block h-full rounded-full bg-accent transition-all duration-500"
+            style={{ width: `${share}%` }}
+          />
+        </span>
+      </span>
+      {elite ? (
+        <span
+          className={`font-mono-tech absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[0.55rem] transition-colors ${
+            active
+              ? "border-accent/50 bg-bg-deep/70 text-accent-bright"
+              : "border-border bg-bg-deep/70 text-muted"
+          }`}
+          aria-hidden
+        >
+          <Sparkles className="h-2.5 w-2.5" />
+          3/3
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -97,7 +187,7 @@ export function MovieCatalog({
   limit,
   catalogCount = 0,
   draftCount = 0,
-  archiveMetrics = { fourK: 0, hdr10: 0, russianAtmos: 0 },
+  archiveMetrics = { fourK: 0, hdr10: 0, russianAtmos: 0, elite: 0 },
 }: MovieCatalogProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -143,6 +233,11 @@ export function MovieCatalog({
   const metricHdrActive =
     isCatalog && activeHdr === "HDR10,HDR10+";
   const metricAtmosActive = isCatalog && activePremiumAudio === "true";
+  const metricEliteActive =
+    metric4KActive &&
+    metricAtmosActive &&
+    isCatalog &&
+    activeHdr === "HDR_ANY";
 
   const pages = Math.max(1, Math.ceil(total / limit));
   const allMovies = [...movies, ...extraMovies];
@@ -233,13 +328,25 @@ export function MovieCatalog({
           >
             черновики · <span className="tabular-nums">{draftCount}</span>
           </Link>
+        </div>
 
-          {!isDraftView ? (
-            <>
-              <span className="h-4 w-px bg-border" aria-hidden />
-              <MetricChip
+        {!isDraftView ? (
+          <div className="mt-4">
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <p className="font-mono-tech text-faint">
+                индекс качества архива
+              </p>
+              <p className="font-mono-tech hidden text-faint sm:inline">
+                нажмите, чтобы отфильтровать
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <QualityGauge
                 count={archiveMetrics.fourK}
+                total={catalogCount}
                 label="4K"
+                caption="разрешение Ultra HD"
+                icon={<MonitorPlay className="h-5 w-5" />}
                 active={metric4KActive}
                 onClick={() =>
                   applyFilter({
@@ -249,9 +356,12 @@ export function MovieCatalog({
                   })
                 }
               />
-              <MetricChip
+              <QualityGauge
                 count={archiveMetrics.hdr10}
-                label="HDR10+"
+                total={catalogCount}
+                label="HDR10 / HDR10+"
+                caption="расширенный динамический диапазон"
+                icon={<Sun className="h-5 w-5" />}
                 active={metricHdrActive}
                 onClick={() =>
                   applyFilter({
@@ -261,9 +371,12 @@ export function MovieCatalog({
                   })
                 }
               />
-              <MetricChip
+              <QualityGauge
                 count={archiveMetrics.russianAtmos}
+                total={catalogCount}
                 label="рус. Atmos"
+                caption="объёмный звук · главная дорожка"
+                icon={<Waves className="h-5 w-5" />}
                 active={metricAtmosActive}
                 onClick={() =>
                   applyFilter({
@@ -273,9 +386,28 @@ export function MovieCatalog({
                   })
                 }
               />
-            </>
-          ) : null}
-        </div>
+              <QualityGauge
+                count={archiveMetrics.elite}
+                total={catalogCount}
+                label="4K + HDR + рус. Atmos"
+                icon={<Sparkles className="h-5 w-5" />}
+                active={metricEliteActive}
+                elite
+                onClick={() =>
+                  applyFilter(
+                    metricEliteActive
+                      ? { resolution: null, hdr: null, premiumAudio: null }
+                      : {
+                          resolution: "4K",
+                          hdr: "HDR_ANY",
+                          premiumAudio: "true",
+                        },
+                  )
+                }
+              />
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <FilterBar facets={facets} />

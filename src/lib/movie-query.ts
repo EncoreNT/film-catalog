@@ -80,11 +80,18 @@ export function buildMovieWhere(
   if (query.resolution || query.hdr) {
     const resolutions = query.resolution?.split(",").filter(Boolean);
     const hdrValues = query.hdr?.split(",").filter(Boolean);
+    // "HDR_ANY" marker → any HDR that is not SDR (incl. Dolby Vision + profiles).
+    const anyHdr = hdrValues?.includes("HDR_ANY");
+    const explicitHdr = hdrValues?.filter((v) => v !== "HDR_ANY");
     where.videoTrack = {
       ...(resolutions?.length
         ? { resolutionLabel: { in: resolutions } }
         : {}),
-      ...(hdrValues?.length ? { hdr: { in: hdrValues } } : {}),
+      ...(anyHdr
+        ? { hdr: { notIn: ["SDR"] } }
+        : explicitHdr?.length
+          ? { hdr: { in: explicitHdr } }
+          : {}),
     };
   }
 

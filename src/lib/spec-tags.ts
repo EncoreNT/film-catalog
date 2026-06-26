@@ -209,6 +209,16 @@ export function is4K(movie: MovieWithTracks): boolean {
   return v?.resolutionLabel === "4K";
 }
 
+/**
+ * Any HDR — not SDR, not empty. Matches the elite-tier server count, which
+ * counts Dolby Vision (any profile) as HDR alongside HDR10 / HDR10+.
+ */
+export function isAnyHDR(movie: MovieWithTracks): boolean {
+  const v = movie.videoTrack;
+  if (!v?.hdr) return false;
+  return parseHdrValue(v.hdr).base !== "SDR";
+}
+
 const DV_PROFILE_SHORT: Record<string, string> = {
   P5: "Profile 5",
   P7: "Profile 7 (MEL)",
