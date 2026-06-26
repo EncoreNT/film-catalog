@@ -483,11 +483,10 @@ export function MovieCatalog({
                 <motion.div
                   key={movie.id}
                   layout
-                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{
                     opacity: 1,
                     y: 0,
-                    scale: 1,
                     transition: {
                       duration: 0.25,
                       ease: [0.16, 1, 0.3, 1],
@@ -496,7 +495,6 @@ export function MovieCatalog({
                   }}
                   exit={{
                     opacity: 0,
-                    scale: 0.96,
                     transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
                   }}
                 >
