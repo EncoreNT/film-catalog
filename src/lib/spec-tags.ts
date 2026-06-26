@@ -9,7 +9,7 @@ import {
 } from "./dictionaries";
 import { formatBitrateKbps } from "./resolution";
 
-export type HeroTagKind =
+type HeroTagKind =
   | "resolution"
   | "hdr"
   | "audio-3d"
@@ -17,7 +17,7 @@ export type HeroTagKind =
   | "release"
   | "channel";
 
-export interface HeroTag {
+interface HeroTag {
   kind: HeroTagKind;
   label: string;
   note?: string;
@@ -94,7 +94,7 @@ export function formatAudioLabel(
   return codec;
 }
 
-export function heroTags(movie: MovieWithTracks): HeroTag[] {
+function heroTags(movie: MovieWithTracks): HeroTag[] {
   const tags: HeroTag[] = [];
   const v = movie.videoTrack;
 

@@ -62,17 +62,6 @@ export const AUDIO_PROFILES_BY_CODEC: Record<string, DictOption[]> = {
   mp3: [{ value: "None", label: "Без профиля" }],
 };
 
-/** @deprecated Use AUDIO_PROFILES_BY_CODEC[codec] instead */
-export const AUDIO_PROFILES: DictOption[] = [
-  { value: "Atmos", label: "Dolby Atmos" },
-  { value: "HD MA", label: "DTS-HD Master Audio" },
-  { value: "HD HRA", label: "DTS-HD High Resolution" },
-  { value: "ES", label: "DTS-ES" },
-  { value: "ES Matrix", label: "DTS-ES Matrix" },
-  { value: "EX", label: "Dolby Digital EX" },
-  { value: "None", label: "Без профиля" },
-];
-
 export function getAudioProfilesForCodec(codec: string): DictOption[] {
   if (!codec) {
     return [{ value: "None", label: "Без профиля" }];
@@ -106,14 +95,6 @@ export const CHANNEL_LAYOUTS: DictOption[] = [
   { value: "6.1", label: "6.1" },
   { value: "7.1", label: "7.1" },
   { value: "other", label: "Другое" },
-];
-
-export const HDR_TYPES: DictOption[] = [
-  { value: "SDR", label: "SDR" },
-  { value: "HDR10", label: "HDR10" },
-  { value: "HDR10+", label: "HDR10+" },
-  { value: "DolbyVision", label: "Dolby Vision" },
-  { value: "HLG", label: "HLG" },
 ];
 
 /** Base HDR formats (first-level select). */
@@ -166,9 +147,6 @@ export function formatHdrLabel(value: string | null | undefined): string | null 
   }
   return dictLabel(HDR_BASE_FORMATS, base) ?? base;
 }
-
-/** HDR profiles shown only when HDR is enabled (excludes SDR). @deprecated use HDR_BASE_FORMATS */
-export const HDR_PROFILES: DictOption[] = HDR_BASE_FORMATS;
 
 export const SUBTITLE_TYPES: DictOption[] = [
   { value: "SRT", label: "SRT (текст)" },

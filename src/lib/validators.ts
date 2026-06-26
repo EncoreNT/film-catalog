@@ -3,6 +3,41 @@ import { z } from "zod";
 export const movieStatusSchema = z.enum(["DRAFT", "CATALOG", "EXCLUDED"]);
 export const storageTypeSchema = z.enum(["LOCAL", "EXTERNAL"]);
 
+export const videoInputSchema = z.object({
+  width: z.number().int().nullable().optional(),
+  height: z.number().int().nullable().optional(),
+  resolutionLabel: z.string().nullable().optional(),
+  codec: z.string().nullable().optional(),
+  hdr: z.string().nullable().optional(),
+  fps: z.string().nullable().optional(),
+  bitrate: z.number().int().nullable().optional(),
+});
+
+export const trackInputSchema = z.object({
+  id: z.number().int().optional(),
+  streamIndex: z.number().int(),
+  codec: z.string().nullable().optional(),
+  profile: z.string().nullable().optional(),
+  channels: z.number().int().nullable().optional(),
+  channelLayout: z.string().nullable().optional(),
+  bitrate: z.number().int().nullable().optional(),
+  language: z.string().nullable().optional(),
+  translationType: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  isDefault: z.boolean().optional(),
+});
+
+export const subtitleInputSchema = z.object({
+  id: z.number().int().optional(),
+  streamIndex: z.number().int(),
+  codec: z.string().nullable().optional(),
+  codecLabel: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  isDefault: z.boolean().optional(),
+  forced: z.boolean().optional(),
+});
+
 export const movieUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
@@ -15,81 +50,17 @@ export const movieUpdateSchema = z.object({
   storageId: z.number().int().nullable().optional(),
   releaseType: z.string().nullable().optional(),
   genres: z.array(z.string().min(1)).optional(),
-  videoTrack: z
-    .object({
-      width: z.number().int().nullable().optional(),
-      height: z.number().int().nullable().optional(),
-      resolutionLabel: z.string().nullable().optional(),
-      codec: z.string().nullable().optional(),
-      hdr: z.string().nullable().optional(),
-      fps: z.string().nullable().optional(),
-      bitrate: z.number().int().nullable().optional(),
-    })
-    .optional(),
-  audioTracks: z
-    .array(
-      z.object({
-        id: z.number().int().optional(),
-        streamIndex: z.number().int(),
-        codec: z.string().nullable().optional(),
-        profile: z.string().nullable().optional(),
-        channels: z.number().int().nullable().optional(),
-        channelLayout: z.string().nullable().optional(),
-        bitrate: z.number().int().nullable().optional(),
-        language: z.string().nullable().optional(),
-        translationType: z.string().nullable().optional(),
-        title: z.string().nullable().optional(),
-        isDefault: z.boolean().optional(),
-      }),
-    )
-    .optional(),
-  subtitleTracks: z
-    .array(
-      z.object({
-        id: z.number().int().optional(),
-        streamIndex: z.number().int(),
-        codec: z.string().nullable().optional(),
-        codecLabel: z.string().nullable().optional(),
-        language: z.string().nullable().optional(),
-        title: z.string().nullable().optional(),
-        isDefault: z.boolean().optional(),
-        forced: z.boolean().optional(),
-      }),
-    )
-    .optional(),
+  videoTrack: videoInputSchema.optional(),
+  audioTracks: z.array(trackInputSchema).optional(),
+  subtitleTracks: z.array(subtitleInputSchema).optional(),
 });
 
-const trackInputSchema = z.object({
+const createTrackInputSchema = trackInputSchema.omit({ id: true }).extend({
   streamIndex: z.number().int().optional(),
-  codec: z.string().nullable().optional(),
-  profile: z.string().nullable().optional(),
-  channels: z.number().int().nullable().optional(),
-  channelLayout: z.string().nullable().optional(),
-  bitrate: z.number().int().nullable().optional(),
-  language: z.string().nullable().optional(),
-  translationType: z.string().nullable().optional(),
-  title: z.string().nullable().optional(),
-  isDefault: z.boolean().optional(),
 });
 
-const subtitleInputSchema = z.object({
+const createSubtitleInputSchema = subtitleInputSchema.omit({ id: true }).extend({
   streamIndex: z.number().int().optional(),
-  codec: z.string().nullable().optional(),
-  codecLabel: z.string().nullable().optional(),
-  language: z.string().nullable().optional(),
-  title: z.string().nullable().optional(),
-  isDefault: z.boolean().optional(),
-  forced: z.boolean().optional(),
-});
-
-const videoInputSchema = z.object({
-  width: z.number().int().nullable().optional(),
-  height: z.number().int().nullable().optional(),
-  resolutionLabel: z.string().nullable().optional(),
-  codec: z.string().nullable().optional(),
-  hdr: z.string().nullable().optional(),
-  fps: z.string().nullable().optional(),
-  bitrate: z.number().int().nullable().optional(),
 });
 
 export const movieCreateSchema = z.object({
@@ -103,8 +74,8 @@ export const movieCreateSchema = z.object({
   genres: z.array(z.string().min(1)).optional(),
   status: movieStatusSchema.optional(),
   videoTrack: videoInputSchema.optional(),
-  audioTracks: z.array(trackInputSchema).optional(),
-  subtitleTracks: z.array(subtitleInputSchema).optional(),
+  audioTracks: z.array(createTrackInputSchema).optional(),
+  subtitleTracks: z.array(createSubtitleInputSchema).optional(),
   skipProbe: z.boolean().optional(),
   probeOnly: z.boolean().optional(),
 });
@@ -133,11 +104,6 @@ export const movieListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
-export const bulkActionSchema = z.object({
-  ids: z.array(z.number().int()),
-  action: z.enum(["approve", "exclude"]),
-});
-
 export const scanRootSchema = z.object({
   scanRoot: z.string().min(1),
 });
@@ -145,11 +111,5 @@ export const scanRootSchema = z.object({
 export const storageCreateSchema = z.object({
   name: z.string().min(1),
   type: storageTypeSchema,
-  path: z.string().nullable().optional(),
-});
-
-export const storageUpdateSchema = z.object({
-  name: z.string().min(1).optional(),
-  type: storageTypeSchema.optional(),
   path: z.string().nullable().optional(),
 });

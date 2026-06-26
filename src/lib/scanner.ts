@@ -5,6 +5,8 @@ import { probeMediaFile } from "./ffprobe";
 import { saveEmbeddedCoverFromProbe } from "./cover-storage";
 import { parseMovieName } from "./name-parser";
 import { computeFileHashPrefix } from "./file-hash";
+import { syncMovieTracksFromProbe } from "./movie-tracks";
+import { resolveMovieSlug } from "./movie-slug";
 import { MovieStatus } from "@/generated/prisma/client";
 
 const VIDEO_EXTENSIONS = new Set([
@@ -53,34 +55,6 @@ async function walkVideoFiles(dir: string): Promise<string[]> {
     }
   }
   return results;
-}
-
-async function upsertTracks(
-  movieId: number,
-  probe: Awaited<ReturnType<typeof probeMediaFile>>,
-) {
-  await prisma.audioTrack.deleteMany({ where: { movieId } });
-  await prisma.subtitleTrack.deleteMany({ where: { movieId } });
-
-  if (probe.video) {
-    await prisma.videoTrack.upsert({
-      where: { movieId },
-      create: { movieId, ...probe.video },
-      update: { ...probe.video },
-    });
-  }
-
-  if (probe.audio.length > 0) {
-    await prisma.audioTrack.createMany({
-      data: probe.audio.map((a) => ({ movieId, ...a })),
-    });
-  }
-
-  if (probe.subtitles.length > 0) {
-    await prisma.subtitleTrack.createMany({
-      data: probe.subtitles.map((s) => ({ movieId, ...s })),
-    });
-  }
 }
 
 export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
@@ -165,7 +139,7 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
             durationSeconds: probe.durationSeconds,
           },
         });
-        await upsertTracks(movedMovie.id, probe);
+        await syncMovieTracksFromProbe(prisma, movedMovie.id, probe);
         await saveEmbeddedCoverFromProbe(
           movedMovie.id,
           filePath,
@@ -186,7 +160,7 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
             durationSeconds: probe.durationSeconds,
           },
         });
-        await upsertTracks(existing.id, probe);
+        await syncMovieTracksFromProbe(prisma, existing.id, probe);
         await saveEmbeddedCoverFromProbe(
           existing.id,
           filePath,
@@ -197,8 +171,11 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
         continue;
       }
 
+      const slug = await resolveMovieSlug(prisma, parsed.title);
+
       const movie = await prisma.movie.create({
         data: {
+          slug,
           title: parsed.title,
           year: parsed.year,
           releaseType: parsed.releaseType,
@@ -210,7 +187,7 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
           status: MovieStatus.DRAFT,
         },
       });
-      await upsertTracks(movie.id, probe);
+      await syncMovieTracksFromProbe(prisma, movie.id, probe);
       await saveEmbeddedCoverFromProbe(movie.id, filePath, probe, false);
       summary.newDrafts++;
     } catch (err) {

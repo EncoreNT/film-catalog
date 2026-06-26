@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "motion/react";
 import { MonitorPlay, Star, Sun, Waves } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { formatDuration } from "@/lib/format";
+import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import { genreLabel } from "@/lib/dictionaries";
 import { PremiumBadge } from "./PremiumBadge";
 import { SpecTag } from "./SpecTag";
@@ -23,7 +23,7 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, index = 0 }: MovieCardProps) {
-  const coverUrl = movie.coverPath ? `/api/covers/${movie.id}` : null;
+  const coverUrl = movieCoverUrlFromMovie(movie);
   const premium4K = is4K(movie);
   const premiumHdr = premiumHDR(movie);
   const premiumAtmos = premiumAudio(movie);
@@ -34,31 +34,28 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const duration = formatDuration(movie.durationSeconds);
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.25,
-        delay: Math.min(index * 0.04, 0.4),
-        ease: [0.16, 1, 0.3, 1],
-      }}
-      className="group relative"
+    <article
+      className="group relative transition-transform duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] hover:scale-[1.03]"
     >
-      <Link href={`/movies/${movie.id}`} className="focus-ring block rounded-[var(--radius)]">
+      <Link href={`/movies/${movie.slug}`} className="focus-ring block rounded-[var(--radius)]">
         <div
-          className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border bg-gradient-to-b from-bg-elevated to-bg-base transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/50 group-hover:shadow-[0_0_40px_var(--accent-glow)] ${
+          className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border bg-gradient-to-b from-bg-elevated to-bg-base transition-[border-color,box-shadow] duration-500 ${
             isTopTier
-              ? "border-accent/45 shadow-[0_0_0_1px_var(--accent-glow),0_8px_30px_-6px_rgba(232,176,90,0.55),0_0_50px_var(--accent-glow)] sm:-translate-y-1"
-              : "border-border-strong"
+              ? "border-accent/35 shadow-[0_0_0_1px_rgba(232,176,90,0.18),0_6px_22px_-8px_rgba(232,176,90,0.35),0_0_28px_var(--accent-glow)] group-hover:border-accent/70 group-hover:shadow-[0_0_0_1px_rgba(232,176,90,0.5),0_18px_44px_-10px_rgba(232,176,90,0.6),0_0_70px_var(--accent-glow)]"
+              : "border-border-strong group-hover:border-accent/50 group-hover:shadow-[0_0_40px_var(--accent-glow)]"
           }`}
+          style={{ transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)" }}
         >
           {isTopTier ? (
             <>
-              {/* Spotlight cone — projector beam from top-left corner */}
+              {/* Spotlight cone — projector beam from top-left corner.
+                  Dimmed at rest, intensifies on hover so the premium state
+                  escalates rather than feeling weaker than the base. */}
               <span
-                className="pointer-events-none absolute inset-0 z-0"
+                className="pointer-events-none absolute inset-0 z-0 opacity-60 transition-opacity duration-500 group-hover:opacity-100"
                 aria-hidden
                 style={{
+                  transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)",
                   background:
                     "conic-gradient(from 200deg at 0% 0%, var(--accent-soft) 0deg, rgba(232,176,90,0.16) 14deg, transparent 32deg)",
                   mixBlendMode: "screen",
@@ -66,9 +63,10 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               />
               {/* Warm top wash — the lit wall behind the beam */}
               <span
-                className="pointer-events-none absolute inset-x-0 top-0 z-0 h-2/3"
+                className="pointer-events-none absolute inset-x-0 top-0 z-0 h-2/3 opacity-70 transition-opacity duration-500 group-hover:opacity-100"
                 aria-hidden
                 style={{
+                  transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)",
                   background:
                     "radial-gradient(ellipse 75% 55% at 12% -8%, rgba(246,200,120,0.22) 0%, transparent 62%)",
                 }}
@@ -90,8 +88,9 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               alt={`Обложка: ${movie.title}`}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
+              className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.06]"
+              style={{ transitionTimingFunction: "var(--ease)" }}
+              loading={index < 4 ? "eager" : "lazy"}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center p-4 text-center">
@@ -142,7 +141,8 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
 
           {movie.rating != null ? (
             <span
-              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)]"
+              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)] transition-[border-color,box-shadow] duration-500 group-hover:border-accent/70 group-hover:shadow-[0_0_24px_var(--accent-glow)]"
+              style={{ transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)" }}
               aria-label={`Оценка ${movie.rating} из 10`}
               title={`Оценка ${movie.rating} из 10`}
             >
@@ -208,6 +208,6 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
           </div>
         </div>
       </Link>
-    </motion.article>
+    </article>
   );
 }

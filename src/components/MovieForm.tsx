@@ -2,85 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, EyeOff, FileVideo, Loader2, Plus, Star, Trash2 } from "lucide-react";
+import { Check, EyeOff, FileVideo, Loader2, Trash2 } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { Button } from "./primitives/Button";
 import { ConfirmDialog } from "./primitives/ConfirmDialog";
 import { Field, TextAreaField } from "./primitives/Field";
 import { DatePicker } from "./primitives/DatePicker";
 import { Select } from "./primitives/Select";
-import { BitrateInput, SizeInput } from "./primitives/MeasureInput";
-import { HdrInput } from "./primitives/HdrInput";
 import { StarRating } from "./StarRating";
-import {
-  VIDEO_CODECS,
-  AUDIO_CODECS,
-  CHANNEL_LAYOUTS,
-  SUBTITLE_TYPES,
-  LANGUAGES,
-  RELEASE_TYPES,
-  AUDIO_TRANSLATION_TYPES,
-  GENRES,
-  getAudioProfilesForCodec,
-  normalizeAudioProfile,
-} from "@/lib/dictionaries";
+import { RELEASE_TYPES, GENRES, normalizeAudioProfile } from "@/lib/dictionaries";
 import { MultiSelect } from "./primitives/MultiSelect";
 import { DurationInput } from "./primitives/DurationInput";
 import { YearInput } from "./primitives/YearInput";
 import { CoverUpload } from "./primitives/CoverUpload";
+import { TrackEditorSection } from "./TrackEditorSection";
+import { useFilePathCheck } from "@/hooks/useFilePathCheck";
+import { useTrackEditor } from "@/hooks/useTrackEditor";
+import type { VideoFieldState } from "@/lib/movie-form-types";
+import { buildMovieUpdatePayload } from "@/lib/build-movie-payload";
 
 interface MovieEditorProps {
   movie: MovieWithTracks;
 }
-
-interface AudioRow {
-  id: string;
-  codec: string | null;
-  profile: string;
-  channels: number | null;
-  channelLayout: string | null;
-  bitrate: number | null;
-  language: string | null;
-  translationType: string;
-  title: string | null;
-  isDefault: boolean;
-}
-
-interface SubRow {
-  id: string;
-  codec: string | null;
-  codecLabel: string | null;
-  language: string | null;
-  title: string | null;
-  isDefault: boolean;
-  forced: boolean;
-}
-
-const newAudioId = () => `audio-${crypto.randomUUID()}`;
-const newSubId = () => `sub-${crypto.randomUUID()}`;
-
-const emptyAudioRow = (): AudioRow => ({
-  id: newAudioId(),
-  codec: null,
-  profile: "None",
-  channels: null,
-  channelLayout: null,
-  bitrate: null,
-  language: null,
-  translationType: "",
-  title: null,
-  isDefault: false,
-});
-
-const emptySubRow = (): SubRow => ({
-  id: newSubId(),
-  codec: null,
-  codecLabel: "SRT",
-  language: null,
-  title: null,
-  isDefault: false,
-  forced: false,
-});
 
 export function MovieEditor({ movie }: MovieEditorProps) {
   const router = useRouter();
@@ -96,10 +39,8 @@ export function MovieEditor({ movie }: MovieEditorProps) {
   const [description, setDescription] = useState(movie.description ?? "");
   const [releaseType, setReleaseType] = useState(movie.releaseType ?? "");
   const [filePath, setFilePath] = useState(movie.filePath ?? "");
-  const [filePathStatus, setFilePathStatus] = useState<{
-    checking: boolean;
-    exists: boolean | null;
-  }>({ checking: false, exists: null });
+  const { checking: filePathChecking, exists: fileExists, checkFilePath } =
+    useFilePathCheck();
   const [genres, setGenres] = useState<string[]>(
     movie.genres.map((g) => g.name),
   );
@@ -113,105 +54,77 @@ export function MovieEditor({ movie }: MovieEditorProps) {
       : "",
   );
 
-  // --- Video track ---
   const v = movie.videoTrack;
-  const [vCodec, setVCodec] = useState(v?.codec ?? "");
-  const [vHdr, setVHdr] = useState(v?.hdr ?? "SDR");
-  const [vRes, setVRes] = useState(v?.resolutionLabel ?? "");
-  const [vWidth, setVWidth] = useState<number | null>(v?.width ?? null);
-  const [vHeight, setVHeight] = useState<number | null>(v?.height ?? null);
-  const [vFps, setVFps] = useState(v?.fps ?? "");
-  const [vBitrate, setVBitrate] = useState<number | null>(v?.bitrate ?? null);
+  const [video, setVideo] = useState<VideoFieldState>({
+    codec: v?.codec ?? "",
+    hdr: v?.hdr ?? "SDR",
+    resolutionLabel: v?.resolutionLabel ?? "",
+    width: v?.width ?? null,
+    height: v?.height ?? null,
+    fps: v?.fps ?? "",
+    bitrate: v?.bitrate ?? null,
+  });
 
-  // --- Audio & subtitle tracks ---
-  const [audioTracks, setAudioTracks] = useState<AudioRow[]>(
-    movie.audioTracks.map((t) => ({
-      id: `audio-${t.id}`,
-      codec: t.codec,
-      profile: normalizeAudioProfile(t.codec ?? "", t.profile ?? "None"),
-      channels: t.channels,
-      channelLayout: t.channelLayout,
-      bitrate: t.bitrate,
-      language: t.language,
-      translationType: t.translationType ?? "",
-      title: t.title,
-      isDefault: t.isDefault,
+  const {
+    audioRows,
+    subtitleRows,
+    updateAudio,
+    addAudioRow,
+    removeAudioRow,
+    setMainAudioTrack,
+    updateSubtitle,
+    addSubtitleRow,
+    removeSubtitleRow,
+  } = useTrackEditor({
+    initialAudio: movie.audioTracks.map((track) => ({
+      rowKey: `audio-${track.id}`,
+      codec: track.codec ?? "",
+      profile: normalizeAudioProfile(track.codec ?? "", track.profile ?? "None"),
+      channelLayout: track.channelLayout ?? "",
+      language: track.language ?? "",
+      translationType: track.translationType ?? "",
+      bitrate: track.bitrate,
+      title: track.title ?? "",
+      isDefault: track.isDefault,
     })),
-  );
-  const [subtitleTracks, setSubtitleTracks] = useState<SubRow[]>(
-    movie.subtitleTracks.map((t) => ({
-      id: `sub-${t.id}`,
-      codec: t.codec,
-      codecLabel: t.codecLabel,
-      language: t.language,
-      title: t.title,
-      isDefault: t.isDefault,
-      forced: t.forced,
+    initialSubtitles: movie.subtitleTracks.map((track) => ({
+      rowKey: `sub-${track.id}`,
+      codecLabel: track.codecLabel ?? "SRT",
+      language: track.language ?? "",
+      title: track.title ?? "",
+      isDefault: track.isDefault,
+      forced: track.forced,
     })),
-  );
+    defaultAudioRow: () => ({
+      rowKey: `audio-${crypto.randomUUID()}`,
+      codec: "",
+      profile: "None",
+      channelLayout: "",
+      language: "",
+      translationType: "",
+      bitrate: null,
+      title: "",
+      isDefault: false,
+    }),
+  });
 
   const markDirty = () => setIsDirty(true);
 
-  const checkFilePath = async (path: string) => {
-    if (!path.trim()) {
-      setFilePathStatus({ checking: false, exists: null });
-      return;
-    }
-    setFilePathStatus({ checking: true, exists: null });
-    try {
-      const res = await fetch(
-        `/api/movies?path=${encodeURIComponent(path)}`,
-        { method: "HEAD" },
-      );
-      setFilePathStatus({ checking: false, exists: res.ok });
-    } catch {
-      setFilePathStatus({ checking: false, exists: false });
-    }
-  };
-
-  const updateAudio = (i: number, patch: Partial<AudioRow>) => {
-    setAudioTracks((rows) =>
-      rows.map((row, idx) => {
-        if (idx !== i) return row;
-        const next = { ...row, ...patch };
-        if (patch.codec !== undefined) {
-          next.profile = normalizeAudioProfile(patch.codec ?? "", row.profile);
-        }
-        return next;
-      }),
-    );
-    markDirty();
-  };
-  const addAudioTrack = () => {
-    setAudioTracks((rows) => [...rows, emptyAudioRow()]);
-    markDirty();
-  };
-  const removeAudioTrack = (i: number) => {
-    setAudioTracks((rows) => rows.filter((_, idx) => idx !== i));
-    markDirty();
-  };
-  const setMainTrack = (i: number) => {
-    setAudioTracks((rows) =>
-      rows.map((row, idx) => ({
-        ...row,
-        isDefault: idx === i ? !row.isDefault : false,
-      })),
-    );
+  const patchVideo = (patch: Partial<VideoFieldState>) => {
+    setVideo((current) => ({ ...current, ...patch }));
     markDirty();
   };
 
-  const updateSubtitle = (i: number, patch: Partial<SubRow>) => {
-    setSubtitleTracks((rows) =>
-      rows.map((row, idx) => (idx === i ? { ...row, ...patch } : row)),
-    );
+  const patchAudio = (index: number, patch: Parameters<typeof updateAudio>[1]) => {
+    updateAudio(index, patch);
     markDirty();
   };
-  const addSubtitleTrack = () => {
-    setSubtitleTracks((rows) => [...rows, emptySubRow()]);
-    markDirty();
-  };
-  const removeSubtitleTrack = (i: number) => {
-    setSubtitleTracks((rows) => rows.filter((_, idx) => idx !== i));
+
+  const patchSubtitle = (
+    index: number,
+    patch: Parameters<typeof updateSubtitle>[1],
+  ) => {
+    updateSubtitle(index, patch);
     markDirty();
   };
 
@@ -223,54 +136,34 @@ export function MovieEditor({ movie }: MovieEditorProps) {
       const res = await fetch(`/api/movies/${movie.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          year,
-          description: description || null,
-          releaseType: releaseType || null,
-          filePath: filePath.trim() || null,
-          genres,
-          durationSeconds,
-          rating,
-          watchedAt: watchedAt ? new Date(watchedAt).toISOString() : null,
-          videoTrack: {
-            width: vWidth,
-            height: vHeight,
-            resolutionLabel: vRes || null,
-            codec: vCodec || null,
-            hdr: vHdr || null,
-            fps: vFps || null,
-            bitrate: vBitrate,
-          },
-          audioTracks: audioTracks.map((t, i) => ({
-            streamIndex: i,
-            codec: t.codec,
-            profile: t.profile && t.profile !== "None" ? t.profile : null,
-            channels: t.channels,
-            channelLayout: t.channelLayout,
-            bitrate: t.bitrate,
-            language: t.language,
-            translationType: t.translationType || null,
-            title: t.title,
-            isDefault: t.isDefault,
-          })),
-          subtitleTracks: subtitleTracks.map((t, i) => ({
-            streamIndex: i,
-            codec: t.codec,
-            codecLabel: t.codecLabel,
-            language: t.language,
-            title: t.title,
-            isDefault: t.isDefault,
-            forced: t.forced,
-          })),
-        }),
+        body: JSON.stringify(
+          buildMovieUpdatePayload({
+            title,
+            year,
+            description,
+            releaseType,
+            filePath,
+            genres,
+            durationSeconds,
+            rating,
+            watchedAt,
+            video,
+            audioRows,
+            subtitleRows,
+          }),
+        ),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? "Ошибка сохранения");
       }
+      const updated = (await res.json()) as MovieWithTracks;
       setIsDirty(false);
-      router.refresh();
+      if (updated.slug !== movie.slug) {
+        router.replace(`/movies/${updated.slug}/edit`);
+      } else {
+        router.refresh();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -337,6 +230,7 @@ export function MovieEditor({ movie }: MovieEditorProps) {
             <CoverUpload
               movieId={movie.id}
               hasCover={!!movie.coverPath}
+              coverVersion={movie.updatedAt}
               onUploaded={() => router.refresh()}
             />
             <div className="min-w-0 flex-1">
@@ -370,18 +264,18 @@ export function MovieEditor({ movie }: MovieEditorProps) {
             />
             {filePath.trim() ? (
               <span className="flex items-center gap-2 text-xs text-muted">
-                {filePathStatus.checking ? (
+                {filePathChecking ? (
                   <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden />
-                ) : filePathStatus.exists ? (
+                ) : fileExists ? (
                   <Check className="h-4 w-4 text-accent" aria-hidden />
                 ) : (
                   <FileVideo className="h-4 w-4 text-faint" aria-hidden />
                 )}
-                {filePathStatus.checking
+                {filePathChecking
                   ? "Проверяю файл…"
-                  : filePathStatus.exists
+                  : fileExists
                     ? "Файл доступен"
-                    : filePathStatus.exists === false
+                    : fileExists === false
                       ? "Файл не найден — сохранение пути вернётся ошибкой"
                       : "Сохранение пересчитает чексумму"}
               </span>
@@ -463,260 +357,36 @@ export function MovieEditor({ movie }: MovieEditorProps) {
           />
         </div>
 
-        {/* Дорожки */}
-        <div className="surface-card space-y-8 p-5">
-          <h2 className="font-display text-xl font-semibold">Дорожки</h2>
-
-          <section>
-            <h3 className="font-mono-tech mb-4 text-muted">видео</h3>
-            <div className="surface-elevated space-y-4 p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select
-                  label="Кодек"
-                  value={vCodec}
-                  onChange={(c) => {
-                    setVCodec(c);
-                    markDirty();
-                  }}
-                  options={[{ value: "", label: "—" }, ...VIDEO_CODECS]}
-                  hint="Алгоритм сжатия видео: HEVC/H.265, H.264, AV1 и т.д. AV1 и HEVC эффективнее."
-                />
-                <Field
-                  label="FPS"
-                  value={vFps}
-                  onChange={(e) => {
-                    setVFps(e.target.value);
-                    markDirty();
-                  }}
-                  hint="Кадров в секунду. Кино — 23.976, сериалы — 25/30, HFR — 48/60."
-                />
-              </div>
-              <HdrInput
-                value={vHdr}
-                onChange={(h) => {
-                  setVHdr(h);
-                  markDirty();
-                }}
-              />
-              <SizeInput
-                width={vWidth}
-                height={vHeight}
-                resolutionLabel={vRes}
-                onWidthChange={(w) => {
-                  setVWidth(w);
-                  markDirty();
-                }}
-                onHeightChange={(h) => {
-                  setVHeight(h);
-                  markDirty();
-                }}
-                onResolutionLabelChange={(r) => {
-                  setVRes(r);
-                  markDirty();
-                }}
-              />
-              <BitrateInput
-                label="Битрейт видео"
-                valueKbps={vBitrate}
-                onChange={(b) => {
-                  setVBitrate(b);
-                  markDirty();
-                }}
-                hint="Скорость видеопотока. Переключается между kbps и Mbps. Больше — выше качество при том же кодеке."
-              />
-            </div>
-          </section>
-
-          <section>
-            <h3 className="font-mono-tech mb-4 text-muted">аудиодорожки</h3>
-            <div className="space-y-4">
-              {audioTracks.map((track, i) => {
-                const profileOptions = getAudioProfilesForCodec(track.codec ?? "");
-                const profileDisabled =
-                  profileOptions.length <= 1 ||
-                  (profileOptions.length === 1 &&
-                    profileOptions[0].value === "None");
-                return (
-                  <div key={track.id} className="surface-elevated space-y-3 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono-tech text-faint">
-                        дорожка {i + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeAudioTrack(i)}
-                        aria-label="Удалить дорожку"
-                        className="focus-ring rounded-md p-1.5 text-muted transition-colors hover:text-danger"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </button>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Select
-                        label="Кодек"
-                        value={track.codec ?? ""}
-                        onChange={(val) => updateAudio(i, { codec: val })}
-                        options={[{ value: "", label: "—" }, ...AUDIO_CODECS]}
-                        hint="Аудиоформат: TrueHD/E-AC3/AC3/DTS/AAC/FLAC… Определяет доступные профили."
-                      />
-                      <Select
-                        label="Профиль"
-                        value={track.profile}
-                        onChange={(val) => updateAudio(i, { profile: val })}
-                        options={profileOptions}
-                        preserveOrder
-                        disabled={profileDisabled}
-                        hint={
-                          profileDisabled
-                            ? "У этого кодека нет профилей — поле недоступно."
-                            : "Уточнение кодека: Dolby Atmos, DTS-HD MA и т.д. Зависит от выбранного кодека."
-                        }
-                      />
-                      <Select
-                        label="Формат"
-                        value={track.channelLayout ?? ""}
-                        onChange={(val) => updateAudio(i, { channelLayout: val })}
-                        options={[{ value: "", label: "—" }, ...CHANNEL_LAYOUTS]}
-                        preserveOrder
-                        hint="Расположение каналов: 2.0 (стерео), 5.1, 7.1…"
-                      />
-                      <Select
-                        label="Язык"
-                        value={track.language ?? ""}
-                        onChange={(val) => updateAudio(i, { language: val })}
-                        options={[{ value: "", label: "—" }, ...LANGUAGES]}
-                        hint="Язык дорожки. Используется для фильтрации каталога."
-                      />
-                      <Select
-                        label="Тип перевода"
-                        value={track.translationType}
-                        onChange={(val) => updateAudio(i, { translationType: val })}
-                        options={[
-                          { value: "", label: "—" },
-                          ...AUDIO_TRANSLATION_TYPES,
-                        ]}
-                        hint="Дубляж, многоголосый, авторский, оригинал и т.д."
-                      />
-                      <BitrateInput
-                        label="Битрейт"
-                        valueKbps={track.bitrate}
-                        onChange={(kbps) => updateAudio(i, { bitrate: kbps })}
-                        hint="Скорость аудиопотока. Переключается kbps/Mbps."
-                      />
-                      <Field
-                        label="Название дорожки"
-                        value={track.title ?? ""}
-                        onChange={(e) => updateAudio(i, { title: e.target.value })}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setMainTrack(i)}
-                        className="focus-ring group inline-flex items-center gap-2 rounded-md py-1 text-sm transition-colors"
-                        aria-pressed={track.isDefault}
-                        aria-label="Основная дорожка"
-                      >
-                        <Star
-                          className={`h-5 w-5 transition-all group-hover:scale-110 ${
-                            track.isDefault
-                              ? "fill-accent text-accent drop-shadow-[0_0_6px_var(--accent-glow)]"
-                              : "fill-transparent text-muted/40"
-                          }`}
-                          aria-hidden
-                        />
-                        <span
-                          className={`font-mono-tech ${
-                            track.isDefault ? "text-accent" : "text-muted"
-                          }`}
-                        >
-                          основная дорожка
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              <Button variant="secondary" type="button" onClick={addAudioTrack}>
-                <Plus className="h-4 w-4" aria-hidden />
-                Добавить дорожку
-              </Button>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="font-mono-tech mb-4 text-muted">субтитры</h3>
-            <div className="space-y-4">
-              {subtitleTracks.length === 0 ? (
-                <p className="font-mono-tech text-sm text-faint">
-                  нет субтитров
-                </p>
-              ) : null}
-              {subtitleTracks.map((track, i) => (
-                <div key={track.id} className="surface-elevated space-y-3 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono-tech text-faint">
-                      субтитры {i + 1}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeSubtitleTrack(i)}
-                      aria-label="Удалить субтитры"
-                      className="focus-ring rounded-md p-1.5 text-muted transition-colors hover:text-danger"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden />
-                    </button>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Select
-                      label="Тип"
-                      value={track.codecLabel ?? ""}
-                      onChange={(val) => updateSubtitle(i, { codecLabel: val })}
-                      options={SUBTITLE_TYPES}
-                      hint="Формат субтитров: SRT/ASS (текст), PGS/VobSub (графика) и т.д."
-                    />
-                    <Select
-                      label="Язык"
-                      value={track.language ?? ""}
-                      onChange={(val) => updateSubtitle(i, { language: val })}
-                      options={[{ value: "", label: "—" }, ...LANGUAGES]}
-                      hint="Язык субтитров. Используется для фильтрации каталога."
-                    />
-                    <Field
-                      label="Название"
-                      value={track.title ?? ""}
-                      onChange={(e) => updateSubtitle(i, { title: e.target.value })}
-                    />
-                    <Select
-                      label="Forced"
-                      value={track.forced ? "yes" : "no"}
-                      onChange={(val) => updateSubtitle(i, { forced: val === "yes" })}
-                      preserveOrder
-                      options={[
-                        { value: "no", label: "Нет" },
-                        { value: "yes", label: "Да" },
-                      ]}
-                      hint="Forced-субтитры показываются принудительно (например, перевод надписей в кадре)."
-                    />
-                  </div>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
-                    <input
-                      type="checkbox"
-                      checked={track.isDefault}
-                      onChange={(e) => updateSubtitle(i, { isDefault: e.target.checked })}
-                      className="h-4 w-4 accent-accent"
-                    />
-                    основные
-                  </label>
-                </div>
-              ))}
-              <Button variant="secondary" type="button" onClick={addSubtitleTrack}>
-                <Plus className="h-4 w-4" aria-hidden />
-                Добавить субтитры
-              </Button>
-            </div>
-          </section>
-        </div>
+        <TrackEditorSection
+          video={video}
+          onVideoChange={patchVideo}
+          audioRows={audioRows}
+          onUpdateAudio={patchAudio}
+          onAddAudio={() => {
+            addAudioRow();
+            markDirty();
+          }}
+          onRemoveAudio={(index) => {
+            removeAudioRow(index);
+            markDirty();
+          }}
+          onSetMainAudio={(index) => {
+            setMainAudioTrack(index);
+            markDirty();
+          }}
+          subtitleRows={subtitleRows}
+          onUpdateSubtitle={patchSubtitle}
+          onAddSubtitle={() => {
+            addSubtitleRow();
+            markDirty();
+          }}
+          onRemoveSubtitle={(index) => {
+            removeSubtitleRow(index);
+            markDirty();
+          }}
+          mainTrackStyle="star"
+          minAudioRows={0}
+        />
       </div>
 
       {/* Sticky footer — единая точка сохранения */}

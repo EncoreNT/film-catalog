@@ -414,12 +414,3 @@ export async function extractEmbeddedCover(
     return null;
   }
 }
-
-export async function isFfprobeAvailable(): Promise<boolean> {
-  try {
-    await execa("ffprobe", ["-version"]);
-    return true;
-  } catch {
-    return false;
-  }
-}

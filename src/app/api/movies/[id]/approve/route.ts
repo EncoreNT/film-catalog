@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { MovieStatus } from "@/generated/prisma/client";
 import { movieInclude } from "@/lib/movie-include";
-
-type RouteContext = { params: Promise<{ id: string }> };
+import {
+  isErrorResponse,
+  parseRouteId,
+  type RouteContext,
+} from "@/lib/api-utils";
 
 export async function POST(_request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
-  const movieId = parseInt(id, 10);
-  if (Number.isNaN(movieId)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  }
+  const movieId = await parseRouteId(context.params);
+  if (isErrorResponse(movieId)) return movieId;
 
   const movie = await prisma.movie.update({
     where: { id: movieId },

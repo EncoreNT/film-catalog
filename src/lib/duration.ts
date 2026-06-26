@@ -91,10 +91,14 @@ export function formatDuration(
   return `${h}:${pad2(m)}:${pad2(s)}`;
 }
 
-/** Pick the most readable format for an initial value (hms for ≥1h, else minutes). */
-export function defaultDurationFormat(
-  seconds: number | null | undefined,
-): DurationFormat {
-  if (seconds == null || seconds <= 0) return "minutes";
-  return seconds >= 3600 ? "hms" : "minutes";
+/**
+ * Default format for a fresh/empty DurationInput.
+ *
+ * Always `hms` — "чч:мм:сс" is the canonical, least ambiguous representation,
+ * so the field opens in that mode everywhere regardless of the current value.
+ * Users can still switch to "мин"/"сек" inline; the choice is component-local
+ * and never persisted.
+ */
+export function defaultDurationFormat(): DurationFormat {
+  return "hms";
 }

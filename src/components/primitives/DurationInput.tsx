@@ -31,9 +31,7 @@ export function DurationInput({
   hint,
 }: DurationInputProps) {
   const fieldId = useId();
-  const [format, setFormat] = useState<DurationFormat>(
-    defaultDurationFormat(valueSeconds),
-  );
+  const [format, setFormat] = useState<DurationFormat>(defaultDurationFormat());
   const [text, setText] = useState(() => formatDuration(format, valueSeconds));
   const [touched, setTouched] = useState(false);
 

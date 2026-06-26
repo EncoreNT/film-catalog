@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { ImagePlus, RefreshCw, Loader2, Check, X, Link2 } from "lucide-react";
+import { movieCoverUrl } from "@/lib/cover-url";
 
 type Source =
   | { kind: "none" }
@@ -14,6 +15,8 @@ interface CoverUploadProps {
   movieId?: number;
   /** Existing cover path (edit mode) — when set, shows the stored cover. */
   hasCover?: boolean;
+  /** Bumps when the stored cover changes (typically movie.updatedAt). */
+  coverVersion?: Date | string | number;
   /** Create mode: emitted with a buffered File when a file is picked. */
   onFileChange?: (file: File | null) => void;
   /** Create mode: emitted with a buffered URL when a URL is pasted. */
@@ -29,6 +32,7 @@ interface CoverUploadProps {
 export function CoverUpload({
   movieId,
   hasCover,
+  coverVersion,
   onFileChange,
   onUrlChange,
   onUploaded,
@@ -37,6 +41,7 @@ export function CoverUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [source, setSource] = useState<Source>({ kind: "none" });
   const [stored, setStored] = useState(hasCover);
+  const [storedVersion, setStoredVersion] = useState(coverVersion);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,13 +50,15 @@ export function CoverUpload({
 
   const editMode = movieId != null;
 
+  const version = storedVersion ?? coverVersion;
+
   const previewSrc =
     source.kind === "file"
       ? source.previewUrl
       : source.kind === "url"
         ? source.url
-        : stored && movieId != null
-          ? `/api/covers/${movieId}`
+        : stored && movieId != null && version != null
+          ? movieCoverUrl(movieId, version)
           : null;
   const previewIsRemote = source.kind === "url";
   const busy = uploading;
@@ -143,8 +150,10 @@ export function CoverUpload({
       const d = await res.json().catch(() => null);
       throw new Error(d?.error ?? "Не удалось загрузить обложку");
     }
+    const updated = (await res.json()) as { updatedAt: string };
     setUploaded(true);
     setStored(true);
+    setStoredVersion(updated.updatedAt);
     if (source.kind === "file") URL.revokeObjectURL(source.previewUrl);
     setSource({ kind: "none" });
     onUploaded?.();

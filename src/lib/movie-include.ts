@@ -7,7 +7,3 @@ export const movieInclude = {
   storage: true,
   genres: { orderBy: { name: "asc" } },
 } satisfies Prisma.MovieInclude;
-
-export type MovieWithRelations = Prisma.MovieGetPayload<{
-  include: typeof movieInclude;
-}>;

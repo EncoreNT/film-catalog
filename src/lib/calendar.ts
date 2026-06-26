@@ -15,7 +15,7 @@ export const MONTHS_RU = [
   "Декабрь",
 ];
 
-export interface CalendarDay {
+interface CalendarDay {
   date: Date;
   day: number;
   inMonth: boolean;
@@ -24,7 +24,7 @@ export interface CalendarDay {
 }
 
 /** Monday-first index (0..6) for a date. */
-export function weekdayIndex(date: Date): number {
+function weekdayIndex(date: Date): number {
   const jsDay = date.getDay();
   return jsDay === 0 ? 6 : jsDay - 1;
 }
