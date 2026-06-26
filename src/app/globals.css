@@ -93,17 +93,6 @@ input[type="number"] {
   appearance: textfield;
 }
 
-/* DateField: hide the low-contrast native calendar icon — a custom
-   high-contrast Calendar icon is rendered next to the input, and the
-   whole field opens the picker via showPicker(). */
-.date-field-input::-webkit-calendar-picker-indicator {
-  display: none;
-  -webkit-appearance: none;
-}
-.date-field-input {
-  color-scheme: dark;
-}
-
 /* Film perforation strip */
 .film-perfs {
   background-image: radial-gradient(
@@ -130,6 +119,24 @@ input[type="number"] {
 }
 .ambient-blob-2 {
   animation: drift-slower 24s ease-in-out infinite;
+}
+
+/* Confirm dialog entrance animation */
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.confirm-dialog[open] {
+  animation: confirm-in 0.18s var(--ease) both;
+}
+.confirm-dialog::backdrop {
+  animation: confirm-in 0.18s var(--ease) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

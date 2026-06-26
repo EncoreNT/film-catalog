@@ -112,6 +112,8 @@ export const movieCreateSchema = z.object({
 export const movieListQuerySchema = z.object({
   q: z.string().optional(),
   resolution: z.string().optional(),
+  hdr: z.string().optional(),
+  premiumAudio: z.string().optional(),
   language: z.string().optional(),
   subtitleLang: z.string().optional(),
   channelLayout: z.string().optional(),

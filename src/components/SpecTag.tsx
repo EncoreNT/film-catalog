@@ -6,7 +6,8 @@ export type SpecTagKind =
   | "audio-3d"
   | "audio"
   | "release"
-  | "channel";
+  | "channel"
+  | "codec";
 
 interface SpecTagProps {
   kind: SpecTagKind;
@@ -52,6 +53,11 @@ const KIND_STYLES: Record<
     accent: "text-muted",
     border: "border-border",
     bg: "bg-bg-surface",
+  },
+  codec: {
+    accent: "text-muted",
+    border: "border-border",
+    bg: "bg-bg-elevated",
   },
 };
 

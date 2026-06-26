@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { MovieForm, TrackEditor } from "@/components/MovieForm";
+import { MovieEditor } from "@/components/MovieForm";
 import { movieInclude } from "@/lib/movie-include";
 import type { Metadata } from "next";
 
@@ -57,20 +57,7 @@ export default async function EditMoviePage({ params }: PageProps) {
         </h1>
       </header>
 
-      <section className="grid gap-8 lg:grid-cols-2">
-        <div className="surface-card p-5">
-          <h2 className="font-display mb-6 text-xl font-semibold">
-            Редактирование
-          </h2>
-          <MovieForm movie={movie} />
-        </div>
-        <div className="surface-card p-5">
-          <h2 className="font-display mb-6 text-xl font-semibold">
-            Дорожки
-          </h2>
-          <TrackEditor movie={movie} />
-        </div>
-      </section>
+      <MovieEditor movie={movie} />
     </div>
   );
 }

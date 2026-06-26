@@ -77,10 +77,31 @@ export function buildMovieWhere(
     };
   }
 
-  if (query.resolution) {
-    const resolutions = query.resolution.split(",").filter(Boolean);
+  if (query.resolution || query.hdr) {
+    const resolutions = query.resolution?.split(",").filter(Boolean);
+    const hdrValues = query.hdr?.split(",").filter(Boolean);
+    // "HDR_ANY" marker → any HDR that is not SDR (incl. Dolby Vision + profiles).
+    const anyHdr = hdrValues?.includes("HDR_ANY");
+    const explicitHdr = hdrValues?.filter((v) => v !== "HDR_ANY");
     where.videoTrack = {
-      resolutionLabel: { in: resolutions },
+      ...(resolutions?.length
+        ? { resolutionLabel: { in: resolutions } }
+        : {}),
+      ...(anyHdr
+        ? { hdr: { notIn: ["SDR"] } }
+        : explicitHdr?.length
+          ? { hdr: { in: explicitHdr } }
+          : {}),
+    };
+  }
+
+  if (query.premiumAudio === "true") {
+    where.audioTracks = {
+      some: {
+        isDefault: true,
+        language: "rus",
+        profile: { in: ["Atmos", "DTS:X MA"] },
+      },
     };
   }
 

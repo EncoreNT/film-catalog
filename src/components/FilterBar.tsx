@@ -2,12 +2,11 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Chip } from "./primitives/Chip";
 import { Select } from "./primitives/Select";
 import { RatingStepper } from "./RatingStepper";
-import { Button } from "./primitives/Button";
 import { genreLabel } from "@/lib/dictionaries";
 
 const FILTER_DEFAULTS: Record<string, string> = {
@@ -23,7 +22,7 @@ const MULTI_KEYS = [
   "subtitleLang",
   "genre",
 ] as const;
-const SCALAR_KEYS = ["q", "minRating"] as const;
+const SCALAR_KEYS = ["q", "minRating", "hdr", "premiumAudio"] as const;
 
 function countActiveFilters(params: URLSearchParams): number {
   let n = 0;
@@ -40,13 +39,12 @@ function countActiveFilters(params: URLSearchParams): number {
   return n;
 }
 
-function pluralFilters(n: number): string {
-  const mod100 = n % 100;
-  const mod10 = n % 10;
-  if (mod100 >= 11 && mod100 <= 19) return "фильтров";
-  if (mod10 === 1) return "фильтр";
-  if (mod10 >= 2 && mod10 <= 4) return "фильтра";
-  return "фильтров";
+function countFacetFilters(params: URLSearchParams): number {
+  let n = 0;
+  for (const key of MULTI_KEYS) {
+    if (params.has(key)) n++;
+  }
+  return n;
 }
 
 interface Facet {
@@ -62,9 +60,6 @@ interface FilterBarProps {
     channelLayouts: Facet[];
     genres: Facet[];
   };
-  selectedIds: number[];
-  onBulkAction: (action: "approve" | "exclude") => void;
-  bulkLoading?: boolean;
 }
 
 function parseMulti(value: string | null): string[] {
@@ -81,16 +76,12 @@ function hasFacets(facets: Facet[]): boolean {
   return facets.some((f) => f.value && f.count > 0);
 }
 
-export function FilterBar({
-  facets,
-  selectedIds,
-  onBulkAction,
-  bulkLoading,
-}: FilterBarProps) {
+export function FilterBar({ facets }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const [facetsOpen, setFacetsOpen] = useState(false);
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -145,12 +136,15 @@ export function FilterBar({
     showGenres;
 
   const activeCount = countActiveFilters(searchParams);
+  const facetActiveCount = countFacetFilters(searchParams);
 
   const resetFilters = () => {
     setQ("");
     updateParams({
       q: null,
       minRating: null,
+      hdr: null,
+      premiumAudio: null,
       resolution: null,
       language: null,
       channelLayout: null,
@@ -163,11 +157,11 @@ export function FilterBar({
   };
 
   return (
-    <div className="mb-8 space-y-4">
-      {/* Search */}
+    <div className="mb-6 space-y-3">
+      {/* Toolbar — search + inline selects in one strip */}
       <form
         onSubmit={handleSearch}
-        className="surface-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center"
+        className="surface-card flex flex-col gap-2 p-2 lg:flex-row lg:items-center"
       >
         <div className="relative flex-1">
           <Search
@@ -178,259 +172,246 @@ export function FilterBar({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Поиск по названию…"
-            className="focus-ring min-h-11 w-full rounded-[var(--radius-sm)] border border-border bg-bg-elevated py-2 pl-10 pr-4 text-sm text-text placeholder:text-faint"
+            className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-elevated py-2 pl-10 pr-3 text-sm text-text placeholder:text-faint"
             aria-label="Поиск по названию"
           />
         </div>
-        <Button type="submit" variant="primary" loading={isPending}>
-          Найти
-        </Button>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:items-center">
+          <Select
+            compact
+            label="Статус"
+            value={searchParams.get("status") ?? "CATALOG"}
+            onChange={(v) => updateParams({ status: v })}
+            preserveOrder
+            options={[
+              { value: "CATALOG", label: "Каталог" },
+              { value: "DRAFT", label: "Черновики" },
+              { value: "EXCLUDED", label: "Скрытые" },
+              { value: "CATALOG,DRAFT", label: "Каталог + черновики" },
+            ]}
+          />
+          <Select
+            compact
+            label="Просмотр"
+            value={searchParams.get("watched") ?? "all"}
+            onChange={(v) => updateParams({ watched: v })}
+            preserveOrder
+            options={[
+              { value: "all", label: "Все" },
+              { value: "watched", label: "Просмотренные" },
+              { value: "unwatched", label: "Непросмотренные" },
+            ]}
+          />
+          <div className="lg:w-44">
+            <RatingStepper
+              compact
+              label="Мин. оценка"
+              min={1}
+              max={10}
+              value={
+                searchParams.get("minRating")
+                  ? parseInt(searchParams.get("minRating")!, 10)
+                  : null
+              }
+              onChange={(v) => updateParams({ minRating: v?.toString() ?? null })}
+            />
+          </div>
+        </div>
       </form>
 
-      {/* Filter controls */}
-      <div className="grid gap-4 lg:grid-cols-4">
-        <Select
-          label="Сортировка"
-          value={searchParams.get("sort") ?? "title"}
-          onChange={(v) => updateParams({ sort: v })}
-          preserveOrder
-          options={[
-            { value: "title", label: "Название" },
-            { value: "year", label: "Год" },
-            { value: "createdAt", label: "Добавлено" },
-            { value: "rating", label: "Оценка" },
-            { value: "watchedAt", label: "Дата просмотра" },
-            { value: "durationSeconds", label: "Продолжительность" },
-          ]}
-        />
-        <Select
-          label="Статус"
-          value={searchParams.get("status") ?? "CATALOG"}
-          onChange={(v) => updateParams({ status: v })}
-          preserveOrder
-          options={[
-            { value: "CATALOG", label: "Каталог" },
-            { value: "DRAFT", label: "Черновики" },
-            { value: "EXCLUDED", label: "Исключённые" },
-            { value: "CATALOG,DRAFT", label: "Каталог + черновики" },
-          ]}
-        />
-        <Select
-          label="Просмотр"
-          value={searchParams.get("watched") ?? "all"}
-          onChange={(v) => updateParams({ watched: v })}
-          preserveOrder
-          options={[
-            { value: "all", label: "Все" },
-            { value: "watched", label: "Просмотренные" },
-            { value: "unwatched", label: "Непросмотренные" },
-          ]}
-        />
-        <RatingStepper
-          label="Мин. оценка"
-          min={1}
-          max={10}
-          value={
-            searchParams.get("minRating")
-              ? parseInt(searchParams.get("minRating")!, 10)
-              : null
-          }
-          onChange={(v) => updateParams({ minRating: v?.toString() ?? null })}
-        />
+      {/* Active filters + facet trigger row */}
+      <div className="flex flex-wrap items-center gap-2">
+        {anyFacets ? (
+          <button
+            type="button"
+            onClick={() => setFacetsOpen((open) => !open)}
+            className="focus-ring font-mono-tech inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-border bg-bg-surface px-3 text-xs text-muted transition-all duration-200 hover:border-accent/40 hover:text-text"
+            aria-expanded={facetsOpen}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+            фильтры по свойствам
+            {facetActiveCount > 0 ? (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent/20 px-1 text-[0.6rem] text-accent">
+                {facetActiveCount}
+              </span>
+            ) : null}
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                facetsOpen ? "rotate-180" : ""
+              }`}
+              aria-hidden
+            />
+          </button>
+        ) : null}
+
+        <AnimatePresence>
+          {activeCount > 0 ? (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              type="button"
+              onClick={resetFilters}
+              className="focus-ring font-mono-tech inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-3 text-xs text-accent transition-colors hover:bg-accent/10"
+              aria-label="Сбросить все фильтры"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+              сбросить · {activeCount}
+            </motion.button>
+          ) : null}
+        </AnimatePresence>
       </div>
 
-      {/* Active filters summary — appears when any filter deviates from defaults */}
-      <AnimatePresence>
-        {activeCount > 0 ? (
+      {/* Facet drawer */}
+      <AnimatePresence initial={false}>
+        {facetsOpen && anyFacets ? (
           <motion.div
-            key="active-filters"
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: "auto", marginTop: 0 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            key="facet-panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-accent/20 bg-accent/5 px-4 py-2.5">
-              <span className="font-mono-tech flex items-center gap-2 text-sm text-accent">
-                <span
-                  className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[11px] font-bold leading-none text-bg-deep"
-                  aria-label={`${activeCount} ${pluralFilters(activeCount)} активно`}
-                >
-                  {activeCount}
-                </span>
-                {pluralFilters(activeCount)} активно
-              </span>
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="focus-ring flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:text-danger"
-                aria-label="Сбросить все фильтры"
-              >
-                <X className="h-3.5 w-3.5" aria-hidden />
-                Сбросить всё
-              </button>
+            <div className="surface-card space-y-5 p-4">
+              {showResolution ? (
+                <div className="space-y-2.5">
+                  <p className="font-mono-tech text-faint">разрешение</p>
+                  <div className="flex flex-wrap gap-2">
+                    {facets.resolutions.map((f) =>
+                      f.value ? (
+                        <Chip
+                          key={f.value}
+                          active={activeResolutions.includes(f.value)}
+                          count={f.count}
+                          onClick={() =>
+                            updateParams({
+                              resolution:
+                                toggleMulti(activeResolutions, f.value!).join(
+                                  ",",
+                                ) || null,
+                            })
+                          }
+                        >
+                          {f.value}
+                        </Chip>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {showAudioLang ? (
+                <div className="space-y-2.5">
+                  <p className="font-mono-tech text-faint">аудио · язык</p>
+                  <div className="flex flex-wrap gap-2">
+                    {facets.audioLanguages.map((f) =>
+                      f.value ? (
+                        <Chip
+                          key={f.value}
+                          active={activeLanguages.includes(f.value)}
+                          count={f.count}
+                          onClick={() =>
+                            updateParams({
+                              language:
+                                toggleMulti(activeLanguages, f.value!).join(
+                                  ",",
+                                ) || null,
+                            })
+                          }
+                        >
+                          {f.value}
+                        </Chip>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {showChannelLayout ? (
+                <div className="space-y-2.5">
+                  <p className="font-mono-tech text-faint">аудио · формат</p>
+                  <div className="flex flex-wrap gap-2">
+                    {facets.channelLayouts.map((f) =>
+                      f.value ? (
+                        <Chip
+                          key={f.value}
+                          active={activeLayouts.includes(f.value)}
+                          count={f.count}
+                          onClick={() =>
+                            updateParams({
+                              channelLayout:
+                                toggleMulti(activeLayouts, f.value!).join(
+                                  ",",
+                                ) || null,
+                            })
+                          }
+                        >
+                          {f.value}
+                        </Chip>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {showSubtitleLang ? (
+                <div className="space-y-2.5">
+                  <p className="font-mono-tech text-faint">субтитры · язык</p>
+                  <div className="flex flex-wrap gap-2">
+                    {facets.subtitleLanguages.map((f) =>
+                      f.value ? (
+                        <Chip
+                          key={f.value}
+                          active={activeSubtitleLangs.includes(f.value)}
+                          count={f.count}
+                          onClick={() =>
+                            updateParams({
+                              subtitleLang:
+                                toggleMulti(activeSubtitleLangs, f.value!).join(
+                                  ",",
+                                ) || null,
+                            })
+                          }
+                        >
+                          {f.value}
+                        </Chip>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {showGenres ? (
+                <div className="space-y-2.5">
+                  <p className="font-mono-tech text-faint">жанры</p>
+                  <div className="flex flex-wrap gap-2">
+                    {facets.genres.map((f) =>
+                      f.value ? (
+                        <Chip
+                          key={f.value}
+                          active={activeGenres.includes(f.value)}
+                          count={f.count}
+                          onClick={() =>
+                            updateParams({
+                              genre:
+                                toggleMulti(activeGenres, f.value!).join(",") ||
+                                null,
+                            })
+                          }
+                        >
+                          {genreLabel(f.value) ?? f.value}
+                        </Chip>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
-
-      {/* Facet chips */}
-      {anyFacets ? (
-        <div className="space-y-5 border-t border-border pt-5">
-          {showResolution ? (
-            <div className="space-y-3">
-              <p className="font-mono-tech text-muted">разрешение</p>
-              <div className="flex flex-wrap gap-2">
-                {facets.resolutions.map((f) =>
-                  f.value ? (
-                    <Chip
-                      key={f.value}
-                      active={activeResolutions.includes(f.value)}
-                      count={f.count}
-                      onClick={() =>
-                        updateParams({
-                          resolution:
-                            toggleMulti(activeResolutions, f.value!).join(",") ||
-                            null,
-                        })
-                      }
-                    >
-                      {f.value}
-                    </Chip>
-                  ) : null,
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          {showAudioLang ? (
-            <div className="space-y-3">
-              <p className="font-mono-tech text-muted">аудио · язык</p>
-              <div className="flex flex-wrap gap-2">
-                {facets.audioLanguages.map((f) =>
-                  f.value ? (
-                    <Chip
-                      key={f.value}
-                      active={activeLanguages.includes(f.value)}
-                      count={f.count}
-                      onClick={() =>
-                        updateParams({
-                          language:
-                            toggleMulti(activeLanguages, f.value!).join(",") ||
-                            null,
-                        })
-                      }
-                    >
-                      {f.value}
-                    </Chip>
-                  ) : null,
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          {showChannelLayout ? (
-            <div className="space-y-3">
-              <p className="font-mono-tech text-muted">аудио · формат</p>
-              <div className="flex flex-wrap gap-2">
-                {facets.channelLayouts.map((f) =>
-                  f.value ? (
-                    <Chip
-                      key={f.value}
-                      active={activeLayouts.includes(f.value)}
-                      count={f.count}
-                      onClick={() =>
-                        updateParams({
-                          channelLayout:
-                            toggleMulti(activeLayouts, f.value!).join(",") ||
-                            null,
-                        })
-                      }
-                    >
-                      {f.value}
-                    </Chip>
-                  ) : null,
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          {showSubtitleLang ? (
-            <div className="space-y-3">
-              <p className="font-mono-tech text-muted">субтитры · язык</p>
-              <div className="flex flex-wrap gap-2">
-                {facets.subtitleLanguages.map((f) =>
-                  f.value ? (
-                    <Chip
-                      key={f.value}
-                      active={activeSubtitleLangs.includes(f.value)}
-                      count={f.count}
-                      onClick={() =>
-                        updateParams({
-                          subtitleLang:
-                            toggleMulti(activeSubtitleLangs, f.value!).join(",") ||
-                            null,
-                        })
-                      }
-                    >
-                      {f.value}
-                    </Chip>
-                  ) : null,
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          {showGenres ? (
-            <div className="space-y-3">
-              <p className="font-mono-tech text-muted">жанры</p>
-              <div className="flex flex-wrap gap-2">
-                {facets.genres.map((f) =>
-                  f.value ? (
-                    <Chip
-                      key={f.value}
-                      active={activeGenres.includes(f.value)}
-                      count={f.count}
-                      onClick={() =>
-                        updateParams({
-                          genre:
-                            toggleMulti(activeGenres, f.value!).join(",") ||
-                            null,
-                        })
-                      }
-                    >
-                      {genreLabel(f.value) ?? f.value}
-                    </Chip>
-                  ) : null,
-                )}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Bulk actions */}
-      {selectedIds.length > 0 ? (
-        <div className="surface-card flex flex-wrap items-center gap-3 p-4">
-          <span className="text-sm text-muted">
-            Выбрано: {selectedIds.length}
-          </span>
-          <Button
-            variant="primary"
-            loading={bulkLoading}
-            onClick={() => onBulkAction("approve")}
-          >
-            В каталог
-          </Button>
-          <Button
-            variant="danger"
-            loading={bulkLoading}
-            onClick={() => onBulkAction("exclude")}
-          >
-            Исключить
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }

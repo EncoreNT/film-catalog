@@ -618,7 +618,13 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
 
           {step === 2 ? (
             <div className="space-y-4">
-              {audioRows.map((row, i) => (
+              {audioRows.map((row, i) => {
+                const profileOptions = getAudioProfilesForCodec(row.codec);
+                const profileDisabled =
+                  profileOptions.length <= 1 ||
+                  (profileOptions.length === 1 &&
+                    profileOptions[0].value === "None");
+                return (
                 <div key={i} className="surface-elevated space-y-3 p-4">
                   <div className="flex items-center justify-between">
                     <span className="font-mono-tech text-faint">дорожка {i + 1}</span>
@@ -645,9 +651,14 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
                       label="Профиль"
                       value={row.profile}
                       onChange={(v) => updateAudio(i, { profile: v })}
-                      options={getAudioProfilesForCodec(row.codec)}
+                      options={profileOptions}
                       preserveOrder
-                      hint="Уточнение кодека: Dolby Atmos, DTS-HD MA и т.д. Зависит от выбранного кодека."
+                      disabled={profileDisabled}
+                      hint={
+                        profileDisabled
+                          ? "У этого кодека нет профилей — поле недоступно."
+                          : "Уточнение кодека: Dolby Atmos, DTS-HD MA и т.д. Зависит от выбранного кодека."
+                      }
                     />
                     <Select
                       label="Формат"
@@ -699,7 +710,8 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
                     основная дорожка
                   </label>
                 </div>
-              ))}
+                );
+              })}
               <Button variant="secondary" onClick={addAudioRow}>
                 <Plus className="h-4 w-4" />
                 Добавить дорожку

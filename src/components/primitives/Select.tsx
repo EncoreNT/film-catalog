@@ -21,6 +21,10 @@ interface SelectProps {
   searchable?: boolean;
   /** Keep the options in the order provided instead of sorting alphabetically. */
   preserveOrder?: boolean;
+  /** Disable interaction — used when the option set is empty/irrelevant. */
+  disabled?: boolean;
+  /** Inline compact mode: hides the label row, slimmer trigger — for toolbars. */
+  compact?: boolean;
 }
 
 export function Select({
@@ -32,6 +36,8 @@ export function Select({
   hint,
   searchable,
   preserveOrder,
+  disabled,
+  compact,
 }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -53,6 +59,18 @@ export function Select({
       value: "",
       label: "—",
     };
+
+  // Reserve trigger width for the longest option so the control doesn't
+  // resize (and nudge neighbours) when the selection changes.
+  const triggerMinWidth = useMemo(() => {
+    const longest = ordered.reduce(
+      (max, o) => (o.label.length > max.length ? o.label : max),
+      selected.label,
+    );
+    // ~0.55em per char + chevron(~1.25rem) + horizontal padding(~1.5rem)
+    const ch = longest.length * 0.6 + 4;
+    return `${ch}rem`;
+  }, [ordered, selected.label]);
 
   const close = () => {
     setOpen(false);
@@ -78,31 +96,42 @@ export function Select({
   }, [open]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <label htmlFor={fieldId} className="text-sm text-muted">
-          {label}
-        </label>
-        {hint ? <InfoHint text={hint} label={label} /> : null}
-      </div>
+    <div className={compact ? "relative" : "flex flex-col gap-2"}>
+      {compact ? null : (
+        <div className="flex items-center gap-1.5">
+          <label htmlFor={fieldId} className="text-sm text-muted">
+            {label}
+          </label>
+          {hint ? <InfoHint text={hint} label={label} /> : null}
+        </div>
+      )}
       <div className="relative" ref={ref}>
         <button
           id={fieldId}
           type="button"
-          onClick={() => (open ? close() : setOpen(true))}
+          disabled={disabled}
+          aria-disabled={disabled}
+          aria-label={compact ? label : undefined}
+          title={compact ? label : undefined}
+          onClick={() => (disabled ? null : open ? close() : setOpen(true))}
           aria-haspopup="listbox"
           aria-expanded={open}
-          className={`focus-ring flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-bg-elevated px-3 py-2 text-sm text-text transition-all duration-200 ${
-            open
-              ? "border-accent/50 shadow-[0_0_16px_var(--accent-glow)]"
-              : "border-border hover:border-border-strong"
+          style={compact ? { minWidth: triggerMinWidth } : undefined}
+          className={`focus-ring flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-bg-elevated px-3 text-sm text-text transition-all duration-200 ${
+            compact ? "min-h-9 py-1.5" : "min-h-11 py-2"
+          } ${
+            disabled
+              ? "cursor-not-allowed border-border opacity-50"
+              : open
+                ? "cursor-pointer border-accent/50 shadow-[0_0_16px_var(--accent-glow)]"
+                : "cursor-pointer border-border hover:border-border-strong"
           }`}
         >
           <span className="truncate">{selected.label}</span>
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-accent/70 transition-transform duration-200 ${
               open ? "rotate-180" : ""
-            }`}
+            } ${disabled ? "opacity-40" : ""}`}
             aria-hidden
           />
         </button>
@@ -110,7 +139,7 @@ export function Select({
         {open ? (
           <ul
             role="listbox"
-            className="surface-elevated absolute z-50 mt-2 max-h-72 w-full overflow-auto p-1 shadow-2xl"
+            className="surface-elevated absolute z-50 mt-2 max-h-72 min-w-full w-max max-w-[min(90vw,20rem)] overflow-auto p-1 shadow-2xl"
           >
             {showSearch ? (
               <li className="px-1 pb-1 pt-2">
@@ -148,7 +177,7 @@ export function Select({
                         : "text-text hover:bg-bg-surface-hover"
                     }`}
                   >
-                    <span className="truncate">{opt.label}</span>
+                    <span className="whitespace-nowrap">{opt.label}</span>
                     {active ? (
                       <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
                     ) : null}
