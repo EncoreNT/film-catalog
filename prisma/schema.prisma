@@ -55,6 +55,7 @@ model Movie {
   videoTrack     VideoTrack?
   audioTracks    AudioTrack[]
   subtitleTracks SubtitleTrack[]
+  slots          FranchiseSlot[]
 
   @@index([status])
   @@index([fileHash])
@@ -128,4 +129,33 @@ model SubtitleTrack {
 model Setting {
   key   String @id
   value String
+}
+
+model Franchise {
+  id          Int             @id @default(autoincrement())
+  slug        String          @unique
+  name        String
+  description String?
+  coverPath   String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  slots       FranchiseSlot[]
+
+  @@index([name])
+}
+
+model FranchiseSlot {
+  id          Int       @id @default(autoincrement())
+  franchiseId Int
+  movieId     Int?
+  storyOrder  Int
+  titleHint   String?
+  yearHint    Int?
+  createdAt   DateTime  @default(now())
+  franchise   Franchise @relation(fields: [franchiseId], references: [id], onDelete: Cascade)
+  movie       Movie?    @relation(fields: [movieId], references: [id], onDelete: SetNull)
+
+  @@unique([franchiseId, movieId])
+  @@index([franchiseId, storyOrder])
+  @@index([franchiseId])
 }

@@ -42,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${fraunces.variable} ${inter.variable} ${jetbrains.variable} h-full`}
+      className={`${fraunces.variable} ${inter.variable} ${jetbrains.variable} h-full overflow-x-hidden`}
     >
       <body className="relative min-h-dvh antialiased">
         <AmbientBackground />
@@ -69,6 +69,12 @@ export default function RootLayout({
                 className="focus-ring rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-text"
               >
                 Каталог
+              </Link>
+              <Link
+                href="/franchises"
+                className="focus-ring rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-text"
+              >
+                Франшизы
               </Link>
               <Link
                 href="/scan"

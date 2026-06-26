@@ -9,9 +9,9 @@ export interface ArchiveMetrics {
   elite: number;
 }
 
-const catalogWhere = { status: MovieStatus.CATALOG } as const;
+export const catalogWhere = { status: MovieStatus.CATALOG } as const;
 
-const russianAtmosAudioWhere = {
+export const russianAtmosAudioWhere = {
   audioTracks: {
     some: {
       isDefault: true,
@@ -21,7 +21,7 @@ const russianAtmosAudioWhere = {
   },
 } satisfies Prisma.MovieWhereInput;
 
-const eliteTierWhere = {
+export const eliteTierWhere = {
   ...catalogWhere,
   AND: [
     { videoTrack: { resolutionLabel: "4K" } },

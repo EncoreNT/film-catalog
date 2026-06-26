@@ -50,3 +50,19 @@ export function formatDuration(
   }
   return `${m}:${String(s).padStart(2, "0")}`;
 }
+
+/**
+ * Compact runtime for stat cells: «8ч 42м», «8ч», «42м».
+ * Returns null when there is nothing to show.
+ */
+export function formatRuntimeCompact(
+  seconds: number | null | undefined,
+): string | null {
+  if (seconds == null || seconds <= 0) return null;
+  const totalMinutes = Math.round(seconds / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h > 0 && m > 0) return `${h}ч ${m}м`;
+  if (h > 0) return `${h}ч`;
+  return `${m}м`;
+}

@@ -10,6 +10,7 @@ import {
   Disc3,
   AudioLines,
   Star,
+  Library,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { MovieRating } from "@/components/MovieRating";
@@ -49,6 +50,11 @@ export default async function MoviePage({ params }: PageProps) {
   });
 
   if (!movie) notFound();
+
+  const franchiseMemberships = await prisma.franchiseSlot.findMany({
+    where: { movieId: movie.id },
+    include: { franchise: { select: { id: true, name: true, slug: true } } },
+  });
 
   const coverUrl = movieCoverUrlFromMovie(movie);
   const tags = secondaryTags(movie);
@@ -193,6 +199,26 @@ export default async function MoviePage({ params }: PageProps) {
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
                 {movie.description}
               </p>
+            ) : null}
+            {franchiseMemberships.length > 0 ? (
+              <section className="mt-6 border-t border-border pt-5">
+                <h2 className="font-mono-tech mb-3 text-faint">
+                  входит во франшизы
+                </h2>
+                <ul className="flex flex-wrap gap-2">
+                  {franchiseMemberships.map((membership) => (
+                    <li key={membership.id}>
+                      <Link
+                        href={`/franchises/${membership.franchise.slug}`}
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-bg-elevated px-3 py-1.5 text-xs text-text transition-colors hover:border-accent/50 hover:text-accent"
+                      >
+                        <Library className="h-3.5 w-3.5 text-accent" aria-hidden />
+                        {membership.franchise.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ) : null}
           </header>
 

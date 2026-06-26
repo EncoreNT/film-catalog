@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
       {
         pathname: "/api/covers/**",
       },
+      {
+        pathname: "/api/franchises/*/cover",
+      },
     ],
   },
 };
