@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
   isErrorResponse,
@@ -28,10 +29,17 @@ async function saveCover(movieId: number, buffer: Buffer, ext: string) {
   const coverPath = path.join(COVERS_DIR, coverFileName);
   await writeFile(coverPath, buffer);
   const relativeCoverPath = `covers/${coverFileName}`;
-  return prisma.movie.update({
+  const updated = await prisma.movie.update({
     where: { id: movieId },
     data: { coverPath: relativeCoverPath },
+    select: { id: true, slug: true, coverPath: true, updatedAt: true },
   });
+
+  revalidatePath("/");
+  revalidatePath(`/movies/${updated.slug}`);
+  revalidatePath(`/movies/${updated.slug}/edit`);
+
+  return updated;
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {

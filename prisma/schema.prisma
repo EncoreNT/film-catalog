@@ -32,6 +32,7 @@ model Storage {
 
 model Movie {
   id              Int         @id @default(autoincrement())
+  slug            String      @unique
   title           String
   year            Int?
   description     String?

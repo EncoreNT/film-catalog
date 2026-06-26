@@ -5,6 +5,7 @@ import { probeMediaFile } from "./ffprobe";
 import { parseMovieName } from "./name-parser";
 import { computeFileHashPrefix } from "./file-hash";
 import { syncMovieTracksFromProbe } from "./movie-tracks";
+import { resolveMovieSlug } from "./movie-slug";
 import { MovieStatus } from "@/generated/prisma/client";
 
 const VIDEO_EXTENSIONS = new Set([
@@ -151,8 +152,11 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
         continue;
       }
 
+      const slug = await resolveMovieSlug(prisma, parsed.title);
+
       const movie = await prisma.movie.create({
         data: {
+          slug,
           title: parsed.title,
           year: parsed.year,
           releaseType: parsed.releaseType,

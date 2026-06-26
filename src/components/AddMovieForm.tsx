@@ -260,7 +260,7 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
         }
       }
       onDone?.();
-      router.push(`/movies/${movie.id}`);
+      router.push(`/movies/${movie.slug}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {

@@ -22,6 +22,7 @@ import {
   formatRelativeDate,
 } from "@/lib/format";
 import { genreLabel } from "@/lib/dictionaries";
+import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import {
   codecFull,
   codecShort,
@@ -36,22 +37,20 @@ import {
 } from "@/lib/spec-tags";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function MoviePage({ params }: PageProps) {
-  const { id } = await params;
-  const movieId = parseInt(id, 10);
-  if (Number.isNaN(movieId)) notFound();
+  const { slug } = await params;
 
   const movie = await prisma.movie.findUnique({
-    where: { id: movieId },
+    where: { slug },
     include: movieInclude,
   });
 
   if (!movie) notFound();
 
-  const coverUrl = movie.coverPath ? `/api/covers/${movie.id}` : null;
+  const coverUrl = movieCoverUrlFromMovie(movie);
   const tags = secondaryTags(movie);
   const vBitrate = videoBitrateLabel(movie);
   const vPixels = videoResolutionPixels(movie);
@@ -71,7 +70,7 @@ export default async function MoviePage({ params }: PageProps) {
           Назад к каталогу
         </Link>
         <Link
-          href={`/movies/${movie.id}/edit`}
+          href={`/movies/${movie.slug}/edit`}
           className="focus-ring inline-flex items-center gap-2 rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:text-accent hover:bg-bg-surface-hover hover:shadow-[0_0_20px_var(--accent-glow)]"
         >
           <Pencil className="h-4 w-4" aria-hidden />

@@ -150,6 +150,54 @@ input[type="number"] {
   }
 }
 
+/* Vertical film perforation strip — sprocket holes running top→bottom */
+.film-perfs-y {
+  background-image: radial-gradient(
+    circle at center,
+    var(--bg-deep) 4px,
+    transparent 4.5px
+  );
+  background-size: 100% 22px;
+  background-repeat: repeat-y;
+  background-position: center;
+}
+
+/* Warm glow behind the big error code — projector beam catching the numerals */
+.error-code-glow {
+  text-shadow:
+    0 0 60px var(--accent-glow),
+    0 0 28px rgba(232, 176, 90, 0.16),
+    0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Error scene entrance — staggered rise with a soft focus pull */
+@keyframes error-scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+.error-scene-in {
+  animation: error-scene-in 0.6s var(--ease) both;
+}
+
+/* Slow flicker for the projector lamp icon on error pages */
+@keyframes lamp-flicker {
+  0%, 100% { opacity: 1; }
+  42% { opacity: 0.86; }
+  47% { opacity: 0.7; }
+  52% { opacity: 0.92; }
+}
+.lamp-flicker {
+  animation: lamp-flicker 4.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

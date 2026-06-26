@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MonitorPlay, Star, Sun, Waves } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { formatDuration } from "@/lib/format";
+import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import { genreLabel } from "@/lib/dictionaries";
 import { PremiumBadge } from "./PremiumBadge";
 import { SpecTag } from "./SpecTag";
@@ -22,7 +23,7 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, index = 0 }: MovieCardProps) {
-  const coverUrl = movie.coverPath ? `/api/covers/${movie.id}` : null;
+  const coverUrl = movieCoverUrlFromMovie(movie);
   const premium4K = is4K(movie);
   const premiumHdr = premiumHDR(movie);
   const premiumAtmos = premiumAudio(movie);
@@ -37,19 +38,21 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
       className="group relative animate-[movieCardIn_0.25s_ease-out_both]"
       style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
     >
-      <Link href={`/movies/${movie.id}`} className="focus-ring block rounded-[var(--radius)]">
+      <Link href={`/movies/${movie.slug}`} className="focus-ring block rounded-[var(--radius)]">
         <div
-          className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border bg-gradient-to-b from-bg-elevated to-bg-base transition-all duration-300 group-hover:scale-[1.02] group-hover:border-accent/50 group-hover:shadow-[0_0_40px_var(--accent-glow)] ${
+          className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] border bg-gradient-to-b from-bg-elevated to-bg-base transition-[transform,border-color,box-shadow] duration-300 ease-out group-hover:scale-[1.02] ${
             isTopTier
-              ? "border-accent/45 shadow-[0_0_0_1px_var(--accent-glow),0_8px_30px_-6px_rgba(232,176,90,0.55),0_0_50px_var(--accent-glow)] sm:-translate-y-1"
-              : "border-border-strong"
+              ? "border-accent/35 shadow-[0_0_0_1px_rgba(232,176,90,0.18),0_6px_22px_-8px_rgba(232,176,90,0.35),0_0_28px_var(--accent-glow)] group-hover:-translate-y-1.5 group-hover:border-accent/70 group-hover:shadow-[0_0_0_1px_rgba(232,176,90,0.5),0_18px_44px_-10px_rgba(232,176,90,0.6),0_0_70px_var(--accent-glow)]"
+              : "border-border-strong group-hover:border-accent/50 group-hover:shadow-[0_0_40px_var(--accent-glow)]"
           }`}
         >
           {isTopTier ? (
             <>
-              {/* Spotlight cone — projector beam from top-left corner */}
+              {/* Spotlight cone — projector beam from top-left corner.
+                  Dimmed at rest, intensifies on hover so the premium state
+                  escalates rather than feeling weaker than the base. */}
               <span
-                className="pointer-events-none absolute inset-0 z-0"
+                className="pointer-events-none absolute inset-0 z-0 opacity-60 transition-opacity duration-300 group-hover:opacity-100"
                 aria-hidden
                 style={{
                   background:
@@ -59,7 +62,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               />
               {/* Warm top wash — the lit wall behind the beam */}
               <span
-                className="pointer-events-none absolute inset-x-0 top-0 z-0 h-2/3"
+                className="pointer-events-none absolute inset-x-0 top-0 z-0 h-2/3 opacity-70 transition-opacity duration-300 group-hover:opacity-100"
                 aria-hidden
                 style={{
                   background:
@@ -83,7 +86,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               alt={`Обложка: ${movie.title}`}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
               loading={index < 4 ? "eager" : "lazy"}
             />
           ) : (
@@ -108,7 +111,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
           )}
 
           {(premium4K || premiumHdr || premiumAtmos) && (
-            <div className="absolute left-2 top-2 z-10 flex max-w-[calc(100%-3.5rem)] flex-col gap-1">
+            <div className="absolute left-2 top-2 z-10 flex max-w-[calc(100%-3.5rem)] flex-col gap-1 transition-transform duration-300 ease-out group-hover:-translate-y-0.5">
               {premium4K ? (
                 <PremiumBadge
                   size="sm"
@@ -135,7 +138,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
 
           {movie.rating != null ? (
             <span
-              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)]"
+              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)] transition-all duration-300 ease-out group-hover:scale-105 group-hover:border-accent/70 group-hover:shadow-[0_0_24px_var(--accent-glow)]"
               aria-label={`Оценка ${movie.rating} из 10`}
               title={`Оценка ${movie.rating} из 10`}
             >

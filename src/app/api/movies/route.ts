@@ -10,6 +10,7 @@ import { MovieStatus } from "@/generated/prisma/client";
 import { probeMediaFile } from "@/lib/ffprobe";
 import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
+import { resolveMovieSlug } from "@/lib/movie-slug";
 import { access } from "fs/promises";
 
 export async function GET(request: NextRequest) {
@@ -83,8 +84,11 @@ export async function POST(request: NextRequest) {
       ? await upsertGenresByNames(data.genres)
       : [];
 
+    const slug = await resolveMovieSlug(prisma, data.title);
+
     const movie = await prisma.movie.create({
       data: {
+        slug,
         title: data.title,
         year: data.year ?? null,
         description: data.description ?? null,

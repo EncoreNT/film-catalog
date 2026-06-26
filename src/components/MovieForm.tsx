@@ -157,8 +157,13 @@ export function MovieEditor({ movie }: MovieEditorProps) {
         const data = await res.json();
         throw new Error(data.error ?? "Ошибка сохранения");
       }
+      const updated = (await res.json()) as MovieWithTracks;
       setIsDirty(false);
-      router.refresh();
+      if (updated.slug !== movie.slug) {
+        router.replace(`/movies/${updated.slug}/edit`);
+      } else {
+        router.refresh();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -225,6 +230,7 @@ export function MovieEditor({ movie }: MovieEditorProps) {
             <CoverUpload
               movieId={movie.id}
               hasCover={!!movie.coverPath}
+              coverVersion={movie.updatedAt}
               onUploaded={() => router.refresh()}
             />
             <div className="min-w-0 flex-1">

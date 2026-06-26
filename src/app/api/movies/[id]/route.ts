@@ -6,6 +6,7 @@ import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
 import { computeFileHashPrefix } from "@/lib/file-hash";
 import { syncMovieTracks } from "@/lib/movie-tracks";
+import { resolveMovieSlug } from "@/lib/movie-slug";
 import {
   isErrorResponse,
   jsonError,
@@ -57,10 +58,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const movie = await prisma.$transaction(async (tx) => {
+      const slug =
+        movieData.title !== undefined
+          ? await resolveMovieSlug(tx, movieData.title, movieId)
+          : undefined;
+
       await tx.movie.update({
         where: { id: movieId },
         data: {
           ...movieData,
+          slug,
           filePath:
             filePath === undefined ? undefined : filePath ? filePath : null,
           fileSize,
