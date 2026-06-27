@@ -8,7 +8,7 @@ import {
 import { movieCreateSchema } from "@/lib/validators";
 import { MovieStatus } from "@/generated/prisma/client";
 import { probeMediaFile } from "@/lib/ffprobe";
-import { maybeExtractEmbeddedCover } from "@/lib/cover-storage";
+import { maybeExtractCover } from "@/lib/cover-storage";
 import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
 import { resolveMovieSlug } from "@/lib/movie-slug";
@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
         video: probe.video,
         audio: probe.audio,
         subtitles: probe.subtitles,
-        embeddedCover: probe.embeddedCover,
       });
     }
 
@@ -143,7 +142,7 @@ export async function POST(request: NextRequest) {
     // file. Best-effort: failures never block movie creation.
     if (data.filePath?.trim() && !movie.coverPath) {
       try {
-        await maybeExtractEmbeddedCover(movie.id, data.filePath, false);
+        await maybeExtractCover(movie.id, data.filePath, false);
       } catch {
         // ignore — cover extraction is non-fatal
       }

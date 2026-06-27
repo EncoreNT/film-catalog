@@ -39,23 +39,15 @@ export interface ProbedSubtitleTrack {
   forced: boolean;
 }
 
-export interface ProbedEmbeddedCover {
-  streamIndex: number;
-  width: number | null;
-  height: number | null;
-  /** ffprobe tags.filename, e.g. "Cover" or "cover.jpg" */
-  filename: string | null;
-  /** ffprobe tags.mimetype, e.g. "image/jpeg" */
-  mimetype: string | null;
-}
-
 export interface ProbeResult {
   durationSeconds: number | null;
   video: ProbedVideoTrack | null;
   audio: ProbedAudioTrack[];
   subtitles: ProbedSubtitleTrack[];
-  /** Best embedded attached picture (poster preferred over small thumbs). */
-  embeddedCover: ProbedEmbeddedCover | null;
+}
+
+interface FfprobeSideData {
+  side_data_type?: string;
 }
 
 interface FfprobeStream {
@@ -70,12 +62,17 @@ interface FfprobeStream {
   bit_rate?: string;
   r_frame_rate?: string;
   avg_frame_rate?: string;
+  pix_fmt?: string;
+  color_space?: string;
+  color_transfer?: string;
+  color_primaries?: string;
   disposition?: {
     default?: number;
     forced?: number;
     attached_pic?: number;
   };
   tags?: Record<string, string>;
+  side_data_list?: FfprobeSideData[];
 }
 
 interface FfprobeFormat {
@@ -177,31 +174,49 @@ function detectDvProfile(haystack: string): string | null {
   return null;
 }
 
-function detectHdr(stream: FfprobeStream, allStreams: FfprobeStream[]): string {
-  const tags = stream.tags ?? {};
-  const tagHaystack = Object.values(tags).join(" ").toLowerCase();
-  if (tagHaystack.includes("dolby vision") || tagHaystack.includes("dovi")) {
-    const profile = detectDvProfile(tagHaystack);
+function detectHdr(stream: FfprobeStream): string {
+  // Build a haystack from the stream's color metadata AND its tags. ffprobe
+  // exposes HDR markers as structured fields (color_transfer, color_primaries,
+  // color_space, pix_fmt, profile), not as tag strings — so a file whose only
+  // HDR signal is `color_transfer: "smpte2084"` (PQ) was previously read from
+  // tags alone and misdetected as SDR.
+  const colorHaystack = [
+    stream.color_transfer,
+    stream.color_primaries,
+    stream.color_space,
+    stream.pix_fmt,
+    stream.profile,
+    ...Object.values(stream.tags ?? {}),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  // Dolby Vision is the most specific — check it first.
+  if (
+    colorHaystack.includes("dolby vision") ||
+    colorHaystack.includes("dovi") ||
+    colorHaystack.includes("dolbyvision")
+  ) {
+    const profile = detectDvProfile(colorHaystack);
     return profile ? `DV:${profile}` : "DolbyVision";
   }
-  if (tagHaystack.includes("hdr10+")) return "HDR10+";
-  if (tagHaystack.includes("hdr10") || tagHaystack.includes("smpte2084")) {
-    return "HDR10";
-  }
-  if (tagHaystack.includes("hlg") || tagHaystack.includes("arib-std-b67")) {
+
+  if (colorHaystack.includes("hdr10+")) return "HDR10+";
+
+  // SMPTE ST 2084 is the PQ transfer function — the reliable HDR10 marker.
+  // HEVC Main 10 + BT.2020 primaries + PQ transfer = HDR10.
+  if (colorHaystack.includes("smpte2084")) return "HDR10";
+  if (colorHaystack.includes("hdr10")) return "HDR10";
+
+  if (colorHaystack.includes("hlg") || colorHaystack.includes("arib-std-b67")) {
     return "HLG";
   }
 
-  const sideData = (stream as { side_data_list?: { side_data_type?: string }[] })
-    .side_data_list;
-  if (sideData?.some((d) => d.side_data_type?.includes("DOVI"))) {
+  // Dolby Vision can also surface as side data on the video stream.
+  if (stream.side_data_list?.some((d) => d.side_data_type?.includes("DOVI"))) {
     return "DolbyVision";
   }
-
-  const hasHdrMaster = allStreams.some((s) =>
-    (s.codec_name ?? "").toLowerCase().includes("hdr"),
-  );
-  if (hasHdrMaster) return "HDR10";
 
   return "SDR";
 }
@@ -210,58 +225,6 @@ function subtitleCodecLabel(codec?: string): string | null {
   if (!codec) return null;
   const key = codec.toLowerCase();
   return SUBTITLE_CODEC_LABELS[key] ?? codec.toUpperCase();
-}
-
-/**
- * Pick the best embedded attached picture to use as a poster.
- *
- * Posters are portrait (height > width, ~2:3); small landscape thumbnails are
- * leftovers. Prefer the largest portrait image, then fall back to the largest
- * image overall. Returns null when there are no attached pics.
- */
-function pickEmbeddedCover(
-  streams: FfprobeStream[],
-): ProbedEmbeddedCover | null {
-  const pics = streams.filter((s) => s.disposition?.attached_pic === 1);
-  if (pics.length === 0) return null;
-
-  const score = (s: FfprobeStream): number => {
-    const w = s.width ?? 0;
-    const h = s.height ?? 0;
-    const area = w * h;
-    const portrait = h > w ? 1_000_000_000 : 0; // portrait always beats landscape
-    return portrait + area;
-  };
-
-  const best = [...pics].sort((a, b) => score(b) - score(a))[0];
-  if (!best) return null;
-  const tags = best.tags ?? {};
-  return {
-    streamIndex: best.index,
-    width: best.width ?? null,
-    height: best.height ?? null,
-    filename: tags.filename ?? null,
-    mimetype: tags.mimetype ?? null,
-  };
-}
-
-const COVER_MIME_TO_EXT: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-  "image/gif": ".gif",
-  "image/avif": ".avif",
-  "image/bmp": ".bmp",
-};
-
-function coverExtFor(cover: ProbedEmbeddedCover): string {
-  const mime = (cover.mimetype ?? "").toLowerCase();
-  if (COVER_MIME_TO_EXT[mime]) return COVER_MIME_TO_EXT[mime];
-  const fromName = cover.filename?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
-  if (fromName && COVER_MIME_TO_EXT[`image/${fromName === "jpg" ? "jpeg" : fromName}`]) {
-    return `.${fromName}`;
-  }
-  return ".jpg";
 }
 
 function normalizeLanguage(lang?: string | null): string | null {
@@ -292,16 +255,23 @@ function normalizeLanguage(lang?: string | null): string | null {
   return map[l] ?? l;
 }
 
-export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
-  const { stdout } = await execa("ffprobe", [
-    "-v",
-    "quiet",
-    "-print_format",
-    "json",
-    "-show_streams",
-    "-show_format",
-    filePath,
-  ]);
+export async function probeMediaFile(
+  filePath: string,
+  signal?: AbortSignal,
+): Promise<ProbeResult> {
+  const { stdout } = await execa(
+    "ffprobe",
+    [
+      "-v",
+      "quiet",
+      "-print_format",
+      "json",
+      "-show_streams",
+      "-show_format",
+      filePath,
+    ],
+    { cancelSignal: signal },
+  );
 
   const data = JSON.parse(stdout) as FfprobeOutput;
   const streams = data.streams ?? [];
@@ -314,7 +284,6 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
   );
   const audioStreams = streams.filter((s) => s.codec_type === "audio");
   const subtitleStreams = streams.filter((s) => s.codec_type === "subtitle");
-  const embeddedCover = pickEmbeddedCover(streams);
 
   let video: ProbedVideoTrack | null = null;
   if (videoStream) {
@@ -326,7 +295,7 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
       height,
       resolutionLabel: getResolutionLabel(width, height),
       codec: videoStream.codec_name ?? null,
-      hdr: detectHdr(videoStream, streams),
+      hdr: detectHdr(videoStream),
       fps: parseFps(videoStream),
       bitrate: streamBitrateKbps(videoStream),
     };
@@ -354,18 +323,32 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
       isDefault: s.disposition?.default === 1,
     };
   });
+  // A container can flag more than one audio track as default (malformed
+  // rips, or multiple tracks carrying disposition.default). The UI expects a
+  // single "main" track, so keep only the first default and clear the rest.
+  const firstDefaultAudio = audio.findIndex((a) => a.isDefault);
+  if (firstDefaultAudio !== -1) {
+    for (let i = 0; i < audio.length; i++) {
+      if (i !== firstDefaultAudio) audio[i].isDefault = false;
+    }
+  }
 
   const subtitles: ProbedSubtitleTrack[] = subtitleStreams.map((s) => {
     const tags = s.tags ?? {};
     const codec = s.codec_name ?? null;
+    const title = tags.title ?? null;
+    // Many rips flag forced subtitles only in the track title ("forced RUS")
+    // rather than via the container's disposition.forced bit, so treat a title
+    // containing "forced" as forced as well.
+    const titleLooksForced = title ? /\bforced\b/i.test(title) : false;
     return {
       streamIndex: s.index,
       codec,
       codecLabel: subtitleCodecLabel(codec ?? undefined),
       language: normalizeLanguage(tags.language),
-      title: tags.title ?? null,
+      title,
       isDefault: s.disposition?.default === 1,
-      forced: s.disposition?.forced === 1,
+      forced: s.disposition?.forced === 1 || titleLooksForced,
     };
   });
 
@@ -374,43 +357,5 @@ export async function probeMediaFile(filePath: string): Promise<ProbeResult> {
     video,
     audio,
     subtitles,
-    embeddedCover,
   };
-}
-
-/**
- * Extract an embedded attached picture to a buffer using ffmpeg
- * (`-map 0:<streamIndex> -c copy`). Returns null when there is no embedded
- * cover or ffmpeg is unavailable. The ffmpeg call is guarded by a timeout so
- * a slow network-mounted source can't stall a scan.
- */
-export async function extractEmbeddedCover(
-  filePath: string,
-  cover: ProbedEmbeddedCover,
-): Promise<{ buffer: Buffer; ext: string } | null> {
-  try {
-    const result = await execa(
-      "ffmpeg",
-      [
-        "-v",
-        "quiet",
-        "-i",
-        filePath,
-        "-map",
-        `0:${cover.streamIndex}`,
-        "-c",
-        "copy",
-        "-f",
-        "image2",
-        "-y",
-        "pipe:1",
-      ],
-      { encoding: "buffer", timeout: 60_000, maxBuffer: 12 * 1024 * 1024 },
-    );
-    const buffer = Buffer.from(result.stdout);
-    if (!buffer || buffer.length === 0) return null;
-    return { buffer, ext: coverExtFor(cover) };
-  } catch {
-    return null;
-  }
 }

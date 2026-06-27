@@ -2,7 +2,7 @@ import { readdir, stat } from "fs/promises";
 import path from "path";
 import { prisma } from "./prisma";
 import { probeMediaFile } from "./ffprobe";
-import { saveEmbeddedCoverFromProbe } from "./cover-storage";
+import { maybeExtractCover } from "./cover-storage";
 import { parseMovieName } from "./name-parser";
 import { computeFileHashPrefix } from "./file-hash";
 import { syncMovieTracksFromProbe } from "./movie-tracks";
@@ -31,6 +31,26 @@ export interface ScanSummary {
   moved: number;
   skipped: number;
   errors: string[];
+  /** True when the scan was cancelled mid-way via the AbortSignal. */
+  cancelled: boolean;
+}
+
+export type ScanProgressEvent =
+  | { type: "start"; total: number }
+  | {
+      type: "file";
+      index: number;
+      total: number;
+      fileName: string;
+      filePath: string;
+    }
+  | { type: "summary"; summary: ScanSummary };
+
+export interface ScanOptions {
+  /** Cooperative cancellation — checked between files and passed to ffprobe. */
+  signal?: AbortSignal;
+  /** Progress callback (used by the streaming scan endpoint). */
+  onProgress?: (event: ScanProgressEvent) => void;
 }
 
 async function walkVideoFiles(dir: string): Promise<string[]> {
@@ -57,7 +77,11 @@ async function walkVideoFiles(dir: string): Promise<string[]> {
   return results;
 }
 
-export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
+export async function scanDirectory(
+  rootPath: string,
+  options: ScanOptions = {},
+): Promise<ScanSummary> {
+  const { signal, onProgress } = options;
   const summary: ScanSummary = {
     found: 0,
     newDrafts: 0,
@@ -65,12 +89,28 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
     moved: 0,
     skipped: 0,
     errors: [],
+    cancelled: false,
   };
 
   const files = await walkVideoFiles(rootPath);
   summary.found = files.length;
+  onProgress?.({ type: "start", total: files.length });
 
-  for (const filePath of files) {
+  for (let i = 0; i < files.length; i++) {
+    if (signal?.aborted) {
+      summary.cancelled = true;
+      break;
+    }
+    const filePath = files[i];
+    const fileName = path.basename(filePath);
+    onProgress?.({
+      type: "file",
+      index: i + 1,
+      total: files.length,
+      fileName,
+      filePath,
+    });
+
     try {
       const fileStat = await stat(filePath);
       const fileSize = fileStat.size;
@@ -96,26 +136,38 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
         existing.fileMtime?.getTime() !== fileMtime.getTime();
 
       if (needsHash) {
+        if (signal?.aborted) {
+          summary.cancelled = true;
+          break;
+        }
         fileHash = await computeFileHashPrefix(filePath);
       }
 
+      // Detect a move: same content hash at a different path. Requiring a
+      // matching fileSize too guards against the (very unlikely) case of two
+      // different films sharing the same first-16MB hash prefix — that would
+      // otherwise overwrite one film's entry instead of creating a new one.
       const movedMovie =
         fileHash &&
         (await prisma.movie.findFirst({
           where: {
             fileHash,
+            fileSize,
             NOT: { filePath },
           },
         }));
 
       const parentFolder = path.basename(path.dirname(filePath));
-      const fileName = path.basename(filePath);
       const parsed = parseMovieName(fileName, parentFolder);
 
       let probe;
       try {
-        probe = await probeMediaFile(filePath);
+        probe = await probeMediaFile(filePath, signal);
       } catch (err) {
+        if (signal?.aborted) {
+          summary.cancelled = true;
+          break;
+        }
         summary.errors.push(
           `${fileName}: ffprobe failed — ${err instanceof Error ? err.message : "unknown"}`,
         );
@@ -124,8 +176,34 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
           video: null,
           audio: [],
           subtitles: [],
-          embeddedCover: null,
         };
+      }
+
+      // Prefer the entry already bound to this path: the file at this path
+      // changed (re-rip, re-mux) and should update in place. Only when nothing
+      // is registered at this path do we look for a same-content entry
+      // elsewhere and treat it as a move. Checking `existing` first avoids a
+      // duplicate-by-path when a file is overwritten with content identical to
+      // another catalogued file.
+      if (existing) {
+        await prisma.movie.update({
+          where: { id: existing.id },
+          data: {
+            fileSize,
+            fileMtime,
+            fileHash,
+            durationSeconds: probe.durationSeconds,
+          },
+        });
+        await syncMovieTracksFromProbe(prisma, existing.id, probe);
+        await maybeExtractCover(
+          existing.id,
+          filePath,
+          !!existing.coverPath,
+          signal,
+        );
+        summary.updated++;
+        continue;
       }
 
       if (movedMovie) {
@@ -140,35 +218,19 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
           },
         });
         await syncMovieTracksFromProbe(prisma, movedMovie.id, probe);
-        await saveEmbeddedCoverFromProbe(
+        await maybeExtractCover(
           movedMovie.id,
           filePath,
-          probe,
           !!movedMovie.coverPath,
+          signal,
         );
         summary.moved++;
         continue;
       }
 
-      if (existing) {
-        await prisma.movie.update({
-          where: { id: existing.id },
-          data: {
-            fileSize,
-            fileMtime,
-            fileHash,
-            durationSeconds: probe.durationSeconds,
-          },
-        });
-        await syncMovieTracksFromProbe(prisma, existing.id, probe);
-        await saveEmbeddedCoverFromProbe(
-          existing.id,
-          filePath,
-          probe,
-          !!existing.coverPath,
-        );
-        summary.updated++;
-        continue;
+      if (signal?.aborted) {
+        summary.cancelled = true;
+        break;
       }
 
       const slug = await resolveMovieSlug(prisma, parsed.title);
@@ -188,14 +250,19 @@ export async function scanDirectory(rootPath: string): Promise<ScanSummary> {
         },
       });
       await syncMovieTracksFromProbe(prisma, movie.id, probe);
-      await saveEmbeddedCoverFromProbe(movie.id, filePath, probe, false);
+      await maybeExtractCover(movie.id, filePath, false, signal);
       summary.newDrafts++;
     } catch (err) {
+      if (signal?.aborted) {
+        summary.cancelled = true;
+        break;
+      }
       summary.errors.push(
         `${filePath}: ${err instanceof Error ? err.message : "unknown error"}`,
       );
     }
   }
 
+  onProgress?.({ type: "summary", summary });
   return summary;
 }

@@ -7,6 +7,7 @@ export async function computeFileHashPrefix(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const hash = createHash("sha256");
     let bytesRead = 0;
+    let finished = false;
     const stream = createReadStream(filePath, {
       highWaterMark: 64 * 1024,
     });
@@ -28,8 +29,19 @@ export async function computeFileHashPrefix(filePath: string): Promise<string> {
       }
     });
 
-    stream.on("close", () => resolve(hash.digest("hex")));
-    stream.on("end", () => resolve(hash.digest("hex")));
-    stream.on("error", reject);
+    // 'end' and 'close' both fire for small files that are read fully, so
+    // finalize the hash exactly once to avoid ERR_CRYPTO_HASH_FINALIZED.
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      resolve(hash.digest("hex"));
+    };
+    stream.on("close", finish);
+    stream.on("end", finish);
+    stream.on("error", (err) => {
+      if (finished) return;
+      finished = true;
+      reject(err);
+    });
   });
 }
