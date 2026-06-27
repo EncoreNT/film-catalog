@@ -151,20 +151,25 @@ export function buildMovieWhere(
 
 export function buildMovieOrder(
   query: ReturnType<typeof parseListQuery>,
-): Prisma.MovieOrderByWithRelationInput {
+): Prisma.MovieOrderByWithRelationInput[] {
   const order = query.order ?? "asc";
+  // Prisma v7's runtime validator rejects a single orderBy object that has
+  // more than one key, so combine sort fields as an array of single-key
+  // objects. `id` is the final tiebreaker so pagination stays stable across
+  // page requests (SQLite otherwise returns equal-valued rows in an
+  // unspecified order, which can split one movie across two pages).
   switch (query.sort) {
     case "year":
-      return { year: order };
+      return [{ year: order }, { id: order }];
     case "createdAt":
-      return { createdAt: order };
+      return [{ createdAt: order }, { id: order }];
     case "rating":
-      return { rating: order };
+      return [{ rating: order }, { id: order }];
     case "watchedAt":
-      return { watchedAt: order };
+      return [{ watchedAt: order }, { id: order }];
     case "durationSeconds":
-      return { durationSeconds: order };
+      return [{ durationSeconds: order }, { id: order }];
     default:
-      return { title: order };
+      return [{ title: order }, { id: order }];
   }
 }

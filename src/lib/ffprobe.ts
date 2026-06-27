@@ -2,6 +2,7 @@ import { execa } from "execa";
 import {
   channelsToLayout,
   detectAudioProfile,
+  detectTranslationType,
   normalizeCodec,
 } from "./channels";
 import { getResolutionLabel } from "./resolution";
@@ -26,6 +27,8 @@ export interface ProbedAudioTrack {
   bitrate: number | null;
   language: string | null;
   title: string | null;
+  /** Auto-detected translation type (dub/pro_multi/author/original/…), or null. */
+  translationType: string | null;
   isDefault: boolean;
 }
 
@@ -320,6 +323,7 @@ export async function probeMediaFile(
       bitrate: streamBitrateKbps(s),
       language: normalizeLanguage(tags.language),
       title: tags.title ?? null,
+      translationType: detectTranslationType(tags.title),
       isDefault: s.disposition?.default === 1,
     };
   });

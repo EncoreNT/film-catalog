@@ -81,6 +81,19 @@ export function MovieCatalog({
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadedPages, setLoadedPages] = useState(0);
 
+  // "Показать ещё" accumulates extra pages into extraMovies. When the user
+  // changes filters / sort / page, the server passes a new first page as
+  // `movies`, but extraMovies from the previous query would otherwise survive
+  // and get concatenated — producing duplicate ids (and React key collisions).
+  // Reset the accumulated state whenever the query string changes.
+  const filterKey = searchParams.toString();
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setExtraMovies([]);
+    setLoadedPages(0);
+  }
+
   const applyFilter = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     for (const [key, value] of Object.entries(updates)) {
@@ -124,7 +137,18 @@ export function MovieCatalog({
     activeHdr === "HDR_ANY";
 
   const pages = Math.max(1, Math.ceil(total / limit));
-  const allMovies = [...movies, ...extraMovies];
+  // Defense-in-depth: even if two pages ever overlap (e.g. a non-stable sort
+  // shifts a movie between pages between requests), dedup by id so React keys
+  // stay unique. First occurrence wins, preserving the first-page order.
+  const allMovies: MovieWithTracks[] = [];
+  {
+    const seen = new Set<number>();
+    for (const movie of [...movies, ...extraMovies]) {
+      if (seen.has(movie.id)) continue;
+      seen.add(movie.id);
+      allMovies.push(movie);
+    }
+  }
   const shownCount = allMovies.length;
   const canLoadMore = page + loadedPages < pages && shownCount < total;
 

@@ -139,3 +139,33 @@ export function detectAudioProfile(
 
   return null;
 }
+
+/**
+ * Detect the catalog's canonical translation type from an audio track title.
+ *
+ * Russian release groups encode the translation kind right in the track name,
+ * e.g. "DUB, BLU-RAY", "MVO, HDREZKA STUDIO", "AVO, Л.ВОЛОДАРСКИЙ",
+ * "ORIGINAL". Map those keywords to the AUDIO_TRANSLATION_TYPES vocabulary
+ * so the "Перевод" column is filled automatically during a scan. Returns null
+ * when no known marker is present — the caller then leaves the field empty.
+ *
+ * Detection is purely title-based (per request: only when such a "comment"
+ * exists); language alone never implies a type.
+ */
+export function detectTranslationType(title?: string | null): string | null {
+  if (!title) return null;
+  const t = title.toLowerCase();
+
+  // Multi-voice before single-voice so "многоголос" isn't caught by "одноголос".
+  if (t.includes("дубляж") || t.includes("дуб") || /\bdub\b/.test(t)) {
+    return "dub";
+  }
+  if (t.includes("многоголос") || /\bmvo\b/.test(t)) return "pro_multi";
+  if (t.includes("двухголос") || /\bdvo\b/.test(t)) return "pro_two";
+  if (t.includes("авторск") || /\bavo\b/.test(t)) return "author";
+  if (/\bpvo\b/.test(t)) return "pro_single";
+  if (t.includes("одноголос") || /\bsvo\b/.test(t)) return "amateur_single";
+  if (t.includes("оригинал") || /\boriginal\b/.test(t)) return "original";
+
+  return null;
+}

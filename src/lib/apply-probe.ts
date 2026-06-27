@@ -32,7 +32,7 @@ export function probeToAudioRows(audio: ProbeResult["audio"]): AudioFormRow[] {
     profile: normalizeAudioProfile(track.codec ?? "", track.profile ?? "None"),
     channelLayout: track.channelLayout ?? "",
     language: track.language ?? "",
-    translationType: "",
+    translationType: track.translationType ?? "",
     bitrate: track.bitrate,
     title: track.title ?? "",
     isDefault: track.isDefault,
