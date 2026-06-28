@@ -10,9 +10,14 @@ import {
   Disc3,
   AudioLines,
   Star,
+  Layers,
   Library,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import {
+  alternativeQualityLabel,
+  findAlternativeQualityMovies,
+} from "@/lib/alternative-quality";
 import { MovieRating } from "@/components/MovieRating";
 import { SpecTag } from "@/components/SpecTag";
 import { PremiumBadge } from "@/components/PremiumBadge";
@@ -57,6 +62,8 @@ export default async function MoviePage({ params }: PageProps) {
     where: { movieId: movie.id },
     include: { franchise: { select: { id: true, name: true, slug: true } } },
   });
+
+  const alternativeVersions = await findAlternativeQualityMovies(movie);
 
   const coverUrl = movieCoverUrlFromMovie(movie);
   const tags = secondaryTags(movie);
@@ -217,6 +224,26 @@ export default async function MoviePage({ params }: PageProps) {
                       >
                         <Library className="h-3.5 w-3.5 text-accent" aria-hidden />
                         {membership.franchise.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            {alternativeVersions.length > 0 ? (
+              <section className="mt-6 border-t border-border pt-5">
+                <h2 className="font-mono-tech mb-3 text-faint">
+                  фильм в альтернативном качестве
+                </h2>
+                <ul className="flex flex-wrap gap-2">
+                  {alternativeVersions.map((alt) => (
+                    <li key={alt.id}>
+                      <Link
+                        href={`/movies/${alt.slug}`}
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-bg-elevated px-3 py-1.5 text-xs text-text transition-colors hover:border-accent/50 hover:text-accent"
+                      >
+                        <Layers className="h-3.5 w-3.5 text-accent" aria-hidden />
+                        {alternativeQualityLabel(alt)}
                       </Link>
                     </li>
                   ))}
