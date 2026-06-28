@@ -66,3 +66,12 @@ export function formatRuntimeCompact(
   if (h > 0) return `${h}ч`;
   return `${m}м`;
 }
+
+/** File size in gibibytes (GiB), labeled as «ГБ» for the UI. */
+export function formatFileSizeGB(
+  bytes: number | null | undefined,
+): string | null {
+  if (bytes == null || bytes <= 0) return null;
+  const gb = bytes / 1024 ** 3;
+  return `${gb.toFixed(2)} ГБ`;
+}

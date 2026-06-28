@@ -108,6 +108,21 @@ export const scanRootSchema = z.object({
   scanRoot: z.string().min(1),
 });
 
+export const scanRequestSchema = scanRootSchema
+  .extend({
+    externalDrive: z.boolean().optional(),
+    driveName: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.externalDrive && !data.driveName?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Укажите имя внешнего диска",
+        path: ["driveName"],
+      });
+    }
+  });
+
 export const storageCreateSchema = z.object({
   name: z.string().min(1),
   type: storageTypeSchema,

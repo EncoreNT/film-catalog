@@ -20,8 +20,10 @@ import { movieInclude } from "@/lib/movie-include";
 import {
   formatDate,
   formatDuration,
+  formatFileSizeGB,
   formatRelativeDate,
 } from "@/lib/format";
+import { displayFilePath } from "@/lib/display-path";
 import { genreLabel } from "@/lib/dictionaries";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import {
@@ -64,6 +66,7 @@ export default async function MoviePage({ params }: PageProps) {
   const premiumAtmos = premiumAudio(movie);
   const premiumHdr = premiumHDR(movie);
   const showPremiumStrip = premium4K || premiumAtmos != null || premiumHdr != null;
+  const fileSizeLabel = formatFileSizeGB(movie.fileSize);
 
   return (
     <div className="space-y-10">
@@ -473,12 +476,19 @@ export default async function MoviePage({ params }: PageProps) {
           <section className="surface-card p-5">
             <h2 className="font-mono-tech mb-4 text-muted">файл</h2>
             {movie.filePath ? (
-              <p className="break-all text-xs text-muted">{movie.filePath}</p>
+              <p className="break-all text-xs text-muted">
+                {displayFilePath(movie.filePath)}
+              </p>
             ) : (
               <p className="font-mono-tech text-xs text-faint">
                 путь не указан
               </p>
             )}
+            {fileSizeLabel ? (
+              <p className="font-mono-tech mt-2 text-xs text-muted">
+                {fileSizeLabel}
+              </p>
+            ) : null}
             {movie.storage ? (
               <p className="font-mono-tech mt-3 inline-flex items-center gap-1.5 text-xs text-accent">
                 {movie.storage.type === "EXTERNAL" ? "▣" : "■"}

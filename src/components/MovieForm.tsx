@@ -16,7 +16,9 @@ import { DurationInput } from "./primitives/DurationInput";
 import { YearInput } from "./primitives/YearInput";
 import { CoverUpload } from "./primitives/CoverUpload";
 import { TrackEditorSection } from "./TrackEditorSection";
+import { StoragePicker } from "./StoragePicker";
 import { useFilePathCheck } from "@/hooks/useFilePathCheck";
+import { useStoragePicker } from "@/hooks/useStoragePicker";
 import { useTrackEditor } from "@/hooks/useTrackEditor";
 import type { VideoFieldState } from "@/lib/movie-form-types";
 import { buildMovieUpdatePayload } from "@/lib/build-movie-payload";
@@ -41,6 +43,17 @@ export function MovieEditor({ movie }: MovieEditorProps) {
   const [filePath, setFilePath] = useState(movie.filePath ?? "");
   const { checking: filePathChecking, exists: fileExists, checkFilePath } =
     useFilePathCheck();
+  const {
+    storageKind,
+    setStorageKind,
+    selectedStorageId,
+    setSelectedStorageId,
+    newStorageName,
+    setNewStorageName,
+    externalStorages,
+    validateStorage,
+    resolveStorageId,
+  } = useStoragePicker(movie.storage);
   const [genres, setGenres] = useState<string[]>(
     movie.genres.map((g) => g.name),
   );
@@ -130,9 +143,18 @@ export function MovieEditor({ movie }: MovieEditorProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    const storageError = validateStorage();
+    if (storageError) {
+      setError(storageError);
+      return;
+    }
+
+    setLoading(true);
     try {
+      const storageId = await resolveStorageId();
+
       const res = await fetch(`/api/movies/${movie.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -143,6 +165,7 @@ export function MovieEditor({ movie }: MovieEditorProps) {
             description,
             releaseType,
             filePath,
+            storageId,
             genres,
             durationSeconds,
             rating,
@@ -285,6 +308,25 @@ export function MovieEditor({ movie }: MovieEditorProps) {
               </span>
             )}
           </Field>
+
+          <StoragePicker
+            storageKind={storageKind}
+            onStorageKindChange={(value) => {
+              setStorageKind(value);
+              markDirty();
+            }}
+            externalStorages={externalStorages}
+            selectedStorageId={selectedStorageId}
+            onSelectedStorageIdChange={(value) => {
+              setSelectedStorageId(value);
+              markDirty();
+            }}
+            newStorageName={newStorageName}
+            onNewStorageNameChange={(value) => {
+              setNewStorageName(value);
+              markDirty();
+            }}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <YearInput

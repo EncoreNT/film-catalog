@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
-  HardDrive,
-  Plug,
   Plus,
   ChevronRight,
   ChevronLeft,
@@ -21,7 +19,7 @@ import {
 import { Button } from "./primitives/Button";
 import { Field, TextAreaField } from "./primitives/Field";
 import { Select } from "./primitives/Select";
-import { SegmentedControl } from "./primitives/SegmentedControl";
+import { StoragePicker } from "./StoragePicker";
 import {
   RELEASE_TYPES,
   GENRES,
@@ -43,18 +41,10 @@ import {
   probeToVideoFields,
 } from "@/lib/apply-probe";
 import { buildMovieCreatePayload } from "@/lib/build-movie-payload";
+import { useStoragePicker } from "@/hooks/useStoragePicker";
 
 interface AddMovieFormProps {
   onDone?: () => void;
-}
-
-type StorageKind = "local" | "external";
-
-interface Storage {
-  id: number;
-  name: string;
-  type: "LOCAL" | "EXTERNAL";
-  path?: string | null;
 }
 
 const STEPS: { key: string; label: string; icon: React.ReactNode }[] = [
@@ -76,10 +66,17 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
   const [autoFilling, setAutoFilling] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
 
-  const [storageKind, setStorageKind] = useState<StorageKind>("local");
-  const [storages, setStorages] = useState<Storage[]>([]);
-  const [selectedStorageId, setSelectedStorageId] = useState<string>("");
-  const [newStorageName, setNewStorageName] = useState("");
+  const {
+    storageKind,
+    setStorageKind,
+    selectedStorageId,
+    setSelectedStorageId,
+    newStorageName,
+    setNewStorageName,
+    externalStorages,
+    validateStorage,
+    resolveStorageId,
+  } = useStoragePicker();
 
   const [releaseType, setReleaseType] = useState("");
   const [genres, setGenres] = useState<string[]>([]);
@@ -114,14 +111,6 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const externalStorages = storages.filter((s) => s.type === "EXTERNAL");
-
-  useEffect(() => {
-    fetch("/api/storages")
-      .then((r) => r.json())
-      .then((d) => setStorages(d.storages ?? []));
-  }, []);
 
   const handleFilePathBlur = () => {
     const trimmed = filePath.trim();
@@ -171,31 +160,6 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
     }
   };
 
-  const createStorageIfNeeded = async (): Promise<number | null> => {
-    if (storageKind === "local") {
-      const local = storages.find((s) => s.type === "LOCAL");
-      if (local) return local.id;
-      const res = await fetch("/api/storages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Локальный диск", type: "LOCAL" }),
-      });
-      const created = await res.json();
-      return created.id;
-    }
-    if (selectedStorageId) return parseInt(selectedStorageId, 10);
-    if (newStorageName.trim()) {
-      const res = await fetch("/api/storages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newStorageName.trim(), type: "EXTERNAL" }),
-      });
-      const created = await res.json();
-      return created.id;
-    }
-    return null;
-  };
-
   const handleSubmit = async () => {
     setError(null);
     if (!title.trim()) {
@@ -203,15 +167,16 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
       setStep(0);
       return;
     }
-    if (storageKind === "external" && !selectedStorageId && !newStorageName.trim()) {
-      setError("Укажите название внешнего диска");
+    const storageError = validateStorage();
+    if (storageError) {
+      setError(storageError);
       setStep(0);
       return;
     }
 
     setLoading(true);
     try {
-      const storageId = await createStorageIfNeeded();
+      const storageId = await resolveStorageId();
 
       const payload = buildMovieCreatePayload({
         title,
@@ -327,12 +292,12 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
 
               <StoragePicker
                 storageKind={storageKind}
-                setStorageKind={setStorageKind}
+                onStorageKindChange={setStorageKind}
                 externalStorages={externalStorages}
                 selectedStorageId={selectedStorageId}
-                setSelectedStorageId={setSelectedStorageId}
+                onSelectedStorageIdChange={setSelectedStorageId}
                 newStorageName={newStorageName}
-                setNewStorageName={setNewStorageName}
+                onNewStorageNameChange={setNewStorageName}
               />
 
               <div className="space-y-3">
@@ -548,63 +513,6 @@ function DetailsFields({
         placeholder="Краткое описание фильма…"
         hint="Краткое описание сюжета — на твоё усмотрение."
       />
-    </div>
-  );
-}
-
-function StoragePicker({
-  storageKind,
-  setStorageKind,
-  externalStorages,
-  selectedStorageId,
-  setSelectedStorageId,
-  newStorageName,
-  setNewStorageName,
-}: {
-  storageKind: StorageKind;
-  setStorageKind: (v: StorageKind) => void;
-  externalStorages: Storage[];
-  selectedStorageId: string;
-  setSelectedStorageId: (v: string) => void;
-  newStorageName: string;
-  setNewStorageName: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-3">
-      <p className="font-mono-tech text-muted">хранилище</p>
-      <SegmentedControl
-        ariaLabel="Хранилище"
-        value={storageKind}
-        onChange={(v) => setStorageKind(v as StorageKind)}
-        options={[
-          { value: "local", label: "Локальный диск", icon: <HardDrive className="h-4 w-4" /> },
-          { value: "external", label: "Внешний диск", icon: <Plug className="h-4 w-4" /> },
-        ]}
-      />
-      {storageKind === "external" ? (
-        externalStorages.length > 0 ? (
-          <Select
-            label="Выберите диск"
-            value={selectedStorageId}
-            onChange={setSelectedStorageId}
-            options={[
-              { value: "", label: "— новый диск —" },
-              ...externalStorages.map((s) => ({
-                value: String(s.id),
-                label: s.name,
-              })),
-            ]}
-          />
-        ) : null
-      ) : null}
-      {storageKind === "external" && !selectedStorageId ? (
-        <Field
-          label="Название нового диска"
-          value={newStorageName}
-          onChange={(e) => setNewStorageName(e.target.value)}
-          placeholder="Например, Seagate 4TB"
-        />
-      ) : null}
     </div>
   );
 }

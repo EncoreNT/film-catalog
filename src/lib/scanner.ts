@@ -51,6 +51,8 @@ export interface ScanOptions {
   signal?: AbortSignal;
   /** Progress callback (used by the streaming scan endpoint). */
   onProgress?: (event: ScanProgressEvent) => void;
+  /** When set, all found movies are tagged with this storage. */
+  storageId?: number | null;
 }
 
 async function walkVideoFiles(dir: string): Promise<string[]> {
@@ -81,7 +83,7 @@ export async function scanDirectory(
   rootPath: string,
   options: ScanOptions = {},
 ): Promise<ScanSummary> {
-  const { signal, onProgress } = options;
+  const { signal, onProgress, storageId } = options;
   const summary: ScanSummary = {
     found: 0,
     newDrafts: 0,
@@ -125,6 +127,12 @@ export async function scanDirectory(
         existing.fileSize === fileSize &&
         existing.fileMtime?.getTime() === fileMtime.getTime()
       ) {
+        if (storageId != null) {
+          await prisma.movie.update({
+            where: { id: existing.id },
+            data: { storageId },
+          });
+        }
         summary.skipped++;
         continue;
       }
@@ -193,6 +201,7 @@ export async function scanDirectory(
             fileMtime,
             fileHash,
             durationSeconds: probe.durationSeconds,
+            ...(storageId != null ? { storageId } : {}),
           },
         });
         await syncMovieTracksFromProbe(prisma, existing.id, probe);
@@ -215,6 +224,7 @@ export async function scanDirectory(
             fileMtime,
             fileHash,
             durationSeconds: probe.durationSeconds,
+            ...(storageId != null ? { storageId } : {}),
           },
         });
         await syncMovieTracksFromProbe(prisma, movedMovie.id, probe);
@@ -247,6 +257,7 @@ export async function scanDirectory(
           fileMtime,
           fileHash,
           status: MovieStatus.DRAFT,
+          ...(storageId != null ? { storageId } : {}),
         },
       });
       await syncMovieTracksFromProbe(prisma, movie.id, probe);

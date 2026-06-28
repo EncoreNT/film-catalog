@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getScanRoot, setScanRoot } from "@/lib/settings";
 import { scanDirectory, type ScanProgressEvent } from "@/lib/scanner";
-import { scanRootSchema } from "@/lib/validators";
+import { scanRequestSchema, scanRootSchema } from "@/lib/validators";
+import { prisma } from "@/lib/prisma";
+import { StorageType } from "@/generated/prisma/client";
 
 export async function GET() {
   const scanRoot = await getScanRoot();
@@ -17,14 +19,29 @@ export async function POST(request: NextRequest) {
   }
 
   let scanRoot: string;
+  let externalDrive = false;
+  let driveName: string | undefined;
   try {
-    ({ scanRoot } = scanRootSchema.parse(body));
+    const parsed = scanRequestSchema.parse(body);
+    scanRoot = parsed.scanRoot;
+    externalDrive = parsed.externalDrive ?? false;
+    driveName = parsed.driveName;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid scan root";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
   await setScanRoot(scanRoot);
+
+  let storageId: number | null = null;
+  if (externalDrive && driveName?.trim()) {
+    const storage = await prisma.storage.upsert({
+      where: { name: driveName.trim() },
+      create: { name: driveName.trim(), type: StorageType.EXTERNAL },
+      update: { type: StorageType.EXTERNAL },
+    });
+    storageId = storage.id;
+  }
 
   // Stream newline-delimited JSON progress events to the client. Each line is
   // one ScanProgressEvent. The client reads them via response.body and updates
@@ -49,6 +66,7 @@ export async function POST(request: NextRequest) {
         await scanDirectory(scanRoot, {
           signal: request.signal,
           onProgress: enqueue,
+          storageId,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Scan failed";

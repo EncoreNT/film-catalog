@@ -12,7 +12,8 @@ import { maybeExtractCover } from "@/lib/cover-storage";
 import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
 import { resolveMovieSlug } from "@/lib/movie-slug";
-import { access } from "fs/promises";
+import { computeFileHashPrefix } from "@/lib/file-hash";
+import { access, stat } from "fs/promises";
 
 export async function GET(request: NextRequest) {
   const query = parseListQuery(request.nextUrl.searchParams);
@@ -85,6 +86,24 @@ export async function POST(request: NextRequest) {
       ? await upsertGenresByNames(data.genres)
       : [];
 
+    let fileSize: number | null = null;
+    let fileMtime: Date | null = null;
+    let fileHash: string | null = null;
+    const trimmedPath = data.filePath?.trim() || null;
+    if (trimmedPath) {
+      try {
+        const fileStat = await stat(trimmedPath);
+        fileSize = fileStat.size;
+        fileMtime = fileStat.mtime;
+        fileHash = await computeFileHashPrefix(trimmedPath);
+      } catch {
+        return NextResponse.json(
+          { error: "Файл не найден по указанному пути" },
+          { status: 400 },
+        );
+      }
+    }
+
     const slug = await resolveMovieSlug(prisma, data.title);
 
     const movie = await prisma.movie.create({
@@ -94,7 +113,10 @@ export async function POST(request: NextRequest) {
         year: data.year ?? null,
         description: data.description ?? null,
         durationSeconds,
-        filePath: data.filePath ?? null,
+        filePath: trimmedPath,
+        fileSize,
+        fileMtime,
+        fileHash,
         storageId: data.storageId ?? null,
         releaseType: data.releaseType ?? null,
         status: data.status ?? MovieStatus.CATALOG,
@@ -140,9 +162,9 @@ export async function POST(request: NextRequest) {
     // When the caller skipped probing (e.g. the Add form, which autofills
     // from a probeOnly call), still try to pull an embedded poster out of the
     // file. Best-effort: failures never block movie creation.
-    if (data.filePath?.trim() && !movie.coverPath) {
+    if (trimmedPath && !movie.coverPath) {
       try {
-        await maybeExtractCover(movie.id, data.filePath, false);
+        await maybeExtractCover(movie.id, trimmedPath, false);
       } catch {
         // ignore — cover extraction is non-fatal
       }

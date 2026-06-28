@@ -95,6 +95,7 @@ export interface MovieUpdatePayloadInput {
   description: string | null;
   releaseType: string | null;
   filePath: string | null;
+  storageId: number | null;
   genres: string[];
   durationSeconds: number | null;
   rating: number | null;
@@ -111,6 +112,7 @@ export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
     description: input.description || null,
     releaseType: input.releaseType || null,
     filePath: input.filePath?.trim() || null,
+    storageId: input.storageId,
     genres: input.genres,
     durationSeconds: input.durationSeconds,
     rating: input.rating,

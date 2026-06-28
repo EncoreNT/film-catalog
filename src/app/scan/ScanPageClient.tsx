@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
+import { Checkbox } from "@/components/primitives/Checkbox";
 import { Field } from "@/components/primitives/Field";
 import { MovieCard } from "@/components/MovieCard";
 import type { ScanSummary } from "@/lib/scanner";
@@ -40,7 +41,8 @@ export function ScanPageClient({
 }: ScanPageClientProps) {
   const router = useRouter();
   const [scanRoot, setScanRoot] = useState(initialScanRoot);
-  const [loading, setLoading] = useState(false);
+  const [externalDrive, setExternalDrive] = useState(false);
+  const [driveName, setDriveName] = useState("");
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [cancelled, setCancelled] = useState(false);
@@ -62,24 +64,12 @@ export function ScanPageClient({
     router.refresh();
   };
 
-  const saveRoot = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/scan", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scanRoot }),
-      });
-      if (!res.ok) throw new Error("Не удалось сохранить путь");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const runScan = async () => {
+    if (externalDrive && !driveName.trim()) {
+      setError("Укажите имя внешнего диска");
+      return;
+    }
+
     setScanning(true);
     setCancelled(false);
     setError(null);
@@ -93,7 +83,11 @@ export function ScanPageClient({
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scanRoot }),
+        body: JSON.stringify({
+          scanRoot,
+          externalDrive,
+          driveName: externalDrive ? driveName.trim() : undefined,
+        }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
@@ -218,12 +212,23 @@ export function ScanPageClient({
           value={scanRoot}
           onChange={(e) => setScanRoot(e.target.value)}
           placeholder="/Users/you/Movies"
-          hint="Абсолютный путь к папке с фильмами. Можно задать через SCAN_ROOT в .env."
+          hint="Абсолютный путь к папке с фильмами. Можно задать через SCAN_ROOT в .env. Путь сохраняется при сканировании."
         />
+        <Checkbox
+          label="Сканирую внешний жёсткий диск"
+          checked={externalDrive}
+          onChange={(e) => setExternalDrive(e.target.checked)}
+        />
+        {externalDrive ? (
+          <Field
+            label="Имя диска"
+            value={driveName}
+            onChange={(e) => setDriveName(e.target.value)}
+            placeholder="Seagate 4TB"
+            hint="Все найденные фильмы будут отмечены как хранящиеся на этом внешнем диске."
+          />
+        ) : null}
         <div className="flex flex-wrap gap-3">
-          <Button variant="secondary" loading={loading} onClick={saveRoot}>
-            Сохранить путь
-          </Button>
           <Button
             variant="primary"
             loading={scanning}
