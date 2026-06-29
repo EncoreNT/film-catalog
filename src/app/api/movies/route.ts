@@ -12,8 +12,7 @@ import { maybeExtractCover } from "@/lib/cover-storage";
 import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
 import { resolveMovieSlug } from "@/lib/movie-slug";
-import { computeFileHashPrefix } from "@/lib/file-hash";
-import { access, stat } from "fs/promises";
+import { loadMovieFileMeta } from "@/lib/load-movie-file-meta";
 
 export async function GET(request: NextRequest) {
   const query = parseListQuery(request.nextUrl.searchParams);
@@ -47,7 +46,8 @@ export async function POST(request: NextRequest) {
         );
       }
       try {
-        await access(data.filePath);
+        const { assertMovieFileReadable } = await loadMovieFileMeta();
+        await assertMovieFileReadable(data.filePath);
       } catch {
         return NextResponse.json(
           { error: "Файл не найден по указанному пути" },
@@ -92,10 +92,11 @@ export async function POST(request: NextRequest) {
     const trimmedPath = data.filePath?.trim() || null;
     if (trimmedPath) {
       try {
-        const fileStat = await stat(trimmedPath);
-        fileSize = fileStat.size;
-        fileMtime = fileStat.mtime;
-        fileHash = await computeFileHashPrefix(trimmedPath);
+        const { readMovieFileMeta } = await loadMovieFileMeta();
+        const meta = await readMovieFileMeta(trimmedPath);
+        fileSize = meta.fileSize;
+        fileMtime = meta.fileMtime;
+        fileHash = meta.fileHash;
       } catch {
         return NextResponse.json(
           { error: "Файл не найден по указанному пути" },
@@ -183,7 +184,8 @@ export async function HEAD(request: NextRequest) {
     return new NextResponse(null, { status: 400 });
   }
   try {
-    await access(filePath);
+    const { assertMovieFileReadable } = await loadMovieFileMeta();
+    await assertMovieFileReadable(filePath);
     return new NextResponse(null, { status: 200 });
   } catch {
     return new NextResponse(null, { status: 404 });

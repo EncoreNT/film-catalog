@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
+import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -100,7 +100,7 @@ export default async function FranchisePage({ params }: PageProps) {
       <section className="relative left-1/2 -translate-x-1/2 -mt-8 sm:-mt-12 w-screen overflow-hidden border-b border-border bg-bg-elevated">
         <div className="relative w-full aspect-[16/9] min-h-[300px] max-h-[680px]">
           {coverUrl ? (
-            <Image
+            <ApiCoverImage
               src={coverUrl}
               alt={`Обложка: ${franchise.name}`}
               fill

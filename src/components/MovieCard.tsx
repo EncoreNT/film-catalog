@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { MonitorPlay, Star, Sun, Waves } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { formatDuration } from "@/lib/format";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import { genreLabel } from "@/lib/dictionaries";
+import { ApiCoverImage } from "./primitives/ApiCoverImage";
 import { PremiumBadge } from "./PremiumBadge";
 import { SpecTag } from "./SpecTag";
 import {
@@ -83,7 +83,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
             </>
           ) : null}
           {coverUrl ? (
-            <Image
+            <ApiCoverImage
               src={coverUrl}
               alt={`Обложка: ${movie.title}`}
               fill

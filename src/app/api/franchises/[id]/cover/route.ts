@@ -3,6 +3,7 @@ import { writeFile, mkdir, readFile, stat } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { dataPath } from "@/lib/data-path";
 import {
   isErrorResponse,
   jsonError,
@@ -10,7 +11,7 @@ import {
   type RouteContext,
 } from "@/lib/api-utils";
 
-const COVERS_DIR = path.join(process.cwd(), "data", "covers");
+const COVERS_DIR = dataPath("covers");
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return jsonError("Обложка не найдена", 404);
   }
 
-  const filePath = path.join(process.cwd(), "data", franchise.coverPath);
+  const filePath = dataPath(franchise.coverPath);
   const ext = path.extname(filePath).toLowerCase();
   const contentType = EXT_TO_MIME[ext] ?? "application/octet-stream";
   const etag = `"franchise-cover-${franchiseId}-${franchise.updatedAt.getTime()}"`;
@@ -97,6 +98,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       },
     });
   } catch {
+    await prisma.franchise
+      .update({ where: { id: franchiseId }, data: { coverPath: null } })
+      .catch(() => {});
     return jsonError("Файл обложки отсутствует", 404);
   }
 }

@@ -1,9 +1,11 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "./prisma";
+import { dataPath } from "./data-path";
+import { assertCoverImageExtension } from "./cover-formats-mkv";
 import { extractFirstMkvAttachment } from "./mkv";
 
-const COVERS_DIR = path.join(process.cwd(), "data", "covers");
+const COVERS_DIR = dataPath("covers");
 
 /**
  * Persist a cover image buffer for a movie and record its relative path.
@@ -15,6 +17,7 @@ export async function saveCoverBuffer(
   buffer: Buffer,
   ext: string,
 ): Promise<string> {
+  assertCoverImageExtension(ext);
   await mkdir(COVERS_DIR, { recursive: true });
   const coverFileName = `${movieId}${ext}`;
   await writeFile(path.join(COVERS_DIR, coverFileName), buffer);

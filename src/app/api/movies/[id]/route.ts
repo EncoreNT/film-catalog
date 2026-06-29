@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stat } from "fs/promises";
 import { prisma } from "@/lib/prisma";
 import { movieUpdateSchema } from "@/lib/validators";
 import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
-import { computeFileHashPrefix } from "@/lib/file-hash";
 import { syncMovieTracks } from "@/lib/movie-tracks";
 import { resolveMovieSlug } from "@/lib/movie-slug";
+import { loadMovieFileMeta } from "@/lib/load-movie-file-meta";
 import {
   isErrorResponse,
   jsonError,
@@ -43,10 +42,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const trimmed = filePath?.trim() || null;
       if (trimmed) {
         try {
-          const fileStat = await stat(trimmed);
-          fileSize = fileStat.size;
-          fileMtime = fileStat.mtime;
-          fileHash = await computeFileHashPrefix(trimmed);
+          const { readMovieFileMeta } = await loadMovieFileMeta();
+          const meta = await readMovieFileMeta(trimmed);
+          fileSize = meta.fileSize;
+          fileMtime = meta.fileMtime;
+          fileHash = meta.fileHash;
         } catch {
           return jsonError("Файл не найден по указанному пути", 400);
         }

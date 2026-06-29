@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
+import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import Link from "next/link";
 import { Clapperboard, Star } from "lucide-react";
 import type { FranchiseWithSlots } from "@/lib/franchise-include";
@@ -66,7 +66,7 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
       <article className="surface-card overflow-hidden transition-all duration-200 group-hover:border-accent/40 group-hover:shadow-[0_0_28px_var(--accent-glow)]">
         <div className="relative aspect-[16/9] overflow-hidden bg-bg-elevated">
           {coverUrl ? (
-            <Image
+            <ApiCoverImage
               src={coverUrl}
               alt={`Обложка: ${franchise.name}`}
               fill

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -98,7 +98,7 @@ export default async function MoviePage({ params }: PageProps) {
         <div className="mx-auto w-full max-w-[280px]">
           <div className="surface-card relative aspect-[2/3] overflow-hidden">
             {coverUrl ? (
-              <Image
+              <ApiCoverImage
                 src={coverUrl}
                 alt={`Обложка: ${movie.title}`}
                 fill

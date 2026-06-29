@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { dataPath } from "@/lib/data-path";
 import {
   isErrorResponse,
   jsonError,
@@ -10,7 +11,7 @@ import {
   type RouteContext,
 } from "@/lib/api-utils";
 
-const COVERS_DIR = path.join(process.cwd(), "data", "covers");
+const COVERS_DIR = dataPath("covers");
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": ".jpg",

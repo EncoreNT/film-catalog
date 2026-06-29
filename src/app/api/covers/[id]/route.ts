@@ -2,21 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
+import { dataPath } from "@/lib/data-path";
 import {
   isErrorResponse,
   jsonError,
   parseRouteId,
   type RouteContext,
 } from "@/lib/api-utils";
-
-const MIME: Record<string, string> = {
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".webp": "image/webp",
-  ".gif": "image/gif",
-  ".avif": "image/avif",
-};
+import { COVER_MIME_BY_EXT, isCoverImageExtension } from "@/lib/cover-formats";
 
 export async function GET(request: NextRequest, context: RouteContext) {
   const movieId = await parseRouteId(context.params);
@@ -30,9 +23,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return jsonError("Обложка не найдена", 404);
   }
 
-  const filePath = path.join(process.cwd(), "data", movie.coverPath);
+  const filePath = dataPath(movie.coverPath);
   const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME[ext] ?? "application/octet-stream";
+  if (!isCoverImageExtension(ext)) {
+    await prisma.movie
+      .update({ where: { id: movieId }, data: { coverPath: null } })
+      .catch(() => {});
+    return jsonError("Файл обложки имеет неподдерживаемый формат", 404);
+  }
+  const contentType = COVER_MIME_BY_EXT[ext] ?? "application/octet-stream";
   const etag = `"cover-${movieId}-${movie.updatedAt.getTime()}"`;
 
   if (request.headers.get("if-none-match") === etag) {
@@ -60,6 +59,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       },
     });
   } catch {
+    // DB can outlive files on disk (redeploy, missing volume). Drop stale path
+    // so the UI stops requesting a cover that no longer exists.
+    await prisma.movie
+      .update({ where: { id: movieId }, data: { coverPath: null } })
+      .catch(() => {});
     return jsonError("Файл обложки отсутствует", 404);
   }
 }
