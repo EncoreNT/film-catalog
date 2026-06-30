@@ -1,5 +1,5 @@
 const QUALITY_TAGS =
-  /\b(2160p|1080p|720p|480p|4k|uhd|hd|sd|x264|x265|h\.?264|h\.?265|hevc|avc|xvid|divx|web-?dl|webrip|bluray|blu-?ray|bdrip|brrip|remux|repack|proper|extended|unrated|directors?.cut|imax|10bit|8bit|hdr10\+?|dolby.?vision|dv|hlg|sdr|aac|ac3|eac3|dts|truehd|atmos|multi|dual|rus|eng|sub|dub|rip|cam|ts|tc|scr|r5|dvdrip|hdtv|amzn|nf|dsnp|hmax|atvp|repack2|internal|limited|fs|ws|proper|read\.nfo|xxx|xxx1080p)\b/gi;
+  /\b(2160p|1080p|720p|480p|4k|uhd|hd|sd|x264|x265|h\.?264|h\.?265|hevc|avc|xvid|divx|web-?dl|webrip|bluray|blu-?ray|bdrip|brrip|remux|hybrid|repack|proper|extended|unrated|directors?.cut|imax|10bit|8bit|hdr10\+?|dolby.?vision|dv|hlg|sdr|aac|ac3|eac3|dts|truehd|atmos|multi|dual|rus|eng|sub|dub|rip|cam|ts|tc|scr|r5|dvdrip|hdtv|amzn|nf|dsnp|hmax|atvp|repack2|internal|limited|fs|ws|proper|read\.nfo|xxx|xxx1080p)\b/gi;
 
 const YEAR_PATTERN = /(?:\(|\[|\s|^)(19\d{2}|20\d{2})(?:\)|\]|\s|$)/;
 
@@ -10,6 +10,7 @@ export interface ParsedName {
 }
 
 const RELEASE_PATTERNS: [RegExp, string][] = [
+  [/\bhybrid\b/i, "hybrid"],
   [/\bbdremux\b/i, "bdremux"],
   [/\bbdrip\b/i, "bdrip"],
   [/\bbrrip\b/i, "bdrip"],

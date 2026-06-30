@@ -196,6 +196,7 @@ export const RESOLUTION_REFERENCE_PX: Record<
 };
 
 export const RELEASE_TYPES: DictOption[] = [
+  { value: "hybrid", label: "Hybrid" },
   { value: "bdremux", label: "BDRemux" },
   { value: "bdrip", label: "BDRip" },
   { value: "bluray", label: "Blu-ray (untouched)" },

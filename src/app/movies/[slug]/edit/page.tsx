@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { MovieEditor } from "@/components/MovieForm";
 import { movieInclude } from "@/lib/movie-include";
+import { getMovieFranchiseMemberships } from "@/lib/movie-franchise-memberships";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -34,6 +35,11 @@ export default async function EditMoviePage({ params }: PageProps) {
 
   if (!movie) notFound();
 
+  const franchiseMemberships = await getMovieFranchiseMemberships(
+    prisma,
+    movie.id,
+  );
+
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -53,7 +59,7 @@ export default async function EditMoviePage({ params }: PageProps) {
         </h1>
       </header>
 
-      <MovieEditor movie={movie} />
+      <MovieEditor movie={movie} franchiseMemberships={franchiseMemberships} />
     </div>
   );
 }

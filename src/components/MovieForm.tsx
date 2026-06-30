@@ -10,6 +10,8 @@ import { Field, TextAreaField } from "./primitives/Field";
 import { DatePicker } from "./primitives/DatePicker";
 import { Select } from "./primitives/Select";
 import { StarRating } from "./StarRating";
+import { MovieFranchisePicker } from "./MovieFranchisePicker";
+import type { MovieFranchiseMembership } from "@/lib/movie-franchise-memberships";
 import { RELEASE_TYPES, GENRES, normalizeAudioProfile } from "@/lib/dictionaries";
 import { MultiSelect } from "./primitives/MultiSelect";
 import { DurationInput } from "./primitives/DurationInput";
@@ -33,9 +35,10 @@ import {
 
 interface MovieEditorProps {
   movie: MovieWithTracks;
+  franchiseMemberships?: MovieFranchiseMembership[];
 }
 
-export function MovieEditor({ movie }: MovieEditorProps) {
+export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -483,6 +486,12 @@ export function MovieEditor({ movie }: MovieEditorProps) {
               markDirty();
             }}
             hint="Краткое описание сюжета — на твоё усмотрение."
+          />
+
+          <MovieFranchisePicker
+            movieId={movie.id}
+            movieTitle={movie.title}
+            initialMemberships={franchiseMemberships ?? []}
           />
 
           <div className="space-y-2">

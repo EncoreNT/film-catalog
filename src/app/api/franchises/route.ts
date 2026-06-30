@@ -14,10 +14,31 @@ import { jsonError } from "@/lib/api-utils";
 export async function GET(request: NextRequest) {
   const query = parseFranchiseListQuery(request.nextUrl.searchParams);
   const where = buildFranchiseWhere(query);
-  const orderBy = buildFranchiseOrder(query);
   const page = query.page ?? 1;
   const limit = query.limit ?? 48;
   const skip = (page - 1) * limit;
+
+  // Lightweight mode for picker dropdowns: returns only id/name/slug without
+  // pulling every franchise's slots and movies.
+  if (request.nextUrl.searchParams.get("lite") === "1") {
+    const [items, total] = await Promise.all([
+      prisma.franchise.findMany({
+        where,
+        orderBy: { name: "asc" },
+        skip,
+        take: limit,
+        select: { id: true, name: true, slug: true },
+      }),
+      prisma.franchise.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      items,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
+  }
+
+  const orderBy = buildFranchiseOrder(query);
 
   const [items, total] = await Promise.all([
     prisma.franchise.findMany({
