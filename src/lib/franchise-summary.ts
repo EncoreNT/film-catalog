@@ -26,8 +26,10 @@ export interface FranchiseSlotSummary {
   resolution: string | null;
   /** Compact dynamic-range badge text (HDR10 / HDR10+ / DV / SDR). */
   dynamicRange: string | null;
-  /** Compact audio badge text (e.g. "TrueHD Atmos", "AC3"). */
+  /** Short audio code for the reel cell (ATMOS / DTS:X / TRUEHD / AC3 …). */
   audio: string | null;
+  /** Full audio label for the tooltip (e.g. "TrueHD Atmos"). */
+  audioFull: string | null;
 }
 
 const RESOLUTION_SHORT: Record<string, string> = {
@@ -54,19 +56,49 @@ function slotDynamicRange(movie: MovieWithTracks | null): string | null {
   return "HDR";
 }
 
-function slotAudio(movie: MovieWithTracks | null): string | null {
-  if (!movie || movie.audioTracks.length === 0) return null;
+const AUDIO_SHORT: Record<string, string> = {
+  truehd: "TRUEHD",
+  eac3: "EAC3",
+  ac3: "AC3",
+  "dts-hd": "DTS-HD",
+  dts: "DTS",
+  aac: "AAC",
+  flac: "FLAC",
+  opus: "OPUS",
+  vorbis: "VORBIS",
+  pcm: "PCM",
+  mp3: "MP3",
+};
+
+function pickBestAudioTrack(
+  movie: MovieWithTracks,
+): MovieWithTracks["audioTracks"][number] | null {
+  if (movie.audioTracks.length === 0) return null;
   const sorted = [...movie.audioTracks].sort((a, b) => {
-    const a3D =
-      a.profile === "Atmos" || a.profile === "DTS:X MA" ? 1 : 0;
-    const b3D =
-      b.profile === "Atmos" || b.profile === "DTS:X MA" ? 1 : 0;
+    const a3D = a.profile === "Atmos" || a.profile === "DTS:X MA" ? 1 : 0;
+    const b3D = b.profile === "Atmos" || b.profile === "DTS:X MA" ? 1 : 0;
     if (a3D !== b3D) return b3D - a3D;
     if (a.isDefault && !b.isDefault) return -1;
     if (!a.isDefault && b.isDefault) return 1;
     return 0;
   });
-  return formatAudioLabel(sorted[0]);
+  return sorted[0];
+}
+
+function slotAudioShort(movie: MovieWithTracks | null): string | null {
+  const track = movie ? pickBestAudioTrack(movie) : null;
+  if (!track) return null;
+  const profile =
+    track.profile && track.profile !== "None" ? track.profile : null;
+  if (profile === "Atmos") return "ATMOS";
+  if (profile === "DTS:X MA") return "DTS:X";
+  if (track.codec) return AUDIO_SHORT[track.codec] ?? track.codec.toUpperCase();
+  return profile;
+}
+
+function slotAudioFull(movie: MovieWithTracks | null): string | null {
+  const track = movie ? pickBestAudioTrack(movie) : null;
+  return track ? formatAudioLabel(track) : null;
 }
 
 export interface FranchiseSummary {
@@ -135,7 +167,8 @@ export function computeFranchiseSummary(
       elite,
       resolution: slotResolution(movie),
       dynamicRange: slotDynamicRange(movie),
-      audio: slotAudio(movie),
+      audio: slotAudioShort(movie),
+      audioFull: slotAudioFull(movie),
     };
   });
 

@@ -1,3 +1,5 @@
+import { Monitor, Contrast, AudioLines } from "lucide-react";
+import type { ReactNode } from "react";
 import type { FranchiseSlotSummary, SlotTier } from "@/lib/franchise-summary";
 
 interface FranchiseQualityReelProps {
@@ -5,65 +7,106 @@ interface FranchiseQualityReelProps {
   className?: string;
 }
 
+/*
+ * HUD-style quality readout. Each filled film is a compact "spec panel":
+ * a hairline-bordered cell with a slim top signal bar whose brightness
+ * encodes the quality tier, holding three clearly delineated spec tiles
+ * (resolution · dynamic range · audio), each led by a small lucide icon.
+ * Missing slots stay hollow with a faint index marker so the gaps read as
+ * intentional. Elite tier earns an accent glow + gold tiles. Everything
+ * uses the warm-coal theme tokens — no flat white pills — for a cinematic,
+ * technical feel.
+ */
+
 const TIER_CELL: Record<SlotTier, string> = {
-  missing: "border border-dashed border-ember/45 bg-ember/5",
-  basic: "bg-muted/30",
-  "premium-1": "bg-accent/40",
-  "premium-2": "bg-accent/65",
-  elite: "bg-accent shadow-[0_0_8px_var(--accent-glow)]",
+  missing: "border border-dashed border-ember/40 bg-ember/[0.06]",
+  basic: "border border-border-strong/60 bg-bg-surface",
+  "premium-1": "border border-border-strong/60 bg-accent/[0.07]",
+  "premium-2": "border border-accent/25 bg-accent/[0.09]",
+  elite: "border border-accent/45 bg-accent/[0.12] shadow-[0_0_12px_var(--accent-glow)]",
+};
+
+const TIER_SIGNAL: Record<SlotTier, string> = {
+  missing: "",
+  basic: "bg-border-strong",
+  "premium-1": "bg-accent/55",
+  "premium-2": "bg-accent/85",
+  elite: "bg-accent-bright shadow-[0_0_6px_var(--accent-glow)]",
 };
 
 const TIER_HOVER: Record<SlotTier, string> = {
   missing: "group-hover:border-ember/70 group-hover:bg-ember/10",
-  basic: "group-hover:bg-muted/45",
-  "premium-1": "group-hover:brightness-110",
-  "premium-2": "group-hover:brightness-110",
-  elite: "group-hover:shadow-[0_0_12px_var(--accent-glow)]",
+  basic: "group-hover:border-accent/30",
+  "premium-1": "group-hover:border-accent/40",
+  "premium-2": "group-hover:border-accent/55",
+  elite: "group-hover:shadow-[0_0_16px_var(--accent-glow)]",
 };
 
-// Badge pills are light chips with dark text so they read on every tier fill —
-// the cell background still encodes the quality tier around them.
-const BADGE_PILL =
-  "rounded-[3px] bg-white/90 px-1 py-[1px] text-[0.5rem] font-bold leading-none text-black tabular-nums whitespace-nowrap";
+const TILE_BASE =
+  "flex items-center justify-center gap-1 rounded-[3px] border px-1 py-[2px] font-mono text-[0.5rem] uppercase tracking-[0.05em] leading-none tabular-nums";
+
+const TILE_NORMAL =
+  "border-border-strong bg-bg-deep/85 text-text shadow-[0_1px_0_rgba(255,240,220,0.04)]";
+
+const TILE_ELITE =
+  "border-accent/45 bg-bg-deep/75 text-accent-bright shadow-[0_0_6px_rgba(232,176,90,0.18)]";
 
 export function qualityLabel(slot: FranchiseSlotSummary): string {
   if (!slot.filled) return "не хватает";
   const parts: string[] = [];
-  if (slot.fourK) parts.push("4K");
-  if (slot.hdr) parts.push("HDR");
-  if (slot.atmos) parts.push("рус. Atmos");
+  if (slot.resolution) parts.push(slot.resolution);
+  if (slot.dynamicRange) parts.push(slot.dynamicRange);
+  if (slot.audioFull) parts.push(slot.audioFull);
   return parts.length ? parts.join(" · ") : "стандартное качество";
 }
 
-function CellBadges({ slot }: { slot: FranchiseSlotSummary }) {
-  const top = slot.resolution || slot.dynamicRange;
+function Tile({
+  icon,
+  value,
+  elite,
+}: {
+  icon: ReactNode;
+  value: string;
+  elite: boolean;
+}) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-1 leading-none">
-      {top ? (
-        <div className="flex items-center justify-center gap-[3px]">
-          {slot.resolution ? (
-            <span className={BADGE_PILL}>{slot.resolution}</span>
-          ) : null}
-          {slot.dynamicRange ? (
-            <span className={BADGE_PILL}>{slot.dynamicRange}</span>
-          ) : null}
-        </div>
+    <span className={`${TILE_BASE} ${elite ? TILE_ELITE : TILE_NORMAL}`}>
+      <span className="shrink-0 opacity-70">{icon}</span>
+      <span className="truncate">{value}</span>
+    </span>
+  );
+}
+
+function SpecTiles({ slot }: { slot: FranchiseSlotSummary }) {
+  const elite = slot.tier === "elite";
+  const iconCls = "h-[9px] w-[9px]";
+  return (
+    <div className="flex h-full flex-col items-stretch justify-center gap-[3px]">
+      {slot.resolution ? (
+        <Tile
+          icon={<Monitor className={iconCls} aria-hidden />}
+          value={slot.resolution}
+          elite={elite}
+        />
+      ) : null}
+      {slot.dynamicRange ? (
+        <Tile
+          icon={<Contrast className={iconCls} aria-hidden />}
+          value={slot.dynamicRange}
+          elite={elite}
+        />
       ) : null}
       {slot.audio ? (
-        <span className={`${BADGE_PILL} max-w-full truncate text-center`}>
-          {slot.audio}
-        </span>
+        <Tile
+          icon={<AudioLines className={iconCls} aria-hidden />}
+          value={slot.audio}
+          elite={elite}
+        />
       ) : null}
     </div>
   );
 }
 
-/**
- * Per-film quality strip — one segment per slot in story order. Each cell
- * shows the film's resolution, dynamic range and audio as badge chips;
- * missing slots stay hollow so the gaps read at a glance. Cell brightness
- * ramps with how many premium specs a film has.
- */
 export function FranchiseQualityReel({
   slots,
   className = "",
@@ -87,9 +130,23 @@ export function FranchiseQualityReel({
         <span
           key={slot.index}
           title={`Фильм ${slot.index + 1} · ${slot.title ?? "без названия"} — ${qualityLabel(slot)}${slot.year ? ` · ${slot.year}` : ""}`}
-          className={`flex-1 min-w-0 rounded-[3px] px-1 py-1 transition-all duration-200 ${TIER_CELL[slot.tier]} ${TIER_HOVER[slot.tier]}`}
+          className={`relative flex-1 min-w-0 overflow-hidden rounded-[5px] transition-all duration-200 ${TIER_CELL[slot.tier]} ${TIER_HOVER[slot.tier]}`}
         >
-          {slot.filled ? <CellBadges slot={slot} /> : null}
+          {slot.tier !== "missing" ? (
+            <span
+              aria-hidden
+              className={`absolute inset-x-0 top-0 h-[3px] ${TIER_SIGNAL[slot.tier]}`}
+            />
+          ) : null}
+          <span className="flex h-full items-center justify-center px-[5px] pt-[7px] pb-1">
+            {slot.filled ? (
+              <SpecTiles slot={slot} />
+            ) : (
+              <span className="font-mono text-[0.5rem] tabular-nums text-ember/55">
+                {slot.index + 1}
+              </span>
+            )}
+          </span>
         </span>
       ))}
     </div>
