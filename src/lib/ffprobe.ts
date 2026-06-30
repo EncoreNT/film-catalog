@@ -51,6 +51,12 @@ export interface ProbeResult {
 
 interface FfprobeSideData {
   side_data_type?: string;
+  dv_profile?: number;
+  dv_level?: number;
+  rpu_present_flag?: number;
+  el_present_flag?: number;
+  bl_present_flag?: number;
+  dv_bl_signal_compatibility_id?: number;
 }
 
 interface FfprobeStream {
@@ -177,7 +183,42 @@ function detectDvProfile(haystack: string): string | null {
   return null;
 }
 
-function detectHdr(stream: FfprobeStream): string {
+function findDoviSideData(stream: FfprobeStream): FfprobeSideData | undefined {
+  return stream.side_data_list?.find((d) => d.side_data_type?.includes("DOVI"));
+}
+
+/** Map ffprobe DOVI configuration record fields to catalog profile codes. */
+function mapDoviProfileFromSideData(dovi: FfprobeSideData): string | null {
+  const n = dovi.dv_profile;
+  if (n == null) return null;
+
+  if (n === 8) {
+    // compatibility id 4 = HLG base (Profile 8.4); 1 = HDR10/PQ base (Profile 8.1).
+    if (dovi.dv_bl_signal_compatibility_id === 4) return "P8.4";
+    return "P8";
+  }
+  if (n === 7) {
+    if (dovi.el_present_flag && dovi.bl_present_flag) return "P7FEL";
+    return "P7";
+  }
+  if (n === 5) return "P5";
+  return `P${n}`;
+}
+
+function detectHdrFromDoviSideData(stream: FfprobeStream): string | null {
+  const dovi = findDoviSideData(stream);
+  if (!dovi) return null;
+  const profile = mapDoviProfileFromSideData(dovi);
+  return profile ? `DV:${profile}` : "DolbyVision";
+}
+
+/** Detect HDR format from a probed video stream (exported for unit tests). */
+export function detectVideoHdr(stream: FfprobeStream): string {
+  // DV Profile 8 ships an HDR10-compatible PQ base layer — color_transfer is
+  // smpte2084, so side_data must be checked before inferring plain HDR10.
+  const fromSideData = detectHdrFromDoviSideData(stream);
+  if (fromSideData) return fromSideData;
+
   // Build a haystack from the stream's color metadata AND its tags. ffprobe
   // exposes HDR markers as structured fields (color_transfer, color_primaries,
   // color_space, pix_fmt, profile), not as tag strings — so a file whose only
@@ -195,7 +236,6 @@ function detectHdr(stream: FfprobeStream): string {
     .join(" ")
     .toLowerCase();
 
-  // Dolby Vision is the most specific — check it first.
   if (
     colorHaystack.includes("dolby vision") ||
     colorHaystack.includes("dovi") ||
@@ -214,11 +254,6 @@ function detectHdr(stream: FfprobeStream): string {
 
   if (colorHaystack.includes("hlg") || colorHaystack.includes("arib-std-b67")) {
     return "HLG";
-  }
-
-  // Dolby Vision can also surface as side data on the video stream.
-  if (stream.side_data_list?.some((d) => d.side_data_type?.includes("DOVI"))) {
-    return "DolbyVision";
   }
 
   return "SDR";
@@ -298,7 +333,7 @@ export async function probeMediaFile(
       height,
       resolutionLabel: getResolutionLabel(width, height),
       codec: videoStream.codec_name ?? null,
-      hdr: detectHdr(videoStream),
+      hdr: detectVideoHdr(videoStream),
       fps: parseFps(videoStream),
       bitrate: streamBitrateKbps(videoStream),
     };
