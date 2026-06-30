@@ -48,7 +48,7 @@ export default function RootLayout({
         <AmbientBackground />
         <GrainOverlay />
 
-        <header className="sticky top-0 z-40 border-b border-border bg-bg-deep/70 backdrop-blur-xl">
+        <header className="surface-screen sticky top-0 z-40 border-b border-border bg-bg-deep/70 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <Link href="/" className="focus-ring group flex items-center gap-3 rounded-lg">
               <span

@@ -254,7 +254,7 @@ export function MovieCatalog({
             </button>
             <Link
               href="/scan"
-              className="focus-ring flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-sm font-semibold text-bg-deep shadow-[0_0_20px_var(--accent-glow)] transition-all duration-200 hover:bg-accent-bright"
+              className="focus-ring flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-sm font-semibold text-on-accent shadow-[0_0_20px_var(--accent-glow)] transition-all duration-200 hover:bg-accent-bright"
             >
               <ScanSearch className="h-4 w-4" aria-hidden />
               Скан

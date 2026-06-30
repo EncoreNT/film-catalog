@@ -56,7 +56,7 @@ export function EmptyCatalog({ isDraftView }: EmptyCatalogProps) {
           {!isDraftView ? (
             <Link
               href="/scan"
-              className="focus-ring group inline-flex min-h-12 items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-bg-deep shadow-[0_0_32px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_48px_var(--accent-glow)]"
+              className="focus-ring group inline-flex min-h-12 items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-on-accent shadow-[0_0_32px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_48px_var(--accent-glow)]"
             >
               <ScanSearch className="h-5 w-5" aria-hidden />
               Начать сканирование

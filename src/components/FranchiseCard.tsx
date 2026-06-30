@@ -78,8 +78,8 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
               <Clapperboard className="h-12 w-12 text-accent/40" aria-hidden />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-bg-deep via-bg-deep/55 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
+          <div className="absolute inset-0 bg-gradient-to-t from-scrim via-scrim/55 to-transparent" />
+          <div className="surface-screen absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
             <div className="min-w-0">
               <p className="font-mono-tech text-[0.65rem] text-accent">
                 {summary.total} {pluralFilms(summary.total)}

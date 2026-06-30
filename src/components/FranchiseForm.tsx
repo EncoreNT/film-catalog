@@ -198,7 +198,7 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
       {mode === "create" ? (
         // Sticky footer anchors to the bottom of the Modal's scrollable body.
-        <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center gap-3 border-t border-border bg-bg-deep/80 px-5 py-4 backdrop-blur-xl">
+        <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center gap-3 border-t border-border bg-bg-base/80 px-5 py-4 backdrop-blur-xl">
           {createFooter}
         </div>
       ) : (

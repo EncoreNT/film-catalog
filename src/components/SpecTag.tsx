@@ -28,13 +28,13 @@ const KIND_STYLES: Record<
     glow: true,
   },
   hdr: {
-    accent: "text-accent-bright",
+    accent: "text-accent",
     border: "border-accent-bright/45",
     bg: "bg-accent-bright/12",
     glow: true,
   },
   "audio-3d": {
-    accent: "text-accent-bright",
+    accent: "text-accent",
     border: "border-accent-bright/50",
     bg: "bg-accent-bright/14",
     glow: true,

@@ -359,12 +359,12 @@ function ScanProgressModal({
   const index = progress?.index ?? 0;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/70 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Сканирование"
     >
-      <div className="surface-card w-full max-w-md space-y-5 p-6">
+      <div className="surface-screen surface-card w-full max-w-md space-y-5 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-xl font-semibold">

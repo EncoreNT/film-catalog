@@ -20,7 +20,7 @@ export function ErrorScene({
   onRetry,
 }: ErrorSceneProps) {
   return (
-    <div className="error-scene-in relative -mx-4 my-6 sm:-mx-6">
+    <div className="error-scene-in surface-screen relative my-6 overflow-hidden rounded-[var(--radius)] border border-border bg-bg-deep">
       {/* Sprocket-rail frame: two vertical perforation strips bracket the whole scene,
           like a strip of film pulled out of the projector */}
       <div
@@ -82,7 +82,7 @@ export function ErrorScene({
         <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
           <Link
             href="/"
-            className="focus-ring group inline-flex min-h-12 items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-bg-deep shadow-[0_0_28px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_44px_var(--accent-glow)]"
+            className="focus-ring group inline-flex min-h-12 items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-on-accent shadow-[0_0_28px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_44px_var(--accent-glow)]"
           >
             <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" aria-hidden />
             В каталог

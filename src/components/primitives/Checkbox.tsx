@@ -38,7 +38,7 @@ export function Checkbox({
         className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-border-strong bg-bg-elevated transition-all duration-200 group-hover:border-accent/50 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-checked:border-accent peer-checked:bg-accent peer-checked:shadow-[0_0_12px_var(--accent-glow)] peer-disabled:group-hover:border-border-strong"
       >
         <Check
-          className={`h-3 w-3 text-bg-deep transition-opacity duration-150 ${
+          className={`h-3 w-3 text-on-accent transition-opacity duration-150 ${
             checked ? "opacity-100" : "opacity-0"
           }`}
           strokeWidth={3}

@@ -539,7 +539,7 @@ export function MovieEditor({ movie }: MovieEditorProps) {
       </div>
 
       {/* Sticky footer — единая точка сохранения */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-deep/80 backdrop-blur-xl">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-base/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             {loading ? (

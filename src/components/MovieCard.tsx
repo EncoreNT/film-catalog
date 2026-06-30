@@ -57,7 +57,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                 style={{
                   transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)",
                   background:
-                    "conic-gradient(from 200deg at 0% 0%, var(--accent-soft) 0deg, rgba(232,176,90,0.16) 14deg, transparent 32deg)",
+                    "conic-gradient(from 200deg at 0% 0%, var(--screen-accent-soft) 0deg, rgba(232,176,90,0.16) 14deg, transparent 32deg)",
                   mixBlendMode: "screen",
                 }}
               />
@@ -141,17 +141,17 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
 
           {movie.rating != null ? (
             <span
-              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)] transition-[border-color,box-shadow] duration-500 group-hover:border-accent/70 group-hover:shadow-[0_0_24px_var(--accent-glow)]"
+              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-screen-accent/40 bg-scrim/90 px-2 py-1 text-xs text-screen-accent shadow-[0_0_16px_var(--screen-accent-glow)] transition-[border-color,box-shadow] duration-500 group-hover:border-screen-accent/70 group-hover:shadow-[0_0_24px_var(--screen-accent-glow)]"
               style={{ transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)" }}
               aria-label={`Оценка ${movie.rating} из 10`}
               title={`Оценка ${movie.rating} из 10`}
             >
               {movie.rating}
-              <Star className="h-3 w-3 fill-accent text-accent" aria-hidden />
+              <Star className="h-3 w-3 fill-screen-accent text-screen-accent" aria-hidden />
             </span>
           ) : null}
 
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-deep via-bg-deep/92 to-transparent px-3 pb-3 pt-16">
+          <div className="surface-screen absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-deep via-bg-deep/92 to-transparent px-3 pb-3 pt-16">
             <h3 className="font-display line-clamp-2 text-base font-semibold leading-snug text-text sm:text-lg">
               {movie.title}
             </h3>

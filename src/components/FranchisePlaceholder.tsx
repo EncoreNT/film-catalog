@@ -51,7 +51,7 @@ export function FranchisePlaceholder({
           </>
         ) : (
           <>
-            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ember/25 bg-bg-deep/40 text-ember/60">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ember/25 bg-bg-surface text-ember/70">
               <Film className="h-5 w-5" aria-hidden />
             </span>
             <p className="font-display text-sm font-semibold leading-tight text-muted">
@@ -70,10 +70,10 @@ export function FranchisePlaceholder({
       {/* Hover affordance — "привязать фильм" — only when interactive */}
       {interactive ? (
         <span
-          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-bg-deep/75 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-bg-base/85 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           aria-hidden
         >
-          <span className="font-mono-tech inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-bg-deep/80 px-3 py-1.5 text-[0.65rem] text-accent">
+          <span className="font-mono-tech inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-bg-elevated px-3 py-1.5 text-[0.65rem] text-accent">
             <Link2 className="h-3 w-3" />
             привязать фильм
           </span>

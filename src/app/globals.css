@@ -1,27 +1,98 @@
 @import "tailwindcss";
 
+/*
+  Variant D — Archive, two-tone.
+  Light "paper" is the default surface (content chrome); dark "screen" zones
+  (header, ErrorScene, scan modal, franchise hero) reuse the warm-coal cinema
+  palette via the .surface-screen scope, which overrides the core tokens below.
+  Tailwind v4 `@theme inline` resolves var() lazily, so scoping works: any
+  utility like bg-bg-elevated / text-text / text-accent inside .surface-screen
+  picks up the overridden (dark + gold) values automatically.
+*/
 :root {
-  /* Warm coal palette — projection-room warmth, not cold black */
-  --bg-deep: #15110d;
-  --bg-base: #1c1611;
-  --bg-elevated: #241c15;
-  --bg-surface: rgba(255, 240, 220, 0.04);
-  --bg-surface-hover: rgba(255, 240, 220, 0.07);
-  --border-hairline: rgba(255, 220, 180, 0.1);
-  --border-strong: rgba(255, 220, 180, 0.18);
-  --text-primary: #f4ede0;
-  --text-muted: #a89a86;
-  --text-faint: #6b5f50;
-  --accent: #e8b05a;
-  --accent-bright: #f6c878;
-  --accent-glow: rgba(232, 176, 90, 0.22);
-  --accent-soft: rgba(232, 176, 90, 0.08);
-  --ember: #c87038;
-  --ember-glow: rgba(200, 112, 56, 0.18);
-  --danger: #e07a5a;
+  color-scheme: light;
+
+  /* Paper — default light surface */
+  --bg-deep: #faf6ef;
+  --bg-base: #f4ede1;
+  --bg-elevated: #ffffff;
+  --bg-surface: rgba(120, 80, 30, 0.04);
+  --bg-surface-hover: rgba(120, 80, 30, 0.07);
+  --border-hairline: rgba(90, 60, 20, 0.12);
+  --border-strong: rgba(90, 60, 20, 0.22);
+
+  --text-primary: #2a2018;
+  --text-muted: #6b5d4d;
+  --text-faint: #8b7d6a;
+
+  /* Accent on paper — bronze, AA on light */
+  --accent: #a8651f;
+  --accent-bright: #c87a1e;
+  --accent-glow: rgba(168, 101, 31, 0.18);
+  --accent-soft: rgba(168, 101, 31, 0.08);
+  --ember: #a85a2a;
+  --ember-glow: rgba(168, 90, 42, 0.18);
+  --danger: #c2410c;
+
+  /* Text on amber fills (dark) — replaces text-bg-deep on accent backgrounds */
+  --on-accent: #2a2018;
+
+  /* Dark veil for overlays sitting on top of poster/cover images */
+  --scrim: #1c1611;
+  --on-scrim: #f4ede0;
+
+  /* Film perforation dot color (overridable inside screen zones) */
+  --perf-dot: rgba(90, 60, 20, 0.22);
+
+  /* Screen — warm-coal cinema palette for header / errors / hero / scan modal */
+  --screen-bg: #1c1611;
+  --screen-bg-base: #15110d;
+  --screen-bg-elevated: #241c15;
+  --screen-text: #f4ede0;
+  --screen-muted: #a89a86;
+  --screen-faint: #6b5f50;
+  --screen-accent: #e8b05a;
+  --screen-accent-bright: #f6c878;
+  --screen-accent-glow: rgba(232, 176, 90, 0.22);
+  --screen-accent-soft: rgba(232, 176, 90, 0.08);
+  --screen-ember: #c87038;
+  --screen-ember-glow: rgba(200, 112, 56, 0.18);
+  --screen-border: rgba(255, 220, 180, 0.1);
+  --screen-border-strong: rgba(255, 220, 180, 0.18);
+
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --radius: 14px;
   --radius-sm: 8px;
+}
+
+/*
+  Screen scope — drop on any wrapper that should render in the dark cinema
+  palette. Existing utilities (bg-bg-deep, text-text, text-accent, bg-accent,
+  border-border, …) re-resolve to the screen tokens inside this scope.
+*/
+.surface-screen {
+  color-scheme: dark;
+  --bg-deep: var(--screen-bg);
+  --bg-base: var(--screen-bg-base);
+  --bg-elevated: var(--screen-bg-elevated);
+  --bg-surface: rgba(255, 220, 180, 0.04);
+  --bg-surface-hover: rgba(255, 220, 180, 0.07);
+  --border-hairline: var(--screen-border);
+  --border-strong: var(--screen-border-strong);
+  --text-primary: var(--screen-text);
+  --text-muted: var(--screen-muted);
+  --text-faint: var(--screen-faint);
+  --accent: var(--screen-accent);
+  --accent-bright: var(--screen-accent-bright);
+  --accent-glow: var(--screen-accent-glow);
+  --accent-soft: var(--screen-accent-soft);
+  --ember: var(--screen-ember);
+  --ember-glow: var(--screen-ember-glow);
+  --on-accent: var(--screen-bg);
+  --scrim: var(--screen-bg);
+  --on-scrim: var(--screen-text);
+  --perf-dot: rgba(255, 220, 180, 0.22);
+  color: var(--screen-text);
 }
 
 @theme inline {
@@ -40,6 +111,12 @@
   --color-accent-soft: var(--accent-soft);
   --color-ember: var(--ember);
   --color-danger: var(--danger);
+  --color-on-accent: var(--on-accent);
+  --color-scrim: var(--scrim);
+  --color-on-scrim: var(--on-scrim);
+  --color-screen-accent: var(--screen-accent);
+  --color-screen-accent-bright: var(--screen-accent-bright);
+  --color-screen-accent-soft: var(--screen-accent-soft);
   --font-display: var(--font-fraunces);
   --font-mono: var(--font-jetbrains);
   --font-ui: var(--font-inter);
@@ -65,10 +142,12 @@ body {
 }
 
 .surface-card {
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius);
-  backdrop-filter: blur(8px);
+  box-shadow:
+    0 1px 2px rgba(90, 60, 20, 0.04),
+    0 8px 28px -14px rgba(90, 60, 20, 0.14);
 }
 
 .surface-elevated {
@@ -93,15 +172,26 @@ input[type="number"] {
   appearance: textfield;
 }
 
-/* Film perforation strip */
+/* Film perforation strip — dots use the scoped --perf-dot token so they read
+   warm-gray on paper and light on the dark screen zones. */
 .film-perfs {
   background-image: radial-gradient(
     circle at center,
-    var(--bg-deep) 4px,
+    var(--perf-dot) 4px,
     transparent 4.5px
   );
   background-size: 22px 100%;
   background-repeat: repeat-x;
+  background-position: center;
+}
+.film-perfs-y {
+  background-image: radial-gradient(
+    circle at center,
+    var(--perf-dot) 4px,
+    transparent 4.5px
+  );
+  background-size: 100% 22px;
+  background-repeat: repeat-y;
   background-position: center;
 }
 
@@ -150,19 +240,8 @@ input[type="number"] {
   }
 }
 
-/* Vertical film perforation strip — sprocket holes running top→bottom */
-.film-perfs-y {
-  background-image: radial-gradient(
-    circle at center,
-    var(--bg-deep) 4px,
-    transparent 4.5px
-  );
-  background-size: 100% 22px;
-  background-repeat: repeat-y;
-  background-position: center;
-}
-
-/* Warm glow behind the big error code — projector beam catching the numerals */
+/* Warm glow behind the big error code — projector beam catching the numerals.
+   Resolves to gold inside .surface-screen via --accent-glow. */
 .error-code-glow {
   text-shadow:
     0 0 60px var(--accent-glow),

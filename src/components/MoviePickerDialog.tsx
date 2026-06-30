@@ -162,7 +162,7 @@ function MoviePickerDialogContent({
                     disabled={saving}
                     className="focus-ring group flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-sm)] border border-border bg-bg-surface p-2.5 text-left transition-all duration-200 hover:border-accent/50 hover:bg-bg-surface-hover hover:shadow-[0_0_18px_var(--accent-glow)] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <span className="relative h-16 w-11 shrink-0 overflow-hidden rounded-[var(--radius-sm)] border border-border bg-bg-deep">
+                    <span className="relative h-16 w-11 shrink-0 overflow-hidden rounded-[var(--radius-sm)] border border-border bg-bg-base">
                       {cover ? (
                         <Image
                           src={cover}

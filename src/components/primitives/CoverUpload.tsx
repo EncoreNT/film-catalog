@@ -196,32 +196,32 @@ export function CoverUpload({
           )}
 
           <span
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-bg-deep/70 text-center opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-scrim/70 text-center opacity-0 transition-opacity duration-200 group-hover:opacity-100"
             aria-hidden
           >
             {busy ? (
-              <Loader2 className="h-5 w-5 animate-spin text-accent" />
+              <Loader2 className="h-5 w-5 animate-spin text-screen-accent" />
             ) : previewSrc ? (
               <>
-                <RefreshCw className="h-4 w-4 text-accent" />
-                <span className="text-[0.65rem] font-medium text-text">Заменить</span>
+                <RefreshCw className="h-4 w-4 text-screen-accent" />
+                <span className="text-[0.65rem] font-medium text-on-scrim">Заменить</span>
               </>
             ) : (
               <>
-                <ImagePlus className="h-4 w-4 text-accent" />
-                <span className="text-[0.65rem] font-medium text-text">Загрузить</span>
+                <ImagePlus className="h-4 w-4 text-screen-accent" />
+                <span className="text-[0.65rem] font-medium text-on-scrim">Загрузить</span>
               </>
             )}
           </span>
         </button>
 
         {busy ? (
-          <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-bg-deep/80">
-            <Loader2 className="h-3 w-3 animate-spin text-accent" aria-hidden />
+          <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-scrim/80">
+            <Loader2 className="h-3 w-3 animate-spin text-screen-accent" aria-hidden />
           </span>
         ) : uploaded ? (
           <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent/90">
-            <Check className="h-3 w-3 text-bg-deep" aria-hidden />
+            <Check className="h-3 w-3 text-on-accent" aria-hidden />
           </span>
         ) : null}
 
@@ -230,7 +230,7 @@ export function CoverUpload({
             type="button"
             onClick={clearPick}
             aria-label="Убрать обложку"
-            className="focus-ring absolute left-1 top-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-bg-deep/80 text-muted transition-colors hover:text-danger"
+            className="focus-ring absolute left-1 top-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-scrim/80 text-on-scrim/70 transition-colors hover:text-danger"
           >
             <X className="h-3 w-3" aria-hidden />
           </button>
@@ -274,7 +274,7 @@ export function CoverUpload({
           <button
             type="button"
             onClick={applyUrl}
-            className="focus-ring shrink-0 rounded-[var(--radius-sm)] bg-accent px-2.5 py-1.5 text-xs font-medium text-bg-deep transition-opacity hover:opacity-90"
+            className="focus-ring shrink-0 rounded-[var(--radius-sm)] bg-accent px-2.5 py-1.5 text-xs font-medium text-on-accent transition-opacity hover:opacity-90"
           >
             Ок
           </button>

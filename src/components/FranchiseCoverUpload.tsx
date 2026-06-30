@@ -145,12 +145,12 @@ export function FranchiseCoverUpload({
           />
         </label>
         {uploading ? (
-          <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-bg-deep/80">
-            <Loader2 className="h-3 w-3 animate-spin text-accent" aria-hidden />
+          <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-scrim/80">
+            <Loader2 className="h-3 w-3 animate-spin text-screen-accent" aria-hidden />
           </span>
         ) : uploaded ? (
           <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent/90">
-            <Check className="h-3 w-3 text-bg-deep" aria-hidden />
+            <Check className="h-3 w-3 text-on-accent" aria-hidden />
           </span>
         ) : null}
       </div>
@@ -180,7 +180,7 @@ export function FranchiseCoverUpload({
           <button
             type="button"
             onClick={() => void applyUrl()}
-            className="focus-ring shrink-0 rounded-[var(--radius-sm)] bg-accent px-2.5 py-1.5 text-xs font-medium text-bg-deep"
+            className="focus-ring shrink-0 rounded-[var(--radius-sm)] bg-accent px-2.5 py-1.5 text-xs font-medium text-on-accent"
           >
             Ок
           </button>

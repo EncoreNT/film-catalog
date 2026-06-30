@@ -40,7 +40,7 @@ export function EmptyFranchises({ onCreate }: EmptyFranchisesProps) {
             <button
               type="button"
               onClick={onCreate}
-              className="focus-ring group inline-flex min-h-12 cursor-pointer items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-bg-deep shadow-[0_0_32px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright"
+              className="focus-ring group inline-flex min-h-12 cursor-pointer items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-on-accent shadow-[0_0_32px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright"
             >
               <PlusCircle className="h-5 w-5" aria-hidden />
               Создать франшизу
@@ -48,7 +48,7 @@ export function EmptyFranchises({ onCreate }: EmptyFranchisesProps) {
           ) : (
             <Link
               href="/franchises"
-              className="focus-ring inline-flex min-h-12 items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-bg-deep"
+              className="focus-ring inline-flex min-h-12 items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-on-accent"
             >
               <PlusCircle className="h-5 w-5" aria-hidden />
               К списку франшиз

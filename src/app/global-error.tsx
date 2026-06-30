@@ -38,7 +38,7 @@ export default function GlobalError({
       lang="ru"
       className={`${fraunces.variable} ${inter.variable} ${jetbrains.variable} h-full`}
     >
-      <body className="relative min-h-dvh antialiased">
+      <body className="surface-screen relative min-h-dvh antialiased">
         {/* Minimal ambient backdrop — recreated here because the root layout
             is replaced entirely when this boundary activates */}
         <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
@@ -62,7 +62,7 @@ export default function GlobalError({
           aria-hidden
           style={{
             background:
-              "radial-gradient(ellipse 90% 70% at 50% 35%, transparent 0%, rgba(0,0,0,0.35) 75%, rgba(0,0,0,0.6) 100%)",
+              "radial-gradient(ellipse 90% 70% at 50% 35%, transparent 0%, rgba(0,0,0,0.18) 72%, rgba(0,0,0,0.36) 100%)",
           }}
         />
 
@@ -125,7 +125,7 @@ export default function GlobalError({
                 <button
                   type="button"
                   onClick={unstable_retry}
-                  className="focus-ring inline-flex min-h-12 cursor-pointer items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-bg-deep shadow-[0_0_28px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_44px_var(--accent-glow)]"
+                  className="focus-ring inline-flex min-h-12 cursor-pointer items-center gap-2.5 rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-semibold text-on-accent shadow-[0_0_28px_var(--accent-glow)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_44px_var(--accent-glow)]"
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden />
                   Перезапустить сеанс

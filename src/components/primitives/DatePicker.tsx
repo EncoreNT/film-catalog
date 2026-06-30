@@ -192,7 +192,7 @@ export function DatePicker({
         <div
           role="dialog"
           aria-label={`${label} — выбор даты`}
-          className="surface-elevated absolute left-0 top-full z-50 mt-2 w-[19rem] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
+          className="surface-elevated absolute left-0 top-full z-50 mt-2 w-[19rem] p-4 shadow-[0_24px_60px_rgba(90,60,20,0.18)]"
         >
           <div className="mb-3 flex items-center justify-between">
             <span className="font-mono-tech text-sm text-text">
@@ -252,7 +252,7 @@ export function DatePicker({
                       : ""
                   } ${
                     isSelected
-                      ? "bg-accent font-semibold text-bg-deep shadow-[0_0_14px_var(--accent-glow)]"
+                      ? "bg-accent font-semibold text-on-accent shadow-[0_0_14px_var(--accent-glow)]"
                       : ""
                   } ${
                     isFocused && !isSelected

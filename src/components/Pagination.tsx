@@ -29,7 +29,7 @@ export function Pagination({ page, pages, buildHref }: PaginationProps) {
   const baseBtn =
     "flex h-9 min-w-9 items-center justify-center rounded-[var(--radius-sm)] border border-border px-3 text-sm transition-all duration-200";
   const idle = "text-muted hover:border-accent/40 hover:text-text";
-  const active = "border-accent bg-accent text-bg-deep font-semibold";
+  const active = "border-accent bg-accent text-on-accent font-semibold";
   const disabled = "cursor-not-allowed border-border/50 text-faint/50";
 
   return (

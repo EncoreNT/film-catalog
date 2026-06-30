@@ -64,7 +64,7 @@ export function Modal({
       </div>
 
       {footer ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-border bg-bg-deep/80 px-5 py-4 backdrop-blur-xl">
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-border bg-bg-base/80 px-5 py-4 backdrop-blur-xl">
           {footer}
         </div>
       ) : null}

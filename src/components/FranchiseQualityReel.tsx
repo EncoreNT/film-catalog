@@ -19,11 +19,11 @@ interface FranchiseQualityReelProps {
  */
 
 const TIER_CELL: Record<SlotTier, string> = {
-  missing: "border border-dashed border-ember/40 bg-ember/[0.06]",
-  basic: "border border-border-strong/60 bg-bg-surface",
+  missing: "border border-dashed border-ember/40 bg-ember/[0.05]",
+  basic: "border border-border-strong/60 bg-bg-base",
   "premium-1": "border border-border-strong/60 bg-accent/[0.07]",
-  "premium-2": "border border-accent/25 bg-accent/[0.09]",
-  elite: "border border-accent/45 bg-accent/[0.12] shadow-[0_0_12px_var(--accent-glow)]",
+  "premium-2": "border border-accent/25 bg-accent/[0.10]",
+  elite: "border border-accent/45 bg-accent/[0.13] shadow-[0_0_12px_var(--accent-glow)]",
 };
 
 const TIER_SIGNAL: Record<SlotTier, string> = {
@@ -46,10 +46,10 @@ const TILE_BASE =
   "flex items-center justify-center gap-1 rounded-[3px] border px-1 py-[2px] font-mono text-[0.5rem] uppercase tracking-[0.05em] leading-none tabular-nums";
 
 const TILE_NORMAL =
-  "border-border-strong bg-bg-deep/85 text-text shadow-[0_1px_0_rgba(255,240,220,0.04)]";
+  "border-border-strong/70 bg-bg-elevated text-text";
 
 const TILE_ELITE =
-  "border-accent/45 bg-bg-deep/75 text-accent-bright shadow-[0_0_6px_rgba(232,176,90,0.18)]";
+  "border-accent/50 bg-accent/15 text-accent shadow-[0_0_6px_rgba(168,101,31,0.20)]";
 
 export function qualityLabel(slot: FranchiseSlotSummary): string {
   if (!slot.filled) return "не хватает";
@@ -142,7 +142,7 @@ export function FranchiseQualityReel({
             {slot.filled ? (
               <SpecTiles slot={slot} />
             ) : (
-              <span className="font-mono text-[0.5rem] tabular-nums text-ember/55">
+              <span className="font-mono text-[0.5rem] tabular-nums text-ember/70">
                 {slot.index + 1}
               </span>
             )}

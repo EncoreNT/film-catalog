@@ -62,7 +62,7 @@ export function QualityGauge({
       <span
         className={`relative flex ${isSm ? "h-7 w-7" : "h-9 w-9"} shrink-0 items-center justify-center rounded-lg transition-colors ${
           active
-            ? "bg-accent/25 text-accent-bright"
+            ? "bg-accent/20 text-accent"
             : "bg-accent/15 text-accent"
         }`}
         aria-hidden
@@ -73,7 +73,7 @@ export function QualityGauge({
         <span className="flex items-baseline gap-1">
           <span
             className={`font-display ${isSm ? "text-lg" : "text-2xl"} font-bold tabular-nums leading-none text-text transition-colors`}
-            style={active ? { color: "var(--accent-bright)" } : undefined}
+            style={active ? { color: "var(--accent)" } : undefined}
           >
             {count}
           </span>
@@ -107,8 +107,8 @@ export function QualityGauge({
         <span
           className={`font-mono-tech absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[0.55rem] transition-colors ${
             active
-              ? "border-accent/50 bg-bg-deep/70 text-accent-bright"
-              : "border-border bg-bg-deep/70 text-muted"
+              ? "border-accent/50 bg-accent/15 text-accent"
+              : "border-border bg-bg-surface text-muted"
           }`}
           aria-hidden
         >
