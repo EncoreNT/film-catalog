@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { MovieCard } from "./MovieCard";
@@ -84,6 +84,7 @@ export function MovieCatalog({
   const [extraMovies, setExtraMovies] = useState<MovieWithTracks[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadedPages, setLoadedPages] = useState(0);
+  const [isPending, startTransition] = useTransition();
 
   // "Показать ещё" accumulates extra pages into extraMovies. When the user
   // changes filters / sort / page, the server passes a new first page as
@@ -98,15 +99,43 @@ export function MovieCatalog({
     setLoadedPages(0);
   }
 
-  const applyFilter = (updates: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    for (const [key, value] of Object.entries(updates)) {
-      if (value == null || value === "") params.delete(key);
-      else params.set(key, value);
-    }
-    params.set("status", "CATALOG");
-    router.push(`/?${params.toString()}`);
-  };
+  // Filter/sort changes go through a transition with `scroll: false` so the
+  // URL updates and the server re-fetches the catalog without scrolling back
+  // to the top or flashing the Suspense skeleton — React keeps the current
+  // view mounted until the new one is ready. `isPending` drives the top
+  // loading bar.
+  const navigate = useCallback(
+    (
+      updates: Record<string, string | null>,
+      opts?: { forceCatalog?: boolean },
+    ) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value == null || value === "") params.delete(key);
+        else params.set(key, value);
+      }
+      // Reshuffling the result set can move the current page out of range,
+      // so drop any page offset on a filter/sort change.
+      params.delete("page");
+      if (opts?.forceCatalog) params.set("status", "CATALOG");
+      const qs = params.toString();
+      startTransition(() => {
+        router.push(qs ? `/?${qs}` : "/", { scroll: false });
+      });
+    },
+    [router, searchParams, startTransition],
+  );
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => navigate(updates),
+    [navigate],
+  );
+
+  const applyFilter = useCallback(
+    (updates: Record<string, string | null>) =>
+      navigate(updates, { forceCatalog: true }),
+    [navigate],
+  );
 
   const sort = searchParams.get("sort") ?? "title";
   const order = searchParams.get("order") ?? "asc";
@@ -118,7 +147,10 @@ export function MovieCatalog({
     if (nextOrder === "asc") params.delete("order");
     else params.set("order", nextOrder);
     params.delete("page");
-    router.push(`/?${params.toString()}`);
+    const qs = params.toString();
+    startTransition(() => {
+      router.push(qs ? `/?${qs}` : "/", { scroll: false });
+    });
   };
 
   const toggleOrder = () =>
@@ -200,6 +232,7 @@ export function MovieCatalog({
 
   return (
     <MotionConfig reducedMotion="user">
+      {isPending ? <div className="catalog-loading-bar" aria-hidden /> : null}
       {/* Compact header — title + actions in one line, metrics as chips below */}
       <section className="mb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -342,7 +375,7 @@ export function MovieCatalog({
         ) : null}
       </section>
 
-      <FilterBar facets={facets} />
+      <FilterBar facets={facets} updateParams={updateParams} />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
         <div className="flex items-baseline gap-3">
@@ -403,7 +436,10 @@ export function MovieCatalog({
         )
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+          <div
+            className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4"
+            aria-busy={isPending}
+          >
             <AnimatePresence mode="popLayout">
               {allMovies.map((movie, index) => (
                 <motion.div

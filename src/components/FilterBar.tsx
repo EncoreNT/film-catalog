@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import {
   ChevronDown,
   Clapperboard,
@@ -82,6 +82,7 @@ interface FilterBarProps {
     originalAudioFormats: Facet[];
     genres: Facet[];
   };
+  updateParams: (updates: Record<string, string | null>) => void;
 }
 
 function parseMulti(value: string | null): string[] {
@@ -215,26 +216,10 @@ function Divider() {
   );
 }
 
-export function FilterBar({ facets }: FilterBarProps) {
-  const router = useRouter();
+export function FilterBar({ facets, updateParams }: FilterBarProps) {
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [facetsOpen, setFacetsOpen] = useState(false);
-
-  const updateParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(searchParams.toString());
-      for (const [key, value] of Object.entries(updates)) {
-        if (value == null || value === "") params.delete(key);
-        else params.set(key, value);
-      }
-      startTransition(() => {
-        router.push(`/?${params.toString()}`);
-      });
-    },
-    [router, searchParams],
-  );
 
   const activeResolutions = useMemo(
     () => parseMulti(searchParams.get("resolution")),
