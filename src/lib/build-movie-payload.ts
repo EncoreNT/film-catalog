@@ -89,12 +89,19 @@ export function buildMovieCreatePayload(input: MovieCreatePayloadInput) {
   };
 }
 
+export interface MovieFileMetaPayload {
+  fileSize: number;
+  fileMtime: string;
+  fileHash: string;
+}
+
 export interface MovieUpdatePayloadInput {
   title: string;
   year: number | null;
   description: string | null;
   releaseType: string | null;
   filePath: string | null;
+  fileMeta: MovieFileMetaPayload | null;
   storageId: number | null;
   genres: string[];
   durationSeconds: number | null;
@@ -112,6 +119,13 @@ export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
     description: input.description || null,
     releaseType: input.releaseType || null,
     filePath: input.filePath?.trim() || null,
+    ...(input.fileMeta
+      ? {
+          fileSize: input.fileMeta.fileSize,
+          fileMtime: input.fileMeta.fileMtime,
+          fileHash: input.fileMeta.fileHash,
+        }
+      : {}),
     storageId: input.storageId,
     genres: input.genres,
     durationSeconds: input.durationSeconds,

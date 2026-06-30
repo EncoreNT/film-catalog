@@ -55,11 +55,16 @@ export async function POST(request: NextRequest) {
         );
       }
       const probe = await probeMediaFile(data.filePath);
+      const { readMovieFileMeta } = await loadMovieFileMeta();
+      const meta = await readMovieFileMeta(data.filePath);
       return NextResponse.json({
         durationSeconds: probe.durationSeconds,
         video: probe.video,
         audio: probe.audio,
         subtitles: probe.subtitles,
+        fileSize: meta.fileSize,
+        fileMtime: meta.fileMtime.toISOString(),
+        fileHash: meta.fileHash,
       });
     }
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, EyeOff, FileVideo, Loader2, Trash2 } from "lucide-react";
+import { Check, EyeOff, Loader2, ScanSearch, Trash2, AlertCircle } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { Button } from "./primitives/Button";
 import { ConfirmDialog } from "./primitives/ConfirmDialog";
@@ -17,11 +17,19 @@ import { YearInput } from "./primitives/YearInput";
 import { CoverUpload } from "./primitives/CoverUpload";
 import { TrackEditorSection } from "./TrackEditorSection";
 import { StoragePicker } from "./StoragePicker";
-import { useFilePathCheck } from "@/hooks/useFilePathCheck";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
 import { useTrackEditor } from "@/hooks/useTrackEditor";
 import type { VideoFieldState } from "@/lib/movie-form-types";
-import { buildMovieUpdatePayload } from "@/lib/build-movie-payload";
+import {
+  buildMovieUpdatePayload,
+  type MovieFileMetaPayload,
+} from "@/lib/build-movie-payload";
+import type { ProbeResult } from "@/lib/ffprobe";
+import {
+  probeToAudioRows,
+  probeToSubtitleRows,
+  probeToVideoFields,
+} from "@/lib/apply-probe";
 
 interface MovieEditorProps {
   movie: MovieWithTracks;
@@ -41,8 +49,11 @@ export function MovieEditor({ movie }: MovieEditorProps) {
   const [description, setDescription] = useState(movie.description ?? "");
   const [releaseType, setReleaseType] = useState(movie.releaseType ?? "");
   const [filePath, setFilePath] = useState(movie.filePath ?? "");
-  const { checking: filePathChecking, exists: fileExists, checkFilePath } =
-    useFilePathCheck();
+  const [pendingFileMeta, setPendingFileMeta] =
+    useState<MovieFileMetaPayload | null>(null);
+  const [fillingFromFile, setFillingFromFile] = useState(false);
+  const [fileFillError, setFileFillError] = useState<string | null>(null);
+  const [fileFillMessage, setFileFillMessage] = useState<string | null>(null);
   const {
     storageKind,
     setStorageKind,
@@ -88,6 +99,8 @@ export function MovieEditor({ movie }: MovieEditorProps) {
     updateSubtitle,
     addSubtitleRow,
     removeSubtitleRow,
+    setAudioRowsFromProbe,
+    setSubtitleRowsFromProbe,
   } = useTrackEditor({
     initialAudio: movie.audioTracks.map((track) => ({
       rowKey: `audio-${track.id}`,
@@ -122,6 +135,70 @@ export function MovieEditor({ movie }: MovieEditorProps) {
   });
 
   const markDirty = () => setIsDirty(true);
+
+  const applyProbeResult = (
+    data: ProbeResult & Partial<MovieFileMetaPayload>,
+  ) => {
+    if (data.durationSeconds != null) {
+      setDurationSeconds(data.durationSeconds);
+    }
+    setVideo((current) => ({ ...current, ...probeToVideoFields(data.video) }));
+    if (data.audio.length) {
+      setAudioRowsFromProbe(probeToAudioRows(data.audio));
+    }
+    if (data.subtitles.length) {
+      setSubtitleRowsFromProbe(probeToSubtitleRows(data.subtitles));
+    }
+    if (
+      data.fileSize != null &&
+      data.fileMtime != null &&
+      data.fileHash != null
+    ) {
+      setPendingFileMeta({
+        fileSize: data.fileSize,
+        fileMtime: data.fileMtime,
+        fileHash: data.fileHash,
+      });
+    }
+    markDirty();
+    setFileFillError(null);
+    setFileFillMessage("Данные из файла заполнены — сохраните изменения");
+    setTimeout(() => setFileFillMessage(null), 4000);
+  };
+
+  const handleFillFromFile = async () => {
+    const trimmed = filePath.trim();
+    if (!trimmed) {
+      setFileFillError("Укажите путь к файлу");
+      setFileFillMessage(null);
+      return;
+    }
+    setFileFillError(null);
+    setFillingFromFile(true);
+    setFileFillMessage(null);
+    try {
+      const res = await fetch("/api/movies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title || "probe",
+          probeOnly: true,
+          filePath: trimmed,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Не удалось прочитать файл");
+      }
+      applyProbeResult(data);
+    } catch (err) {
+      setFileFillError(
+        err instanceof Error ? err.message : "Ошибка чтения файла",
+      );
+    } finally {
+      setFillingFromFile(false);
+    }
+  };
 
   const patchVideo = (patch: Partial<VideoFieldState>) => {
     setVideo((current) => ({ ...current, ...patch }));
@@ -165,6 +242,7 @@ export function MovieEditor({ movie }: MovieEditorProps) {
             description,
             releaseType,
             filePath,
+            fileMeta: pendingFileMeta,
             storageId,
             genres,
             durationSeconds,
@@ -182,6 +260,8 @@ export function MovieEditor({ movie }: MovieEditorProps) {
       }
       const updated = (await res.json()) as MovieWithTracks;
       setIsDirty(false);
+      setPendingFileMeta(null);
+      setFileFillMessage(null);
       if (updated.slug !== movie.slug) {
         router.replace(`/movies/${updated.slug}/edit`);
       } else {
@@ -272,41 +352,68 @@ export function MovieEditor({ movie }: MovieEditorProps) {
           <Field
             label="Путь к файлу"
             placeholder="/Volumes/Seagate/Movies/film.mkv"
-            hint="Абсолютный путь к видеофайлу. При сохранении сервер пересчитает чексумму (первые 16 МБ), размер и время изменения. Если файл не существует — вернётся ошибкой."
+            hint="Абсолютный путь к видеофайлу. Можно сохранить путь без доступного файла (например, внешний диск). Для чтения дорожек и метаданных нажмите «Заполнить данные из файла»."
           >
             <input
               id="путь-к-файлу"
-              className="focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60"
+              className={`focus-ring min-h-11 w-full rounded-[var(--radius)] border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${
+                fileFillError ? "border-danger/50" : "border-border"
+              }`}
               value={filePath}
               onChange={(e) => {
                 setFilePath(e.target.value);
+                setPendingFileMeta(null);
+                setFileFillMessage(null);
+                setFileFillError(null);
                 markDirty();
               }}
-              onBlur={(e) => checkFilePath(e.target.value)}
+              aria-invalid={!!fileFillError}
+              aria-describedby={
+                fileFillError ? "file-path-fill-feedback" : undefined
+              }
               placeholder="/Volumes/Seagate/Movies/film.mkv"
             />
-            {filePath.trim() ? (
-              <span className="flex items-center gap-2 text-xs text-muted">
-                {filePathChecking ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden />
-                ) : fileExists ? (
-                  <Check className="h-4 w-4 text-accent" aria-hidden />
+            <div className="space-y-2 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                loading={fillingFromFile}
+                onClick={handleFillFromFile}
+                disabled={!filePath.trim() || fillingFromFile}
+              >
+                <ScanSearch className="h-4 w-4" aria-hidden />
+                Заполнить данные из файла
+              </Button>
+
+              <div id="file-path-fill-feedback">
+                {fileFillError ? (
+                  <p
+                    className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+                    role="alert"
+                  >
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <span>{fileFillError}</span>
+                  </p>
+                ) : fileFillMessage ? (
+                  <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <span>{fileFillMessage}</span>
+                  </p>
+                ) : pendingFileMeta ? (
+                  <p className="text-xs text-accent">
+                    Метаданные файла готовы к сохранению
+                  </p>
+                ) : filePath.trim() ? (
+                  <p className="text-xs text-faint">
+                    файл не проверялся — путь сохранится как указано
+                  </p>
                 ) : (
-                  <FileVideo className="h-4 w-4 text-faint" aria-hidden />
+                  <p className="text-xs text-faint">
+                    не указан — будет сброшен при сохранении
+                  </p>
                 )}
-                {filePathChecking
-                  ? "Проверяю файл…"
-                  : fileExists
-                    ? "Файл доступен"
-                    : fileExists === false
-                      ? "Файл не найден — сохранение пути вернётся ошибкой"
-                      : "Сохранение пересчитает чексумму"}
-              </span>
-            ) : (
-              <span className="text-xs text-faint">
-                не указан — будет сброшен при сохранении
-              </span>
-            )}
+              </div>
+            </div>
           </Field>
 
           <StoragePicker

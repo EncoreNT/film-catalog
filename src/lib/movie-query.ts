@@ -1,5 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { movieListQuerySchema } from "./validators";
+import { RUS_AUDIO_FORMATS } from "./russian-audio-formats";
+import { audioTrackScopeWhere } from "./audio-track-scope";
 
 export type MovieWithTracks = Prisma.MovieGetPayload<{
   include: {
@@ -123,6 +125,56 @@ export function buildMovieWhere(
         some: {
           ...(langs?.length ? { language: { in: langs } } : {}),
           ...(layouts?.length ? { channelLayout: { in: layouts } } : {}),
+        },
+      },
+    });
+  }
+
+  // Russian-track technical specs (channels + codec). Unlike the generic
+  // `language`/`channelLayout` filters above, these constrain a SINGLE Russian
+  // track — so "5.1 + DTS" only matches a movie whose Russian dub is both 5.1
+  // and DTS, not one with an English 5.1 track and a Russian 2.0 AC-3.
+  // `audioScope` selects which track to filter: Russian dub tracks, or tracks
+  // explicitly tagged as "original" (`translationType`), not merely non-Russian.
+  const audioScope = query.audioScope === "original" ? "original" : "rus";
+  const audioChannels = query.audioChannels?.split(",").filter(Boolean) ?? [];
+  const audioFormats = query.audioFormat?.split(",").filter(Boolean) ?? [];
+  const audioTranslations =
+    query.audioTranslation?.split(",").filter(Boolean) ?? [];
+  const formatWhere = audioFormats
+    .map((v) => RUS_AUDIO_FORMATS.find((f) => f.value === v)?.where)
+    .filter((w): w is Prisma.AudioTrackWhereInput => Boolean(w));
+
+  if (audioScope === "rus") {
+    if (
+      audioChannels.length ||
+      formatWhere.length ||
+      audioTranslations.length
+    ) {
+      audioTrackFilters.push({
+        audioTracks: {
+          some: {
+            ...audioTrackScopeWhere("rus"),
+            ...(audioTranslations.length
+              ? { translationType: { in: audioTranslations } }
+              : {}),
+            ...(audioChannels.length
+              ? { channelLayout: { in: audioChannels } }
+              : {}),
+            ...(formatWhere.length ? { OR: formatWhere } : {}),
+          },
+        },
+      });
+    }
+  } else if (audioChannels.length || formatWhere.length) {
+    audioTrackFilters.push({
+      audioTracks: {
+        some: {
+          ...audioTrackScopeWhere("original"),
+          ...(audioChannels.length
+            ? { channelLayout: { in: audioChannels } }
+            : {}),
+          ...(formatWhere.length ? { OR: formatWhere } : {}),
         },
       },
     });

@@ -48,9 +48,11 @@ interface MovieCatalogProps {
   movies: MovieWithTracks[];
   facets: {
     resolutions: Facet[];
-    audioLanguages: Facet[];
-    subtitleLanguages: Facet[];
-    channelLayouts: Facet[];
+    russianChannelLayouts: Facet[];
+    originalChannelLayouts: Facet[];
+    russianTranslationTypes: Facet[];
+    russianAudioFormats: Facet[];
+    originalAudioFormats: Facet[];
     genres: Facet[];
   };
   total: number;
@@ -59,6 +61,7 @@ interface MovieCatalogProps {
   limit: number;
   catalogCount?: number;
   draftCount?: number;
+  excludedCount?: number;
   archiveMetrics?: ArchiveMetrics;
 }
 
@@ -71,6 +74,7 @@ export function MovieCatalog({
   limit,
   catalogCount = 0,
   draftCount = 0,
+  excludedCount = 0,
   archiveMetrics = { fourK: 0, hdr10: 0, russianAtmos: 0, elite: 0 },
 }: MovieCatalogProps) {
   const router = useRouter();
@@ -120,8 +124,10 @@ export function MovieCatalog({
   const toggleOrder = () =>
     applySort(sort, order === "asc" ? "desc" : "asc");
 
-  const isCatalog =
-    !status.includes("DRAFT") && (!status || status.includes("CATALOG"));
+  const isDraftView = status === "DRAFT";
+  const isExcludedView = status === "EXCLUDED";
+  const isCatalog = !isDraftView && !isExcludedView;
+
   const activeResolution = searchParams.get("resolution");
   const activeHdr = searchParams.get("hdr");
   const activePremiumAudio = searchParams.get("premiumAudio");
@@ -180,7 +186,17 @@ export function MovieCatalog({
   };
 
   const hasAnyMovies = totalCount > 0;
-  const isDraftView = status.includes("DRAFT") && !status.includes("CATALOG");
+
+  const viewLabel = isDraftView
+    ? "черновики"
+    : isExcludedView
+      ? "скрытые"
+      : "каталог";
+  const viewTitle = isDraftView
+    ? "На проверку"
+    : isExcludedView
+      ? "Скрытые"
+      : "Личный архив";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -188,11 +204,9 @@ export function MovieCatalog({
       <section className="mb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
-            <p className="font-mono-tech text-accent">
-              {isDraftView ? "черновики" : "каталог"}
-            </p>
+            <p className="font-mono-tech text-accent">{viewLabel}</p>
             <h1 className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-              {isDraftView ? "На проверку" : "Личный архив"}
+              {viewTitle}
             </h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -236,9 +250,19 @@ export function MovieCatalog({
           >
             черновики · <span className="tabular-nums">{draftCount}</span>
           </Link>
+          <Link
+            href="/?status=EXCLUDED"
+            className={`font-mono-tech inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors ${
+              isExcludedView
+                ? "border-accent/40 bg-accent/5 text-accent"
+                : "border-border bg-bg-surface text-muted hover:text-text"
+            }`}
+          >
+            скрытые · <span className="tabular-nums">{excludedCount}</span>
+          </Link>
         </div>
 
-        {!isDraftView ? (
+        {isCatalog ? (
           <div className="mt-4">
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <p className="font-mono-tech text-faint">

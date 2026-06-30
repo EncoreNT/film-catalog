@@ -16,6 +16,7 @@ import {
   getCatalogGenreFacets,
 } from "@/lib/catalog-facets";
 import { MovieCatalog } from "@/components/MovieCatalog";
+import { MovieStatus } from "@/generated/prisma/client";
 
 const getCachedArchiveMetrics = unstable_cache(
   getArchiveMetrics,
@@ -25,7 +26,7 @@ const getCachedArchiveMetrics = unstable_cache(
 
 const getCachedCatalogFacets = unstable_cache(
   getCatalogFacets,
-  ["catalog-facets"],
+  ["catalog-facets-v2"],
   { revalidate: 60 },
 );
 
@@ -56,10 +57,17 @@ async function CatalogContent({
   const limit = query.limit ?? 48;
   const skip = (page - 1) * limit;
 
+  // Scope the property-filter facet counts to the active tab so the chips
+  // reflect what's actually in the current view (Catalog / Drafts / Hidden),
+  // not the whole archive.
+  const statuses = (query.status ?? "CATALOG")
+    .split(",")
+    .filter(Boolean) as MovieStatus[];
+
   const [
     movies,
     total,
-    { totalCount, catalogCount, draftCount },
+    { totalCount, catalogCount, draftCount, excludedCount },
     archiveMetrics,
     facets,
     genreFacets,
@@ -74,8 +82,8 @@ async function CatalogContent({
     prisma.movie.count({ where }),
     getStatusCounts(),
     getCachedArchiveMetrics(),
-    getCachedCatalogFacets(),
-    getCachedCatalogGenreFacets(),
+    getCachedCatalogFacets(statuses),
+    getCachedCatalogGenreFacets(statuses),
   ]);
 
   return (
@@ -91,6 +99,7 @@ async function CatalogContent({
       }}
       catalogCount={catalogCount}
       draftCount={draftCount}
+      excludedCount={excludedCount}
       archiveMetrics={archiveMetrics}
     />
   );

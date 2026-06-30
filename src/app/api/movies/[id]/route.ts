@@ -5,7 +5,6 @@ import { movieInclude } from "@/lib/movie-include";
 import { upsertGenresByNames } from "@/lib/genres";
 import { syncMovieTracks } from "@/lib/movie-tracks";
 import { resolveMovieSlug } from "@/lib/movie-slug";
-import { loadMovieFileMeta } from "@/lib/load-movie-file-meta";
 import {
   isErrorResponse,
   jsonError,
@@ -28,33 +27,42 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       genres,
       watchedAt,
       filePath,
+      fileSize,
+      fileMtime,
+      fileHash,
       storageId,
       ...movieData
     } = data;
 
     const genreRows = genres ? await upsertGenresByNames(genres) : null;
 
-    let fileSize: number | null | undefined;
-    let fileMtime: Date | null | undefined;
-    let fileHash: string | null | undefined;
+    let nextFileSize: number | null | undefined;
+    let nextFileMtime: Date | null | undefined;
+    let nextFileHash: string | null | undefined;
 
     if (filePath !== undefined) {
       const trimmed = filePath?.trim() || null;
-      if (trimmed) {
-        try {
-          const { readMovieFileMeta } = await loadMovieFileMeta();
-          const meta = await readMovieFileMeta(trimmed);
-          fileSize = meta.fileSize;
-          fileMtime = meta.fileMtime;
-          fileHash = meta.fileHash;
-        } catch {
-          return jsonError("Файл не найден по указанному пути", 400);
-        }
-      } else {
-        fileSize = null;
-        fileMtime = null;
-        fileHash = null;
+      if (!trimmed) {
+        nextFileSize = null;
+        nextFileMtime = null;
+        nextFileHash = null;
+      } else if (
+        fileSize !== undefined ||
+        fileMtime !== undefined ||
+        fileHash !== undefined
+      ) {
+        nextFileSize = fileSize ?? null;
+        nextFileMtime = fileMtime ? new Date(fileMtime) : null;
+        nextFileHash = fileHash ?? null;
       }
+    } else if (
+      fileSize !== undefined ||
+      fileMtime !== undefined ||
+      fileHash !== undefined
+    ) {
+      nextFileSize = fileSize ?? null;
+      nextFileMtime = fileMtime ? new Date(fileMtime) : null;
+      nextFileHash = fileHash ?? null;
     }
 
     const movie = await prisma.$transaction(async (tx) => {
@@ -70,9 +78,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           slug,
           filePath:
             filePath === undefined ? undefined : filePath ? filePath : null,
-          fileSize,
-          fileMtime,
-          fileHash,
+          fileSize: nextFileSize,
+          fileMtime: nextFileMtime,
+          fileHash: nextFileHash,
           storageId:
             storageId === undefined ? undefined : storageId ? storageId : null,
           watchedAt:

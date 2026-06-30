@@ -1,5 +1,10 @@
 import { prisma } from "./prisma";
 import { MovieStatus } from "@/generated/prisma/client";
+import { matchesAudioTrackScope } from "./audio-track-scope";
+import {
+  ORIGINAL_TRANSLATION_TYPE,
+  RUS_AUDIO_FORMATS,
+} from "./russian-audio-formats";
 
 export interface FacetOption {
   value: string | null;
@@ -8,9 +13,11 @@ export interface FacetOption {
 
 export interface CatalogFacets {
   resolutions: FacetOption[];
-  audioLanguages: FacetOption[];
-  subtitleLanguages: FacetOption[];
-  channelLayouts: FacetOption[];
+  russianChannelLayouts: FacetOption[];
+  originalChannelLayouts: FacetOption[];
+  russianTranslationTypes: FacetOption[];
+  russianAudioFormats: FacetOption[];
+  originalAudioFormats: FacetOption[];
 }
 
 export interface CatalogGenreFacet {
@@ -18,54 +25,153 @@ export interface CatalogGenreFacet {
   count: number;
 }
 
-export async function getCatalogFacets(): Promise<CatalogFacets> {
-  const [resolutions, audioLanguages, subtitleLanguages, channelLayouts] =
-    await Promise.all([
-      prisma.videoTrack.groupBy({
-        by: ["resolutionLabel"],
-        _count: true,
-        where: { resolutionLabel: { not: null } },
-      }),
-      prisma.audioTrack.groupBy({
-        by: ["language"],
-        _count: true,
-        where: { language: { not: null } },
-      }),
-      prisma.subtitleTrack.groupBy({
-        by: ["language"],
-        _count: true,
-        where: { language: { not: null } },
-      }),
-      prisma.audioTrack.groupBy({
-        by: ["channelLayout"],
-        _count: true,
-        where: { channelLayout: { not: null } },
-      }),
-    ]);
+export type AudioFacetRow = {
+  movieId: number;
+  language: string | null;
+  channelLayout: string | null;
+  translationType: string | null;
+  codec: string | null;
+  profile: string | null;
+};
+
+type VideoFacetRow = {
+  movieId: number;
+  resolutionLabel: string | null;
+};
+
+type Scope = "rus" | "original";
+
+type FormatWhere = { codec?: string | null; profile?: string | null };
+
+/**
+ * Count distinct movies per bucket. A movie with several tracks sharing a
+ * value (e.g. five 7.1 Russian dubs) must count once, so we collect movie ids
+ * into a Set per bucket rather than tallying tracks.
+ */
+function distinctMovieCounts(
+  rows: AudioFacetRow[],
+  pick: (row: AudioFacetRow) => string | null,
+  scope: Scope,
+): FacetOption[] {
+  const buckets = new Map<string, Set<number>>();
+  for (const row of rows) {
+    if (!matchesAudioTrackScope(row, scope)) continue;
+    const key = pick(row);
+    if (!key) continue;
+    const set = buckets.get(key);
+    if (set) set.add(row.movieId);
+    else buckets.set(key, new Set([row.movieId]));
+  }
+  return [...buckets.entries()].map(([value, set]) => ({
+    value,
+    count: set.size,
+  }));
+}
+
+/**
+ * Distinct movie counts per codec preset. Presets without a `profile` clause
+ * (e.g. AC-3) span every profile for that codec, so a movie with both an AC-3
+ * EX and a bare AC-3 track still counts once.
+ */
+function formatMovieCounts(rows: AudioFacetRow[], scope: Scope): FacetOption[] {
+  return RUS_AUDIO_FORMATS.map((fmt) => {
+    const w = fmt.where as FormatWhere;
+    const movies = new Set<number>();
+    for (const row of rows) {
+      if (!matchesAudioTrackScope(row, scope)) continue;
+      if (row.codec == null) continue;
+      if (w.codec !== undefined && row.codec !== w.codec) continue;
+      if (w.profile !== undefined && row.profile !== w.profile) continue;
+      movies.add(row.movieId);
+    }
+    return { value: fmt.value, count: movies.size };
+  });
+}
+
+/** Pure aggregation used by `getCatalogFacets` and unit tests. */
+export function buildCatalogFacetsFromRows(
+  audioRows: AudioFacetRow[],
+  videoRows: VideoFacetRow[],
+): CatalogFacets {
+  const resolutionBuckets = new Map<string, Set<number>>();
+  for (const row of videoRows) {
+    if (!row.resolutionLabel) continue;
+    const set = resolutionBuckets.get(row.resolutionLabel);
+    if (set) set.add(row.movieId);
+    else resolutionBuckets.set(row.resolutionLabel, new Set([row.movieId]));
+  }
 
   return {
-    resolutions: resolutions.map((row) => ({
-      value: row.resolutionLabel,
-      count: row._count,
+    resolutions: [...resolutionBuckets.entries()].map(([value, set]) => ({
+      value,
+      count: set.size,
     })),
-    audioLanguages: audioLanguages.map((row) => ({
-      value: row.language,
-      count: row._count,
-    })),
-    subtitleLanguages: subtitleLanguages.map((row) => ({
-      value: row.language,
-      count: row._count,
-    })),
-    channelLayouts: channelLayouts.map((row) => ({
-      value: row.channelLayout,
-      count: row._count,
-    })),
+    russianChannelLayouts: distinctMovieCounts(
+      audioRows,
+      (r) => r.channelLayout,
+      "rus",
+    ),
+    originalChannelLayouts: distinctMovieCounts(
+      audioRows,
+      (r) => r.channelLayout,
+      "original",
+    ),
+    russianTranslationTypes: distinctMovieCounts(
+      audioRows,
+      (r) => r.translationType,
+      "rus",
+    ).filter((f) => f.value !== ORIGINAL_TRANSLATION_TYPE),
+    russianAudioFormats: formatMovieCounts(audioRows, "rus"),
+    originalAudioFormats: formatMovieCounts(audioRows, "original"),
   };
 }
 
-export async function getCatalogGenreFacets(): Promise<CatalogGenreFacet[]> {
+/**
+ * Facet counts for the property-filter panel.
+ *
+ * Every count is a number of *movies*, not tracks — a film with five 7.1
+ * Russian dubs counts once under "7.1". Audio scope rules match
+ * `buildMovieWhere` via `matchesAudioTrackScope`: Russian chips count Russian
+ * language tracks; Original chips count only tracks tagged
+ * `translationType === "original"`, not arbitrary English/Spanish dubs.
+ *
+ * `statuses` scopes every count to movies in the given lifecycle states, so
+ * the chips reflect the active tab (Catalog / Drafts / Hidden) rather than the
+ * whole archive. When omitted (e.g. the `/api/stats` overview), counts span
+ * all statuses.
+ */
+export async function getCatalogFacets(
+  statuses?: MovieStatus[],
+): Promise<CatalogFacets> {
+  const scoped = !!statuses?.length;
+  const trackWhere = scoped ? { movie: { status: { in: statuses! } } } : {};
+
+  const [audioRows, videoRows] = await Promise.all([
+    prisma.audioTrack.findMany({
+      where: trackWhere,
+      select: {
+        movieId: true,
+        language: true,
+        channelLayout: true,
+        translationType: true,
+        codec: true,
+        profile: true,
+      },
+    }),
+    prisma.videoTrack.findMany({
+      where: trackWhere,
+      select: { movieId: true, resolutionLabel: true },
+    }),
+  ]);
+
+  return buildCatalogFacetsFromRows(audioRows, videoRows);
+}
+
+export async function getCatalogGenreFacets(
+  statuses: MovieStatus[] = [MovieStatus.CATALOG],
+): Promise<CatalogGenreFacet[]> {
   const genres = await prisma.genre.findMany({
-    where: { movies: { some: { status: MovieStatus.CATALOG } } },
+    where: { movies: { some: { status: { in: statuses } } } },
     select: { name: true, _count: { select: { movies: true } } },
     orderBy: { name: "asc" },
   });
