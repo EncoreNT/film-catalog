@@ -31,6 +31,7 @@ import {
 } from "@/lib/format";
 import { displayFilePath } from "@/lib/display-path";
 import { genreLabel } from "@/lib/dictionaries";
+import { orderedMovieGenres } from "@/lib/movie-genres";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import {
   codecFull,
@@ -75,6 +76,7 @@ export default async function MoviePage({ params }: PageProps) {
   const premiumHdr = premiumHDR(movie);
   const showPremiumStrip = premium4K || premiumAtmos != null || premiumHdr != null;
   const fileSizeLabel = formatFileSizeGB(movie.fileSize);
+  const genres = orderedMovieGenres(movie);
 
   return (
     <div className="space-y-10">
@@ -138,9 +140,9 @@ export default async function MoviePage({ params }: PageProps) {
                 </>
               ) : null}
             </div>
-            {movie.genres.length > 0 ? (
+            {genres.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                {movie.genres.map((g) => (
+                {genres.map((g) => (
                   <span
                     key={g.id}
                     className="font-mono-tech rounded-full border border-border-strong bg-bg-elevated px-3 py-1 text-xs text-text"

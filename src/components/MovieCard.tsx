@@ -5,6 +5,7 @@ import { MonitorPlay, Star, Sun, Waves } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { formatDuration } from "@/lib/format";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
+import { orderedMovieGenres } from "@/lib/movie-genres";
 import { genreLabel } from "@/lib/dictionaries";
 import { ApiCoverImage } from "./primitives/ApiCoverImage";
 import { PremiumBadge } from "./PremiumBadge";
@@ -32,6 +33,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   );
   const footerTags = catalogCardTags(movie);
   const duration = formatDuration(movie.durationSeconds);
+  const genres = orderedMovieGenres(movie);
 
   return (
     <article
@@ -173,7 +175,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
 
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                {movie.genres.slice(0, 2).map((g) => (
+                {genres.slice(0, 2).map((g) => (
                   <span
                     key={g.id}
                     className="font-mono-tech rounded-full border border-border/60 bg-bg-deep/60 px-2 py-0.5 text-[0.6rem] text-muted"

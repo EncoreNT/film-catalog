@@ -52,7 +52,7 @@ model Movie {
   updatedAt       DateTime    @updatedAt
 
   storage        Storage?       @relation(fields: [storageId], references: [id], onDelete: SetNull)
-  genres         Genre[]
+  movieGenres    MovieGenre[]
   videoTrack     VideoTrack?
   audioTracks    AudioTrack[]
   subtitleTracks SubtitleTrack[]
@@ -69,12 +69,23 @@ model Movie {
 }
 
 model Genre {
-  id        Int     @id @default(autoincrement())
-  name      String  @unique
-  movies    Movie[]
-  createdAt DateTime @default(now())
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  movieGenres MovieGenre[]
+  createdAt   DateTime     @default(now())
 
   @@index([name])
+}
+
+model MovieGenre {
+  movieId   Int
+  genreId   Int
+  sortOrder Int    @default(0)
+  movie     Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre     Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, genreId])
+  @@index([movieId, sortOrder])
 }
 
 model VideoTrack {

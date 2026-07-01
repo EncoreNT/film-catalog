@@ -5,5 +5,8 @@ export const movieInclude = {
   audioTracks: true,
   subtitleTracks: true,
   storage: true,
-  genres: { orderBy: { name: "asc" } },
+  movieGenres: {
+    orderBy: { sortOrder: "asc" },
+    include: { genre: true },
+  },
 } satisfies Prisma.MovieInclude;

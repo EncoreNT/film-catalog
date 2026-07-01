@@ -1,13 +1,24 @@
 import type { FranchiseWithSlots } from "./franchise-include";
 import type { MovieWithTracks } from "./movie-query";
+import { orderedMovieGenres } from "./movie-genres";
+import {
+  dictLabel,
+  displayMovieVersionLabel,
+  genreLabel,
+  RELEASE_TYPES,
+  parseHdrValue,
+} from "./dictionaries";
+import { formatDuration } from "./format";
 import {
   is4K,
   isAnyHDR,
   premiumAudio,
   formatAudioLabel,
   mainAudioTrack,
+  codecShort,
+  videoBitrateLabel,
+  videoResolutionPixels,
 } from "./spec-tags";
-import { parseHdrValue } from "./dictionaries";
 
 /**
  * Per-slot quality tier. The tier encodes HOW MANY of the three premium
@@ -36,6 +47,30 @@ export interface FranchiseSlotSummary {
   audio: string | null;
   /** Full audio label for the tooltip (e.g. "TrueHD Atmos"). */
   audioFull: string | null;
+  /** Hint when the slot is empty. */
+  titleHint: string | null;
+  yearHint: number | null;
+  /** Catalog slug — filled slots only. */
+  slug: string | null;
+  rating: number | null;
+  durationLabel: string | null;
+  /** Localized genre labels in display order. */
+  genreLabels: string[];
+  versionLabel: string | null;
+  releaseTypeLabel: string | null;
+  videoCodec: string | null;
+  videoBitrate: string | null;
+  resolutionPixels: string | null;
+}
+
+/** Compact quality summary for aria labels and tooltips. */
+export function slotQualityLabel(slot: FranchiseSlotSummary): string {
+  if (!slot.filled) return "не хватает";
+  const parts: string[] = [];
+  if (slot.resolution) parts.push(slot.resolution);
+  if (slot.dynamicRange) parts.push(slot.dynamicRange);
+  if (slot.audioFull) parts.push(slot.audioFull);
+  return parts.length ? parts.join(" · ") : "стандартное качество";
 }
 
 const RESOLUTION_SHORT: Record<string, string> = {
@@ -146,6 +181,10 @@ export function computeFranchiseSummary(
     const hdr = movie ? isAnyHDR(movie) : false;
     const atmos = movie ? premiumAudio(movie) != null : false;
     const elite = fourK && hdr && atmos;
+    const durationLabel =
+      movie?.durationSeconds != null
+        ? formatDuration(movie.durationSeconds)
+        : null;
     return {
       index,
       filled,
@@ -160,6 +199,23 @@ export function computeFranchiseSummary(
       dynamicRange: slotDynamicRange(movie),
       audio: slotAudioShort(movie),
       audioFull: slotAudioFull(movie),
+      titleHint: slot.titleHint ?? null,
+      yearHint: slot.yearHint ?? null,
+      slug: movie?.slug ?? null,
+      rating: movie?.rating ?? null,
+      durationLabel,
+      genreLabels: movie
+        ? orderedMovieGenres(movie).map((g) => genreLabel(g.name) ?? g.name)
+        : [],
+      versionLabel: movie ? displayMovieVersionLabel(movie.version) : null,
+      releaseTypeLabel: movie
+        ? dictLabel(RELEASE_TYPES, movie.releaseType)
+        : null,
+      videoCodec: movie?.videoTrack?.codec
+        ? codecShort(movie.videoTrack.codec)
+        : null,
+      videoBitrate: movie ? videoBitrateLabel(movie) : null,
+      resolutionPixels: movie ? videoResolutionPixels(movie) : null,
     };
   });
 

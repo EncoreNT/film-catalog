@@ -10,7 +10,7 @@ import { MovieStatus } from "@/generated/prisma/client";
 import { probeMediaFile } from "@/lib/ffprobe";
 import { maybeExtractCover } from "@/lib/cover-storage";
 import { movieInclude } from "@/lib/movie-include";
-import { upsertGenresByNames } from "@/lib/genres";
+import { syncMovieGenres } from "@/lib/genres";
 import { resolveMovieSlug } from "@/lib/movie-slug";
 import { loadMovieFileMeta } from "@/lib/load-movie-file-meta";
 
@@ -87,9 +87,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const genreRows = data.genres?.length
-      ? await upsertGenresByNames(data.genres)
-      : [];
+    const genreNames = data.genres ?? [];
 
     let fileSize: number | null = null;
     let fileMtime: Date | null = null;
@@ -127,9 +125,6 @@ export async function POST(request: NextRequest) {
         releaseType: data.releaseType ?? null,
         version: data.version ?? undefined,
         status: data.status ?? MovieStatus.CATALOG,
-        genres: genreRows.length
-          ? { connect: genreRows.map((g) => ({ id: g.id })) }
-          : undefined,
         videoTrack: video
           ? { create: { streamIndex: 0, ...(video as Record<string, unknown>) } }
           : undefined,
@@ -166,6 +161,18 @@ export async function POST(request: NextRequest) {
       include: movieInclude,
     });
 
+    if (genreNames.length > 0) {
+      await syncMovieGenres(prisma, movie.id, genreNames);
+    }
+
+    const movieWithGenres =
+      genreNames.length > 0
+        ? await prisma.movie.findUnique({
+            where: { id: movie.id },
+            include: movieInclude,
+          })
+        : movie;
+
     // When the caller skipped probing (e.g. the Add form, which autofills
     // from a probeOnly call), still try to pull an embedded poster out of the
     // file. Best-effort: failures never block movie creation.
@@ -177,7 +184,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(movie, { status: 201 });
+    return NextResponse.json(movieWithGenres ?? movie, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Create failed";
     return NextResponse.json({ error: message }, { status: 400 });

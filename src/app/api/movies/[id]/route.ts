@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { movieUpdateSchema } from "@/lib/validators";
 import { movieInclude } from "@/lib/movie-include";
-import { upsertGenresByNames } from "@/lib/genres";
+import { syncMovieGenres } from "@/lib/genres";
 import { syncMovieTracks } from "@/lib/movie-tracks";
 import { resolveMovieSlug } from "@/lib/movie-slug";
 import {
@@ -34,7 +34,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       ...movieData
     } = data;
 
-    const genreRows = genres ? await upsertGenresByNames(genres) : null;
+    const genreNames = genres ?? null;
 
     let nextFileSize: number | null | undefined;
     let nextFileMtime: Date | null | undefined;
@@ -89,12 +89,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
               : watchedAt
                 ? new Date(watchedAt)
                 : null,
-          genres:
-            genreRows === null
-              ? undefined
-              : { set: genreRows.map((g) => ({ id: g.id })) },
         },
       });
+
+      if (genreNames !== null) {
+        await syncMovieGenres(tx, movieId, genreNames);
+      }
 
       if (
         videoTrack !== undefined ||

@@ -1,6 +1,11 @@
+"use client";
+
 import { Monitor, Contrast, AudioLines } from "lucide-react";
 import type { ReactNode } from "react";
 import type { FranchiseSlotSummary, SlotTier } from "@/lib/franchise-summary";
+import { slotQualityLabel } from "@/lib/franchise-summary";
+import { FranchiseSlotTooltip } from "./FranchiseSlotTooltip";
+import { HoverTooltip } from "./primitives/HoverTooltip";
 
 interface FranchiseQualityReelProps {
   slots: FranchiseSlotSummary[];
@@ -35,11 +40,11 @@ const TIER_SIGNAL: Record<SlotTier, string> = {
 };
 
 const TIER_HOVER: Record<SlotTier, string> = {
-  missing: "group-hover:border-ember/70 group-hover:bg-ember/10",
-  basic: "group-hover:border-accent/30",
-  "premium-1": "group-hover:border-accent/40",
-  "premium-2": "group-hover:border-accent/55",
-  elite: "group-hover:shadow-[0_0_16px_var(--accent-glow)]",
+  missing: "group-hover/slot:border-ember/70 group-hover/slot:bg-ember/10",
+  basic: "group-hover/slot:border-accent/30",
+  "premium-1": "group-hover/slot:border-accent/40",
+  "premium-2": "group-hover/slot:border-accent/55",
+  elite: "group-hover/slot:shadow-[0_0_16px_var(--accent-glow)]",
 };
 
 const TILE_BASE =
@@ -51,13 +56,9 @@ const TILE_NORMAL =
 const TILE_ELITE =
   "border-accent/45 bg-bg-deep/75 text-accent-bright shadow-[0_0_6px_rgba(232,176,90,0.18)]";
 
+/** @deprecated Use slotQualityLabel from franchise-summary */
 export function qualityLabel(slot: FranchiseSlotSummary): string {
-  if (!slot.filled) return "не хватает";
-  const parts: string[] = [];
-  if (slot.resolution) parts.push(slot.resolution);
-  if (slot.dynamicRange) parts.push(slot.dynamicRange);
-  if (slot.audioFull) parts.push(slot.audioFull);
-  return parts.length ? parts.join(" · ") : "стандартное качество";
+  return slotQualityLabel(slot);
 }
 
 function Tile({
@@ -116,7 +117,7 @@ export function FranchiseQualityReel({
   const ariaLabel = `Качество по фильмам: ${slots
     .map((s) => {
       const title = s.title ?? `фильм ${s.index + 1}`;
-      return `${title} — ${qualityLabel(s)}`;
+      return `${title} — ${slotQualityLabel(s)}`;
     })
     .join("; ")}`;
 
@@ -127,10 +128,10 @@ export function FranchiseQualityReel({
       className={`flex items-stretch gap-[3px] ${className}`}
     >
       {slots.map((slot) => (
-        <span
+        <HoverTooltip
           key={slot.index}
-          title={`Фильм ${slot.index + 1} · ${slot.title ?? "без названия"} — ${qualityLabel(slot)}${slot.year ? ` · ${slot.year}` : ""}`}
-          className={`relative flex-1 min-w-0 overflow-hidden rounded-[5px] transition-all duration-200 ${TIER_CELL[slot.tier]} ${TIER_HOVER[slot.tier]}`}
+          content={<FranchiseSlotTooltip slot={slot} />}
+          className={`group/slot relative flex-1 min-w-0 overflow-hidden rounded-[5px] transition-all duration-200 ${TIER_CELL[slot.tier]} ${TIER_HOVER[slot.tier]}`}
         >
           {slot.tier !== "missing" ? (
             <span
@@ -147,7 +148,7 @@ export function FranchiseQualityReel({
               </span>
             )}
           </span>
-        </span>
+        </HoverTooltip>
       ))}
     </div>
   );

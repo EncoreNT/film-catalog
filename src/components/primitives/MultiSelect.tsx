@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Check, Search, X } from "lucide-react";
+import { ChevronDown, Check, GripVertical, Search, X } from "lucide-react";
 import { InfoHint } from "./InfoHint";
 import {
   filterOptions,
@@ -21,6 +21,8 @@ interface MultiSelectProps {
   searchable?: boolean;
   /** Keep the options in the order provided instead of sorting alphabetically. */
   preserveOrder?: boolean;
+  /** Allow drag-and-drop reordering of selected tags (order is reflected in `value`). */
+  reorderable?: boolean;
   hint?: ReactNode;
 }
 
@@ -33,10 +35,12 @@ export function MultiSelect({
   id,
   searchable,
   preserveOrder,
+  reorderable,
   hint,
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
 
@@ -91,6 +95,14 @@ export function MultiSelect({
     onChange(value.filter((v) => v !== val));
   };
 
+  const moveTag = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || toIndex < 0 || toIndex >= value.length) return;
+    const next = [...value];
+    const [item] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, item);
+    onChange(next);
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
@@ -122,11 +134,37 @@ export function MultiSelect({
         >
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
             {selectedEntries.length > 0 ? (
-              selectedEntries.map(({ value: val, label: tagLabel }) => (
+              selectedEntries.map(({ value: val, label: tagLabel }, index) => (
                 <span
                   key={val}
-                  className="font-mono-tech inline-flex max-w-full items-center gap-0.5 rounded-full border border-border-strong bg-bg-surface py-0.5 pl-2 pr-1 text-xs text-text"
+                  draggable={reorderable}
+                  onDragStart={(e) => {
+                    if (!reorderable) return;
+                    setDragIndex(index);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => {
+                    if (!reorderable || dragIndex === null) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    if (!reorderable || dragIndex === null) return;
+                    e.preventDefault();
+                    moveTag(dragIndex, index);
+                    setDragIndex(null);
+                  }}
+                  onDragEnd={() => setDragIndex(null)}
+                  className={`font-mono-tech inline-flex max-w-full items-center gap-0.5 rounded-full border border-border-strong bg-bg-surface py-0.5 text-xs text-text ${
+                    reorderable ? "cursor-grab pl-1 pr-1 active:cursor-grabbing" : "pl-2 pr-1"
+                  } ${dragIndex === index ? "opacity-60" : ""}`}
                 >
+                  {reorderable ? (
+                    <GripVertical
+                      className="h-3 w-3 shrink-0 text-muted/70"
+                      aria-hidden
+                    />
+                  ) : null}
                   <span className="truncate">{tagLabel}</span>
                   <button
                     type="button"

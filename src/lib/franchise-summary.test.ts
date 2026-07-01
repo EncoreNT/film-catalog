@@ -32,6 +32,7 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
     watchedAt: null,
     storageId: null,
     releaseType: null,
+    version: "theatrical",
     createdAt: new Date(),
     updatedAt: new Date(),
     storage: null,
@@ -69,7 +70,7 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
         ]
       : [],
     subtitleTracks: [],
-    genres: [],
+    movieGenres: [],
   } as unknown as MovieWithTracks;
 }
 

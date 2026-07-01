@@ -4,13 +4,7 @@ import { RUS_AUDIO_FORMATS } from "./russian-audio-formats";
 import { audioTrackScopeWhere } from "./audio-track-scope";
 
 export type MovieWithTracks = Prisma.MovieGetPayload<{
-  include: {
-    videoTrack: true;
-    audioTracks: true;
-    subtitleTracks: true;
-    storage: true;
-    genres: { orderBy: { name: "asc" } };
-  };
+  include: typeof import("@/lib/movie-include").movieInclude;
 }>;
 
 export function parseListQuery(searchParams: URLSearchParams) {
@@ -60,9 +54,9 @@ export function buildMovieWhere(
   if (query.genre) {
     const genres = query.genre.split(",").filter(Boolean);
     if (genres.length === 1) {
-      where.genres = { some: { name: genres[0] } };
+      where.movieGenres = { some: { genre: { name: genres[0] } } };
     } else if (genres.length > 1) {
-      where.genres = { some: { name: { in: genres } } };
+      where.movieGenres = { some: { genre: { name: { in: genres } } } };
     }
   }
 

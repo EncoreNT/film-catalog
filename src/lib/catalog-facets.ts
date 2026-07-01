@@ -171,13 +171,18 @@ export async function getCatalogGenreFacets(
   statuses: MovieStatus[] = [MovieStatus.CATALOG],
 ): Promise<CatalogGenreFacet[]> {
   const genres = await prisma.genre.findMany({
-    where: { movies: { some: { status: { in: statuses } } } },
-    select: { name: true, _count: { select: { movies: true } } },
+    where: {
+      movieGenres: { some: { movie: { status: { in: statuses } } } },
+    },
+    select: {
+      name: true,
+      _count: { select: { movieGenres: true } },
+    },
     orderBy: { name: "asc" },
   });
 
   return genres.map((genre) => ({
     value: genre.name,
-    count: genre._count.movies,
+    count: genre._count.movieGenres,
   }));
 }

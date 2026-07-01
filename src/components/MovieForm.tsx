@@ -12,8 +12,9 @@ import { Select } from "./primitives/Select";
 import { StarRating } from "./StarRating";
 import { MovieFranchisePicker } from "./MovieFranchisePicker";
 import type { MovieFranchiseMembership } from "@/lib/movie-franchise-memberships";
-import { RELEASE_TYPES, GENRES, MOVIE_VERSIONS, DEFAULT_MOVIE_VERSION, normalizeAudioProfile } from "@/lib/dictionaries";
-import { MultiSelect } from "./primitives/MultiSelect";
+import { orderedMovieGenres } from "@/lib/movie-genres";
+import { RELEASE_TYPES, MOVIE_VERSIONS, DEFAULT_MOVIE_VERSION, normalizeAudioProfile } from "@/lib/dictionaries";
+import { GenrePicker } from "./GenrePicker";
 import { DurationInput } from "./primitives/DurationInput";
 import { YearInput } from "./primitives/YearInput";
 import { CoverUpload } from "./primitives/CoverUpload";
@@ -70,7 +71,7 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
     resolveStorageId,
   } = useStoragePicker(movie.storage);
   const [genres, setGenres] = useState<string[]>(
-    movie.genres.map((g) => g.name),
+    orderedMovieGenres(movie).map((g) => g.name),
   );
   const [durationSeconds, setDurationSeconds] = useState<number | null>(
     movie.durationSeconds ?? null,
@@ -479,16 +480,12 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
             options={MOVIE_VERSIONS}
             hint="Монтажная версия фильма: театральная, режиссёрская, расширенная и т.д. Театральная — базовая, не отображается в каталоге."
           />
-          <MultiSelect
-            label="Жанры"
+          <GenrePicker
             value={genres}
             onChange={(g) => {
               setGenres(g);
               markDirty();
             }}
-            options={GENRES}
-            searchable
-            hint="Можно выбрать несколько жанров. Используются для фильтрации в каталоге."
           />
           <TextAreaField
             label="Описание"

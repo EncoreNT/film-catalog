@@ -22,11 +22,10 @@ import { Select } from "./primitives/Select";
 import { StoragePicker } from "./StoragePicker";
 import {
   RELEASE_TYPES,
-  GENRES,
 } from "@/lib/dictionaries";
 import { parseMoviePath } from "@/lib/name-parser";
 import type { ProbeResult } from "@/lib/ffprobe";
-import { MultiSelect } from "./primitives/MultiSelect";
+import { GenrePicker } from "./GenrePicker";
 import { DurationInput } from "./primitives/DurationInput";
 import { YearInput } from "./primitives/YearInput";
 import { CoverUpload } from "./primitives/CoverUpload";
@@ -498,14 +497,7 @@ function DetailsFields({
         options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
         hint="Источник копии: BDRemux, BDRip, WEB-DL, Blu-ray и т.д. Влияет на качество."
       />
-      <MultiSelect
-        label="Жанры"
-        value={genres}
-        onChange={setGenres}
-        options={GENRES}
-        searchable
-        hint="Можно выбрать несколько жанров. Используются для фильтрации в каталоге."
-      />
+      <GenrePicker value={genres} onChange={setGenres} />
       <TextAreaField
         label="Описание"
         value={description}
