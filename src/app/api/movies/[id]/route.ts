@@ -31,6 +31,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       fileMtime,
       fileHash,
       storageId,
+      version,
       ...movieData
     } = data;
 
@@ -75,14 +76,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         where: { id: movieId },
         data: {
           ...movieData,
+          ...(version != null ? { version } : {}),
           slug,
           filePath:
             filePath === undefined ? undefined : filePath ? filePath : null,
           fileSize: nextFileSize,
           fileMtime: nextFileMtime,
           fileHash: nextFileHash,
-          storageId:
-            storageId === undefined ? undefined : storageId ? storageId : null,
+          ...(storageId === undefined
+            ? {}
+            : storageId != null
+              ? { storage: { connect: { id: storageId } } }
+              : { storage: { disconnect: true } }),
           watchedAt:
             watchedAt === undefined
               ? undefined
