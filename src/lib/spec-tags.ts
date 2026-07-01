@@ -186,6 +186,19 @@ export interface PremiumAudio {
  * Premium 3D-audio hero badge — shown ONLY for the Russian default track.
  * An English Atmos/DTS:X track is not promoted to the premium strip.
  */
+/** Main audio track — default first, otherwise the first listed track. */
+export function mainAudioTrack(
+  movie: MovieWithTracks,
+): MovieWithTracks["audioTracks"][number] | null {
+  if (movie.audioTracks.length === 0) return null;
+  const sorted = [...movie.audioTracks].sort((a, b) => {
+    if (a.isDefault && !b.isDefault) return -1;
+    if (!a.isDefault && b.isDefault) return 1;
+    return 0;
+  });
+  return sorted[0];
+}
+
 export function premiumAudio(movie: MovieWithTracks): PremiumAudio | null {
   const candidate = movie.audioTracks.find((t) => {
     const profile = t.profile && t.profile !== "None" ? t.profile : null;
@@ -262,6 +275,7 @@ const TRANSLATION_SHORT: Record<string, string> = {
   amateur_multi: "люб. многогол.",
   amateur_single: "люб. одногол.",
   author: "авторский",
+  commentary: "комментарии",
   original: "оригинал",
   unknown: "—",
 };
@@ -292,9 +306,29 @@ function videoCodecLabel(codec: string | null | undefined): string | null {
   return VIDEO_CODEC_SHORT[codec] ?? codec.toUpperCase();
 }
 
+const PROMINENT_CATALOG_TAG_KINDS = new Set<SpecTagKind>([
+  "resolution",
+  "hdr",
+  "audio-3d",
+]);
+
+function sortCatalogCardTags(tags: CatalogCardTag[]): CatalogCardTag[] {
+  const prominent: CatalogCardTag[] = [];
+  const regular: CatalogCardTag[] = [];
+  for (const tag of tags) {
+    if (PROMINENT_CATALOG_TAG_KINDS.has(tag.kind)) {
+      prominent.push(tag);
+    } else {
+      regular.push(tag);
+    }
+  }
+  return [...prominent, ...regular];
+}
+
 /**
  * Structured footer tags for catalog cards — no bitrate.
- * Skips specs already shown in premium badges (4K, HDR10/HDR10+, rus. Atmos).
+ * Skips specs already shown in premium badges (4K, rus. Atmos).
+ * HDR10/HDR10+ also appear in the premium strip but get a compact HDR footer tag.
  */
 export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
   const tags: CatalogCardTag[] = [];
@@ -321,20 +355,23 @@ export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
     });
   }
 
-  if (!hdrPremium) {
-    const hdrLabel = formatHdrLabel(v?.hdr);
-    const { base, dvProfile } = parseHdrValue(v?.hdr);
-    if (hdrLabel && base !== "SDR") {
-      if (base === "DolbyVision") {
-        tags.push({
-          kind: "hdr",
-          label: dvProfile
-            ? `DV · ${dvProfileLabel(dvProfile)}`
-            : "Dolby Vision",
-        });
-      } else {
-        tags.push({ kind: "hdr", label: hdrLabel });
-      }
+  const hdrLabel = formatHdrLabel(v?.hdr);
+  const { base, dvProfile } = parseHdrValue(v?.hdr);
+  if (hdrLabel && base !== "SDR") {
+    if (hdrPremium) {
+      tags.push({
+        kind: "hdr",
+        label: hdrPremium.label === "HDR10" ? "HDR" : hdrPremium.label,
+      });
+    } else if (base === "DolbyVision") {
+      tags.push({
+        kind: "hdr",
+        label: dvProfile
+          ? `DV · ${dvProfileLabel(dvProfile)}`
+          : "Dolby Vision",
+      });
+    } else {
+      tags.push({ kind: "hdr", label: hdrLabel });
     }
   }
 
@@ -343,12 +380,7 @@ export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
     tags.push({ kind: "codec", label: codec });
   }
 
-  const sortedAudio = [...movie.audioTracks].sort((a, b) => {
-    if (a.isDefault && !b.isDefault) return -1;
-    if (!a.isDefault && b.isDefault) return 1;
-    return 0;
-  });
-  const mainTrack = sortedAudio[0];
+  const mainTrack = mainAudioTrack(movie);
   const audioLabel = mainTrack ? formatAudioLabel(mainTrack) : null;
   const isPremiumTrack =
     audioPremium &&
@@ -375,5 +407,5 @@ export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
     tags.push({ kind: "channel", label: channels });
   }
 
-  return tags;
+  return sortCatalogCardTags(tags);
 }

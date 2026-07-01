@@ -234,6 +234,52 @@ describe("computeFranchiseSummary", () => {
     expect(s.premium.elite).toBe(2);
   });
 
+  it("uses the default audio track for the reel, not a secondary DTS:X", () => {
+    const movie = makeMovie({
+      id: 1,
+      resolutionLabel: "4K",
+      hdr: "DV:P8",
+    });
+    movie.audioTracks = [
+      {
+        id: 1,
+        movieId: 1,
+        streamIndex: 0,
+        codec: "dts",
+        profile: "None",
+        channels: null,
+        channelLayout: "5.1",
+        bitrate: null,
+        language: "rus",
+        title: "DTS 5.1",
+        translationType: "dub",
+        isDefault: true,
+      },
+      {
+        id: 2,
+        movieId: 1,
+        streamIndex: 1,
+        codec: "dts-hd",
+        profile: "DTS:X MA",
+        channels: null,
+        channelLayout: "7.1",
+        bitrate: null,
+        language: "eng",
+        title: "DTS:X MA",
+        translationType: "original",
+        isDefault: false,
+      },
+    ];
+
+    const s = computeFranchiseSummary(
+      makeFranchise([makeSlot({ storyOrder: 0, movieId: 1, movie })]),
+    );
+
+    expect(s.slots[0].audio).toBe("DTS");
+    expect(s.slots[0].audioFull).toBe("DTS");
+    expect(s.slots[0].dynamicRange).toBe("DV");
+  });
+
   it("rounds the average rating to one decimal", () => {
     const s = computeFranchiseSummary(
       makeFranchise([

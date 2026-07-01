@@ -220,8 +220,8 @@ export const AUDIO_TRANSLATION_TYPES: DictOption[] = [
   { value: "amateur_multi", label: "Люб. многоголосый" },
   { value: "amateur_single", label: "Люб. одноголосый" },
   { value: "author", label: "Авторский" },
+  { value: "commentary", label: "С комментариями" },
   { value: "original", label: "Оригинал" },
-  { value: "unknown", label: "Неизвестно" },
 ];
 
 export const GENRES: DictOption[] = [

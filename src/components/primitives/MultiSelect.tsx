@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Check, Search } from "lucide-react";
+import { ChevronDown, Check, Search, X } from "lucide-react";
 import { InfoHint } from "./InfoHint";
 import {
   filterOptions,
@@ -50,9 +50,10 @@ export function MultiSelect({
     [ordered, query, showSearch],
   );
 
-  const selectedLabels = value
-    .map((v) => ordered.find((o) => o.value === v)?.label ?? v)
-    .filter(Boolean);
+  const selectedEntries = value.map((val) => ({
+    value: val,
+    label: ordered.find((o) => o.value === val)?.label ?? val,
+  }));
 
   const close = () => {
     setOpen(false);
@@ -83,6 +84,11 @@ export function MultiSelect({
         ? value.filter((v) => v !== val)
         : [...value, val],
     );
+    setQuery("");
+  };
+
+  const removeTag = (val: string) => {
+    onChange(value.filter((v) => v !== val));
   };
 
   return (
@@ -94,22 +100,50 @@ export function MultiSelect({
         {hint ? <InfoHint text={hint} label={label} /> : null}
       </div>
       <div className="relative" ref={ref}>
-        <button
+        <div
           id={fieldId}
-          type="button"
-          onClick={() => (open ? close() : setOpen(true))}
+          role="combobox"
           aria-haspopup="listbox"
           aria-expanded={open}
+          tabIndex={0}
+          onClick={() => (open ? close() : setOpen(true))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (open) close();
+              else setOpen(true);
+            }
+          }}
           className={`focus-ring flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-bg-elevated px-3 py-2 text-sm text-text transition-all duration-200 ${
             open
               ? "border-accent/50 shadow-[0_0_16px_var(--accent-glow)]"
               : "border-border hover:border-border-strong"
           }`}
         >
-          <span className="truncate">
-            {selectedLabels.length > 0
-              ? selectedLabels.join(", ")
-              : placeholder}
+          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+            {selectedEntries.length > 0 ? (
+              selectedEntries.map(({ value: val, label: tagLabel }) => (
+                <span
+                  key={val}
+                  className="font-mono-tech inline-flex max-w-full items-center gap-0.5 rounded-full border border-border-strong bg-bg-surface py-0.5 pl-2 pr-1 text-xs text-text"
+                >
+                  <span className="truncate">{tagLabel}</span>
+                  <button
+                    type="button"
+                    aria-label={`Убрать ${tagLabel}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeTag(val);
+                    }}
+                    className="focus-ring shrink-0 rounded-full p-0.5 text-muted transition-colors hover:text-danger"
+                  >
+                    <X className="h-3 w-3" aria-hidden />
+                  </button>
+                </span>
+              ))
+            ) : (
+              <span className="text-muted">{placeholder}</span>
+            )}
           </span>
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-accent/70 transition-transform duration-200 ${
@@ -117,7 +151,7 @@ export function MultiSelect({
             }`}
             aria-hidden
           />
-        </button>
+        </div>
 
         {open ? (
           <ul

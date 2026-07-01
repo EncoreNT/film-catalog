@@ -4,6 +4,7 @@ import { getMovieFranchiseMemberships } from "@/lib/movie-franchise-memberships"
 import {
   parsePlacementTarget,
   placeMovieInFranchise,
+  releaseMovieFromFranchise,
 } from "@/lib/franchise-slot-placement";
 import { jsonError } from "@/lib/api-utils";
 
@@ -64,8 +65,9 @@ export async function DELETE(
   const ids = parseIds(await context.params);
   if (!ids) return jsonError("Некорректный идентификатор", 400);
 
-  await prisma.franchiseSlot.deleteMany({
-    where: { franchiseId: ids.franchiseId, movieId: ids.movieId },
+  await releaseMovieFromFranchise(prisma, {
+    movieId: ids.movieId,
+    franchiseId: ids.franchiseId,
   });
 
   const memberships = await getMovieFranchiseMemberships(prisma, ids.movieId);

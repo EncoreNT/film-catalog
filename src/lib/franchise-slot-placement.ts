@@ -80,6 +80,17 @@ export async function placeMovieInFranchise(
   }
 }
 
+/** Frees the slot occupied by a movie without removing the slot itself. */
+export async function releaseMovieFromFranchise(
+  db: DbClient,
+  { movieId, franchiseId }: { movieId: number; franchiseId: number },
+): Promise<void> {
+  await db.franchiseSlot.updateMany({
+    where: { franchiseId, movieId },
+    data: { movieId: null },
+  });
+}
+
 export function parsePlacementTarget(raw: unknown): SlotPlacementTarget {
   if (typeof raw !== "object" || raw === null) return { kind: "end" };
   const t = raw as { kind?: unknown; slotId?: unknown };

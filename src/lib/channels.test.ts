@@ -31,8 +31,20 @@ describe("detectTranslationType", () => {
     expect(detectTranslationType("DVO, LostFilm")).toBe("pro_two");
     expect(detectTranslationType("Двухголосое")).toBe("pro_two");
     expect(detectTranslationType("PVO, Alex")).toBe("pro_single");
+    expect(detectTranslationType("VO, HDRezka Studio")).toBe("pro_single");
+    expect(detectTranslationType("Voice-over by Studio")).toBe("pro_single");
     expect(detectTranslationType("SVO, любитель")).toBe("amateur_single");
     expect(detectTranslationType("Одноголосое")).toBe("amateur_single");
+  });
+
+  it("detects commentary tracks", () => {
+    expect(
+      detectTranslationType("Commentary by Director Doug Liman"),
+    ).toBe("commentary");
+    expect(detectTranslationType("Audio Commentary")).toBe("commentary");
+    expect(detectTranslationType("Дорожка с комментариями режиссёра")).toBe(
+      "commentary",
+    );
   });
 
   it("returns null when no translation marker is present", () => {

@@ -156,6 +156,10 @@ export function detectTranslationType(title?: string | null): string | null {
   if (!title) return null;
   const t = title.toLowerCase();
 
+  if (t.includes("commentary") || t.includes("комментар")) {
+    return "commentary";
+  }
+
   // Multi-voice before single-voice so "многоголос" isn't caught by "одноголос".
   if (t.includes("дубляж") || t.includes("дуб") || /\bdub\b/.test(t)) {
     return "dub";
@@ -164,6 +168,13 @@ export function detectTranslationType(title?: string | null): string | null {
   if (t.includes("двухголос") || /\bdvo\b/.test(t)) return "pro_two";
   if (t.includes("авторск") || /\bavo\b/.test(t)) return "author";
   if (/\bpvo\b/.test(t)) return "pro_single";
+  if (
+    /\bvo\b/.test(t) ||
+    t.includes("voice-over") ||
+    t.includes("voice over")
+  ) {
+    return "pro_single";
+  }
   if (t.includes("одноголос") || /\bsvo\b/.test(t)) return "amateur_single";
   if (t.includes("оригинал") || /\boriginal\b/.test(t)) return "original";
 

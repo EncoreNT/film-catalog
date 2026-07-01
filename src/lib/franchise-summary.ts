@@ -1,6 +1,12 @@
 import type { FranchiseWithSlots } from "./franchise-include";
 import type { MovieWithTracks } from "./movie-query";
-import { is4K, isAnyHDR, premiumAudio, formatAudioLabel } from "./spec-tags";
+import {
+  is4K,
+  isAnyHDR,
+  premiumAudio,
+  formatAudioLabel,
+  mainAudioTrack,
+} from "./spec-tags";
 import { parseHdrValue } from "./dictionaries";
 
 /**
@@ -70,23 +76,8 @@ const AUDIO_SHORT: Record<string, string> = {
   mp3: "MP3",
 };
 
-function pickBestAudioTrack(
-  movie: MovieWithTracks,
-): MovieWithTracks["audioTracks"][number] | null {
-  if (movie.audioTracks.length === 0) return null;
-  const sorted = [...movie.audioTracks].sort((a, b) => {
-    const a3D = a.profile === "Atmos" || a.profile === "DTS:X MA" ? 1 : 0;
-    const b3D = b.profile === "Atmos" || b.profile === "DTS:X MA" ? 1 : 0;
-    if (a3D !== b3D) return b3D - a3D;
-    if (a.isDefault && !b.isDefault) return -1;
-    if (!a.isDefault && b.isDefault) return 1;
-    return 0;
-  });
-  return sorted[0];
-}
-
 function slotAudioShort(movie: MovieWithTracks | null): string | null {
-  const track = movie ? pickBestAudioTrack(movie) : null;
+  const track = movie ? mainAudioTrack(movie) : null;
   if (!track) return null;
   const profile =
     track.profile && track.profile !== "None" ? track.profile : null;
@@ -97,7 +88,7 @@ function slotAudioShort(movie: MovieWithTracks | null): string | null {
 }
 
 function slotAudioFull(movie: MovieWithTracks | null): string | null {
-  const track = movie ? pickBestAudioTrack(movie) : null;
+  const track = movie ? mainAudioTrack(movie) : null;
   return track ? formatAudioLabel(track) : null;
 }
 

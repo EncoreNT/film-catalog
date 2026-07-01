@@ -107,8 +107,6 @@ export function FranchiseSlotsEditor({
               movieTitle: movie.title,
               movieYear: movie.year,
               coverUrl: movieCoverUrlFromMovie(movie) ?? undefined,
-              titleHint: null,
-              yearHint: null,
             }
           : slot,
       ),

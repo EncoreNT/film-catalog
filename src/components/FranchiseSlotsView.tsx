@@ -53,8 +53,8 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
       const payload = sorted.map((slot) => ({
         movieId: slot.id === pickerSlotId ? movie.id : slot.movieId,
         storyOrder: slot.storyOrder,
-        titleHint: slot.id === pickerSlotId ? null : slot.titleHint,
-        yearHint: slot.id === pickerSlotId ? null : slot.yearHint,
+        titleHint: slot.titleHint,
+        yearHint: slot.yearHint,
       }));
 
       const res = await fetch(`/api/franchises/${franchiseId}`, {
