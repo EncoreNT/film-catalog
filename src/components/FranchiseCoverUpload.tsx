@@ -6,6 +6,7 @@ import { ImagePlus, RefreshCw, Check, Upload } from "lucide-react";
 import { franchiseCoverUrl } from "@/lib/franchise-cover-url";
 import { Modal } from "./primitives/Modal";
 import { Button } from "./primitives/Button";
+import { trimInput } from "@/lib/text-trim";
 
 type Source =
   | { kind: "none" }
@@ -388,6 +389,10 @@ export function FranchiseCoverUpload({
                 setDraftFile(null);
                 setDraftPreviewUrl(null);
                 setError(null);
+              }}
+              onBlur={() => {
+                const trimmed = trimInput(draftUrl);
+                if (trimmed !== draftUrl) setDraftUrl(trimmed);
               }}
               placeholder="https://…/cover.jpg"
               inputMode="url"

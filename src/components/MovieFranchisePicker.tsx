@@ -6,6 +6,7 @@ import { ChevronDown, Library, Loader2, Plus, Search, X } from "lucide-react";
 import { InfoHint } from "./primitives/InfoHint";
 import { FranchiseSlotPickerDialog } from "./FranchiseSlotPickerDialog";
 import type { MovieFranchiseMembership } from "@/lib/movie-franchise-memberships";
+import { trimInput } from "@/lib/text-trim";
 
 interface MovieFranchisePickerProps {
   movieId: number;
@@ -287,6 +288,10 @@ export function MovieFranchisePicker({
                     ref={inputRef}
                     value={query}
                     onChange={(e) => onQueryChange(e.target.value)}
+                    onBlur={() => {
+                      const trimmed = trimInput(query);
+                      if (trimmed !== query) onQueryChange(trimmed);
+                    }}
                     placeholder="Поиск или создание…"
                     className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
                   />

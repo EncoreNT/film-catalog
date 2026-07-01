@@ -4,15 +4,20 @@ import type {
   VideoFieldState,
 } from "@/lib/movie-form-types";
 import { DEFAULT_MOVIE_VERSION } from "@/lib/dictionaries";
+import {
+  trimInput,
+  trimInputOptional,
+  trimMultilineOptional,
+} from "@/lib/text-trim";
 
 export function buildVideoTrackPayload(video: VideoFieldState) {
   return {
     width: video.width,
     height: video.height,
-    resolutionLabel: video.resolutionLabel || null,
-    codec: video.codec || null,
-    hdr: video.hdr || null,
-    fps: video.fps || null,
+    resolutionLabel: trimInputOptional(video.resolutionLabel),
+    codec: trimInputOptional(video.codec),
+    hdr: trimInputOptional(video.hdr),
+    fps: trimInputOptional(video.fps),
     bitrate: video.bitrate,
   };
 }
@@ -27,13 +32,13 @@ export function buildAudioTracksPayload(
 
   return filtered.map((row, index) => ({
     streamIndex: index,
-    codec: row.codec || null,
+    codec: trimInputOptional(row.codec),
     profile: row.profile && row.profile !== "None" ? row.profile : null,
-    channelLayout: row.channelLayout || null,
-    language: row.language || null,
-    translationType: row.translationType || null,
+    channelLayout: trimInputOptional(row.channelLayout),
+    language: trimInputOptional(row.language),
+    translationType: trimInputOptional(row.translationType),
     bitrate: row.bitrate,
-    title: row.title || null,
+    title: trimInputOptional(row.title),
     isDefault: row.isDefault,
   }));
 }
@@ -48,11 +53,11 @@ export function buildSubtitleTracksPayload(
 
   return filtered.map((row, index) => ({
     streamIndex: index,
-    codecLabel: row.codecLabel || null,
-    language: row.language || null,
+    codecLabel: trimInputOptional(row.codecLabel),
+    language: trimInputOptional(row.language),
     forced: row.forced,
     isDefault: row.isDefault,
-    title: row.title || null,
+    title: trimInputOptional(row.title),
   }));
 }
 
@@ -73,15 +78,15 @@ export interface MovieCreatePayloadInput {
 
 export function buildMovieCreatePayload(input: MovieCreatePayloadInput) {
   return {
-    title: input.title.trim(),
+    title: trimInput(input.title),
     year: input.year,
-    description: input.description,
+    description: trimMultilineOptional(input.description),
     storageId: input.storageId,
-    releaseType: input.releaseType,
-    version: input.version || DEFAULT_MOVIE_VERSION,
+    releaseType: trimInputOptional(input.releaseType),
+    version: trimInputOptional(input.version) || DEFAULT_MOVIE_VERSION,
     genres: input.genres,
     durationSeconds: input.durationSeconds,
-    filePath: input.filePath,
+    filePath: trimInputOptional(input.filePath),
     status: "CATALOG" as const,
     skipProbe: true,
     videoTrack: buildVideoTrackPayload(input.video),
@@ -118,12 +123,12 @@ export interface MovieUpdatePayloadInput {
 
 export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
   return {
-    title: input.title,
+    title: trimInput(input.title),
     year: input.year,
-    description: input.description || null,
-    releaseType: input.releaseType || null,
-    version: input.version || DEFAULT_MOVIE_VERSION,
-    filePath: input.filePath?.trim() || null,
+    description: trimMultilineOptional(input.description),
+    releaseType: trimInputOptional(input.releaseType),
+    version: trimInputOptional(input.version) || DEFAULT_MOVIE_VERSION,
+    filePath: trimInputOptional(input.filePath),
     ...(input.fileMeta
       ? {
           fileSize: input.fileMeta.fileSize,

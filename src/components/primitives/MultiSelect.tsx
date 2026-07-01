@@ -9,6 +9,7 @@ import {
   sortOptions,
   type SelectOption,
 } from "./select-utils";
+import { trimInput } from "@/lib/text-trim";
 
 interface MultiSelectProps {
   value: string[];
@@ -208,6 +209,10 @@ export function MultiSelect({
                     autoFocus
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onBlur={() => {
+                      const trimmed = trimInput(query);
+                      if (trimmed !== query) setQuery(trimmed);
+                    }}
                     placeholder="Поиск…"
                     className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
                   />

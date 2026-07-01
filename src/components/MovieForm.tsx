@@ -27,6 +27,7 @@ import {
   buildMovieUpdatePayload,
   type MovieFileMetaPayload,
 } from "@/lib/build-movie-payload";
+import { trimOnInputBlur } from "@/lib/text-trim";
 import type { ProbeResult } from "@/lib/ffprobe";
 import {
   probeToAudioRows,
@@ -373,6 +374,14 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
                 setFileFillError(null);
                 markDirty();
               }}
+              onBlur={(e) =>
+                trimOnInputBlur(e, (ev) => {
+                  setFilePath(ev.target.value);
+                  setPendingFileMeta(null);
+                  setFileFillMessage(null);
+                  setFileFillError(null);
+                })
+              }
               aria-invalid={!!fileFillError}
               aria-describedby={
                 fileFillError ? "file-path-fill-feedback" : undefined

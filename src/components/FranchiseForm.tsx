@@ -14,6 +14,7 @@ import {
   type EditableSlot,
 } from "./FranchiseSlotsEditor";
 import { FranchiseDeleteButton } from "./FranchiseDeleteButton";
+import { trimInput, trimMultilineOptional } from "@/lib/text-trim";
 
 interface FranchiseFormProps {
   mode: "create" | "edit";
@@ -49,8 +50,8 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
     try {
       const payload = {
-        name: name.trim(),
-        description: description.trim() || null,
+        name: trimInput(name),
+        description: trimMultilineOptional(description),
         slots: slotsToPayload(slots),
       };
 
@@ -171,13 +172,12 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
             />
           )}
           <div className="min-w-0 flex-1 space-y-4">
-            <Field label="Название" required>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text"
-              />
-            </Field>
+            <Field
+              label="Название"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
             <TextAreaField
               label="Описание"
               value={description}

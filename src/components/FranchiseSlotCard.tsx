@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Film, X } from "lucide-react";
 import type { EditableSlot } from "./FranchiseSlotsEditor";
+import { trimOnInputBlur } from "@/lib/text-trim";
 
 interface FranchiseSlotCardProps {
   slot: EditableSlot;
@@ -125,6 +126,11 @@ export function FranchiseSlotCard({
             <input
               value={slot.titleHint ?? ""}
               onChange={(e) => onHintChange("titleHint", e.target.value)}
+              onBlur={(e) =>
+                trimOnInputBlur(e, (ev) =>
+                  onHintChange("titleHint", ev.target.value),
+                )
+              }
               onClick={(e) => e.stopPropagation()}
               placeholder="название (необязательно)"
               aria-label={`Фильм ${index + 1}: название`}

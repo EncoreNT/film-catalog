@@ -24,6 +24,7 @@ import {
   genreLabel,
 } from "@/lib/dictionaries";
 import { RUS_AUDIO_FORMATS } from "@/lib/russian-audio-formats";
+import { trimInput } from "@/lib/text-trim";
 
 const FILTER_DEFAULTS: Record<string, string> = {
   sort: "title",
@@ -252,7 +253,9 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    updateParams({ q: q || null });
+    const trimmed = trimInput(q);
+    if (trimmed !== q) setQ(trimmed);
+    updateParams({ q: trimmed || null });
   };
 
   const showResolution = hasFacets(facets.resolutions);
@@ -400,6 +403,10 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onBlur={() => {
+              const trimmed = trimInput(q);
+              if (trimmed !== q) setQ(trimmed);
+            }}
             placeholder="Поиск по названию…"
             className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-elevated py-2 pl-10 pr-3 text-sm text-text placeholder:text-faint"
             aria-label="Поиск по названию"

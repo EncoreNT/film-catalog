@@ -1,5 +1,6 @@
 import { type InputHTMLAttributes, type ReactNode } from "react";
 import { InfoHint } from "./InfoHint";
+import { trimOnInputBlur, trimOnTextareaBlur } from "@/lib/text-trim";
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -17,6 +18,8 @@ export function Field({
   id,
   children,
   required,
+  onChange,
+  onBlur,
   ...props
 }: FieldProps) {
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
@@ -37,6 +40,8 @@ export function Field({
           aria-invalid={!!error}
           aria-describedby={error ? `${fieldId}-error` : undefined}
           required={required}
+          onChange={onChange}
+          onBlur={(e) => trimOnInputBlur(e, onChange, onBlur)}
           {...props}
         />
       )}
@@ -62,6 +67,8 @@ export function TextAreaField({
   hint,
   className = "",
   id,
+  onChange,
+  onBlur,
   ...props
 }: TextAreaFieldProps) {
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
@@ -77,6 +84,8 @@ export function TextAreaField({
         id={fieldId}
         className={`focus-ring min-h-28 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${className}`}
         aria-invalid={!!error}
+        onChange={onChange}
+        onBlur={(e) => trimOnTextareaBlur(e, onChange, onBlur)}
         {...props}
       />
       {error ? (

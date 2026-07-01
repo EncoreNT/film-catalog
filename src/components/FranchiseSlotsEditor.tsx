@@ -9,6 +9,7 @@ import { FranchiseSlotCard, AddSlotButton } from "./FranchiseSlotCard";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import type { FranchiseSlotInput } from "@/lib/franchise-slots";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
+import { trimInputOptional } from "@/lib/text-trim";
 
 export interface EditableSlot {
   key: string;
@@ -44,7 +45,7 @@ export function slotsToPayload(slots: EditableSlot[]): FranchiseSlotInput[] {
   return slots.map((slot) => ({
     movieId: slot.movieId,
     storyOrder: slot.storyOrder,
-    titleHint: slot.titleHint ?? null,
+    titleHint: trimInputOptional(slot.titleHint),
     yearHint: slot.yearHint ?? null,
   }));
 }

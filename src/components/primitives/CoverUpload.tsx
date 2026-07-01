@@ -6,6 +6,7 @@ import { ImagePlus, RefreshCw, Loader2, Check, Upload } from "lucide-react";
 import { movieCoverUrl } from "@/lib/cover-url";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { trimInput } from "@/lib/text-trim";
 
 type Source =
   | { kind: "none" }
@@ -391,6 +392,10 @@ export function CoverUpload({
                 setDraftFile(null);
                 setDraftPreviewUrl(null);
                 setError(null);
+              }}
+              onBlur={() => {
+                const trimmed = trimInput(draftUrl);
+                if (trimmed !== draftUrl) setDraftUrl(trimmed);
               }}
               placeholder="https://…/poster.jpg"
               inputMode="url"

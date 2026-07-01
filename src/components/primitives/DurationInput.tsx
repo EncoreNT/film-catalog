@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { InfoHint } from "./InfoHint";
+import { trimInput } from "@/lib/text-trim";
 import {
   defaultDurationFormat,
   formatDuration,
@@ -45,6 +46,12 @@ export function DurationInput({
     onChange(parsed.seconds);
   };
 
+  const handleBlur = () => {
+    const trimmed = trimInput(text);
+    if (trimmed !== text) handleText(trimmed);
+    setTouched(true);
+  };
+
   const handleFormat = (next: DurationFormat) => {
     // Re-render the same value in the new format (keeps valid values stable,
     // drops an in-progress invalid draft so the user starts clean).
@@ -75,7 +82,7 @@ export function DurationInput({
           inputMode={format === "hms" ? "numeric" : "decimal"}
           value={text}
           onChange={(e) => handleText(e.target.value)}
-          onBlur={() => setTouched(true)}
+          onBlur={handleBlur}
           placeholder={active.placeholder}
           aria-invalid={showError}
           aria-describedby={showError ? `${fieldId}-error` : undefined}

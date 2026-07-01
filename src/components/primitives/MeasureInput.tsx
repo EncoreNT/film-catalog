@@ -9,6 +9,7 @@ import {
 } from "@/lib/dictionaries";
 import { Select } from "./Select";
 import { InfoHint } from "./InfoHint";
+import { trimInput } from "@/lib/text-trim";
 
 type BitrateUnit = "kbps" | "Mbps";
 
@@ -66,6 +67,12 @@ export function BitrateInput({
           inputMode="decimal"
           value={kbpsToDisplay(valueKbps, unit)}
           onChange={(e) => onChange(displayToKbps(e.target.value, unit))}
+          onBlur={(e) => {
+            const trimmed = trimInput(e.target.value);
+            if (trimmed !== e.target.value) {
+              onChange(displayToKbps(trimmed, unit));
+            }
+          }}
           placeholder={unit === "Mbps" ? "35" : "35000"}
           className="focus-ring min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-text placeholder:text-muted/60"
         />
@@ -170,6 +177,10 @@ export function SizeInput({
             inputMode="numeric"
             value={width != null ? String(width) : ""}
             onChange={(e) => handleWidth(e.target.value)}
+            onBlur={(e) => {
+              const trimmed = trimInput(e.target.value);
+              if (trimmed !== e.target.value) handleWidth(trimmed);
+            }}
             placeholder="3840"
             aria-label="Ширина в пикселях"
             className="focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60"
@@ -182,6 +193,10 @@ export function SizeInput({
             inputMode="numeric"
             value={height != null ? String(height) : ""}
             onChange={(e) => handleHeight(e.target.value)}
+            onBlur={(e) => {
+              const trimmed = trimInput(e.target.value);
+              if (trimmed !== e.target.value) handleHeight(trimmed);
+            }}
             placeholder="2160"
             aria-label="Высота в пикселях"
             className="focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60"

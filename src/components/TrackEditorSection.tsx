@@ -20,6 +20,7 @@ import type {
   SubtitleFormRow,
   VideoFieldState,
 } from "@/lib/movie-form-types";
+import { detectTranslationType } from "@/lib/channels";
 
 interface TrackEditorSectionProps {
   video: VideoFieldState;
@@ -210,7 +211,14 @@ export function TrackEditorSection({
                   <Field
                     label={mainTrackStyle === "star" ? "Название дорожки" : "Название"}
                     value={track.title}
-                    onChange={(e) => onUpdateAudio(index, { title: e.target.value })}
+                    onChange={(e) => {
+                      const title = e.target.value;
+                      const detected = detectTranslationType(title);
+                      onUpdateAudio(index, {
+                        title,
+                        ...(detected ? { translationType: detected } : {}),
+                      });
+                    }}
                     placeholder={mainTrackStyle === "checkbox" ? "Surround 7.1" : undefined}
                   />
                 </div>

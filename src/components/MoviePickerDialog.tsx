@@ -6,6 +6,7 @@ import { Film, Loader2, Search, X } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import { Button } from "./primitives/Button";
+import { trimInput } from "@/lib/text-trim";
 
 interface MoviePickerDialogProps {
   open: boolean;
@@ -139,6 +140,10 @@ function MoviePickerDialogContent({
             ref={inputRef}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
+            onBlur={() => {
+              const trimmed = trimInput(query);
+              if (trimmed !== query) onQueryChange(trimmed);
+            }}
             placeholder="Поиск по названию…"
             className="min-h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-muted/60"
             aria-label="Поиск фильма"
