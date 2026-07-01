@@ -212,6 +212,52 @@ export const RELEASE_TYPES: DictOption[] = [
   { value: "other", label: "Другое" },
 ];
 
+/**
+ * Cinematic cut / version of a film — independent of the release source
+ * (`releaseType`). "theatrical" is the base version every movie defaults to;
+ * it is never shown in the UI. Any other value is surfaced as a badge on the
+ * movie page and catalog card.
+ */
+export const DEFAULT_MOVIE_VERSION = "theatrical";
+
+export const MOVIE_VERSIONS: DictOption[] = [
+  { value: "theatrical", label: "Театральная версия" },
+  { value: "directors-cut", label: "Режиссёрская версия" },
+  { value: "extended", label: "Расширенная версия" },
+  { value: "special-edition", label: "Специальная версия" },
+  { value: "ultimate-edition", label: "Ультимативная версия" },
+  { value: "final-cut", label: "Финальная версия" },
+  { value: "uncut", label: "Без купюр" },
+  { value: "unrated", label: "Без рейтинга" },
+  { value: "collectors-cut", label: "Коллекционная версия" },
+  { value: "remastered", label: "Ремастер" },
+  { value: "tv-cut", label: "Телевизионная версия" },
+  { value: "international", label: "Международная версия" },
+  { value: "other", label: "Другое" },
+];
+
+/** Raw label for a version value (includes "Театральная версия"). */
+export function movieVersionLabel(value?: string | null): string | null {
+  if (!value) return null;
+  return MOVIE_VERSIONS.find((v) => v.value === value)?.label ?? null;
+}
+
+/** The theatrical cut is the base version and is never displayed. */
+export function isBaseMovieVersion(value?: string | null): boolean {
+  return !value || value === DEFAULT_MOVIE_VERSION;
+}
+
+/**
+ * Label to display for a version, or null when it's the base theatrical cut
+ * (which is hidden everywhere) or an unknown value without a label.
+ */
+export function displayMovieVersionLabel(
+  value?: string | null,
+): string | null {
+  if (isBaseMovieVersion(value)) return null;
+  return movieVersionLabel(value) ?? value ?? null;
+}
+
 export const AUDIO_TRANSLATION_TYPES: DictOption[] = [
   { value: "dub", label: "Дубляж" },
   { value: "pro_multi", label: "Проф. многоголосый" },

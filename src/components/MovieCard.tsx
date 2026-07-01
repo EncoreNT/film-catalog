@@ -90,7 +90,8 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-[600ms] group-hover:scale-[1.06]"
               style={{ transitionTimingFunction: "var(--ease)" }}
-              loading={index < 4 ? "eager" : "lazy"}
+              loading={index < 8 ? "eager" : "lazy"}
+              fetchPriority={index === 0 ? "high" : undefined}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center p-4 text-center">

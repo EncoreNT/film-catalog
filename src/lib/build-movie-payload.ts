@@ -3,6 +3,7 @@ import type {
   SubtitleFormRow,
   VideoFieldState,
 } from "@/lib/movie-form-types";
+import { DEFAULT_MOVIE_VERSION } from "@/lib/dictionaries";
 
 export function buildVideoTrackPayload(video: VideoFieldState) {
   return {
@@ -61,6 +62,7 @@ export interface MovieCreatePayloadInput {
   description: string | null;
   storageId: number | null;
   releaseType: string | null;
+  version?: string | null;
   genres: string[];
   durationSeconds: number | null;
   filePath: string | null;
@@ -76,6 +78,7 @@ export function buildMovieCreatePayload(input: MovieCreatePayloadInput) {
     description: input.description,
     storageId: input.storageId,
     releaseType: input.releaseType,
+    version: input.version || DEFAULT_MOVIE_VERSION,
     genres: input.genres,
     durationSeconds: input.durationSeconds,
     filePath: input.filePath,
@@ -100,6 +103,7 @@ export interface MovieUpdatePayloadInput {
   year: number | null;
   description: string | null;
   releaseType: string | null;
+  version?: string | null;
   filePath: string | null;
   fileMeta: MovieFileMetaPayload | null;
   storageId: number | null;
@@ -118,6 +122,7 @@ export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
     year: input.year,
     description: input.description || null,
     releaseType: input.releaseType || null,
+    version: input.version || DEFAULT_MOVIE_VERSION,
     filePath: input.filePath?.trim() || null,
     ...(input.fileMeta
       ? {

@@ -106,7 +106,8 @@ export default async function FranchisePage({ params }: PageProps) {
               fill
               sizes="100vw"
               className="object-cover"
-              priority
+              loading="eager"
+              fetchPriority="high"
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-accent-soft to-transparent">

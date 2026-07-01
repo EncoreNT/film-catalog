@@ -6,6 +6,7 @@ export type SpecTagKind =
   | "audio-3d"
   | "audio"
   | "release"
+  | "version"
   | "channel"
   | "codec";
 
@@ -48,6 +49,11 @@ const KIND_STYLES: Record<
     accent: "text-text",
     border: "border-border-strong",
     bg: "bg-bg-surface",
+  },
+  version: {
+    accent: "text-accent-bright",
+    border: "border-accent/45",
+    bg: "bg-accent/12",
   },
   channel: {
     accent: "text-muted",

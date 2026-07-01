@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
         fileHash,
         storageId: data.storageId ?? null,
         releaseType: data.releaseType ?? null,
+        version: data.version ?? undefined,
         status: data.status ?? MovieStatus.CATALOG,
         genres: genreRows.length
           ? { connect: genreRows.map((g) => ({ id: g.id })) }

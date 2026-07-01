@@ -110,7 +110,8 @@ export default async function MoviePage({ params }: PageProps) {
                 fill
                 sizes="280px"
                 className="object-cover"
-                priority
+                loading="eager"
+                fetchPriority="high"
               />
             ) : (
               <div className="flex h-full items-center justify-center p-6 text-center">
@@ -193,6 +194,8 @@ export default async function MoviePage({ params }: PageProps) {
                           return <AudioLines className="h-3.5 w-3.5" />;
                         case "release":
                           return <Disc3 className="h-3.5 w-3.5" />;
+                        case "version":
+                          return <Layers className="h-3.5 w-3.5" />;
                         case "channel":
                           return null;
                       }

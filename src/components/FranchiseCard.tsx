@@ -72,6 +72,8 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
               fill
               sizes="(max-width: 640px) 100vw, 50vw"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              loading={index < 2 ? "eager" : "lazy"}
+              fetchPriority={index === 0 ? "high" : undefined}
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-accent-soft to-transparent">

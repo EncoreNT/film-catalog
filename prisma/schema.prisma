@@ -47,6 +47,7 @@ model Movie {
   watchedAt       DateTime?
   storageId       Int?
   releaseType     String?
+  version         String      @default("theatrical")
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -63,6 +64,7 @@ model Movie {
   @@index([watchedAt])
   @@index([storageId])
   @@index([releaseType])
+  @@index([version])
   @@index([durationSeconds])
 }
 

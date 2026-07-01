@@ -4,6 +4,7 @@ import {
   dictLabel,
   RELEASE_TYPES,
   AUDIO_CODECS,
+  displayMovieVersionLabel,
   formatHdrLabel,
   parseHdrValue,
 } from "./dictionaries";
@@ -15,6 +16,7 @@ type HeroTagKind =
   | "audio-3d"
   | "audio"
   | "release"
+  | "version"
   | "channel";
 
 interface HeroTag {
@@ -127,6 +129,11 @@ function heroTags(movie: MovieWithTracks): HeroTag[] {
   const release = dictLabel(RELEASE_TYPES, movie.releaseType);
   if (release) {
     tags.push({ kind: "release", label: release });
+  }
+
+  const version = displayMovieVersionLabel(movie.version);
+  if (version) {
+    tags.push({ kind: "version", label: version });
   }
 
   const bestAudio = [...movie.audioTracks]
@@ -340,6 +347,11 @@ export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
   const release = dictLabel(RELEASE_TYPES, movie.releaseType);
   if (release) {
     tags.push({ kind: "release", label: release });
+  }
+
+  const version = displayMovieVersionLabel(movie.version);
+  if (version) {
+    tags.push({ kind: "version", label: version });
   }
 
   if (

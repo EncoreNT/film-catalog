@@ -12,7 +12,7 @@ import { Select } from "./primitives/Select";
 import { StarRating } from "./StarRating";
 import { MovieFranchisePicker } from "./MovieFranchisePicker";
 import type { MovieFranchiseMembership } from "@/lib/movie-franchise-memberships";
-import { RELEASE_TYPES, GENRES, normalizeAudioProfile } from "@/lib/dictionaries";
+import { RELEASE_TYPES, GENRES, MOVIE_VERSIONS, DEFAULT_MOVIE_VERSION, normalizeAudioProfile } from "@/lib/dictionaries";
 import { MultiSelect } from "./primitives/MultiSelect";
 import { DurationInput } from "./primitives/DurationInput";
 import { YearInput } from "./primitives/YearInput";
@@ -51,6 +51,7 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   const [year, setYear] = useState<number | null>(movie.year ?? null);
   const [description, setDescription] = useState(movie.description ?? "");
   const [releaseType, setReleaseType] = useState(movie.releaseType ?? "");
+  const [version, setVersion] = useState(movie.version ?? DEFAULT_MOVIE_VERSION);
   const [filePath, setFilePath] = useState(movie.filePath ?? "");
   const [pendingFileMeta, setPendingFileMeta] =
     useState<MovieFileMetaPayload | null>(null);
@@ -244,6 +245,7 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
             year,
             description,
             releaseType,
+            version,
             filePath,
             fileMeta: pendingFileMeta,
             storageId,
@@ -466,6 +468,16 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
             }}
             options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
             hint="Источник копии: BDRemux, BDRip, WEB-DL, Blu-ray и т.д. Влияет на качество."
+          />
+          <Select
+            label="Версия"
+            value={version}
+            onChange={(v) => {
+              setVersion(v);
+              markDirty();
+            }}
+            options={MOVIE_VERSIONS}
+            hint="Монтажная версия фильма: театральная, режиссёрская, расширенная и т.д. Театральная — базовая, не отображается в каталоге."
           />
           <MultiSelect
             label="Жанры"
