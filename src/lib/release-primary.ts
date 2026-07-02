@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { releaseInclude } from "./movie-include";
+import { releaseHasExternalStorage } from "./release-storage";
 
 export type ReleaseWithTracks = Prisma.ReleaseGetPayload<{
   include: typeof releaseInclude;
@@ -84,9 +85,9 @@ export function movieHasFile(releases: Pick<ReleaseWithTracks, "filePath">[]): b
   return releases.some((r) => !!r.filePath);
 }
 
-/** True when any release is on external storage. */
+/** True when any release is on an external drive. */
 export function movieHasExternalStorage(
-  releases: Pick<ReleaseWithTracks, "storage">[],
+  releases: Pick<ReleaseWithTracks, "externalStorage" | "externalStorageId">[],
 ): boolean {
-  return releases.some((r) => r.storage?.type === "EXTERNAL");
+  return releases.some((r) => releaseHasExternalStorage(r));
 }

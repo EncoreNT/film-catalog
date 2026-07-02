@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayFilePath } from "./display-path";
+import { displayFileDir, displayFilePath } from "./display-path";
 
 describe("displayFilePath", () => {
   it("converts WSL mount paths to Windows drive paths", () => {
@@ -26,5 +26,17 @@ describe("displayFilePath", () => {
   it("leaves Windows-style paths unchanged", () => {
     const path = "D:\\Movies\\film.mkv";
     expect(displayFilePath(path)).toBe(path);
+  });
+
+});
+
+describe("displayFileDir", () => {
+  it("returns parent directory in display format", () => {
+    expect(
+      displayFileDir(
+        "/mnt/d/Фильмы/4K/Harry.Potter.HDR/2001.Harry.Potter.and.the.Sorcerers.Stone.4K.HEVC.HDR.mkv",
+      ),
+    ).toBe("D:\\Фильмы\\4K\\Harry.Potter.HDR");
+    expect(displayFileDir("D:\\Movies\\film.mkv")).toBe("D:\\Movies");
   });
 });

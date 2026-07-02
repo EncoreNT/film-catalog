@@ -8,7 +8,7 @@ function release(
   return {
     id: partial.id,
     movieId: 1,
-    storageId: null,
+    externalStorageId: null,
     filePath: null,
     fileSize: null,
     fileMtime: null,
@@ -18,7 +18,7 @@ function release(
     durationSeconds: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    storage: null,
+    externalStorage: null,
     videoTrack: partial.videoTrack ?? null,
     audioTracks: [],
     subtitleTracks: [],

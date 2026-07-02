@@ -59,12 +59,14 @@ export function Modal({
         </Button>
       </div>
 
-      <div className={`min-h-0 flex-1 overflow-y-auto p-5 ${bodyClassName ?? ""}`}>
+      <div
+        className={`scroll-subtle min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 ${bodyClassName ?? ""}`}
+      >
         {children}
       </div>
 
       {footer ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-border bg-bg-deep/80 px-5 py-4 backdrop-blur-xl">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border bg-bg-elevated px-5 py-4">
           {footer}
         </div>
       ) : null}

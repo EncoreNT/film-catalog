@@ -70,11 +70,10 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
     setStorageKind,
     selectedStorageId,
     setSelectedStorageId,
-    newStorageName,
-    setNewStorageName,
     externalStorages,
+    createExternalStorage,
     validateStorage,
-    resolveStorageId,
+    resolveExternalStorageId,
   } = useStoragePicker();
 
   const [releaseType, setReleaseType] = useState("");
@@ -175,13 +174,13 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
 
     setLoading(true);
     try {
-      const storageId = await resolveStorageId();
+      const externalStorageId = await resolveExternalStorageId();
 
       const payload = buildMovieCreatePayload({
         title,
         year,
         description: description.trim() || null,
-        storageId,
+        externalStorageId,
         releaseType: releaseType || null,
         genres,
         durationSeconds,
@@ -295,8 +294,7 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
                 externalStorages={externalStorages}
                 selectedStorageId={selectedStorageId}
                 onSelectedStorageIdChange={setSelectedStorageId}
-                newStorageName={newStorageName}
-                onNewStorageNameChange={setNewStorageName}
+                onCreateExternalStorage={createExternalStorage}
               />
 
               <div className="space-y-3">

@@ -17,7 +17,7 @@ interface MergeMoviesModalProps {
   onClose: () => void;
   currentMovieId: number;
   candidates: MergeCandidate[];
-  onMerged: () => void;
+  onMerged: (result: { canonicalSlug: string }) => void;
 }
 
 function truncate(text: string, max: number): string {
@@ -148,7 +148,7 @@ function CandidateCard({
         </p>
       ) : null}
 
-      <ul className="mt-3 space-y-1.5 border-t border-border pt-2">
+      <ul className="scroll-subtle mt-3 max-h-28 space-y-1.5 overflow-y-auto border-t border-border pt-2">
         {candidate.releases.map((release) => (
           <li
             key={release.id}
@@ -317,7 +317,7 @@ export function MergeMoviesModal({
       if (!res.ok) {
         throw new Error(data.error ?? "Не удалось объединить");
       }
-      onMerged();
+      onMerged({ canonicalSlug: canonical.slug });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -337,7 +337,28 @@ export function MergeMoviesModal({
       onClose={onClose}
       title="Объединить фильмы"
       size="xwide"
-      bodyClassName="max-h-[min(70vh,720px)] overflow-y-auto"
+      footer={
+        <>
+          {error ? (
+            <p className="mr-auto w-full text-sm text-red-400 sm:w-auto" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+            Отмена
+          </Button>
+          <Button type="button" onClick={handleMerge} disabled={loading || !other}>
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Объединение…
+              </>
+            ) : (
+              "Объединить"
+            )}
+          </Button>
+        </>
+      }
     >
       <div className="space-y-5">
         <p className="text-sm text-muted">
@@ -437,28 +458,6 @@ export function MergeMoviesModal({
             ) : null}
           </div>
         ) : null}
-
-        {error ? (
-          <p className="text-sm text-red-400" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
-            Отмена
-          </Button>
-          <Button type="button" onClick={handleMerge} disabled={loading || !other}>
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Объединение…
-              </>
-            ) : (
-              "Объединить"
-            )}
-          </Button>
-        </div>
       </div>
     </Modal>
   );

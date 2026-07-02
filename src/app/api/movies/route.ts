@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
+  buildMovieListWhere,
   buildMovieOrder,
-  buildMovieWhere,
   parseListQuery,
 } from "@/lib/movie-query";
 import { movieCreateSchema } from "@/lib/validators";
@@ -23,7 +23,7 @@ import { probeMediaFile } from "@/lib/ffprobe";
 
 export async function GET(request: NextRequest) {
   const query = parseListQuery(request.nextUrl.searchParams);
-  const where = buildMovieWhere(query);
+  const where = await buildMovieListWhere(query);
   const orderBy = buildMovieOrder(query);
   const page = query.page ?? 1;
   const limit = query.limit ?? 48;

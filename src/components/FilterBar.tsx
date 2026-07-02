@@ -3,6 +3,8 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
+  ArrowDownAZ,
+  ArrowDownWideNarrow,
   ChevronDown,
   Clapperboard,
   MonitorPlay,
@@ -25,6 +27,10 @@ import {
 } from "@/lib/dictionaries";
 import { RUS_AUDIO_FORMATS } from "@/lib/russian-audio-formats";
 import { trimInput } from "@/lib/text-trim";
+import {
+  sortGenreFacets,
+  type GenreSortMode,
+} from "@/lib/genre-facet-sort";
 
 const FILTER_DEFAULTS: Record<string, string> = {
   sort: "title",
@@ -40,7 +46,7 @@ const FACET_KEYS = [
   "audioTranslation",
 ] as const;
 const SCALAR_FACET_KEYS = ["hdr", "premiumAudio"] as const;
-const SCALAR_KEYS = ["q", "minRating", ...SCALAR_FACET_KEYS] as const;
+const SCALAR_KEYS = ["q", "minRating", "multiRelease", ...SCALAR_FACET_KEYS] as const;
 
 function countActiveFilters(params: URLSearchParams): number {
   let n = 0;
@@ -71,6 +77,47 @@ function countFacetFilters(params: URLSearchParams): number {
 interface Facet {
   value: string | null;
   count: number;
+}
+
+function GenreSortToggle({
+  value,
+  onChange,
+}: {
+  value: GenreSortMode;
+  onChange: (mode: GenreSortMode) => void;
+}) {
+  return (
+    <div
+      className="inline-flex rounded-[var(--radius-sm)] border border-border bg-bg-elevated/50 p-0.5"
+      role="group"
+      aria-label="Сортировка жанров"
+    >
+      {(
+        [
+          ["alpha", "А–Я", ArrowDownAZ],
+          ["count", "по числу", ArrowDownWideNarrow],
+        ] as const
+      ).map(([mode, text, Icon]) => {
+        const active = value === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(mode)}
+            className={`focus-ring inline-flex min-h-7 items-center gap-1 rounded-[calc(var(--radius-sm)-2px)] px-2 py-1 font-mono-tech text-[0.6rem] transition-colors ${
+              active
+                ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
+                : "text-muted hover:bg-bg-surface hover:text-text"
+            }`}
+          >
+            <Icon className="h-3 w-3" aria-hidden />
+            {text}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 interface FilterBarProps {
@@ -132,12 +179,14 @@ function FacetSection({
   icon,
   title,
   hint,
+  headerActions,
   children,
 }: {
   index: string;
   icon: React.ReactNode;
   title: string;
   hint?: string;
+  headerActions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -150,10 +199,15 @@ function FacetSection({
           {icon}
         </span>
         <h3 className="font-mono-tech text-faint">{title}</h3>
-        {hint ? (
-          <span className="ml-auto font-mono-tech text-[0.6rem] text-faint/70">
-            {hint}
-          </span>
+        {headerActions || hint ? (
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {headerActions}
+            {hint ? (
+              <span className="font-mono-tech text-[0.6rem] text-faint/70">
+                {hint}
+              </span>
+            ) : null}
+          </div>
         ) : null}
       </div>
       {children}
@@ -221,6 +275,7 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [facetsOpen, setFacetsOpen] = useState(false);
+  const [genreSort, setGenreSort] = useState<GenreSortMode>("alpha");
 
   const activeResolutions = useMemo(
     () => parseMulti(searchParams.get("resolution")),
@@ -260,6 +315,10 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
 
   const showResolution = hasFacets(facets.resolutions);
   const showGenres = hasFacets(facets.genres);
+  const sortedGenres = useMemo(
+    () => sortGenreFacets(facets.genres, genreSort),
+    [facets.genres, genreSort],
+  );
 
   // Audio facets are scope-aware: channels + codec constrain whichever track
   // the user is targeting (Russian dub or original), so the options and counts
@@ -326,6 +385,7 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
     updateParams({
       q: null,
       minRating: null,
+      multiRelease: null,
       hdr: null,
       premiumAudio: null,
       resolution: null,
@@ -412,7 +472,7 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
             aria-label="Поиск по названию"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:flex lg:items-center">
           <Select
             compact
             label="Просмотр"
@@ -425,7 +485,20 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
               { value: "unwatched", label: "Непросмотренные" },
             ]}
           />
-          <div className="lg:w-44">
+          <Select
+            compact
+            label="Релизы"
+            value={searchParams.get("multiRelease") === "true" ? "multi" : "all"}
+            onChange={(v) =>
+              updateParams({ multiRelease: v === "multi" ? "true" : null })
+            }
+            preserveOrder
+            options={[
+              { value: "all", label: "Все" },
+              { value: "multi", label: "Несколько релизов" },
+            ]}
+          />
+          <div className="col-span-2 lg:col-span-1 lg:w-44">
             <RatingStepper
               compact
               label="Мин. оценка"
@@ -528,11 +601,12 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
                     icon={<Clapperboard className="h-4 w-4" />}
                     title="жанры"
                     hint="можно несколько"
+                    headerActions={
+                      <GenreSortToggle value={genreSort} onChange={setGenreSort} />
+                    }
                   >
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                      {facets.genres
-                        .filter((f) => f.value)
-                        .map((f) => (
+                      {sortedGenres.map((f) => (
                           <Chip
                             key={f.value}
                             active={activeGenres.includes(f.value!)}

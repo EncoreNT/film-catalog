@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export const movieStatusSchema = z.enum(["DRAFT", "CATALOG", "EXCLUDED"]);
-export const storageTypeSchema = z.enum(["LOCAL", "EXTERNAL"]);
 
 export const videoInputSchema = z.object({
   width: z.number().int().nullable().optional(),
@@ -55,7 +54,7 @@ export const releaseUpdateSchema = z.object({
   fileSize: z.number().int().min(0).nullable().optional(),
   fileMtime: z.string().datetime().nullable().optional(),
   fileHash: z.string().nullable().optional(),
-  storageId: z.number().int().nullable().optional(),
+  externalStorageId: z.number().int().nullable().optional(),
   releaseType: z.string().nullable().optional(),
   version: z.string().nullable().optional(),
   durationSeconds: z.number().int().min(0).nullable().optional(),
@@ -74,7 +73,7 @@ const createSubtitleInputSchema = subtitleInputSchema.omit({ id: true }).extend(
 
 export const releaseCreateSchema = z.object({
   filePath: z.string().nullable().optional(),
-  storageId: z.number().int().nullable().optional(),
+  externalStorageId: z.number().int().nullable().optional(),
   releaseType: z.string().nullable().optional(),
   version: z.string().nullable().optional(),
   durationSeconds: z.number().int().min(0).nullable().optional(),
@@ -95,7 +94,7 @@ export const movieCreateSchema = z.object({
   release: releaseCreateSchema.optional(),
   // Legacy flat fields — mapped to release on create
   filePath: z.string().nullable().optional(),
-  storageId: z.number().int().nullable().optional(),
+  externalStorageId: z.number().int().nullable().optional(),
   releaseType: z.string().nullable().optional(),
   version: z.string().nullable().optional(),
   durationSeconds: z.number().int().min(0).nullable().optional(),
@@ -123,6 +122,7 @@ export const movieListQuerySchema = z.object({
   resolution: z.string().optional(),
   hdr: z.string().optional(),
   premiumAudio: z.string().optional(),
+  multiRelease: z.string().optional(),
   language: z.string().optional(),
   subtitleLang: z.string().optional(),
   channelLayout: z.string().optional(),
@@ -150,24 +150,13 @@ export const scanRootSchema = z.object({
   scanRoot: z.string().min(1),
 });
 
-export const scanRequestSchema = scanRootSchema
-  .extend({
-    externalDrive: z.boolean().optional(),
-    driveName: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.externalDrive && !data.driveName?.trim()) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Укажите имя внешнего диска",
-        path: ["driveName"],
-      });
-    }
-  });
+export const scanRequestSchema = scanRootSchema.extend({
+  /** Set when scanning files on a named external drive; omit/null for local disk. */
+  externalStorageId: z.number().int().nullable().optional(),
+});
 
-export const storageCreateSchema = z.object({
+export const externalStorageCreateSchema = z.object({
   name: z.string().min(1),
-  type: storageTypeSchema,
   path: z.string().nullable().optional(),
 });
 

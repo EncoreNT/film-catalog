@@ -101,7 +101,7 @@ export async function createReleaseWithTracks(
       fileSize,
       fileMtime,
       fileHash,
-      storageId: input.storageId ?? null,
+      externalStorageId: input.externalStorageId ?? null,
     },
   });
 
@@ -127,7 +127,7 @@ export async function updateReleaseWithTracks(
     fileSize,
     fileMtime,
     fileHash,
-    storageId,
+    externalStorageId,
     version,
     ...rest
   } = input;
@@ -154,11 +154,11 @@ export async function updateReleaseWithTracks(
       fileSize: nextFileSize,
       fileMtime: nextFileMtime === undefined ? undefined : nextFileMtime,
       fileHash: nextFileHash,
-      ...(storageId === undefined
+      ...(externalStorageId === undefined
         ? {}
-        : storageId != null
-          ? { storage: { connect: { id: storageId } } }
-          : { storage: { disconnect: true } }),
+        : externalStorageId != null
+          ? { externalStorage: { connect: { id: externalStorageId } } }
+          : { externalStorage: { disconnect: true } }),
     },
   });
 
@@ -191,7 +191,7 @@ export function extractReleaseInputFromMovieCreate(
 
   return {
     filePath: data.filePath,
-    storageId: data.storageId,
+    externalStorageId: data.externalStorageId,
     releaseType: data.releaseType,
     version: data.version,
     durationSeconds: data.durationSeconds,

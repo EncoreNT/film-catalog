@@ -3,14 +3,23 @@ import { prisma } from "@/lib/prisma";
 
 type DbClient = Prisma.TransactionClient | typeof prisma;
 
+/** NFC + Unicode-aware lowercasing for title/matchKey/search (SQLite lower() misses Cyrillic). */
+export function normalizeMatchKeyTitle(title: string): string {
+  return title.normalize("NFC").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/** Normalized query needle for case-insensitive catalog search via matchKey. */
+export function normalizeSearchQuery(q: string): string {
+  return normalizeMatchKeyTitle(q);
+}
+
 /**
  * Normalized key used to detect duplicate movies (same work, different releases).
- * Lowercases (Unicode-aware, so Cyrillic too), collapses whitespace, appends "|year".
- * Two movies with the same matchKey are merge candidates (variant C: manual confirm).
+ * NFC + Unicode-aware lowercasing (Cyrillic included), collapses whitespace, appends "|year".
+ * Always compute in JS — SQLite lower() does not fold non-ASCII letters.
  */
 export function computeMatchKey(title: string, year: number | null): string {
-  const normalized = title.toLowerCase().replace(/\s+/g, " ").trim();
-  return `${normalized}|${year ?? ""}`;
+  return `${normalizeMatchKeyTitle(title)}|${year ?? ""}`;
 }
 
 /** Recompute and persist matchKey for a single movie. Returns the new key. */
@@ -25,14 +34,27 @@ export async function recomputeMovieMatchKey(
   return matchKey;
 }
 
-/** Recompute matchKey for every movie. Used for the one-time post-migration backfill. */
-export async function recomputeAllMatchKeys(db: DbClient = prisma): Promise<number> {
-  const movies = await db.movie.findMany({ select: { id: true, title: true, year: true } });
+export interface RecomputeMatchKeysResult {
+  total: number;
+  updated: number;
+}
+
+/** Recompute matchKey for every movie (fixes legacy SQLite lower() backfill). */
+export async function recomputeAllMatchKeys(
+  db: DbClient = prisma,
+): Promise<RecomputeMatchKeysResult> {
+  const movies = await db.movie.findMany({
+    select: { id: true, title: true, year: true, matchKey: true },
+  });
+  let updated = 0;
   for (const movie of movies) {
+    const next = computeMatchKey(movie.title, movie.year);
+    if (movie.matchKey === next) continue;
     await db.movie.update({
       where: { id: movie.id },
-      data: { matchKey: computeMatchKey(movie.title, movie.year) },
+      data: { matchKey: next },
     });
+    updated++;
   }
-  return movies.length;
+  return { total: movies.length, updated };
 }

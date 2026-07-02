@@ -55,4 +55,4 @@ Goals:
 
 ## Migration
 
-`20260702120000_movie_release_split`: each existing Movie → 1 Movie + 1 Release; tracks re-parented to `releaseId`; `matchKey` backfilled. Existing duplicates not auto-merged.
+`20260702120000_movie_release_split`: each existing Movie → 1 Movie + 1 Release; tracks re-parented to `releaseId`; `matchKey` backfilled via SQLite `lower()` (ASCII only — Cyrillic casing fixed by `npm run db:backfill-match-keys`).

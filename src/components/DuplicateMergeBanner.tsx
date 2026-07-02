@@ -72,8 +72,9 @@ export function DuplicateMergeBanner({
         onClose={() => setOpen(false)}
         currentMovieId={currentMovieId}
         candidates={candidates}
-        onMerged={() => {
+        onMerged={({ canonicalSlug }) => {
           setOpen(false);
+          router.replace(`/movies/${canonicalSlug}`);
           router.refresh();
         }}
       />

@@ -2,6 +2,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { movieListQuerySchema } from "./validators";
 import { RUS_AUDIO_FORMATS } from "./russian-audio-formats";
 import { audioTrackScopeWhere } from "./audio-track-scope";
+import { normalizeSearchQuery } from "./movie-match-key";
+import { prisma } from "./prisma";
 
 export type MovieWithTracks = Prisma.MovieGetPayload<{
   include: typeof import("@/lib/movie-include").movieInclude;
@@ -28,8 +30,29 @@ function releaseSome(
   return { releases: { some: releaseWhere } };
 }
 
+export interface BuildMovieWhereContext {
+  multiReleaseMovieIds?: number[];
+}
+
+/** Movie ids with 2+ releases (for multiRelease catalog filter). */
+export async function fetchMultiReleaseMovieIds(): Promise<number[]> {
+  const rows = await prisma.movie.findMany({
+    select: { id: true, _count: { select: { releases: true } } },
+  });
+  return rows.filter((m) => m._count.releases >= 2).map((m) => m.id);
+}
+
+export async function buildMovieListWhere(
+  query: ReturnType<typeof parseListQuery>,
+): Promise<Prisma.MovieWhereInput> {
+  const multiReleaseMovieIds =
+    query.multiRelease === "true" ? await fetchMultiReleaseMovieIds() : undefined;
+  return buildMovieWhere(query, { multiReleaseMovieIds });
+}
+
 export function buildMovieWhere(
   query: ReturnType<typeof parseListQuery>,
+  ctx: BuildMovieWhereContext = {},
 ): Prisma.MovieWhereInput {
   const where: Prisma.MovieWhereInput = {};
 
@@ -43,7 +66,23 @@ export function buildMovieWhere(
   }
 
   if (query.q) {
-    where.title = { contains: query.q };
+    const needle = normalizeSearchQuery(query.q);
+    if (needle) {
+      // title contains is case-sensitive in SQLite for Cyrillic; matchKey is JS-normalized.
+      where.OR = [
+        { matchKey: { contains: needle } },
+        { matchKey: null, title: { contains: query.q.trim() } },
+      ];
+    }
+  }
+
+  if (query.multiRelease === "true") {
+    const ids = ctx.multiReleaseMovieIds;
+    if (!ids?.length) {
+      where.id = -1;
+    } else {
+      where.id = { in: ids };
+    }
   }
 
   if (query.minRating) {

@@ -17,7 +17,7 @@ function toMergeCandidateRelease(
     id: release.id,
     label: releaseTabLabel(release),
     filePath: release.filePath,
-    storageName: release.storage?.name ?? null,
+    storageName: release.externalStorage?.name ?? null,
     fileSizeLabel: formatFileSizeGB(release.fileSize),
   };
 }

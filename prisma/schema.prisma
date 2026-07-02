@@ -13,21 +13,14 @@ enum MovieStatus {
   EXCLUDED
 }
 
-enum StorageType {
-  LOCAL
-  EXTERNAL
-}
-
-model Storage {
-  id        Int         @id @default(autoincrement())
-  name      String      @unique
-  type      StorageType @default(LOCAL)
+/** Named external drive; null externalStorageId on Release means local disk. */
+model ExternalStorage {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
   path      String?
-  createdAt DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   releases Release[]
-
-  @@index([type])
 }
 
 model Movie {
@@ -55,10 +48,10 @@ model Movie {
 }
 
 model Release {
-  id              Int         @id @default(autoincrement())
-  movieId         Int
-  storageId       Int?
-  filePath        String?     @unique
+  id                  Int         @id @default(autoincrement())
+  movieId             Int
+  externalStorageId   Int?
+  filePath            String?     @unique
   fileSize        Int?
   fileMtime       DateTime?
   fileHash        String?
@@ -68,15 +61,15 @@ model Release {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  movie          Movie        @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  storage        Storage?     @relation(fields: [storageId], references: [id], onDelete: SetNull)
+  movie            Movie             @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  externalStorage  ExternalStorage?  @relation(fields: [externalStorageId], references: [id], onDelete: SetNull)
   videoTrack     VideoTrack?
   audioTracks    AudioTrack[]
   subtitleTracks SubtitleTrack[]
 
   @@index([movieId])
   @@index([fileHash])
-  @@index([storageId])
+  @@index([externalStorageId])
   @@index([releaseType])
   @@index([version])
   @@index([durationSeconds])

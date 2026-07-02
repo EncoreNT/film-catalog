@@ -1,6 +1,11 @@
 import type { SpecTagKind } from "@/components/SpecTag";
 import type { ReleaseWithTracks } from "./movie-query";
 import { displayFilePath } from "./display-path";
+import {
+  releaseHasExternalStorage,
+  releaseStorageIsExternal,
+  releaseStorageLabel,
+} from "./release-storage";
 import { formatDate, formatFileSizeGB } from "./format";
 import {
   codecFull,
@@ -183,8 +188,8 @@ export function buildReleaseDetailView(
       ? displayFilePath(release.filePath)
       : null,
     fileSizeLabel: formatFileSizeGB(release.fileSize),
-    storageLabel: release.storage?.name ?? null,
-    storageExternal: release.storage?.type === "EXTERNAL",
+    storageLabel: releaseStorageLabel(release),
+    storageExternal: releaseStorageIsExternal(release),
     createdAtLabel: formatDate(release.createdAt),
     updatedAtLabel: formatDate(release.updatedAt),
   };

@@ -19,7 +19,7 @@ function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
   return {
     id: releaseId,
     movieId: opts.id ?? 1,
-    storageId: null,
+    externalStorageId: null,
     filePath: null,
     fileSize: null,
     fileMtime: null,
@@ -29,7 +29,7 @@ function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
     durationSeconds: opts.durationSeconds ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    storage: null,
+    externalStorage: null,
     videoTrack:
       opts.resolutionLabel || opts.hdr
         ? {

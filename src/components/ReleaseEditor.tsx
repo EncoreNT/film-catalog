@@ -77,12 +77,11 @@ function useReleaseFormState(release: ReleaseWithTracks | null) {
     setStorageKind,
     selectedStorageId,
     setSelectedStorageId,
-    newStorageName,
-    setNewStorageName,
     externalStorages,
+    createExternalStorage,
     validateStorage,
-    resolveStorageId,
-  } = useStoragePicker(release?.storage ?? null);
+    resolveExternalStorageId,
+  } = useStoragePicker(release?.externalStorage ?? null);
 
   const [releaseType, setReleaseType] = useState(release?.releaseType ?? "");
   const [version, setVersion] = useState(
@@ -139,11 +138,10 @@ function useReleaseFormState(release: ReleaseWithTracks | null) {
     setStorageKind,
     selectedStorageId,
     setSelectedStorageId,
-    newStorageName,
-    setNewStorageName,
     externalStorages,
+    createExternalStorage,
     validateStorage,
-    resolveStorageId,
+    resolveExternalStorageId,
     releaseType,
     setReleaseType,
     version,
@@ -245,13 +243,13 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
   };
 
   const buildPayload = async () => {
-    const storageId = await form.resolveStorageId();
+    const externalStorageId = await form.resolveExternalStorageId();
     return buildReleaseUpdatePayload({
       releaseType: form.releaseType,
       version: form.version,
       filePath: form.filePath,
       fileMeta: form.pendingFileMeta,
-      storageId,
+      externalStorageId,
       durationSeconds: form.durationSeconds,
       video: form.video,
       audioRows: form.audioRows,
@@ -376,9 +374,8 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             form.setSelectedStorageId(value);
             markDirty();
           }}
-          newStorageName={form.newStorageName}
-          onNewStorageNameChange={(value) => {
-            form.setNewStorageName(value);
+          onCreateExternalStorage={async (name) => {
+            await form.createExternalStorage(name);
             markDirty();
           }}
         />

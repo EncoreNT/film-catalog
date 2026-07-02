@@ -49,7 +49,7 @@ export type ScanProgressEvent =
 export interface ScanOptions {
   signal?: AbortSignal;
   onProgress?: (event: ScanProgressEvent) => void;
-  storageId?: number | null;
+  externalStorageId?: number | null;
 }
 
 async function walkVideoFiles(dir: string): Promise<string[]> {
@@ -80,7 +80,7 @@ export async function scanDirectory(
   rootPath: string,
   options: ScanOptions = {},
 ): Promise<ScanSummary> {
-  const { signal, onProgress, storageId } = options;
+  const { signal, onProgress, externalStorageId } = options;
   const summary: ScanSummary = {
     found: 0,
     newDrafts: 0,
@@ -125,10 +125,10 @@ export async function scanDirectory(
         existing.fileSize === fileSize &&
         existing.fileMtime?.getTime() === fileMtime.getTime()
       ) {
-        if (storageId != null) {
+        if (externalStorageId != null) {
           await prisma.release.update({
             where: { id: existing.id },
-            data: { storageId },
+            data: { externalStorageId },
           });
         }
         summary.skipped++;
@@ -190,7 +190,7 @@ export async function scanDirectory(
             fileMtime,
             fileHash,
             durationSeconds: probe.durationSeconds,
-            ...(storageId != null ? { storageId } : {}),
+            ...(externalStorageId != null ? { externalStorageId } : {}),
           },
         });
         await syncReleaseTracksFromProbe(prisma, existing.id, probe);
@@ -213,7 +213,7 @@ export async function scanDirectory(
             fileMtime,
             fileHash,
             durationSeconds: probe.durationSeconds,
-            ...(storageId != null ? { storageId } : {}),
+            ...(externalStorageId != null ? { externalStorageId } : {}),
           },
         });
         await syncReleaseTracksFromProbe(prisma, movedRelease.id, probe);
@@ -250,7 +250,7 @@ export async function scanDirectory(
               fileSize,
               fileMtime,
               fileHash,
-              ...(storageId != null ? { storageId } : {}),
+              ...(externalStorageId != null ? { externalStorageId } : {}),
             },
           },
         },

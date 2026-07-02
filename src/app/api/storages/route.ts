@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { storageCreateSchema } from "@/lib/validators";
+import { externalStorageCreateSchema } from "@/lib/validators";
 
 export async function GET() {
-  const storages = await prisma.storage.findMany({
-    orderBy: [{ type: "asc" }, { name: "asc" }],
+  const storages = await prisma.externalStorage.findMany({
+    orderBy: { name: "asc" },
     include: { _count: { select: { releases: true } } },
   });
   return NextResponse.json({ storages });
@@ -13,9 +13,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const data = storageCreateSchema.parse(body);
-    const storage = await prisma.storage.create({
-      data: { name: data.name, type: data.type, path: data.path ?? null },
+    const data = externalStorageCreateSchema.parse(body);
+    const storage = await prisma.externalStorage.create({
+      data: { name: data.name, path: data.path ?? null },
       include: { _count: { select: { releases: true } } },
     });
     return NextResponse.json(storage, { status: 201 });

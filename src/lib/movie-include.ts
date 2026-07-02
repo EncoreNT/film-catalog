@@ -4,7 +4,7 @@ export const releaseInclude = {
   videoTrack: true,
   audioTracks: true,
   subtitleTracks: true,
-  storage: true,
+  externalStorage: true,
 } satisfies Prisma.ReleaseInclude;
 
 export const movieInclude = {

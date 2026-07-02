@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AudioLines,
+  Check,
+  Copy,
+  CopyPlus,
   Disc3,
   Layers,
   Menu,
@@ -19,6 +22,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReleaseDetailView } from "@/lib/release-detail-view";
+import { displayFileDir, displayFilePath } from "@/lib/display-path";
 import { SpecTag } from "./SpecTag";
 import { ConfirmDialog } from "./primitives/ConfirmDialog";
 
@@ -97,6 +101,57 @@ function SpecRibbon({ release }: { release: ReleaseDetailView }) {
           {release.premiumAtmos.label}
         </SpecTag>
       ) : null}
+    </div>
+  );
+}
+
+type CopyTarget = "file" | "dir";
+
+function FilePathCopyButtons({ filePath }: { filePath: string }) {
+  const [copied, setCopied] = useState<CopyTarget | null>(null);
+
+  const fullPath = displayFilePath(filePath);
+  const dirPath = displayFileDir(filePath);
+
+  const copy = useCallback(async (text: string, target: CopyTarget) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(target);
+      window.setTimeout(() => setCopied(null), 2000);
+    } catch {
+      // Clipboard may be blocked without a secure context or permission.
+    }
+  }, []);
+
+  const buttonClass =
+    "focus-ring font-mono-tech inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-sm)] border border-border-strong bg-bg-surface px-2.5 py-1.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-40";
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <button
+        type="button"
+        className={buttonClass}
+        onClick={() => void copy(fullPath, "file")}
+      >
+        {copied === "file" ? (
+          <Check className="h-3.5 w-3.5 text-accent" aria-hidden />
+        ) : (
+          <Copy className="h-3.5 w-3.5" aria-hidden />
+        )}
+        {copied === "file" ? "скопировано" : "скопировать путь"}
+      </button>
+      <button
+        type="button"
+        className={buttonClass}
+        onClick={() => void copy(dirPath, "dir")}
+      >
+        {copied === "dir" ? (
+          <Check className="h-3.5 w-3.5 text-accent" aria-hidden />
+        ) : (
+          <CopyPlus className="h-3.5 w-3.5" aria-hidden />
+        )}
+        {copied === "dir" ? "скопировано" : "скопировать папку"}
+      </button>
     </div>
   );
 }
@@ -297,7 +352,12 @@ function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
       <section className="border-t border-border pt-6">
         <h2 className="font-mono-tech mb-4 text-muted">файл</h2>
         {release.filePathDisplay ? (
-          <p className="break-all text-xs text-muted">{release.filePathDisplay}</p>
+          <>
+            <p className="break-all text-xs text-muted">{release.filePathDisplay}</p>
+            {release.filePath ? (
+              <FilePathCopyButtons filePath={release.filePath} />
+            ) : null}
+          </>
         ) : (
           <p className="font-mono-tech text-xs text-faint">путь не указан</p>
         )}

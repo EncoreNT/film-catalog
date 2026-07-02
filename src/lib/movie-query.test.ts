@@ -31,6 +31,28 @@ describe("buildMovieWhere", () => {
     expect(where.id).toBe(-1);
   });
 
+  it("searches case-insensitively via normalized matchKey", () => {
+    const where = buildMovieWhere(queryFrom({ q: "подзем" }));
+    expect(where.OR).toEqual([
+      { matchKey: { contains: "подзем" } },
+      { matchKey: null, title: { contains: "подзем" } },
+    ]);
+  });
+
+  it("filters movies with multiple releases", () => {
+    const where = buildMovieWhere(queryFrom({ multiRelease: "true" }), {
+      multiReleaseMovieIds: [10, 20],
+    });
+    expect(where.id).toEqual({ in: [10, 20] });
+  });
+
+  it("returns impossible filter when no multi-release movies exist", () => {
+    const where = buildMovieWhere(queryFrom({ multiRelease: "true" }), {
+      multiReleaseMovieIds: [],
+    });
+    expect(where.id).toBe(-1);
+  });
+
   it("combines premium audio and language filters with AND", () => {
     const where = buildMovieWhere(
       queryFrom({

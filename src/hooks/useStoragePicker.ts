@@ -1,34 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { StorageKind, StorageOption } from "@/components/StoragePicker";
 
-interface InitialStorage {
+interface InitialExternalStorage {
   id: number;
-  type: "LOCAL" | "EXTERNAL";
+  name: string;
 }
 
-function initialKind(storage: InitialStorage | null | undefined): StorageKind {
-  return storage?.type === "EXTERNAL" ? "external" : "local";
+function initialKind(
+  storage: InitialExternalStorage | null | undefined,
+): StorageKind {
+  return storage ? "external" : "local";
 }
 
 function initialSelectedId(
-  storage: InitialStorage | null | undefined,
+  storage: InitialExternalStorage | null | undefined,
 ): string {
-  return storage?.type === "EXTERNAL" ? String(storage.id) : "";
+  return storage ? String(storage.id) : "";
 }
 
-export function useStoragePicker(initialStorage?: InitialStorage | null) {
-  const [storageKind, setStorageKind] = useState<StorageKind>(() =>
-    initialKind(initialStorage),
+export function useStoragePicker(
+  initialExternalStorage?: InitialExternalStorage | null,
+) {
+  const [storageKind, setStorageKindState] = useState<StorageKind>(() =>
+    initialKind(initialExternalStorage),
   );
   const [storages, setStorages] = useState<StorageOption[]>([]);
   const [selectedStorageId, setSelectedStorageId] = useState(() =>
-    initialSelectedId(initialStorage),
+    initialSelectedId(initialExternalStorage),
   );
-  const [newStorageName, setNewStorageName] = useState("");
-
-  const externalStorages = storages.filter((s) => s.type === "EXTERNAL");
 
   useEffect(() => {
     fetch("/api/storages")
@@ -36,39 +37,43 @@ export function useStoragePicker(initialStorage?: InitialStorage | null) {
       .then((d) => setStorages(d.storages ?? []));
   }, []);
 
+  const setStorageKind = useCallback((kind: StorageKind) => {
+    setStorageKindState(kind);
+    if (kind === "local") {
+      setSelectedStorageId("");
+    }
+  }, []);
+
+  const createExternalStorage = useCallback(async (name: string) => {
+    const res = await fetch("/api/storages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    const created = (await res.json()) as StorageOption & { error?: string };
+    if (!res.ok) {
+      throw new Error(created.error ?? "Не удалось создать внешний диск");
+    }
+    setStorages((prev) =>
+      [...prev.filter((s) => s.id !== created.id), created].sort((a, b) =>
+        a.name.localeCompare(b.name, "ru"),
+      ),
+    );
+    setSelectedStorageId(String(created.id));
+    setStorageKindState("external");
+  }, []);
+
   const validateStorage = (): string | null => {
-    if (
-      storageKind === "external" &&
-      !selectedStorageId &&
-      !newStorageName.trim()
-    ) {
-      return "Укажите название внешнего диска";
+    if (storageKind === "external" && !selectedStorageId) {
+      return "Выберите внешний диск или создайте новый";
     }
     return null;
   };
 
-  const resolveStorageId = async (): Promise<number | null> => {
-    if (storageKind === "local") {
-      const local = storages.find((s) => s.type === "LOCAL");
-      if (local) return local.id;
-      const res = await fetch("/api/storages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Локальный диск", type: "LOCAL" }),
-      });
-      const created = await res.json();
-      return created.id;
-    }
+  /** null = local disk; number = external drive id. */
+  const resolveExternalStorageId = async (): Promise<number | null> => {
+    if (storageKind === "local") return null;
     if (selectedStorageId) return parseInt(selectedStorageId, 10);
-    if (newStorageName.trim()) {
-      const res = await fetch("/api/storages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newStorageName.trim(), type: "EXTERNAL" }),
-      });
-      const created = await res.json();
-      return created.id;
-    }
     return null;
   };
 
@@ -77,10 +82,11 @@ export function useStoragePicker(initialStorage?: InitialStorage | null) {
     setStorageKind,
     selectedStorageId,
     setSelectedStorageId,
-    newStorageName,
-    setNewStorageName,
-    externalStorages,
+    externalStorages: storages,
+    createExternalStorage,
     validateStorage,
-    resolveStorageId,
+    resolveExternalStorageId,
+    /** @deprecated Use resolveExternalStorageId */
+    resolveStorageId: resolveExternalStorageId,
   };
 }

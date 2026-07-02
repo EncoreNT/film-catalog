@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
+  buildMovieListWhere,
   buildMovieOrder,
-  buildMovieWhere,
   parseListQuery,
 } from "@/lib/movie-query";
 import { movieInclude } from "@/lib/movie-include";
@@ -51,7 +51,7 @@ async function CatalogContent({
   }
 
   const query = parseListQuery(params);
-  const where = buildMovieWhere(query);
+  const where = await buildMovieListWhere(query);
   const orderBy = buildMovieOrder(query);
   const page = query.page ?? 1;
   const limit = query.limit ?? 48;

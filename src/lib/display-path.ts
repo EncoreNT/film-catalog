@@ -10,3 +10,13 @@ export function displayFilePath(filePath: string): string {
   const rest = match[2].replace(/\//g, "\\");
   return `${drive}:\\${rest}`;
 }
+
+/** Directory of a file path, in the same format as displayFilePath. */
+export function displayFileDir(filePath: string): string {
+  const display = displayFilePath(filePath);
+  const lastBack = display.lastIndexOf("\\");
+  const lastSlash = display.lastIndexOf("/");
+  const lastSep = Math.max(lastBack, lastSlash);
+  if (lastSep <= 0) return display;
+  return display.slice(0, lastSep);
+}

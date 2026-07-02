@@ -25,7 +25,7 @@ export interface MovieCreatePayloadInput {
   title: string;
   year: number | null;
   description: string | null;
-  storageId: number | null;
+  externalStorageId: number | null;
   releaseType: string | null;
   version?: string | null;
   genres: string[];
@@ -44,7 +44,7 @@ export function buildMovieCreatePayload(input: MovieCreatePayloadInput) {
     genres: input.genres,
     status: "CATALOG" as const,
     release: {
-      storageId: input.storageId,
+      externalStorageId: input.externalStorageId,
       releaseType: trimInputOptional(input.releaseType),
       version: trimInputOptional(input.version) || DEFAULT_MOVIE_VERSION,
       durationSeconds: input.durationSeconds,
@@ -79,7 +79,7 @@ export interface ReleaseUpdatePayloadInput {
   version?: string | null;
   filePath: string | null;
   fileMeta: MovieFileMetaPayload | null;
-  storageId: number | null;
+  externalStorageId: number | null;
   durationSeconds: number | null;
   video: VideoFieldState;
   audioRows: AudioFormRow[];
@@ -109,7 +109,7 @@ export function buildReleaseUpdatePayload(input: ReleaseUpdatePayloadInput) {
           fileHash: input.fileMeta.fileHash,
         }
       : {}),
-    storageId: input.storageId,
+    externalStorageId: input.externalStorageId,
     durationSeconds: input.durationSeconds,
     videoTrack: buildVideoTrackPayload(input.video),
     audioTracks: buildAudioTracksPayload(input.audioRows),

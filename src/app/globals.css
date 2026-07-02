@@ -240,6 +240,28 @@ input[type="number"] {
   to { opacity: 1; }
 }
 
+/* Subtle scrollbars for modals and compact panels */
+.scroll-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 220, 180, 0.22) transparent;
+}
+.scroll-subtle::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-subtle::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-subtle::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 220, 180, 0.16);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scroll-subtle::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 220, 180, 0.28);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

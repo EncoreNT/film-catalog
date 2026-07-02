@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
-import { Checkbox } from "@/components/primitives/Checkbox";
 import { Field } from "@/components/primitives/Field";
+import { StoragePicker } from "@/components/StoragePicker";
+import { useStoragePicker } from "@/hooks/useStoragePicker";
 import { MovieCard } from "@/components/MovieCard";
 import type { ScanSummary } from "@/lib/scanner";
 import type { MovieWithTracks } from "@/lib/movie-query";
@@ -41,8 +42,16 @@ export function ScanPageClient({
 }: ScanPageClientProps) {
   const router = useRouter();
   const [scanRoot, setScanRoot] = useState(initialScanRoot);
-  const [externalDrive, setExternalDrive] = useState(false);
-  const [driveName, setDriveName] = useState("");
+  const {
+    storageKind,
+    setStorageKind,
+    selectedStorageId,
+    setSelectedStorageId,
+    externalStorages,
+    createExternalStorage,
+    validateStorage,
+    resolveExternalStorageId,
+  } = useStoragePicker();
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [cancelled, setCancelled] = useState(false);
@@ -65,8 +74,17 @@ export function ScanPageClient({
   };
 
   const runScan = async () => {
-    if (externalDrive && !driveName.trim()) {
-      setError("Укажите имя внешнего диска");
+    const storageError = validateStorage();
+    if (storageError) {
+      setError(storageError);
+      return;
+    }
+
+    let externalStorageId: number | null = null;
+    try {
+      externalStorageId = await resolveExternalStorageId();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка хранилища");
       return;
     }
 
@@ -85,8 +103,7 @@ export function ScanPageClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scanRoot,
-          externalDrive,
-          driveName: externalDrive ? driveName.trim() : undefined,
+          externalStorageId,
         }),
         signal: controller.signal,
       });
@@ -214,20 +231,14 @@ export function ScanPageClient({
           placeholder="/Users/you/Movies"
           hint="Абсолютный путь к папке с фильмами. Можно задать через SCAN_ROOT в .env. Путь сохраняется при сканировании."
         />
-        <Checkbox
-          label="Сканирую внешний жёсткий диск"
-          checked={externalDrive}
-          onChange={(e) => setExternalDrive(e.target.checked)}
+        <StoragePicker
+          storageKind={storageKind}
+          onStorageKindChange={setStorageKind}
+          externalStorages={externalStorages}
+          selectedStorageId={selectedStorageId}
+          onSelectedStorageIdChange={setSelectedStorageId}
+          onCreateExternalStorage={createExternalStorage}
         />
-        {externalDrive ? (
-          <Field
-            label="Имя диска"
-            value={driveName}
-            onChange={(e) => setDriveName(e.target.value)}
-            placeholder="Seagate 4TB"
-            hint="Все найденные фильмы будут отмечены как хранящиеся на этом внешнем диске."
-          />
-        ) : null}
         <div className="flex flex-wrap gap-3">
           <Button
             variant="primary"

@@ -31,4 +31,15 @@ describe("computeMatchKey", () => {
       computeMatchKey("Alita: Battle Angel", 2019),
     );
   });
+
+  it("folds mixed-case cyrillic like latin (regression: SQLite lower() misses Cyrillic)", () => {
+    const title =
+      "Подземелья и драконы: Честь среди воров / Dungeons & Dragons: Honor Among Thieves";
+    expect(computeMatchKey(title, 2023)).toBe(
+      "подземелья и драконы: честь среди воров / dungeons & dragons: honor among thieves|2023",
+    );
+    expect(computeMatchKey(title, 2023)).toBe(
+      computeMatchKey(title.toLowerCase(), 2023),
+    );
+  });
 });

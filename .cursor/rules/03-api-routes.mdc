@@ -52,8 +52,8 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | GET | `/api/scan` | Текущий scanRoot |
 | POST | `/api/scan` | Запуск скана → **NDJSON stream** |
 | PUT | `/api/scan` | Только сохранить scanRoot |
-| GET | `/api/storages` | Список Storage |
-| POST | `/api/storages` | Создать Storage |
+| GET | `/api/storages` | Список внешних дисков (`ExternalStorage`) |
+| POST | `/api/storages` | Создать внешний диск |
 | GET | `/api/stats` | Archive metrics JSON |
 
 ## NDJSON scan stream
