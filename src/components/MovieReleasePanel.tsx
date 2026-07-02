@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReleaseDetailView } from "@/lib/release-detail-view";
-import { PremiumBadge } from "./PremiumBadge";
 import { SpecTag } from "./SpecTag";
 import { ConfirmDialog } from "./primitives/ConfirmDialog";
 
@@ -40,6 +39,8 @@ function tagIcon(kind: ReleaseDetailView["tags"][number]["kind"]) {
       return <Waves className="h-3.5 w-3.5" />;
     case "audio":
       return <AudioLines className="h-3.5 w-3.5" />;
+    case "channel":
+      return <AudioLines className="h-3.5 w-3.5" />;
     case "release":
       return <Disc3 className="h-3.5 w-3.5" />;
     case "version":
@@ -49,36 +50,61 @@ function tagIcon(kind: ReleaseDetailView["tags"][number]["kind"]) {
   }
 }
 
+function SpecRibbon({ release }: { release: ReleaseDetailView }) {
+  const hasResolution = release.video.resolution && release.video.resolution !== "—";
+
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 border-b border-accent/15 pb-5">
+      {hasResolution ? (
+        <span
+          className={`inline-flex items-baseline gap-1.5 rounded-md border px-2.5 py-1 ${
+            release.premium4K
+              ? "border-accent/45 bg-accent/10 shadow-[0_0_14px_var(--accent-glow)]"
+              : "border-border-strong bg-bg-elevated"
+          }`}
+        >
+          <span
+            className={`font-display text-base font-semibold leading-none ${
+              release.premium4K ? "text-accent-bright" : "text-text"
+            }`}
+          >
+            {release.video.resolution}
+          </span>
+          {release.vPixels ? (
+            <span className="font-mono text-[0.65rem] tabular-nums text-muted">
+              {release.vPixels}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+
+      {release.premiumHdr ? (
+        <SpecTag
+          kind="hdr"
+          icon={<Sun className="h-3.5 w-3.5" />}
+          note={release.premiumHdr.isDolbyVision ? "Dolby Vision" : undefined}
+        >
+          {release.premiumHdr.label}
+        </SpecTag>
+      ) : null}
+
+      {release.premiumAtmos ? (
+        <SpecTag
+          kind="audio-3d"
+          icon={<Waves className="h-3.5 w-3.5" />}
+          note="RU · главная дорожка"
+        >
+          {release.premiumAtmos.label}
+        </SpecTag>
+      ) : null}
+    </div>
+  );
+}
+
 function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
   return (
     <div className="space-y-6">
-      {release.showPremiumStrip ? (
-        <div className="flex flex-wrap items-start gap-3 border-b border-accent/15 pb-5">
-            {release.premium4K ? (
-              <PremiumBadge
-                icon={<MonitorPlay className="h-4 w-4" />}
-                label="4K"
-                sublabel="Ultra HD"
-                tag={release.vPixels ?? undefined}
-              />
-            ) : null}
-            {release.premiumHdr ? (
-              <PremiumBadge
-                icon={<Sun className="h-4 w-4" />}
-                label={release.premiumHdr.label}
-                sublabel={release.premiumHdr.sublabel}
-              />
-            ) : null}
-            {release.premiumAtmos ? (
-              <PremiumBadge
-                icon={<Waves className="h-4 w-4" />}
-                label={release.premiumAtmos.label}
-                sublabel={release.premiumAtmos.sublabel}
-                tag="RU · главная дорожка"
-              />
-            ) : null}
-          </div>
-      ) : null}
+      {release.showRibbon ? <SpecRibbon release={release} /> : null}
 
       {release.tags.length > 0 ? (
         <div>
@@ -101,20 +127,7 @@ function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
       <section>
         <h2 className="font-mono-tech mb-4 text-muted">видео</h2>
         {release.video.hasData ? (
-          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="col-span-2 sm:col-span-1">
-              <dt className="font-mono-tech text-faint">разрешение</dt>
-              <dd className="mt-1.5 flex items-baseline gap-1.5">
-                <span className="font-display text-3xl font-semibold leading-none text-text">
-                  {release.video.resolution}
-                </span>
-                {release.video.vPixels ? (
-                  <span className="font-mono text-xs text-muted">
-                    {release.video.vPixels}
-                  </span>
-                ) : null}
-              </dd>
-            </div>
+          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div className="col-span-2 sm:col-span-1">
               <dt className="font-mono-tech text-faint">битрейт</dt>
               <dd className="mt-1.5 flex items-baseline gap-1.5">

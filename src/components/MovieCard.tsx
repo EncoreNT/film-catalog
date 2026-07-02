@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MonitorPlay, Star, Sun, Waves, Layers } from "lucide-react";
+import { AudioLines, MonitorPlay, Star, Sun, Waves, Layers } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { formatDuration } from "@/lib/format";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
@@ -197,6 +197,11 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                   <SpecTag
                     key={`${tag.kind}-${tag.label}`}
                     kind={tag.kind}
+                    icon={
+                      tag.kind === "channel" ? (
+                        <AudioLines className="h-3.5 w-3.5" />
+                      ) : undefined
+                    }
                     note={tag.note}
                   >
                     {tag.label}

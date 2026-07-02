@@ -144,7 +144,10 @@ function heroTags(release: ReleaseWithTracks): HeroTag[] {
     }
 
     if (bestAudio.t.channelLayout && bestAudio.t.channelLayout !== "other") {
-      tags.push({ kind: "channel", label: bestAudio.t.channelLayout });
+      tags.push({
+        kind: "channel",
+        label: `звук ${bestAudio.t.channelLayout}`,
+      });
     }
   }
 
@@ -153,7 +156,10 @@ function heroTags(release: ReleaseWithTracks): HeroTag[] {
 
 export function secondaryTags(release: ReleaseWithTracks): HeroTag[] {
   return heroTags(release).filter(
-    (t) => t.kind !== "resolution" && t.kind !== "audio-3d",
+    (t) =>
+      t.kind !== "resolution" &&
+      t.kind !== "audio-3d" &&
+      t.kind !== "hdr",
   );
 }
 
@@ -242,6 +248,31 @@ export function premiumHDR(release: ReleaseWithTracks): PremiumHDR | null {
     return { label: "HDR10+", sublabel: "Dynamic Metadata" };
   }
   return null;
+}
+
+export interface PremiumHdrView {
+  label: string;
+  isDolbyVision: boolean;
+}
+
+/**
+ * Единая HDR-сводка для spec-ribbon: покрывает Dolby Vision (с профилем),
+ * HDR10 и HDR10+. В отличие от {@link premiumHDR}, не дробит HDR по разным
+ * слоям отображения — ribbon владеет всем HDR, secondaryTags его не дублируют.
+ */
+export function premiumHdrView(release: ReleaseWithTracks): PremiumHdrView | null {
+  const v = release.videoTrack;
+  if (!v?.hdr) return null;
+  const { base, dvProfile } = parseHdrValue(v.hdr);
+  if (base === "SDR") return null;
+  if (base === "HDR10") return { label: "HDR10", isDolbyVision: false };
+  if (base === "HDR10+") return { label: "HDR10+", isDolbyVision: false };
+  const formatted = formatHdrLabel(v.hdr);
+  if (!formatted) return null;
+  const label = formatted.startsWith("Dolby Vision") && dvProfile
+    ? `Dolby Vision · ${dvProfileLabel(dvProfile)}`
+    : formatted;
+  return { label, isDolbyVision: label.startsWith("Dolby Vision") };
 }
 
 const TRANSLATION_SHORT: Record<string, string> = {

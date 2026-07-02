@@ -8,7 +8,7 @@ import {
   formatAudioLabel,
   is4K,
   premiumAudio,
-  premiumHDR,
+  premiumHdrView,
   releaseTabLabel,
   secondaryTags,
   translationShort,
@@ -47,10 +47,10 @@ export type ReleaseDetailSubtitleTrack = {
 export type ReleaseDetailView = {
   id: number;
   label: string;
-  showPremiumStrip: boolean;
+  showRibbon: boolean;
   premium4K: boolean;
   vPixels: string | null;
-  premiumHdr: { label: string; sublabel: string } | null;
+  premiumHdr: { label: string; isDolbyVision: boolean } | null;
   premiumAtmos: { label: string; sublabel: string } | null;
   tags: ReleaseDetailTag[];
   video: {
@@ -116,9 +116,13 @@ export function buildReleaseDetailView(
   const vPixels = videoResolutionPixels(release);
   const vBitrate = videoBitrateLabel(release);
   const premium4K = is4K(release);
-  const premiumHdr = premiumHDR(release);
+  const premiumHdr = premiumHdrView(release);
   const premiumAtmos = premiumAudio(release);
-  const showPremiumStrip = premium4K || premiumHdr != null || premiumAtmos != null;
+  const hasResolution = !!(
+    release.videoTrack?.resolutionLabel &&
+    release.videoTrack.resolutionLabel !== "other"
+  );
+  const showRibbon = hasResolution || premiumHdr != null || premiumAtmos != null;
 
   const resolution =
     release.videoTrack?.resolutionLabel &&
@@ -131,11 +135,11 @@ export function buildReleaseDetailView(
   return {
     id: release.id,
     label: releaseTabLabel(release),
-    showPremiumStrip,
+    showRibbon,
     premium4K,
     vPixels,
     premiumHdr: premiumHdr
-      ? { label: premiumHdr.label, sublabel: premiumHdr.sublabel }
+      ? { label: premiumHdr.label, isDolbyVision: premiumHdr.isDolbyVision }
       : null,
     premiumAtmos: premiumAtmos
       ? {
