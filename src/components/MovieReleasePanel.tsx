@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AudioLines,
   Disc3,
   Layers,
+  Menu,
   MonitorPlay,
   Pencil,
   Plus,
@@ -306,6 +307,50 @@ function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
   );
 }
 
+function ReleaseActionsMenuItem({
+  label,
+  icon,
+  href,
+  onClick,
+  disabled,
+  danger,
+}: {
+  label: string;
+  icon: ReactNode;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  const className = `focus-ring font-mono-tech flex w-full items-center gap-2 whitespace-nowrap px-3 py-2 text-left text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+    danger
+      ? "text-muted hover:bg-red-500/10 hover:text-red-300"
+      : "text-muted hover:bg-accent/10 hover:text-accent"
+  }`;
+
+  if (href && !disabled) {
+    return (
+      <Link href={href} className={className} title={label}>
+        {icon}
+        {label}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 function ReleasePanelActions({
   movieId,
   movieSlug,
@@ -366,41 +411,49 @@ function ReleasePanelActions({
     }
   };
 
-  const actionClass =
-    "focus-ring font-mono-tech inline-flex items-center gap-1.5 rounded-[var(--radius)] border border-border-strong px-2.5 py-1.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:opacity-40";
-
   return (
     <>
-      <div className="flex flex-wrap items-center gap-1.5 px-2 py-2 sm:px-3">
-        <Link
-          href={`/movies/${movieSlug}/releases/${activeRelease.id}/edit`}
-          className={actionClass}
-        >
-          <Pencil className="h-3.5 w-3.5" aria-hidden />
-          Редактировать
-        </Link>
+      <div className="group/menu relative shrink-0 px-2 py-2 sm:px-3">
         <button
           type="button"
-          className={actionClass}
-          disabled={!activeRelease.filePath || loading}
-          onClick={() => setConfirmKind("probe")}
+          className="focus-ring font-mono-tech inline-flex items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface px-2.5 py-1.5 text-muted transition-colors hover:border-accent/40 hover:text-accent group-hover/menu:border-accent/40 group-hover/menu:text-accent group-focus-within/menu:border-accent/40 group-focus-within/menu:text-accent"
+          aria-label="Меню действий релиза"
+          aria-haspopup="menu"
         >
-          <ScanSearch className="h-3.5 w-3.5" aria-hidden />
-          Пересканировать
+          <Menu className="h-3.5 w-3.5" aria-hidden />
         </button>
-        <Link href={`/movies/${movieSlug}/releases/new`} className={actionClass}>
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-          Добавить
-        </Link>
-        <button
-          type="button"
-          className={`${actionClass} hover:border-red-400/40 hover:text-red-300`}
-          disabled={releaseCount <= 1 || loading}
-          onClick={() => setConfirmKind("delete")}
+
+        <div
+          className="pointer-events-none invisible absolute right-0 top-full z-30 pt-1 opacity-0 transition-[opacity,visibility] duration-150 group-hover/menu:pointer-events-auto group-hover/menu:visible group-hover/menu:opacity-100 group-focus-within/menu:pointer-events-auto group-focus-within/menu:visible group-focus-within/menu:opacity-100"
+          role="menu"
+          aria-label="Действия с релизом"
         >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden />
-          Удалить
-        </button>
+          <div className="min-w-[11.5rem] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-surface py-1 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+            <ReleaseActionsMenuItem
+              label="Редактировать"
+              href={`/movies/${movieSlug}/releases/${activeRelease.id}/edit`}
+              icon={<Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+            />
+            <ReleaseActionsMenuItem
+              label="Пересканировать"
+              icon={<ScanSearch className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+              disabled={!activeRelease.filePath || loading}
+              onClick={() => setConfirmKind("probe")}
+            />
+            <ReleaseActionsMenuItem
+              label="Добавить"
+              href={`/movies/${movieSlug}/releases/new`}
+              icon={<Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+            />
+            <ReleaseActionsMenuItem
+              label="Удалить"
+              icon={<Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+              disabled={releaseCount <= 1 || loading}
+              danger
+              onClick={() => setConfirmKind("delete")}
+            />
+          </div>
+        </div>
       </div>
       {error ? (
         <p className="px-3 pb-2 text-xs text-red-400" role="alert">
@@ -488,8 +541,8 @@ export function MovieReleasePanel({
   }
 
   return (
-    <section className="surface-card mt-8 overflow-hidden">
-      <div className="flex flex-col gap-0 border-b border-border bg-bg-elevated/50 sm:flex-row sm:items-stretch sm:justify-between">
+    <section className="surface-card mt-8">
+      <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/50 sm:flex-row sm:items-stretch sm:justify-between">
         {showTabs ? (
           <div
             className="flex flex-wrap gap-0 px-1 pt-1"

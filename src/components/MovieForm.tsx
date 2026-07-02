@@ -8,7 +8,7 @@ import { Button } from "./primitives/Button";
 import { ConfirmDialog } from "./primitives/ConfirmDialog";
 import { Field, TextAreaField } from "./primitives/Field";
 import { DatePicker } from "./primitives/DatePicker";
-import { StarRating } from "./StarRating";
+import { InfoHint } from "./primitives/InfoHint";
 import { MovieFranchisePicker } from "./MovieFranchisePicker";
 import type { MovieFranchiseMembership } from "@/lib/movie-franchise-memberships";
 import { orderedMovieGenres } from "@/lib/movie-genres";
@@ -36,7 +36,6 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   const [genres, setGenres] = useState<string[]>(
     orderedMovieGenres(movie).map((g) => g.name),
   );
-  const [rating, setRating] = useState<number | null>(movie.rating);
   const [watchedAt, setWatchedAt] = useState(
     movie.watchedAt
       ? new Date(movie.watchedAt).toISOString().slice(0, 10)
@@ -59,7 +58,7 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
             year,
             description,
             genres,
-            rating,
+            rating: movie.rating,
             watchedAt,
           }),
         ),
@@ -131,82 +130,83 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 pb-28">
-      <div className="surface-card mx-auto max-w-2xl space-y-6 p-5">
-        <h2 className="font-display text-xl font-semibold">Карточка фильма</h2>
+    <form onSubmit={handleSubmit} className="pb-28">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] lg:items-start lg:gap-8">
+        <div className="surface-card space-y-6 p-5 sm:p-6">
+          <h2 className="font-display text-xl font-semibold">Карточка фильма</h2>
 
-        <div className="flex items-start gap-3">
-          <CoverUpload
-            movieId={movie.id}
-            hasCover={!!movie.coverPath}
-            coverVersion={movie.updatedAt}
-            onUploaded={() => router.refresh()}
-          />
-          <div className="min-w-0 flex-1">
-            <Field
-              label="Название"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                markDirty();
-              }}
-              required
+          <div className="grid gap-6 sm:grid-cols-[112px_minmax(0,1fr)] sm:items-start">
+            <CoverUpload
+              movieId={movie.id}
+              hasCover={!!movie.coverPath}
+              coverVersion={movie.updatedAt}
+              onUploaded={() => router.refresh()}
             />
+            <div className="min-w-0 space-y-4">
+              <Field
+                label="Название"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  markDirty();
+                }}
+                required
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <YearInput
+                  value={year}
+                  onChange={(y) => {
+                    setYear(y);
+                    markDirty();
+                  }}
+                  hint="Год выхода, 1888 — текущий+1."
+                />
+                <DatePicker
+                  label="Дата просмотра"
+                  value={watchedAt}
+                  onChange={(d) => {
+                    setWatchedAt(d);
+                    markDirty();
+                  }}
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
-        <YearInput
-          value={year}
-          onChange={(y) => {
-            setYear(y);
-            markDirty();
-          }}
-          hint="Год выхода фильма, от 1888 до текущего+1."
-        />
-
-        <GenrePicker
-          value={genres}
-          onChange={(g) => {
-            setGenres(g);
-            markDirty();
-          }}
-        />
-
-        <TextAreaField
-          label="Описание"
-          value={description}
-          onChange={(e) => {
-            setDescription(e.target.value);
-            markDirty();
-          }}
-          hint="Краткое описание сюжета — на твоё усмотрение."
-        />
-
-        <MovieFranchisePicker
-          movieId={movie.id}
-          movieTitle={movie.title}
-          initialMemberships={franchiseMemberships ?? []}
-        />
-
-        <div className="space-y-2">
-          <p className="text-sm text-muted">Оценка</p>
-          <StarRating
-            value={rating}
-            onChange={(r) => {
-              setRating(r);
+          <GenrePicker
+            value={genres}
+            onChange={(g) => {
+              setGenres(g);
               markDirty();
             }}
           />
+
+          <TextAreaField
+            label="Описание"
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              markDirty();
+            }}
+            hint="Краткое описание сюжета — на твоё усмотрение."
+          />
         </div>
 
-        <DatePicker
-          label="Дата просмотра"
-          value={watchedAt}
-          onChange={(d) => {
-            setWatchedAt(d);
-            markDirty();
-          }}
-        />
+        <aside className="surface-card space-y-4 p-5 sm:p-6 lg:sticky lg:top-24">
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-xl font-semibold">Франшизы</h2>
+            <InfoHint
+              label="Франшизы"
+              text="Привяжите фильм к одной или нескольким франшизам и выберите слот. Новую франшизу можно создать прямо отсюда."
+            />
+          </div>
+          <MovieFranchisePicker
+            embedded
+            movieId={movie.id}
+            movieTitle={movie.title}
+            initialMemberships={franchiseMemberships ?? []}
+          />
+        </aside>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-deep/80 backdrop-blur-xl">

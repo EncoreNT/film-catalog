@@ -70,18 +70,9 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Назад к каталогу
         </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          {movie.status === "DRAFT" ? (
-            <MovieApproveButton movieId={movie.id} title={movie.title} />
-          ) : null}
-          <Link
-            href={`/movies/${movie.slug}/edit`}
-            className="focus-ring inline-flex items-center gap-2 rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:text-accent hover:bg-bg-surface-hover hover:shadow-[0_0_20px_var(--accent-glow)]"
-          >
-            <Pencil className="h-4 w-4" aria-hidden />
-            Редактировать фильм
-          </Link>
-        </div>
+        {movie.status === "DRAFT" ? (
+          <MovieApproveButton movieId={movie.id} title={movie.title} />
+        ) : null}
       </div>
 
       {mergeCandidates.length > 1 ? (
@@ -114,13 +105,23 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
 
         <div className="space-y-8">
           <header>
-            <p className="font-mono-tech text-accent">
-              {movie.status === "DRAFT"
-                ? "черновик"
-                : movie.status === "EXCLUDED"
-                  ? "исключён"
-                  : "каталог"}
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <p className="font-mono-tech text-accent">
+                {movie.status === "DRAFT"
+                  ? "черновик"
+                  : movie.status === "EXCLUDED"
+                    ? "исключён"
+                    : "каталог"}
+              </p>
+              <Link
+                href={`/movies/${movie.slug}/edit`}
+                className="focus-ring font-mono-tech -mt-0.5 inline-flex shrink-0 items-center gap-1 text-[11px] text-faint transition-colors hover:text-accent"
+                title="Редактировать фильм"
+              >
+                <Pencil className="h-3 w-3" aria-hidden />
+                редактировать
+              </Link>
+            </div>
             <h1 className="font-display mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
               {movie.title}
             </h1>

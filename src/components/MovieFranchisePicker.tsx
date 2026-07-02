@@ -12,6 +12,8 @@ interface MovieFranchisePickerProps {
   movieId: number;
   movieTitle: string;
   initialMemberships: MovieFranchiseMembership[];
+  /** Hide section title — when wrapped in an external card header. */
+  embedded?: boolean;
 }
 
 interface FranchiseLite {
@@ -33,6 +35,7 @@ export function MovieFranchisePicker({
   movieId,
   movieTitle,
   initialMemberships,
+  embedded = false,
 }: MovieFranchisePickerProps) {
   const [memberships, setMemberships] = useState(initialMemberships);
   const [open, setOpen] = useState(false);
@@ -180,15 +183,23 @@ export function MovieFranchisePicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <span className="text-sm text-muted">Франшизы</span>
-        <InfoHint
-          label="Франшизы"
-          text="Привяжите фильм к одной или нескольким франшизам и выберите слот, куда он встаёт. Можно вставить перед любым слотом, занять пустой плейсхолдер или добавить в конец. Новая франшиза создаётся прямо отсюда."
-        />
-      </div>
+      {!embedded ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-muted">Франшизы</span>
+          <InfoHint
+            label="Франшизы"
+            text="Привяжите фильм к одной или нескольким франшизам и выберите слот, куда он встаёт. Можно вставить перед любым слотом, занять пустой плейсхолдер или добавить в конец. Новая франшиза создаётся прямо отсюда."
+          />
+        </div>
+      ) : null}
 
-      <div className="rounded-[var(--radius)] border border-border bg-bg-elevated p-3">
+      <div
+        className={
+          embedded
+            ? "space-y-3"
+            : "rounded-[var(--radius)] border border-border bg-bg-elevated p-3"
+        }
+      >
         {memberships.length > 0 ? (
           <ul className="space-y-1.5">
             {memberships.map((m) => {
