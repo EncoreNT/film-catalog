@@ -24,6 +24,7 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReleaseDetailView } from "@/lib/release-detail-view";
 import { displayFileDir, displayFilePath } from "@/lib/display-path";
 import { SpecTag } from "./SpecTag";
+import { ReleaseStorageBadge } from "./ReleaseStorageBadge";
 import { ConfirmDialog } from "./primitives/ConfirmDialog";
 
 interface MovieReleasePanelProps {
@@ -367,10 +368,10 @@ function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
           </p>
         ) : null}
         {release.storageLabel ? (
-          <p className="font-mono-tech mt-3 inline-flex items-center gap-1.5 text-xs text-accent">
-            {release.storageExternal ? "▣" : "■"}
-            {release.storageLabel}
-          </p>
+          <ReleaseStorageBadge
+            label={release.storageLabel}
+            external={release.storageExternal}
+          />
         ) : null}
         <p className="font-mono-tech mt-2 text-xs text-muted">
           добавлен {release.createdAtLabel} · обновлён {release.updatedAtLabel}
