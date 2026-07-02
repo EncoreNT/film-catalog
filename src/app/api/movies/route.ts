@@ -7,12 +7,19 @@ import {
 } from "@/lib/movie-query";
 import { movieCreateSchema } from "@/lib/validators";
 import { MovieStatus } from "@/generated/prisma/client";
-import { probeMediaFile } from "@/lib/ffprobe";
 import { maybeExtractCover } from "@/lib/cover-storage";
 import { movieInclude } from "@/lib/movie-include";
 import { syncMovieGenres } from "@/lib/genres";
 import { resolveMovieSlug } from "@/lib/movie-slug";
+import { computeMatchKey } from "@/lib/movie-match-key";
+import {
+  createReleaseWithTracks,
+  extractReleaseInputFromMovieCreate,
+  readReleaseFileMeta,
+  resolveReleaseProbeData,
+} from "@/lib/release-api";
 import { loadMovieFileMeta } from "@/lib/load-movie-file-meta";
+import { probeMediaFile } from "@/lib/ffprobe";
 
 export async function GET(request: NextRequest) {
   const query = parseListQuery(request.nextUrl.searchParams);
@@ -37,9 +44,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = movieCreateSchema.parse(body);
+    const releaseInput = extractReleaseInputFromMovieCreate(data);
 
     if (data.probeOnly) {
-      if (!data.filePath?.trim()) {
+      const filePath = releaseInput?.filePath ?? data.filePath;
+      if (!filePath?.trim()) {
         return NextResponse.json(
           { error: "Укажите путь к файлу для автозаполнения" },
           { status: 400 },
@@ -47,144 +56,73 @@ export async function POST(request: NextRequest) {
       }
       try {
         const { assertMovieFileReadable } = await loadMovieFileMeta();
-        await assertMovieFileReadable(data.filePath);
+        await assertMovieFileReadable(filePath);
       } catch {
         return NextResponse.json(
           { error: "Файл не найден по указанному пути" },
           { status: 404 },
         );
       }
-      const probe = await probeMediaFile(data.filePath);
-      const { readMovieFileMeta } = await loadMovieFileMeta();
-      const meta = await readMovieFileMeta(data.filePath);
+      const probe = await probeMediaFile(filePath);
+      const meta = await readReleaseFileMeta(filePath);
       return NextResponse.json({
         durationSeconds: probe.durationSeconds,
         video: probe.video,
         audio: probe.audio,
         subtitles: probe.subtitles,
         fileSize: meta.fileSize,
-        fileMtime: meta.fileMtime.toISOString(),
+        fileMtime: meta.fileMtime?.toISOString(),
         fileHash: meta.fileHash,
       });
     }
 
-    let video = (data.videoTrack as Record<string, unknown> | null) ?? null;
-    let audio = (data.audioTracks as Record<string, unknown>[]) ?? [];
-    let subtitles = (data.subtitleTracks as Record<string, unknown>[]) ?? [];
-    let durationSeconds = data.durationSeconds ?? null;
-
-    const shouldProbe = !!data.filePath && !data.skipProbe;
-    if (shouldProbe) {
-      try {
-        const probe = await probeMediaFile(data.filePath as string);
-        if (probe.durationSeconds != null) durationSeconds = probe.durationSeconds;
-        if (probe.video) video = probe.video as unknown as typeof video;
-        if (probe.audio.length) audio = probe.audio as unknown as typeof audio;
-        if (probe.subtitles.length)
-          subtitles = probe.subtitles as unknown as typeof subtitles;
-      } catch {
-        // ffprobe failed — keep manually provided / empty values
-      }
-    }
-
     const genreNames = data.genres ?? [];
-
-    let fileSize: number | null = null;
-    let fileMtime: Date | null = null;
-    let fileHash: string | null = null;
-    const trimmedPath = data.filePath?.trim() || null;
-    if (trimmedPath) {
-      try {
-        const { readMovieFileMeta } = await loadMovieFileMeta();
-        const meta = await readMovieFileMeta(trimmedPath);
-        fileSize = meta.fileSize;
-        fileMtime = meta.fileMtime;
-        fileHash = meta.fileHash;
-      } catch {
-        return NextResponse.json(
-          { error: "Файл не найден по указанному пути" },
-          { status: 400 },
-        );
-      }
-    }
-
     const slug = await resolveMovieSlug(prisma, data.title);
+    const matchKey = computeMatchKey(data.title, data.year ?? null);
 
-    const movie = await prisma.movie.create({
-      data: {
-        slug,
-        title: data.title,
-        year: data.year ?? null,
-        description: data.description ?? null,
-        durationSeconds,
-        filePath: trimmedPath,
-        fileSize,
-        fileMtime,
-        fileHash,
-        storageId: data.storageId ?? null,
-        releaseType: data.releaseType ?? null,
-        version: data.version ?? undefined,
-        status: data.status ?? MovieStatus.CATALOG,
-        videoTrack: video
-          ? { create: { streamIndex: 0, ...(video as Record<string, unknown>) } }
-          : undefined,
-        audioTracks: audio.length
-          ? {
-              create: audio.map((t, i) => ({
-                streamIndex: (t.streamIndex as number) ?? i,
-                codec: (t.codec as string | null) ?? null,
-                profile: (t.profile as string | null) ?? null,
-                channels: (t.channels as number | null) ?? null,
-                channelLayout: (t.channelLayout as string | null) ?? null,
-                bitrate: (t.bitrate as number | null) ?? null,
-                language: (t.language as string | null) ?? null,
-                translationType: (t.translationType as string | null) ?? null,
-                title: (t.title as string | null) ?? null,
-                isDefault: (t.isDefault as boolean) ?? false,
-              })),
-            }
-          : undefined,
-        subtitleTracks: subtitles.length
-          ? {
-              create: subtitles.map((t, i) => ({
-                streamIndex: (t.streamIndex as number) ?? i,
-                codec: (t.codec as string | null) ?? null,
-                codecLabel: (t.codecLabel as string | null) ?? null,
-                language: (t.language as string | null) ?? null,
-                title: (t.title as string | null) ?? null,
-                isDefault: (t.isDefault as boolean) ?? false,
-                forced: (t.forced as boolean) ?? false,
-              })),
-            }
-          : undefined,
-      },
-      include: movieInclude,
+    const movie = await prisma.$transaction(async (tx) => {
+      const created = await tx.movie.create({
+        data: {
+          slug,
+          title: data.title,
+          year: data.year ?? null,
+          description: data.description ?? null,
+          matchKey,
+          status: data.status ?? MovieStatus.CATALOG,
+        },
+      });
+
+      if (releaseInput) {
+        await createReleaseWithTracks(tx, created.id, releaseInput);
+      }
+
+      if (genreNames.length > 0) {
+        await syncMovieGenres(tx, created.id, genreNames);
+      }
+
+      return tx.movie.findUnique({
+        where: { id: created.id },
+        include: movieInclude,
+      });
     });
 
-    if (genreNames.length > 0) {
-      await syncMovieGenres(prisma, movie.id, genreNames);
-    }
-
-    const movieWithGenres =
-      genreNames.length > 0
-        ? await prisma.movie.findUnique({
-            where: { id: movie.id },
-            include: movieInclude,
-          })
-        : movie;
-
-    // When the caller skipped probing (e.g. the Add form, which autofills
-    // from a probeOnly call), still try to pull an embedded poster out of the
-    // file. Best-effort: failures never block movie creation.
-    if (trimmedPath && !movie.coverPath) {
+    const trimmedPath = releaseInput?.filePath?.trim();
+    if (trimmedPath && movie && !movie.coverPath) {
       try {
         await maybeExtractCover(movie.id, trimmedPath, false);
       } catch {
-        // ignore — cover extraction is non-fatal
+        // non-fatal
       }
     }
 
-    return NextResponse.json(movieWithGenres ?? movie, { status: 201 });
+    const result =
+      movie ??
+      (await prisma.movie.findUnique({
+        where: { slug },
+        include: movieInclude,
+      }));
+
+    return NextResponse.json(result, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Create failed";
     return NextResponse.json({ error: message }, { status: 400 });

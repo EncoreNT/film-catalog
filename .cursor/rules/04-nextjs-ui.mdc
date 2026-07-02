@@ -1,0 +1,84 @@
+---
+description: Next.js 16, компоненты, дизайн-система, обложки
+globs: src/app/**,src/components/**
+alwaysApply: false
+---
+
+# Next.js и UI
+
+## Next.js 16 — обязательные паттерны
+
+```typescript
+// params и searchParams — Promise
+interface PageProps {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+export default async function Page({ params, searchParams }: PageProps) {
+  const { slug } = await params;
+  const resolved = await searchParams;
+}
+```
+
+- Server Components по умолчанию; `"use client"` только для интерактива
+- `unstable_cache` для тяжёлых facet/metrics запросов (revalidate 60s)
+- `Suspense` + skeleton на главной
+- Images: `next/image` с `localPatterns` для `/api/covers/**` и franchise cover (см. `next.config.ts`)
+- Для обложек часто используется `ApiCoverImage` — plain `<img>` на API URL с cache bust `?v=updatedAt`
+
+## Иерархия компонентов
+
+```
+primitives/     — переиспользуемые UI-кирпичи (Button, Field, Modal, Select, Chip, …)
+Movie*          — каталог, карточка, форма, рейтинг, approve
+Franchise*      — карточка, форма, слоты, cover upload, quality reel
+FilterBar       — фильтры каталога (client, URL searchParams)
+SpecTag         — бейджи кодека/HDR/разрешения
+TrackEditorSection — аудио/субтитры в форме
+AmbientBackground, GrainOverlay — декор layout
+```
+
+Client hooks: `hooks/useStoragePicker.ts`, `hooks/useTrackEditor.ts`.
+
+## Дизайн-система (`globals.css`)
+
+Warm coal palette — «кинозал», не cold black:
+
+| Token | Tailwind | Назначение |
+|-------|----------|------------|
+| `--bg-deep` | `bg-bg-deep` | Фон страницы |
+| `--accent` | `text-accent` | Золотой акцент |
+| `--radius` | `rounded-[var(--radius)]` | 14px карточки |
+
+Шрифты: Fraunces (display), Inter (UI, cyrillic), JetBrains Mono (tech labels).
+
+Utility classes: `.surface-card`, `.surface-elevated`, `.focus-ring`, `.font-display`, `.font-mono-tech`.
+
+## Обложки — ориентация
+
+| Тип | Aspect | Где |
+|-----|--------|-----|
+| **Фильм** | portrait 2:3 | `aspect-[2/3]`, MovieCard, movie detail |
+| **Франшиза** | landscape 16:9 | `aspect-[16/9]`, FranchiseCard, hero, FranchiseCoverUpload |
+
+Всегда `object-cover`. Франшизные upload UI подсказывает 16:9.
+
+## Формы
+
+- `MovieForm`, `AddMovieForm` — probeOnly → POST create
+- `FranchiseForm` + `FranchiseSlotsEditor` — slots через syncFranchiseSlots
+- Словари опций: `lib/dictionaries.ts` (кодеки, профили, жанры, release types)
+- Spec display logic: `lib/spec-tags.ts`, `lib/format.ts`
+
+## Навигация
+
+Root layout (`app/layout.tsx`): Каталог `/`, Франшизы `/franchises`, Скан `/scan`.
+
+## Ошибки
+
+- `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`
+- `ErrorScene` — переиспользуемый error UI
+
+## Стилизация
+
+Tailwind v4 (`@import "tailwindcss"`, `@theme inline`). Не добавлять legacy `@tailwind base/components/utilities`. Prefer existing tokens over hardcoded hex.

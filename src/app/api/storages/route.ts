@@ -5,7 +5,7 @@ import { storageCreateSchema } from "@/lib/validators";
 export async function GET() {
   const storages = await prisma.storage.findMany({
     orderBy: [{ type: "asc" }, { name: "asc" }],
-    include: { _count: { select: { movies: true } } },
+    include: { _count: { select: { releases: true } } },
   });
   return NextResponse.json({ storages });
 }
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const data = storageCreateSchema.parse(body);
     const storage = await prisma.storage.create({
       data: { name: data.name, type: data.type, path: data.path ?? null },
-      include: { _count: { select: { movies: true } } },
+      include: { _count: { select: { releases: true } } },
     });
     return NextResponse.json(storage, { status: 201 });
   } catch (err) {

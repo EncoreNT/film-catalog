@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeFranchiseSummary, slotTier } from "./franchise-summary";
 import type { FranchiseWithSlots } from "./franchise-include";
-import type { MovieWithTracks } from "./movie-query";
+import type { MovieWithTracks, ReleaseWithTracks } from "./movie-query";
 
 type MovieOpts = {
   id?: number;
@@ -12,27 +12,21 @@ type MovieOpts = {
   resolutionLabel?: string | null;
   hdr?: string | null;
   atmos?: boolean;
+  audioTracks?: ReleaseWithTracks["audioTracks"];
 };
 
-function makeMovie(opts: MovieOpts): MovieWithTracks {
+function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
   return {
-    id: opts.id ?? 1,
-    slug: `m-${opts.id ?? 1}`,
-    title: opts.title ?? "Фильм",
-    year: opts.year ?? null,
-    description: null,
-    durationSeconds: opts.durationSeconds ?? null,
+    id: releaseId,
+    movieId: opts.id ?? 1,
+    storageId: null,
     filePath: null,
     fileSize: null,
     fileMtime: null,
     fileHash: null,
-    status: "CATALOG",
-    coverPath: null,
-    rating: opts.rating ?? null,
-    watchedAt: null,
-    storageId: null,
     releaseType: null,
     version: "theatrical",
+    durationSeconds: opts.durationSeconds ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
     storage: null,
@@ -40,7 +34,7 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
       opts.resolutionLabel || opts.hdr
         ? {
             id: 1,
-            movieId: opts.id ?? 1,
+            releaseId,
             streamIndex: 0,
             width: null,
             height: null,
@@ -51,27 +45,47 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
             bitrate: null,
           }
         : null,
-    audioTracks: opts.atmos
-      ? [
-          {
-            id: 1,
-            movieId: opts.id ?? 1,
-            streamIndex: 0,
-            codec: null,
-            profile: "Atmos",
-            channels: null,
-            channelLayout: null,
-            bitrate: null,
-            language: "rus",
-            title: null,
-            translationType: null,
-            isDefault: true,
-          },
-        ]
-      : [],
+    audioTracks:
+      opts.audioTracks ??
+      (opts.atmos
+        ? [
+            {
+              id: 1,
+              releaseId,
+              streamIndex: 0,
+              codec: null,
+              profile: "Atmos",
+              channels: null,
+              channelLayout: null,
+              bitrate: null,
+              language: "rus",
+              title: null,
+              translationType: null,
+              isDefault: true,
+            },
+          ]
+        : []),
     subtitleTracks: [],
+  };
+}
+
+function makeMovie(opts: MovieOpts): MovieWithTracks {
+  return {
+    id: opts.id ?? 1,
+    slug: `m-${opts.id ?? 1}`,
+    title: opts.title ?? "Фильм",
+    year: opts.year ?? null,
+    description: null,
+    matchKey: null,
+    status: "CATALOG",
+    coverPath: null,
+    rating: opts.rating ?? null,
+    watchedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    releases: [makeRelease(opts)],
     movieGenres: [],
-  } as unknown as MovieWithTracks;
+  } as MovieWithTracks;
 }
 
 type SlotOpts = {
@@ -240,37 +254,37 @@ describe("computeFranchiseSummary", () => {
       id: 1,
       resolutionLabel: "4K",
       hdr: "DV:P8",
+      audioTracks: [
+        {
+          id: 1,
+          releaseId: 1,
+          streamIndex: 0,
+          codec: "dts",
+          profile: "None",
+          channels: null,
+          channelLayout: "5.1",
+          bitrate: null,
+          language: "rus",
+          title: "DTS 5.1",
+          translationType: "dub",
+          isDefault: true,
+        },
+        {
+          id: 2,
+          releaseId: 1,
+          streamIndex: 1,
+          codec: "dts-hd",
+          profile: "DTS:X MA",
+          channels: null,
+          channelLayout: "7.1",
+          bitrate: null,
+          language: "eng",
+          title: "DTS:X MA",
+          translationType: "original",
+          isDefault: false,
+        },
+      ],
     });
-    movie.audioTracks = [
-      {
-        id: 1,
-        movieId: 1,
-        streamIndex: 0,
-        codec: "dts",
-        profile: "None",
-        channels: null,
-        channelLayout: "5.1",
-        bitrate: null,
-        language: "rus",
-        title: "DTS 5.1",
-        translationType: "dub",
-        isDefault: true,
-      },
-      {
-        id: 2,
-        movieId: 1,
-        streamIndex: 1,
-        codec: "dts-hd",
-        profile: "DTS:X MA",
-        channels: null,
-        channelLayout: "7.1",
-        bitrate: null,
-        language: "eng",
-        title: "DTS:X MA",
-        translationType: "original",
-        isDefault: false,
-      },
-    ];
 
     const s = computeFranchiseSummary(
       makeFranchise([makeSlot({ storyOrder: 0, movieId: 1, movie })]),

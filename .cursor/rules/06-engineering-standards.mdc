@@ -1,0 +1,100 @@
+---
+description: ADR, тесты, архитектурная дисциплина — даже для локального проекта
+alwaysApply: true
+---
+
+# Engineering standards
+
+Локальный pet-project ≠ «можно наколхозить». Код должен оставаться поддерживаемым через годы и понятным AI/людям без повторного ресерча.
+
+## ADR (Architecture Decision Records)
+
+**Когда писать ADR** — при нетривиальном выборе, который сложно вывести из кода:
+
+- новая сущность / изменение связей в Prisma
+- новый pipeline (scan, probe, import, export)
+- смена паттерна (RSC vs client, caching, slug-стратегия)
+- отказ от существующего подхода или компромисс (performance vs simplicity)
+
+**Когда НЕ писать** — мелкий bugfix, переименование, стили, очевидный рефактор без смены архитектуры.
+
+**Где:** `docs/adr/NNNN-kebab-title.md` (4 цифры, монotonic). Шаблон — `docs/adr/README.md`.
+
+**Статусы:** Proposed → Accepted → Superseded by ADR-XXXX.
+
+После принятия ADR — обновить релевантные `.cursor/rules/` если решение меняет задокументированную архитектуру.
+
+## Тесты (vitest)
+
+```bash
+npm test          # перед завершением задачи с логикой
+npm run typecheck
+```
+
+| Что тестировать | Где | Пример |
+|-----------------|-----|--------|
+| Парсеры, query builders, pure helpers | `src/lib/*.test.ts` рядом с модулем | `name-parser.test.ts`, `movie-query.test.ts` |
+| Zod edge cases | lib tests | invalid query params |
+| ffprobe/channel normalization | lib tests с fixtures | `ffprobe.test.ts`, `channels.test.ts` |
+
+| Что НЕ обязательно | Почему |
+|--------------------|--------|
+| Snapshot всего UI | хрупко, мало value |
+| Trivial getters | noise |
+| E2E каждой кнопки | нет infra; только если явно попросили |
+
+**Правило:** меняешь нетривиальную логику в `src/lib/` — добавь или обнови тест. Регрессия должна ловиться `npm test`.
+
+Стиль: `describe` / `it`, осмысленные кейсы (happy path + edge), без моков Prisma в unit-тестах pure functions.
+
+## Слои и границы
+
+```
+components/  → UI, локальный state, fetch к API
+app/api/     → HTTP, zod, orchestration (тонкий слой)
+lib/         → бизнес-логика, pure functions, prisma helpers
+prisma/      → схема, миграции
+```
+
+- **Не** класть бизнес-логику в route handlers — вынести в `lib/`
+- **Не** импортировать `prisma` в client components
+- **Не** дублировать zod-схемы — одна source of truth в `validators.ts`
+
+## Компоненты — переиспользование
+
+Перед новым компонентом — **grep / посмотреть** `components/primitives/` и существующие доменные.
+
+| Уровень | Путь | Примеры |
+|---------|------|---------|
+| Primitives | `components/primitives/` | Button, Field, Modal, Select, Chip, ApiCoverImage |
+| Domain | `components/` | MovieCard, FranchiseForm, FilterBar |
+| Page-specific | inline в `app/**/page.tsx` | только layout секции без reuse |
+
+**❌ BAD** — скопировать `Button` / modal / cover upload в новый файл с правками на 2 строки.
+
+**✅ GOOD** — расширить primitive prop'ом; вынести общий кусок в `lib/` или shared component.
+
+Обложки: фильмы → `CoverUpload` / `ApiCoverImage` + `aspect-[2/3]`; франшизы → `FranchiseCoverUpload` + `aspect-[16/9]`.
+
+## Проектирование БД
+
+Изменения схемы — **только** через Prisma migrate (`npm run db:migrate`), не ручной SQL.
+
+Чеклист перед новым полем/таблицей:
+
+1. **Нормализация** — повторяющиеся списки (жанры, tracks) → отдельные таблицы, не JSON blob
+2. **Relations** — обе стороны `@relation`, `onDelete` явно (Cascade vs SetNull)
+3. **Индексы** — поля в `buildMovieWhere` / sort / unique lookups → `@@index`
+4. **Timestamps** — `createdAt` / `updatedAt` на сущностях с lifecycle
+5. **Slug vs id** — URL по slug, FK по id
+6. **ADR** — если решение неочевидно (denormalization, enum vs string)
+
+Существующие паттерны — эталон: `Movie` + 1:1 `VideoTrack` + 1:N tracks; `MovieGenre` с `sortOrder`; `FranchiseSlot` с `storyOrder`.
+
+## Definition of Done (для AI-задач)
+
+- [ ] Логика в правильном слое (`lib/`, не размазана)
+- [ ] Нет дублирования UI / validators / include-объектов
+- [ ] `npm test` и `npm run typecheck` проходят
+- [ ] ADR если архитектурное решение; rules обновлены при необходимости
+- [ ] Миграция + schema sync если менялась БД

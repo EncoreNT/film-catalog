@@ -40,38 +40,56 @@ export interface SubtitleTrackInput {
   forced?: boolean;
 }
 
-export interface MovieTracksInput {
+export interface ReleaseTracksInput {
   videoTrack?: VideoTrackInput | null;
   audioTracks?: AudioTrackInput[] | null;
   subtitleTracks?: SubtitleTrackInput[] | null;
 }
 
+/** @deprecated Use syncReleaseTracksFromProbe */
 export async function syncMovieTracksFromProbe(
   db: Db,
-  movieId: number,
+  releaseId: number,
   probe: Pick<ProbeResult, "video" | "audio" | "subtitles">,
 ) {
-  await syncMovieTracks(db, movieId, {
+  await syncReleaseTracksFromProbe(db, releaseId, probe);
+}
+
+/** @deprecated Use syncReleaseTracks */
+export async function syncMovieTracks(
+  db: Db,
+  releaseId: number,
+  tracks: ReleaseTracksInput,
+) {
+  await syncReleaseTracks(db, releaseId, tracks);
+}
+
+export async function syncReleaseTracksFromProbe(
+  db: Db,
+  releaseId: number,
+  probe: Pick<ProbeResult, "video" | "audio" | "subtitles">,
+) {
+  await syncReleaseTracks(db, releaseId, {
     videoTrack: probe.video,
     audioTracks: probe.audio,
     subtitleTracks: probe.subtitles,
   });
 }
 
-export async function syncMovieTracks(
+export async function syncReleaseTracks(
   db: Db,
-  movieId: number,
-  tracks: MovieTracksInput,
+  releaseId: number,
+  tracks: ReleaseTracksInput,
 ) {
   const { videoTrack, audioTracks, subtitleTracks } = tracks;
 
   if (audioTracks !== undefined || subtitleTracks !== undefined) {
     if (audioTracks !== undefined) {
-      await db.audioTrack.deleteMany({ where: { movieId } });
+      await db.audioTrack.deleteMany({ where: { releaseId } });
       if (audioTracks && audioTracks.length > 0) {
         await db.audioTrack.createMany({
           data: audioTracks.map((track) => ({
-            movieId,
+            releaseId,
             streamIndex: track.streamIndex,
             codec: track.codec ?? null,
             profile: track.profile ?? null,
@@ -88,11 +106,11 @@ export async function syncMovieTracks(
     }
 
     if (subtitleTracks !== undefined) {
-      await db.subtitleTrack.deleteMany({ where: { movieId } });
+      await db.subtitleTrack.deleteMany({ where: { releaseId } });
       if (subtitleTracks && subtitleTracks.length > 0) {
         await db.subtitleTrack.createMany({
           data: subtitleTracks.map((track) => ({
-            movieId,
+            releaseId,
             streamIndex: track.streamIndex,
             codec: track.codec ?? null,
             codecLabel: track.codecLabel ?? null,
@@ -108,9 +126,9 @@ export async function syncMovieTracks(
 
   if (videoTrack !== undefined && videoTrack !== null) {
     await db.videoTrack.upsert({
-      where: { movieId },
+      where: { releaseId },
       create: {
-        movieId,
+        releaseId,
         streamIndex: videoTrack.streamIndex ?? 0,
         width: videoTrack.width ?? null,
         height: videoTrack.height ?? null,

@@ -1,0 +1,152 @@
+---
+description: Полная архитектура — каталоги, слои, маршруты, потоки данных
+alwaysApply: true
+---
+
+# Архитектура
+
+## Дерево проекта
+
+```
+film-catalog/
+├── prisma/
+│   ├── schema.prisma          # Модель данных
+│   └── migrations/            # SQL-миграции
+├── src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── layout.tsx         # Root layout (шапка, шрифты, ambient)
+│   │   ├── page.tsx           # Каталог фильмов (/)
+│   │   ├── globals.css        # Design tokens, Tailwind v4 @theme
+│   │   ├── scan/              # Страница сканирования
+│   │   ├── movies/[slug]/     # Деталь + edit
+│   │   ├── franchises/        # Список + [slug] detail + edit
+│   │   └── api/               # Route Handlers (REST)
+│   ├── components/            # React-компоненты
+│   │   ├── primitives/        # Button, Field, Modal, Select, …
+│   │   └── …                  # Доменные: MovieCard, FranchiseForm, …
+│   ├── hooks/                 # Client hooks (useStoragePicker, useTrackEditor)
+│   ├── lib/                   # Бизнес-логика, утилиты, Prisma helpers
+│   └── generated/prisma/      # Сгенерированный Prisma Client (не редактировать)
+├── data/                      # Runtime data (gitignored)
+└── .cursor/rules/             # Спеки для AI
+```
+
+## Слои и ответственность
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Pages (RSC)          src/app/**/page.tsx               │
+│  Server Components, prisma queries, unstable_cache      │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│  Client Components    "use client" в components/          │
+│  Формы, фильтры, модалки, scan progress                 │
+└──────────────────────────┬──────────────────────────────┘
+                           │ fetch → /api/*
+┌──────────────────────────▼──────────────────────────────┐
+│  API Route Handlers   src/app/api/**/route.ts           │
+│  zod validate → lib/* → prisma → JSON                   │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│  Domain lib           src/lib/*.ts                      │
+│  scanner, ffprobe, movie-query, franchise-slots, …      │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│  Prisma + SQLite      src/lib/prisma.ts                 │
+│  better-sqlite3 adapter, singleton in dev              │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Страницы (UI routes)
+
+| URL | Файл | Назначение |
+|-----|------|------------|
+| `/` | `app/page.tsx` | Каталог: фильтры, табы DRAFT/CATALOG/EXCLUDED, пагинация |
+| `/movies/[slug]` | `app/movies/[slug]/page.tsx` | Карточка фильма: specs, tracks, rating, franchises |
+| `/movies/[slug]/edit` | `app/movies/[slug]/edit/page.tsx` | Редактирование фильма |
+| `/franchises` | `app/franchises/page.tsx` | Список франшиз |
+| `/franchises/[slug]` | `app/franchises/[slug]/page.tsx` | Деталь: слоты, quality reel, completion |
+| `/franchises/[slug]/edit` | `app/franchises/[slug]/edit/page.tsx` | Редактор франшизы и слотов |
+| `/scan` | `app/scan/page.tsx` | Скан папки, прогресс NDJSON stream |
+
+## Ключевые include-объекты Prisma
+
+- `movieInclude` (`lib/movie-include.ts`) — videoTrack, audioTracks, subtitleTracks, storage, movieGenres→genre
+- `franchiseInclude` (`lib/franchise-include.ts`) — slots→movie (с movieInclude), orderBy storyOrder
+
+**Всегда** использовать эти константы вместо ad-hoc include.
+
+## Поток: сканирование
+
+```
+/scan UI → POST /api/scan { scanRoot, externalDrive?, driveName? }
+         → setScanRoot (Setting table или SCAN_ROOT env)
+         → scanDirectory (lib/scanner.ts)
+              walkVideoFiles (рекурсия, skip dot-dirs)
+              для каждого файла:
+                skip если size+mtime совпали
+                hash prefix (16MB) при изменении
+                detect move: same hash+size, другой path
+                parseMovieName → title/year/releaseType
+                probeMediaFile (ffprobe)
+                syncMovieTracksFromProbe
+                maybeExtractCover (mkvextract, best-effort)
+                create DRAFT или update/move
+         → NDJSON stream: start | file | summary | error
+```
+
+## Поток: каталог и фильтры
+
+```
+/ searchParams → parseListQuery (zod)
+              → buildMovieWhere + buildMovieOrder
+              → prisma.movie.findMany + movieInclude
+              → MovieCatalog (client) + FilterBar chips
+Facets: catalog-facets.ts + unstable_cache (60s)
+Status counts: archive-metrics.ts
+```
+
+## Поток: обложки
+
+```
+Файл на диске: data/covers/<movieId>.<ext>  или  franchise-<id>.<ext>
+DB поле: coverPath = "covers/..." (относительно data/)
+URL фильма:  /api/covers/[id]?v=<updatedAt>     → lib/cover-url.ts
+URL франшизы: /api/franchises/[id]/cover?v=...   → lib/franchise-cover-url.ts
+Upload: POST multipart → saveCoverBuffer / franchise cover route
+Extract: maybeExtractCover из MKV attachment (scanner + create movie)
+```
+
+## Поток: франшизы
+
+```
+Franchise — именованная серия со слотами (FranchiseSlot)
+Слот: storyOrder, optional movieId, titleHint, yearHint
+syncFranchiseSlots — deleteMany + createMany (полная замена)
+Привязка фильма к слоту: PATCH /api/movies/[id]/franchises/[franchiseId]
+Metrics: franchise-metrics.ts (4K, HDR, Atmos counts по слотам)
+```
+
+## Slug-стратегия
+
+- Фильмы: `resolveMovieSlug` (`lib/movie-slug.ts`) — транслит + dedup suffix
+- Франшизы: `resolveFranchiseSlug` (`lib/franchise-slug.ts`)
+- URL всегда по slug, не по id
+
+## Настройки
+
+- `getScanRoot` / `setScanRoot` — ключ `scanRoot` в таблице Setting, fallback `process.env.SCAN_ROOT`
+- Prisma singleton: `src/lib/prisma.ts`, adapter BetterSqlite3, path из DATABASE_URL
+
+## Тесты
+
+Vitest рядом с кодом: `src/lib/*.test.ts`. Запуск: `npm test`. Покрывают парсеры, query builders, ffprobe helpers — не E2E.
+
+## Что НЕ трогать без необходимости
+
+- `src/generated/prisma/` — только `prisma generate`
+- `data.old/` — архив, не используется runtime
+- Миграции — только через `npm run db:migrate`, не править SQL вручную без причины

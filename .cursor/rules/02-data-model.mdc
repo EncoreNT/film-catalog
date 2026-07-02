@@ -1,0 +1,95 @@
+---
+description: Prisma-схема, сущности, связи и enum-ы
+globs: prisma/**,src/lib/**
+alwaysApply: false
+---
+
+# Модель данных
+
+Файл: `prisma/schema.prisma`. Client output: `src/generated/prisma/`. ADR: `docs/adr/0001-movie-release-split.md`.
+
+## Enum-ы
+
+| Enum | Значения | Смысл |
+|------|----------|-------|
+| `MovieStatus` | DRAFT, CATALOG, EXCLUDED | Черновик → в каталоге → скрыт |
+| `StorageType` | LOCAL, EXTERNAL | Локальный диск vs внешний накопитель |
+
+## Сущности
+
+### Movie (работа / фильм)
+
+Ключевые поля:
+
+- `slug` — уникальный URL
+- `title`, `year`, `description`
+- `matchKey` — нормализованный `title|year` для поиска дублей (merge candidates)
+- `status` — lifecycle (скан создаёт DRAFT)
+- `coverPath` — относительный путь `covers/<id>.ext`
+- `rating` (1–10), `watchedAt`
+
+Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot)
+
+### Release (файл / релиз)
+
+- `filePath` (@unique), `fileSize`, `fileMtime`, `fileHash` — дедуп и move detection
+- `releaseType`, `version`, `durationSeconds`
+- `storageId` → Storage
+- `movieId` → Movie
+
+Relations: `videoTrack` (1:1), `audioTracks[]`, `subtitleTracks[]`
+
+### VideoTrack (1:1 с Release)
+
+`streamIndex`, `width`, `height`, `resolutionLabel`, `codec`, `hdr`, `fps`, `bitrate`
+
+### AudioTrack / SubtitleTrack (1:N с Release)
+
+См. прежние поля; FK — `releaseId`.
+
+### Genre + MovieGenre
+
+Many-to-many через `MovieGenre` с `sortOrder`. Жанры на уровне Movie.
+
+### Storage
+
+Именованные хранилища. Relation: `releases[]`.
+
+### Franchise + FranchiseSlot
+
+- `FranchiseSlot.movieId` → Movie (не Release)
+
+## Индексы (важные для фильтров)
+
+Movie: status, matchKey, rating, watchedAt
+Release: movieId, fileHash, storageId, releaseType, version, durationSeconds
+VideoTrack: resolutionLabel
+AudioTrack: language, channelLayout, translationType
+
+## Типичные паттерны запросов
+
+```typescript
+// Полный фильм для UI/API (work + все releases с треками)
+prisma.movie.findUnique({ where: { slug }, include: movieInclude });
+
+// movieInclude = releases (releaseInclude) + movieGenres
+// releaseInclude = videoTrack, audioTracks, subtitleTracks, storage
+
+// Список с фильтрами (фильтры по releases.some { … })
+const query = parseListQuery(searchParams);
+prisma.movie.findMany({
+  where: buildMovieWhere(query),
+  orderBy: buildMovieOrder(query),
+  include: movieInclude,
+});
+```
+
+## Валидация входа
+
+Zod в `lib/validators.ts`:
+
+- `movieCreateSchema` / `movieUpdateSchema` — work-level
+- `releaseCreateSchema` / `releaseUpdateSchema` — file-level
+- `mergeSchema` — объединение дублей
+
+API routes **всегда** парсят body/query через zod.

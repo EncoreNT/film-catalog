@@ -1,0 +1,84 @@
+---
+description: REST API — все route handlers, форматы, ошибки
+globs: src/app/api/**
+alwaysApply: false
+---
+
+# API Routes
+
+Общие утилиты: `lib/api-utils.ts` — `jsonError`, `parseRouteId`, `RouteContext`, `isErrorResponse`.
+
+Ошибки: `{ error: string }` + HTTP status. Сообщения на русском.
+
+## Movies
+
+| Method | Path | Назначение |
+|--------|------|------------|
+| GET | `/api/movies` | Список с фильтрами (query = movieListQuerySchema) |
+| POST | `/api/movies` | Создание; `probeOnly: true` — только ffprobe preview |
+| HEAD | `/api/movies?path=` | Проверка существования файла |
+| PATCH | `/api/movies/[id]` | Обновление (movieUpdateSchema) |
+| DELETE | `/api/movies/[id]` | Удаление |
+| POST | `/api/movies/[id]/approve` | DRAFT → CATALOG |
+| POST | `/api/movies/[id]/cover` | Upload обложки (multipart) |
+| GET | `/api/movies/[id]/franchises` | Членства фильма во франшизах |
+| POST | `/api/movies/[id]/franchises` | Привязать к франшизе |
+| PATCH | `/api/movies/[id]/franchises/[franchiseId]` | Обновить storyOrder в слоте |
+| DELETE | `/api/movies/[id]/franchises/[franchiseId]` | Отвязать |
+
+Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-fatal).
+
+## Covers
+
+| Method | Path | Назначение |
+|--------|------|------------|
+| GET | `/api/covers/[id]` | Binary cover; ETag + 304; invalid ext → clear coverPath |
+
+## Franchises
+
+| Method | Path | Назначение |
+|--------|------|------------|
+| GET | `/api/franchises` | Список (search, sort, pagination) |
+| POST | `/api/franchises` | Создание |
+| PATCH | `/api/franchises/[id]` | Обновление name/description/slots |
+| DELETE | `/api/franchises/[id]` | Удаление |
+| GET | `/api/franchises/[id]/slots` | Слоты |
+| GET/POST | `/api/franchises/[id]/cover` | Serve / upload обложки франшизы |
+
+## Scan & Storage
+
+| Method | Path | Назначение |
+|--------|------|------------|
+| GET | `/api/scan` | Текущий scanRoot |
+| POST | `/api/scan` | Запуск скана → **NDJSON stream** |
+| PUT | `/api/scan` | Только сохранить scanRoot |
+| GET | `/api/storages` | Список Storage |
+| POST | `/api/storages` | Создать Storage |
+| GET | `/api/stats` | Archive metrics JSON |
+
+## NDJSON scan stream
+
+Content-Type: `application/x-ndjson`. События (по строке):
+
+```typescript
+{ type: "start", total: number }
+{ type: "file", index, total, fileName, filePath }
+{ type: "summary", summary: ScanSummary }
+{ type: "error", message: string }
+```
+
+Abort client fetch → `request.signal` → cooperative cancel в scanner/ffprobe.
+
+## Route handler шаблон
+
+```typescript
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const id = await parseRouteId(context.params);
+  if (isErrorResponse(id)) return id;
+  const body = movieUpdateSchema.parse(await request.json());
+  // … prisma + lib helpers
+  return NextResponse.json(result);
+}
+```
+
+`context.params` — **Promise** (Next.js 16): всегда `await context.params`.

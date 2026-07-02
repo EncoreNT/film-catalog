@@ -12,11 +12,15 @@ export interface ArchiveMetrics {
 export const catalogWhere = { status: MovieStatus.CATALOG } as const;
 
 export const russianAtmosAudioWhere = {
-  audioTracks: {
+  releases: {
     some: {
-      isDefault: true,
-      language: "rus",
-      profile: { in: ["Atmos", "DTS:X MA"] as const },
+      audioTracks: {
+        some: {
+          isDefault: true,
+          language: "rus",
+          profile: { in: ["Atmos", "DTS:X MA"] as const },
+        },
+      },
     },
   },
 } satisfies Prisma.MovieWhereInput;
@@ -24,8 +28,16 @@ export const russianAtmosAudioWhere = {
 export const eliteTierWhere = {
   ...catalogWhere,
   AND: [
-    { videoTrack: { resolutionLabel: "4K" } },
-    { videoTrack: { hdr: { notIn: ["SDR"] } } },
+    {
+      releases: {
+        some: { videoTrack: { resolutionLabel: "4K" } },
+      },
+    },
+    {
+      releases: {
+        some: { videoTrack: { hdr: { notIn: ["SDR"] } } },
+      },
+    },
     russianAtmosAudioWhere,
   ],
 } satisfies Prisma.MovieWhereInput;
@@ -35,13 +47,17 @@ export async function getArchiveMetrics(): Promise<ArchiveMetrics> {
     prisma.movie.count({
       where: {
         ...catalogWhere,
-        videoTrack: { resolutionLabel: "4K" },
+        releases: {
+          some: { videoTrack: { resolutionLabel: "4K" } },
+        },
       },
     }),
     prisma.movie.count({
       where: {
         ...catalogWhere,
-        videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } },
+        releases: {
+          some: { videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } } },
+        },
       },
     }),
     prisma.movie.count({

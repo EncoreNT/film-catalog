@@ -7,6 +7,8 @@ export type MovieWithTracks = Prisma.MovieGetPayload<{
   include: typeof import("@/lib/movie-include").movieInclude;
 }>;
 
+export type ReleaseWithTracks = MovieWithTracks["releases"][number];
+
 export function parseListQuery(searchParams: URLSearchParams) {
   const raw = Object.fromEntries(searchParams.entries());
   return movieListQuerySchema.parse({
@@ -18,6 +20,12 @@ export function parseListQuery(searchParams: URLSearchParams) {
     status: raw.status ?? "CATALOG",
     watched: raw.watched ?? "all",
   });
+}
+
+function releaseSome(
+  releaseWhere: Prisma.ReleaseWhereInput,
+): Prisma.MovieWhereInput {
+  return { releases: { some: releaseWhere } };
 }
 
 export function buildMovieWhere(
@@ -45,10 +53,15 @@ export function buildMovieWhere(
   if (query.minDuration || query.maxDuration) {
     const minSec = query.minDuration ? query.minDuration * 60 : undefined;
     const maxSec = query.maxDuration ? query.maxDuration * 60 : undefined;
-    where.durationSeconds = {
-      ...(minSec != null ? { gte: minSec } : {}),
-      ...(maxSec != null ? { lte: maxSec } : {}),
-    };
+    Object.assign(
+      where,
+      releaseSome({
+        durationSeconds: {
+          ...(minSec != null ? { gte: minSec } : {}),
+          ...(maxSec != null ? { lte: maxSec } : {}),
+        },
+      }),
+    );
   }
 
   if (query.genre) {
@@ -62,7 +75,6 @@ export function buildMovieWhere(
 
   const hasWatchedRange = Boolean(query.watchedFrom || query.watchedTo);
   if (query.watched === "unwatched" && hasWatchedRange) {
-    // Unwatched movies cannot match a watched-date range.
     where.id = -1;
   } else if (query.watched === "watched") {
     where.watchedAt = {
@@ -79,28 +91,29 @@ export function buildMovieWhere(
     };
   }
 
+  const releaseFilters: Prisma.ReleaseWhereInput[] = [];
+
   if (query.resolution || query.hdr) {
     const resolutions = query.resolution?.split(",").filter(Boolean);
     const hdrValues = query.hdr?.split(",").filter(Boolean);
-    // "HDR_ANY" marker → any HDR that is not SDR (incl. Dolby Vision + profiles).
     const anyHdr = hdrValues?.includes("HDR_ANY");
     const explicitHdr = hdrValues?.filter((v) => v !== "HDR_ANY");
-    where.videoTrack = {
-      ...(resolutions?.length
-        ? { resolutionLabel: { in: resolutions } }
-        : {}),
-      ...(anyHdr
-        ? { hdr: { notIn: ["SDR"] } }
-        : explicitHdr?.length
-          ? { hdr: { in: explicitHdr } }
+    releaseFilters.push({
+      videoTrack: {
+        ...(resolutions?.length
+          ? { resolutionLabel: { in: resolutions } }
           : {}),
-    };
+        ...(anyHdr
+          ? { hdr: { notIn: ["SDR"] } }
+          : explicitHdr?.length
+            ? { hdr: { in: explicitHdr } }
+            : {}),
+      },
+    });
   }
 
-  const audioTrackFilters: Prisma.MovieWhereInput[] = [];
-
   if (query.premiumAudio === "true") {
-    audioTrackFilters.push({
+    releaseFilters.push({
       audioTracks: {
         some: {
           isDefault: true,
@@ -114,7 +127,7 @@ export function buildMovieWhere(
   if (query.language || query.channelLayout) {
     const langs = query.language?.split(",").filter(Boolean);
     const layouts = query.channelLayout?.split(",").filter(Boolean);
-    audioTrackFilters.push({
+    releaseFilters.push({
       audioTracks: {
         some: {
           ...(langs?.length ? { language: { in: langs } } : {}),
@@ -124,12 +137,6 @@ export function buildMovieWhere(
     });
   }
 
-  // Russian-track technical specs (channels + codec). Unlike the generic
-  // `language`/`channelLayout` filters above, these constrain a SINGLE Russian
-  // track — so "5.1 + DTS" only matches a movie whose Russian dub is both 5.1
-  // and DTS, not one with an English 5.1 track and a Russian 2.0 AC-3.
-  // `audioScope` selects which track to filter: Russian dub tracks, or tracks
-  // explicitly tagged as "original" (`translationType`), not merely non-Russian.
   const audioScope = query.audioScope === "original" ? "original" : "rus";
   const audioChannels = query.audioChannels?.split(",").filter(Boolean) ?? [];
   const audioFormats = query.audioFormat?.split(",").filter(Boolean) ?? [];
@@ -145,7 +152,7 @@ export function buildMovieWhere(
       formatWhere.length ||
       audioTranslations.length
     ) {
-      audioTrackFilters.push({
+      releaseFilters.push({
         audioTracks: {
           some: {
             ...audioTrackScopeWhere("rus"),
@@ -161,7 +168,7 @@ export function buildMovieWhere(
       });
     }
   } else if (audioChannels.length || formatWhere.length) {
-    audioTrackFilters.push({
+    releaseFilters.push({
       audioTracks: {
         some: {
           ...audioTrackScopeWhere("original"),
@@ -174,22 +181,27 @@ export function buildMovieWhere(
     });
   }
 
-  if (audioTrackFilters.length === 1) {
-    Object.assign(where, audioTrackFilters[0]);
-  } else if (audioTrackFilters.length > 1) {
+  if (query.subtitleLang) {
+    const langs = query.subtitleLang.split(",").filter(Boolean);
+    releaseFilters.push({
+      subtitleTracks: {
+        some: { language: { in: langs } },
+      },
+    });
+  }
+
+  if (releaseFilters.length === 1) {
+    Object.assign(where, releaseSome(releaseFilters[0]));
+  } else if (releaseFilters.length > 1) {
     const existingAnd = Array.isArray(where.AND)
       ? where.AND
       : where.AND
         ? [where.AND]
         : [];
-    where.AND = [...existingAnd, ...audioTrackFilters];
-  }
-
-  if (query.subtitleLang) {
-    const langs = query.subtitleLang.split(",").filter(Boolean);
-    where.subtitleTracks = {
-      some: { language: { in: langs } },
-    };
+    where.AND = [
+      ...existingAnd,
+      ...releaseFilters.map((filter) => releaseSome(filter)),
+    ];
   }
 
   return where;
@@ -199,11 +211,6 @@ export function buildMovieOrder(
   query: ReturnType<typeof parseListQuery>,
 ): Prisma.MovieOrderByWithRelationInput[] {
   const order = query.order ?? "asc";
-  // Prisma v7's runtime validator rejects a single orderBy object that has
-  // more than one key, so combine sort fields as an array of single-key
-  // objects. `id` is the final tiebreaker so pagination stays stable across
-  // page requests (SQLite otherwise returns equal-valued rows in an
-  // unspecified order, which can split one movie across two pages).
   switch (query.sort) {
     case "year":
       return [{ year: order }, { id: order }];
@@ -214,7 +221,9 @@ export function buildMovieOrder(
     case "watchedAt":
       return [{ watchedAt: order }, { id: order }];
     case "durationSeconds":
-      return [{ durationSeconds: order }, { id: order }];
+      // Prisma cannot order Movie by max(release.durationSeconds) on SQLite;
+      // use createdAt as a stable proxy until denormalized duration is added.
+      return [{ createdAt: order }, { id: order }];
     default:
       return [{ title: order }, { id: order }];
   }

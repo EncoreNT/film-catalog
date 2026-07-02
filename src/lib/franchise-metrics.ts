@@ -36,14 +36,18 @@ export async function getFranchiseMetrics(
       where: {
         ...catalogWhere,
         ...franchiseFilter,
-        videoTrack: { resolutionLabel: "4K" },
+        releases: {
+          some: { videoTrack: { resolutionLabel: "4K" } },
+        },
       },
     }),
     prisma.movie.count({
       where: {
         ...catalogWhere,
         ...franchiseFilter,
-        videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } },
+        releases: {
+          some: { videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } } },
+        },
       },
     }),
     prisma.movie.count({

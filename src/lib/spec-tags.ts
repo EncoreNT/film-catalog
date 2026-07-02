@@ -1,5 +1,5 @@
 import type { SpecTagKind } from "@/components/SpecTag";
-import type { MovieWithTracks } from "./movie-query";
+import type { ReleaseWithTracks } from "./movie-query";
 import {
   dictLabel,
   RELEASE_TYPES,
@@ -49,7 +49,7 @@ export function codecFull(codec: string | null | undefined): string | null {
   return dictLabel(AUDIO_CODECS, codec) ?? codec.toUpperCase();
 }
 
-export function audioTrackTag(track: MovieWithTracks["audioTracks"][number]): {
+export function audioTrackTag(track: ReleaseWithTracks["audioTracks"][number]): {
   codec: string | null;
   profile: string | null;
   is3D: boolean;
@@ -64,16 +64,8 @@ export function audioTrackTag(track: MovieWithTracks["audioTracks"][number]): {
   };
 }
 
-/**
- * Full audio format label: codec + profile combined.
- *   TrueHD + Atmos     → "TrueHD Atmos"
- *   E-AC3 + Atmos      → "E-AC3 Atmos"
- *   DTS-HD + DTS:X MA  → "DTS:X HD MA"
- *   DTS-HD + HD MA     → "DTS-HD MA"
- *   AC3 (no profile)   → "AC3"
- */
 export function formatAudioLabel(
-  track: MovieWithTracks["audioTracks"][number],
+  track: ReleaseWithTracks["audioTracks"][number],
 ): string | null {
   const codec = codecShort(track.codec);
   const profile = track.profile && track.profile !== "None" ? track.profile : null;
@@ -84,7 +76,6 @@ export function formatAudioLabel(
     return codec ? `${codec} Atmos` : "Dolby Atmos";
   }
   if (profile === "DTS:X MA") {
-    // DTS:X sits on top of DTS-HD MA — surface both, DTS:X first.
     return codec === "DTS-HD" ? "DTS:X HD MA" : "DTS:X";
   }
   if (profile === "HD MA") {
@@ -96,9 +87,9 @@ export function formatAudioLabel(
   return codec;
 }
 
-function heroTags(movie: MovieWithTracks): HeroTag[] {
+function heroTags(release: ReleaseWithTracks): HeroTag[] {
   const tags: HeroTag[] = [];
-  const v = movie.videoTrack;
+  const v = release.videoTrack;
 
   if (v?.resolutionLabel && v.resolutionLabel !== "other") {
     const label = v.resolutionLabel === "4K" ? "4K" : v.resolutionLabel;
@@ -111,8 +102,6 @@ function heroTags(movie: MovieWithTracks): HeroTag[] {
 
   const hdrLabel = formatHdrLabel(v?.hdr);
   const { base: hdrBase, dvProfile } = parseHdrValue(v?.hdr);
-  // HDR10 / HDR10+ are promoted to the premium strip — exclude from secondary.
-  // Dolby Vision stays here as a secondary tag, with profile shown when known.
   if (hdrLabel && hdrBase !== "HDR10" && hdrBase !== "HDR10+") {
     if (hdrBase === "DolbyVision") {
       tags.push({
@@ -126,17 +115,17 @@ function heroTags(movie: MovieWithTracks): HeroTag[] {
     }
   }
 
-  const release = dictLabel(RELEASE_TYPES, movie.releaseType);
-  if (release) {
-    tags.push({ kind: "release", label: release });
+  const releaseLabel = dictLabel(RELEASE_TYPES, release.releaseType);
+  if (releaseLabel) {
+    tags.push({ kind: "release", label: releaseLabel });
   }
 
-  const version = displayMovieVersionLabel(movie.version);
+  const version = displayMovieVersionLabel(release.version);
   if (version) {
     tags.push({ kind: "version", label: version });
   }
 
-  const bestAudio = [...movie.audioTracks]
+  const bestAudio = [...release.audioTracks]
     .map((t) => ({ t, ...audioTrackTag(t) }))
     .sort((a, b) => {
       if (a.is3D && !b.is3D) return -1;
@@ -162,24 +151,20 @@ function heroTags(movie: MovieWithTracks): HeroTag[] {
   return tags;
 }
 
-/**
- * Secondary hero tags — excludes 4K resolution and 3D audio,
- * which are promoted to the premium badge strip.
- */
-export function secondaryTags(movie: MovieWithTracks): HeroTag[] {
-  return heroTags(movie).filter(
+export function secondaryTags(release: ReleaseWithTracks): HeroTag[] {
+  return heroTags(release).filter(
     (t) => t.kind !== "resolution" && t.kind !== "audio-3d",
   );
 }
 
-export function videoBitrateLabel(movie: MovieWithTracks): string | null {
-  return formatBitrateKbps(movie.videoTrack?.bitrate ?? null);
+export function videoBitrateLabel(release: ReleaseWithTracks): string | null {
+  return formatBitrateKbps(release.videoTrack?.bitrate ?? null);
 }
 
 export function videoResolutionPixels(
-  movie: MovieWithTracks,
+  release: ReleaseWithTracks,
 ): string | null {
-  const v = movie.videoTrack;
+  const v = release.videoTrack;
   if (!v?.width || !v?.height) return null;
   return `${v.width}×${v.height}`;
 }
@@ -189,16 +174,11 @@ export interface PremiumAudio {
   channelLayout: string | null;
 }
 
-/**
- * Premium 3D-audio hero badge — shown ONLY for the Russian default track.
- * An English Atmos/DTS:X track is not promoted to the premium strip.
- */
-/** Main audio track — default first, otherwise the first listed track. */
 export function mainAudioTrack(
-  movie: MovieWithTracks,
-): MovieWithTracks["audioTracks"][number] | null {
-  if (movie.audioTracks.length === 0) return null;
-  const sorted = [...movie.audioTracks].sort((a, b) => {
+  release: ReleaseWithTracks,
+): ReleaseWithTracks["audioTracks"][number] | null {
+  if (release.audioTracks.length === 0) return null;
+  const sorted = [...release.audioTracks].sort((a, b) => {
     if (a.isDefault && !b.isDefault) return -1;
     if (!a.isDefault && b.isDefault) return 1;
     return 0;
@@ -206,8 +186,8 @@ export function mainAudioTrack(
   return sorted[0];
 }
 
-export function premiumAudio(movie: MovieWithTracks): PremiumAudio | null {
-  const candidate = movie.audioTracks.find((t) => {
+export function premiumAudio(release: ReleaseWithTracks): PremiumAudio | null {
+  const candidate = release.audioTracks.find((t) => {
     const profile = t.profile && t.profile !== "None" ? t.profile : null;
     const is3D = profile === "Atmos" || profile === "DTS:X MA";
     return is3D && t.language === "rus" && t.isDefault;
@@ -224,17 +204,12 @@ export function premiumAudio(movie: MovieWithTracks): PremiumAudio | null {
   };
 }
 
-export function is4K(movie: MovieWithTracks): boolean {
-  const v = movie.videoTrack;
-  return v?.resolutionLabel === "4K";
+export function is4K(release: ReleaseWithTracks): boolean {
+  return release.videoTrack?.resolutionLabel === "4K";
 }
 
-/**
- * Any HDR — not SDR, not empty. Matches the elite-tier server count, which
- * counts Dolby Vision (any profile) as HDR alongside HDR10 / HDR10+.
- */
-export function isAnyHDR(movie: MovieWithTracks): boolean {
-  const v = movie.videoTrack;
+export function isAnyHDR(release: ReleaseWithTracks): boolean {
+  const v = release.videoTrack;
   if (!v?.hdr) return false;
   return parseHdrValue(v.hdr).base !== "SDR";
 }
@@ -248,7 +223,6 @@ const DV_PROFILE_SHORT: Record<string, string> = {
   "P8.4": "Profile 8.4",
 };
 
-/** Compact DV profile label for badges/sublabels. */
 export function dvProfileLabel(profile: string): string {
   return DV_PROFILE_SHORT[profile] ?? `Profile ${profile.replace(/^P/, "")}`;
 }
@@ -258,12 +232,8 @@ export interface PremiumHDR {
   sublabel: string;
 }
 
-/**
- * Premium HDR hero badge — HDR10 and HDR10+ are promoted to the premium strip
- * (best displayed by the user's TV). Dolby Vision stays a secondary tag.
- */
-export function premiumHDR(movie: MovieWithTracks): PremiumHDR | null {
-  const v = movie.videoTrack;
+export function premiumHDR(release: ReleaseWithTracks): PremiumHDR | null {
+  const v = release.videoTrack;
   const { base } = parseHdrValue(v?.hdr);
   if (base === "HDR10") {
     return { label: "HDR10", sublabel: "High Dynamic Range" };
@@ -332,24 +302,19 @@ function sortCatalogCardTags(tags: CatalogCardTag[]): CatalogCardTag[] {
   return [...prominent, ...regular];
 }
 
-/**
- * Structured footer tags for catalog cards — no bitrate.
- * Skips specs already shown in premium badges (4K, rus. Atmos).
- * HDR10/HDR10+ also appear in the premium strip but get a compact HDR footer tag.
- */
-export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
+export function catalogCardTags(release: ReleaseWithTracks): CatalogCardTag[] {
   const tags: CatalogCardTag[] = [];
-  const v = movie.videoTrack;
-  const show4KPremium = is4K(movie);
-  const hdrPremium = premiumHDR(movie);
-  const audioPremium = premiumAudio(movie);
+  const v = release.videoTrack;
+  const show4KPremium = is4K(release);
+  const hdrPremium = premiumHDR(release);
+  const audioPremium = premiumAudio(release);
 
-  const release = dictLabel(RELEASE_TYPES, movie.releaseType);
-  if (release) {
-    tags.push({ kind: "release", label: release });
+  const releaseLabel = dictLabel(RELEASE_TYPES, release.releaseType);
+  if (releaseLabel) {
+    tags.push({ kind: "release", label: releaseLabel });
   }
 
-  const version = displayMovieVersionLabel(movie.version);
+  const version = displayMovieVersionLabel(release.version);
   if (version) {
     tags.push({ kind: "version", label: version });
   }
@@ -392,7 +357,7 @@ export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
     tags.push({ kind: "codec", label: codec });
   }
 
-  const mainTrack = mainAudioTrack(movie);
+  const mainTrack = mainAudioTrack(release);
   const audioLabel = mainTrack ? formatAudioLabel(mainTrack) : null;
   const isPremiumTrack =
     audioPremium &&
@@ -420,4 +385,17 @@ export function catalogCardTags(movie: MovieWithTracks): CatalogCardTag[] {
   }
 
   return sortCatalogCardTags(tags);
+}
+
+/** Human-readable tab label for a release (e.g. "BDRemux · 4K"). */
+export function releaseTabLabel(release: ReleaseWithTracks): string {
+  const parts: string[] = [];
+  if (release.releaseType) {
+    parts.push(dictLabel(RELEASE_TYPES, release.releaseType) ?? release.releaseType);
+  }
+  const resolution = release.videoTrack?.resolutionLabel;
+  if (resolution && resolution !== "other") {
+    parts.push(resolution === "4K" ? "4K" : resolution);
+  }
+  return parts.length > 0 ? parts.join(" · ") : `релиз #${release.id}`;
 }

@@ -77,6 +77,12 @@ export default function RootLayout({
                 Франшизы
               </Link>
               <Link
+                href="/duplicates"
+                className="focus-ring rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-text"
+              >
+                Дубли
+              </Link>
+              <Link
                 href="/scan"
                 className="focus-ring flex items-center gap-2 rounded-lg border border-border-strong px-3.5 py-2 text-sm text-text transition-all duration-300 hover:border-accent/50 hover:text-accent hover:shadow-[0_0_20px_var(--accent-glow)]"
               >

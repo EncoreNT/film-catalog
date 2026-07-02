@@ -141,10 +141,14 @@ describe("buildMovieWhere audioScope alignment", () => {
         audioChannels: "2.0",
       }),
     );
-    expect(where.audioTracks).toEqual({
+    expect(where.releases).toEqual({
       some: {
-        translationType: "original",
-        channelLayout: { in: ["2.0"] },
+        audioTracks: {
+          some: {
+            translationType: "original",
+            channelLayout: { in: ["2.0"] },
+          },
+        },
       },
     });
   });
@@ -157,14 +161,26 @@ describe("buildMovieWhere audioScope alignment", () => {
         resolution: "4K",
       }),
     );
-    expect(where.videoTrack).toEqual({
-      resolutionLabel: { in: ["4K"] },
-    });
-    expect(where.audioTracks).toEqual({
-      some: {
-        translationType: "original",
-        channelLayout: { in: ["2.0"] },
+    expect(where.AND).toEqual([
+      {
+        releases: {
+          some: {
+            videoTrack: { resolutionLabel: { in: ["4K"] } },
+          },
+        },
       },
-    });
+      {
+        releases: {
+          some: {
+            audioTracks: {
+              some: {
+                translationType: "original",
+                channelLayout: { in: ["2.0"] },
+              },
+            },
+          },
+        },
+      },
+    ]);
   });
 });

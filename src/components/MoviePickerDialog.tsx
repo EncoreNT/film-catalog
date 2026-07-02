@@ -7,6 +7,7 @@ import type { MovieWithTracks } from "@/lib/movie-query";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import { Button } from "./primitives/Button";
 import { trimInput } from "@/lib/text-trim";
+import { pickPrimaryRelease } from "@/lib/release-primary";
 
 interface MoviePickerDialogProps {
   open: boolean;
@@ -189,9 +190,13 @@ function MoviePickerDialogContent({
                       </span>
                       <span className="font-mono-tech mt-0.5 block text-xs text-muted">
                         {movie.year ?? "—"}
-                        {movie.durationSeconds
-                          ? ` · ${Math.round(movie.durationSeconds / 60)} мин`
-                          : ""}
+                        {(() => {
+                          const duration =
+                            pickPrimaryRelease(movie.releases)?.durationSeconds;
+                          return duration
+                            ? ` · ${Math.round(duration / 60)} мин`
+                            : "";
+                        })()}
                       </span>
                     </span>
                   </button>

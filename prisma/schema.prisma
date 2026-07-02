@@ -25,43 +25,57 @@ model Storage {
   path      String?
   createdAt DateTime    @default(now())
 
-  movies Movie[]
+  releases Release[]
 
   @@index([type])
 }
 
 model Movie {
+  id          Int         @id @default(autoincrement())
+  slug        String      @unique
+  title       String
+  year        Int?
+  description String?
+  matchKey    String?
+  status      MovieStatus @default(DRAFT)
+  coverPath   String?
+  rating      Int?
+  watchedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  movieGenres MovieGenre[]
+  slots       FranchiseSlot[]
+  releases    Release[]
+
+  @@index([status])
+  @@index([matchKey])
+  @@index([rating])
+  @@index([watchedAt])
+}
+
+model Release {
   id              Int         @id @default(autoincrement())
-  slug            String      @unique
-  title           String
-  year            Int?
-  description     String?
-  durationSeconds Int?
-  filePath        String?
+  movieId         Int
+  storageId       Int?
+  filePath        String?     @unique
   fileSize        Int?
   fileMtime       DateTime?
   fileHash        String?
-  status          MovieStatus @default(DRAFT)
-  coverPath       String?
-  rating          Int?
-  watchedAt       DateTime?
-  storageId       Int?
   releaseType     String?
   version         String      @default("theatrical")
+  durationSeconds Int?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  storage        Storage?       @relation(fields: [storageId], references: [id], onDelete: SetNull)
-  movieGenres    MovieGenre[]
+  movie          Movie        @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  storage        Storage?     @relation(fields: [storageId], references: [id], onDelete: SetNull)
   videoTrack     VideoTrack?
   audioTracks    AudioTrack[]
   subtitleTracks SubtitleTrack[]
-  slots          FranchiseSlot[]
 
-  @@index([status])
+  @@index([movieId])
   @@index([fileHash])
-  @@index([rating])
-  @@index([watchedAt])
   @@index([storageId])
   @@index([releaseType])
   @@index([version])
@@ -89,8 +103,8 @@ model MovieGenre {
 }
 
 model VideoTrack {
-  id              Int     @id @default(autoincrement())
-  movieId         Int     @unique
+  id              Int      @id @default(autoincrement())
+  releaseId       Int      @unique
   streamIndex     Int
   width           Int?
   height          Int?
@@ -99,25 +113,25 @@ model VideoTrack {
   hdr             String?
   fps             String?
   bitrate         Int?
-  movie           Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  release         Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
 
   @@index([resolutionLabel])
 }
 
 model AudioTrack {
-  id            Int     @id @default(autoincrement())
-  movieId       Int
-  streamIndex   Int
-  codec         String?
-  profile       String?
-  channels      Int?
-  channelLayout String?
-  bitrate       Int?
-  language      String?
-  title            String?
-  translationType  String?
-  isDefault        Boolean @default(false)
-  movie            Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  id              Int      @id @default(autoincrement())
+  releaseId       Int
+  streamIndex     Int
+  codec           String?
+  profile         String?
+  channels        Int?
+  channelLayout   String?
+  bitrate         Int?
+  language        String?
+  title           String?
+  translationType String?
+  isDefault       Boolean  @default(false)
+  release         Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
 
   @@index([language])
   @@index([channelLayout])
@@ -125,16 +139,16 @@ model AudioTrack {
 }
 
 model SubtitleTrack {
-  id          Int     @id @default(autoincrement())
-  movieId     Int
+  id          Int      @id @default(autoincrement())
+  releaseId   Int
   streamIndex Int
   codec       String?
   codecLabel  String?
   language    String?
   title       String?
-  isDefault   Boolean @default(false)
-  forced      Boolean @default(false)
-  movie       Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  isDefault   Boolean  @default(false)
+  forced      Boolean  @default(false)
+  release     Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
 
   @@index([language])
 }

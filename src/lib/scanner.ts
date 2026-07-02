@@ -5,8 +5,9 @@ import { probeMediaFile } from "./ffprobe";
 import { maybeExtractCover } from "./cover-storage";
 import { parseMovieName } from "./name-parser";
 import { computeFileHashPrefix } from "./file-hash";
-import { syncMovieTracksFromProbe } from "./movie-tracks";
+import { syncReleaseTracksFromProbe } from "./movie-tracks";
 import { resolveMovieSlug } from "./movie-slug";
+import { computeMatchKey } from "./movie-match-key";
 import { MovieStatus } from "@/generated/prisma/client";
 
 const VIDEO_EXTENSIONS = new Set([
@@ -31,7 +32,6 @@ export interface ScanSummary {
   moved: number;
   skipped: number;
   errors: string[];
-  /** True when the scan was cancelled mid-way via the AbortSignal. */
   cancelled: boolean;
 }
 
@@ -47,11 +47,8 @@ export type ScanProgressEvent =
   | { type: "summary"; summary: ScanSummary };
 
 export interface ScanOptions {
-  /** Cooperative cancellation — checked between files and passed to ffprobe. */
   signal?: AbortSignal;
-  /** Progress callback (used by the streaming scan endpoint). */
   onProgress?: (event: ScanProgressEvent) => void;
-  /** When set, all found movies are tagged with this storage. */
   storageId?: number | null;
 }
 
@@ -118,8 +115,9 @@ export async function scanDirectory(
       const fileSize = fileStat.size;
       const fileMtime = fileStat.mtime;
 
-      const existing = await prisma.movie.findFirst({
+      const existing = await prisma.release.findFirst({
         where: { filePath },
+        include: { movie: true },
       });
 
       if (
@@ -128,7 +126,7 @@ export async function scanDirectory(
         existing.fileMtime?.getTime() === fileMtime.getTime()
       ) {
         if (storageId != null) {
-          await prisma.movie.update({
+          await prisma.release.update({
             where: { id: existing.id },
             data: { storageId },
           });
@@ -151,18 +149,15 @@ export async function scanDirectory(
         fileHash = await computeFileHashPrefix(filePath);
       }
 
-      // Detect a move: same content hash at a different path. Requiring a
-      // matching fileSize too guards against the (very unlikely) case of two
-      // different films sharing the same first-16MB hash prefix — that would
-      // otherwise overwrite one film's entry instead of creating a new one.
-      const movedMovie =
+      const movedRelease =
         fileHash &&
-        (await prisma.movie.findFirst({
+        (await prisma.release.findFirst({
           where: {
             fileHash,
             fileSize,
             NOT: { filePath },
           },
+          include: { movie: true },
         }));
 
       const parentFolder = path.basename(path.dirname(filePath));
@@ -187,14 +182,8 @@ export async function scanDirectory(
         };
       }
 
-      // Prefer the entry already bound to this path: the file at this path
-      // changed (re-rip, re-mux) and should update in place. Only when nothing
-      // is registered at this path do we look for a same-content entry
-      // elsewhere and treat it as a move. Checking `existing` first avoids a
-      // duplicate-by-path when a file is overwritten with content identical to
-      // another catalogued file.
       if (existing) {
-        await prisma.movie.update({
+        await prisma.release.update({
           where: { id: existing.id },
           data: {
             fileSize,
@@ -204,20 +193,20 @@ export async function scanDirectory(
             ...(storageId != null ? { storageId } : {}),
           },
         });
-        await syncMovieTracksFromProbe(prisma, existing.id, probe);
+        await syncReleaseTracksFromProbe(prisma, existing.id, probe);
         await maybeExtractCover(
-          existing.id,
+          existing.movieId,
           filePath,
-          !!existing.coverPath,
+          !!existing.movie.coverPath,
           signal,
         );
         summary.updated++;
         continue;
       }
 
-      if (movedMovie) {
-        await prisma.movie.update({
-          where: { id: movedMovie.id },
+      if (movedRelease) {
+        await prisma.release.update({
+          where: { id: movedRelease.id },
           data: {
             filePath,
             fileSize,
@@ -227,11 +216,11 @@ export async function scanDirectory(
             ...(storageId != null ? { storageId } : {}),
           },
         });
-        await syncMovieTracksFromProbe(prisma, movedMovie.id, probe);
+        await syncReleaseTracksFromProbe(prisma, movedRelease.id, probe);
         await maybeExtractCover(
-          movedMovie.id,
+          movedRelease.movieId,
           filePath,
-          !!movedMovie.coverPath,
+          !!movedRelease.movie.coverPath,
           signal,
         );
         summary.moved++;
@@ -244,23 +233,32 @@ export async function scanDirectory(
       }
 
       const slug = await resolveMovieSlug(prisma, parsed.title);
+      const matchKey = computeMatchKey(parsed.title, parsed.year);
 
       const movie = await prisma.movie.create({
         data: {
           slug,
           title: parsed.title,
           year: parsed.year,
-          releaseType: parsed.releaseType,
-          durationSeconds: probe.durationSeconds,
-          filePath,
-          fileSize,
-          fileMtime,
-          fileHash,
+          matchKey,
           status: MovieStatus.DRAFT,
-          ...(storageId != null ? { storageId } : {}),
+          releases: {
+            create: {
+              releaseType: parsed.releaseType,
+              durationSeconds: probe.durationSeconds,
+              filePath,
+              fileSize,
+              fileMtime,
+              fileHash,
+              ...(storageId != null ? { storageId } : {}),
+            },
+          },
         },
+        include: { releases: true },
       });
-      await syncMovieTracksFromProbe(prisma, movie.id, probe);
+
+      const release = movie.releases[0];
+      await syncReleaseTracksFromProbe(prisma, release.id, probe);
       await maybeExtractCover(movie.id, filePath, false, signal);
       summary.newDrafts++;
     } catch (err) {

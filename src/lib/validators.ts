@@ -38,14 +38,19 @@ export const subtitleInputSchema = z.object({
   forced: z.boolean().optional(),
 });
 
+/** Work-level movie fields (title, year, rating, genres, status). */
 export const movieUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
   description: z.string().nullable().optional(),
-  durationSeconds: z.number().int().min(0).nullable().optional(),
   rating: z.number().int().min(1).max(10).nullable().optional(),
   watchedAt: z.string().datetime().nullable().optional(),
   status: movieStatusSchema.optional(),
+  genres: z.array(z.string().min(1)).optional(),
+});
+
+/** File-level release fields (path, tracks, releaseType, version). */
+export const releaseUpdateSchema = z.object({
   filePath: z.string().nullable().optional(),
   fileSize: z.number().int().min(0).nullable().optional(),
   fileMtime: z.string().datetime().nullable().optional(),
@@ -53,7 +58,7 @@ export const movieUpdateSchema = z.object({
   storageId: z.number().int().nullable().optional(),
   releaseType: z.string().nullable().optional(),
   version: z.string().nullable().optional(),
-  genres: z.array(z.string().min(1)).optional(),
+  durationSeconds: z.number().int().min(0).nullable().optional(),
   videoTrack: videoInputSchema.optional(),
   audioTracks: z.array(trackInputSchema).optional(),
   subtitleTracks: z.array(subtitleInputSchema).optional(),
@@ -67,22 +72,50 @@ const createSubtitleInputSchema = subtitleInputSchema.omit({ id: true }).extend(
   streamIndex: z.number().int().optional(),
 });
 
-export const movieCreateSchema = z.object({
-  title: z.string().min(1),
-  year: z.number().int().min(1900).max(2100).nullable().optional(),
-  description: z.string().nullable().optional(),
-  durationSeconds: z.number().int().min(0).nullable().optional(),
+export const releaseCreateSchema = z.object({
   filePath: z.string().nullable().optional(),
   storageId: z.number().int().nullable().optional(),
   releaseType: z.string().nullable().optional(),
   version: z.string().nullable().optional(),
-  genres: z.array(z.string().min(1)).optional(),
-  status: movieStatusSchema.optional(),
+  durationSeconds: z.number().int().min(0).nullable().optional(),
   videoTrack: videoInputSchema.optional(),
   audioTracks: z.array(createTrackInputSchema).optional(),
   subtitleTracks: z.array(createSubtitleInputSchema).optional(),
   skipProbe: z.boolean().optional(),
   probeOnly: z.boolean().optional(),
+});
+
+/** Create movie (work-level) + optional first release. */
+export const movieCreateSchema = z.object({
+  title: z.string().min(1),
+  year: z.number().int().min(1900).max(2100).nullable().optional(),
+  description: z.string().nullable().optional(),
+  genres: z.array(z.string().min(1)).optional(),
+  status: movieStatusSchema.optional(),
+  release: releaseCreateSchema.optional(),
+  // Legacy flat fields — mapped to release on create
+  filePath: z.string().nullable().optional(),
+  storageId: z.number().int().nullable().optional(),
+  releaseType: z.string().nullable().optional(),
+  version: z.string().nullable().optional(),
+  durationSeconds: z.number().int().min(0).nullable().optional(),
+  videoTrack: videoInputSchema.optional(),
+  audioTracks: z.array(createTrackInputSchema).optional(),
+  subtitleTracks: z.array(createSubtitleInputSchema).optional(),
+  skipProbe: z.boolean().optional(),
+  probeOnly: z.boolean().optional(),
+});
+
+export const mergeSchema = z.object({
+  otherId: z.number().int(),
+  choices: z
+    .object({
+      description: z.enum(["canonical", "other"]).optional(),
+      coverPath: z.enum(["canonical", "other"]).optional(),
+      rating: z.enum(["canonical", "other"]).optional(),
+      watchedAt: z.enum(["canonical", "other"]).optional(),
+    })
+    .optional(),
 });
 
 export const movieListQuerySchema = z.object({

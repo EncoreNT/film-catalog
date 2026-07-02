@@ -1,0 +1,64 @@
+---
+description: Что это за проект, стек, команды и куда смотреть в первую очередь
+alwaysApply: true
+---
+
+# Film Catalog — обзор
+
+**Кинозал** — домашний каталог фильмов (Next.js 16, App Router). Сканирует папку с видео, определяет тех. параметры через ffprobe, хранит метаданные в SQLite, позволяет редактировать обложки, жанры, оценки и франшизы.
+
+## Стек
+
+| Слой | Технология |
+|------|------------|
+| Framework | Next.js 16.2 (App Router, RSC) |
+| UI | React 19, Tailwind CSS v4, motion, lucide-react |
+| DB | Prisma 7 + SQLite через `@prisma/adapter-better-sqlite3` |
+| Validation | zod 4 |
+| Media | ffprobe (execa), mkvextract для обложек из MKV |
+| Tests | vitest |
+
+## Команды
+
+```bash
+npm run dev          # localhost:3000
+npm run build
+npm run test         # vitest run
+npm run typecheck
+npm run db:migrate   # prisma migrate dev
+npm run db:studio
+```
+
+## Данные на диске
+
+| Путь | Назначение |
+|------|------------|
+| `data/catalog.db` | SQLite (gitignored) |
+| `data/covers/<id>.<ext>` | Обложки фильмов |
+| `data/covers/franchise-<id>.<ext>` | Обложки франшиз |
+| `.env` | `DATABASE_URL`, опционально `SCAN_ROOT` |
+
+## Язык интерфейса
+
+UI и сообщения об ошибках — **русский**. Код, типы, имена файлов — **английский**.
+
+## Импорты
+
+Alias `@/*` → `src/*`. Prisma client: `@/generated/prisma/client` (генерируется в `postinstall`).
+
+## Правила проекта
+
+Подробная архитектура и конвенции — в `.cursor/rules/`:
+
+- `01-architecture.mdc` — структура каталогов, слои, маршруты, потоки данных
+- `02-data-model.mdc` — Prisma-схема и доменные сущности
+- `03-api-routes.mdc` — REST API
+- `04-nextjs-ui.mdc` — Next.js 16, компоненты, дизайн-система
+- `05-domain-pipelines.mdc` — сканер, ffprobe, обложки, фильтры
+- `06-engineering-standards.mdc` — ADR, тесты, слои, reuse компонентов, проектирование БД
+
+**Не ресерчить кодовую базу с нуля** — сначала прочитать релевантные rules. ADR: `docs/adr/`.
+
+## Next.js 16
+
+Это **не** классический Next.js из training data. Перед изменениями App Router / API читать `node_modules/next/dist/docs/`. Особенности: `params` и `searchParams` — **Promise**, Prisma client с driver adapter.

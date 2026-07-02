@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MonitorPlay, Star, Sun, Waves } from "lucide-react";
+import { MonitorPlay, Star, Sun, Waves, Layers } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movie-query";
 import { formatDuration } from "@/lib/format";
 import { movieCoverUrlFromMovie } from "@/lib/cover-url";
@@ -17,6 +17,11 @@ import {
   premiumAudio,
   premiumHDR,
 } from "@/lib/spec-tags";
+import {
+  movieHasExternalStorage,
+  movieHasFile,
+  pickPrimaryRelease,
+} from "@/lib/release-primary";
 
 interface MovieCardProps {
   movie: MovieWithTracks;
@@ -24,16 +29,20 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, index = 0 }: MovieCardProps) {
+  const primary = pickPrimaryRelease(movie.releases);
   const coverUrl = movieCoverUrlFromMovie(movie);
-  const premium4K = is4K(movie);
-  const premiumHdr = premiumHDR(movie);
-  const premiumAtmos = premiumAudio(movie);
+  const premium4K = primary ? is4K(primary) : false;
+  const premiumHdr = primary ? premiumHDR(primary) : null;
+  const premiumAtmos = primary ? premiumAudio(primary) : null;
   const isTopTier = Boolean(
-    premium4K && isAnyHDR(movie) && premiumAtmos,
+    primary && premium4K && isAnyHDR(primary) && premiumAtmos,
   );
-  const footerTags = catalogCardTags(movie);
-  const duration = formatDuration(movie.durationSeconds);
+  const footerTags = primary ? catalogCardTags(primary) : [];
+  const duration = formatDuration(primary?.durationSeconds ?? null);
   const genres = orderedMovieGenres(movie);
+  const releaseCount = movie.releases.length;
+  const hasExternal = movieHasExternalStorage(movie.releases);
+  const hasFile = movieHasFile(movie.releases);
 
   return (
     <article
@@ -50,9 +59,6 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
         >
           {isTopTier ? (
             <>
-              {/* Spotlight cone — projector beam from top-left corner.
-                  Dimmed at rest, intensifies on hover so the premium state
-                  escalates rather than feeling weaker than the base. */}
               <span
                 className="pointer-events-none absolute inset-0 z-0 opacity-60 transition-opacity duration-500 group-hover:opacity-100"
                 aria-hidden
@@ -63,7 +69,6 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                   mixBlendMode: "screen",
                 }}
               />
-              {/* Warm top wash — the lit wall behind the beam */}
               <span
                 className="pointer-events-none absolute inset-x-0 top-0 z-0 h-2/3 opacity-70 transition-opacity duration-500 group-hover:opacity-100"
                 aria-hidden
@@ -73,7 +78,6 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                     "radial-gradient(ellipse 75% 55% at 12% -8%, rgba(246,200,120,0.22) 0%, transparent 62%)",
                 }}
               />
-              {/* Faint film grain over the lit area */}
               <span
                 className="pointer-events-none absolute inset-0 z-0 opacity-[0.07]"
                 aria-hidden
@@ -154,6 +158,16 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
             </span>
           ) : null}
 
+          {releaseCount > 1 ? (
+            <span
+              className="font-mono-tech absolute right-2 top-12 z-10 inline-flex items-center gap-1 rounded-full border border-border-strong bg-bg-deep/90 px-2 py-1 text-[0.65rem] text-muted"
+              title={`${releaseCount} релиза`}
+            >
+              <Layers className="h-3 w-3" aria-hidden />
+              ×{releaseCount}
+            </span>
+          ) : null}
+
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-deep via-bg-deep/92 to-transparent px-3 pb-3 pt-16">
             <h3 className="font-display line-clamp-2 text-base font-semibold leading-snug text-text sm:text-lg">
               {movie.title}
@@ -183,16 +197,16 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                     {genreLabel(g.name) ?? g.name}
                   </span>
                 ))}
-                {movie.storage?.type === "EXTERNAL" ? (
+                {hasExternal ? (
                   <span
                     className="font-mono-tech text-[0.6rem] text-accent/80"
-                    title={`Внешний диск: ${movie.storage.name}`}
-                    aria-label={`Внешний диск: ${movie.storage.name}`}
+                    title="Есть релиз на внешнем диске"
+                    aria-label="Есть релиз на внешнем диске"
                   >
                     ▣
                   </span>
                 ) : null}
-                {!movie.filePath ? (
+                {!hasFile ? (
                   <span
                     className="font-mono-tech text-[0.6rem] text-faint"
                     title="Файл не указан"

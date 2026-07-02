@@ -40,17 +40,25 @@ describe("buildMovieWhere", () => {
     );
     expect(where.AND).toEqual([
       {
-        audioTracks: {
+        releases: {
           some: {
-            isDefault: true,
-            language: "rus",
-            profile: { in: ["Atmos", "DTS:X MA"] },
+            audioTracks: {
+              some: {
+                isDefault: true,
+                language: "rus",
+                profile: { in: ["Atmos", "DTS:X MA"] },
+              },
+            },
           },
         },
       },
       {
-        audioTracks: {
-          some: { language: { in: ["rus", "eng"] } },
+        releases: {
+          some: {
+            audioTracks: {
+              some: { language: { in: ["rus", "eng"] } },
+            },
+          },
         },
       },
     ]);
@@ -58,8 +66,12 @@ describe("buildMovieWhere", () => {
 
   it("keeps single audio filter without AND wrapper", () => {
     const where = buildMovieWhere(queryFrom({ language: "rus" }));
-    expect(where.audioTracks).toEqual({
-      some: { language: { in: ["rus"] } },
+    expect(where.releases).toEqual({
+      some: {
+        audioTracks: {
+          some: { language: { in: ["rus"] } },
+        },
+      },
     });
     expect(where.AND).toBeUndefined();
   });
@@ -84,7 +96,7 @@ describe("buildMovieOrder", () => {
       { id: "asc" },
     ]);
     expect(buildMovieOrder(queryFrom({ sort: "durationSeconds" }))).toEqual([
-      { durationSeconds: "asc" },
+      { createdAt: "asc" },
       { id: "asc" },
     ]);
     expect(buildMovieOrder(queryFrom({ sort: "createdAt" }))).toEqual([

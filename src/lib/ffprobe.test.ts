@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { detectVideoHdr } from "./ffprobe";
 
+type HdrStream = Parameters<typeof detectVideoHdr>[0];
+
 describe("detectVideoHdr", () => {
   it("detects DV Profile 8 (HDR10 base) from DOVI side data before smpte2084", () => {
     const stream = {
@@ -22,7 +24,7 @@ describe("detectVideoHdr", () => {
           dv_bl_signal_compatibility_id: 1,
         },
       ],
-    };
+    } as unknown as HdrStream;
 
     expect(detectVideoHdr(stream)).toBe("DV:P8");
   });
@@ -37,7 +39,7 @@ describe("detectVideoHdr", () => {
           dv_bl_signal_compatibility_id: 4,
         },
       ],
-    };
+    } as unknown as HdrStream;
 
     expect(detectVideoHdr(stream)).toBe("DV:P8.4");
   });
@@ -49,7 +51,7 @@ describe("detectVideoHdr", () => {
       color_space: "bt2020nc",
       pix_fmt: "yuv420p10le",
       profile: "Main 10",
-    };
+    } as unknown as HdrStream;
 
     expect(detectVideoHdr(stream)).toBe("HDR10");
   });
@@ -57,7 +59,7 @@ describe("detectVideoHdr", () => {
   it("detects Dolby Vision from tag strings with profile", () => {
     const stream = {
       tags: { title: "Dolby Vision Profile 7 FEL rip" },
-    };
+    } as unknown as HdrStream;
 
     expect(detectVideoHdr(stream)).toBe("DV:P7FEL");
   });
@@ -73,7 +75,7 @@ describe("detectVideoHdr", () => {
           bl_present_flag: 0,
         },
       ],
-    };
+    } as unknown as HdrStream;
 
     expect(detectVideoHdr(stream)).toBe("DV:P7");
   });

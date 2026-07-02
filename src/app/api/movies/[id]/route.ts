@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { movieUpdateSchema } from "@/lib/validators";
 import { movieInclude } from "@/lib/movie-include";
 import { syncMovieGenres } from "@/lib/genres";
-import { syncMovieTracks } from "@/lib/movie-tracks";
 import { resolveMovieSlug } from "@/lib/movie-slug";
+import { computeMatchKey } from "@/lib/movie-match-key";
 import {
   isErrorResponse,
   jsonError,
@@ -19,52 +19,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const body = await request.json();
     const data = movieUpdateSchema.parse(body);
-
-    const {
-      videoTrack,
-      audioTracks,
-      subtitleTracks,
-      genres,
-      watchedAt,
-      filePath,
-      fileSize,
-      fileMtime,
-      fileHash,
-      storageId,
-      version,
-      ...movieData
-    } = data;
-
+    const { genres, watchedAt, ...movieData } = data;
     const genreNames = genres ?? null;
 
-    let nextFileSize: number | null | undefined;
-    let nextFileMtime: Date | null | undefined;
-    let nextFileHash: string | null | undefined;
+    const existing = await prisma.movie.findUnique({
+      where: { id: movieId },
+      select: { title: true, year: true },
+    });
+    if (!existing) return jsonError("Фильм не найден", 404);
 
-    if (filePath !== undefined) {
-      const trimmed = filePath?.trim() || null;
-      if (!trimmed) {
-        nextFileSize = null;
-        nextFileMtime = null;
-        nextFileHash = null;
-      } else if (
-        fileSize !== undefined ||
-        fileMtime !== undefined ||
-        fileHash !== undefined
-      ) {
-        nextFileSize = fileSize ?? null;
-        nextFileMtime = fileMtime ? new Date(fileMtime) : null;
-        nextFileHash = fileHash ?? null;
-      }
-    } else if (
-      fileSize !== undefined ||
-      fileMtime !== undefined ||
-      fileHash !== undefined
-    ) {
-      nextFileSize = fileSize ?? null;
-      nextFileMtime = fileMtime ? new Date(fileMtime) : null;
-      nextFileHash = fileHash ?? null;
-    }
+    const nextTitle = movieData.title ?? existing.title;
+    const nextYear =
+      movieData.year !== undefined ? movieData.year : existing.year;
+    const matchKey = computeMatchKey(nextTitle, nextYear);
 
     const movie = await prisma.$transaction(async (tx) => {
       const slug =
@@ -76,18 +43,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         where: { id: movieId },
         data: {
           ...movieData,
-          ...(version != null ? { version } : {}),
           slug,
-          filePath:
-            filePath === undefined ? undefined : filePath ? filePath : null,
-          fileSize: nextFileSize,
-          fileMtime: nextFileMtime,
-          fileHash: nextFileHash,
-          ...(storageId === undefined
-            ? {}
-            : storageId != null
-              ? { storage: { connect: { id: storageId } } }
-              : { storage: { disconnect: true } }),
+          matchKey,
           watchedAt:
             watchedAt === undefined
               ? undefined
@@ -99,18 +56,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       if (genreNames !== null) {
         await syncMovieGenres(tx, movieId, genreNames);
-      }
-
-      if (
-        videoTrack !== undefined ||
-        audioTracks !== undefined ||
-        subtitleTracks !== undefined
-      ) {
-        await syncMovieTracks(tx, movieId, {
-          videoTrack: videoTrack ?? undefined,
-          audioTracks,
-          subtitleTracks,
-        });
       }
 
       return tx.movie.findUnique({

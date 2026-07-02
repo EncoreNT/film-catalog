@@ -9,6 +9,7 @@ import {
   parseHdrValue,
 } from "./dictionaries";
 import { formatDuration } from "./format";
+import { pickPrimaryRelease } from "./release-primary";
 import {
   is4K,
   isAnyHDR,
@@ -19,6 +20,11 @@ import {
   videoBitrateLabel,
   videoResolutionPixels,
 } from "./spec-tags";
+
+function primaryRelease(movie: MovieWithTracks | null) {
+  if (!movie) return null;
+  return pickPrimaryRelease(movie.releases);
+}
 
 /**
  * Per-slot quality tier. The tier encodes HOW MANY of the three premium
@@ -81,13 +87,14 @@ const RESOLUTION_SHORT: Record<string, string> = {
 };
 
 function slotResolution(movie: MovieWithTracks | null): string | null {
-  const label = movie?.videoTrack?.resolutionLabel;
+  const release = primaryRelease(movie);
+  const label = release?.videoTrack?.resolutionLabel;
   if (!label || label === "other") return null;
   return RESOLUTION_SHORT[label] ?? label;
 }
 
 function slotDynamicRange(movie: MovieWithTracks | null): string | null {
-  const v = movie?.videoTrack;
+  const v = primaryRelease(movie)?.videoTrack;
   if (!v?.hdr) return "SDR";
   const { base } = parseHdrValue(v.hdr);
   if (base === "SDR") return "SDR";
@@ -112,7 +119,8 @@ const AUDIO_SHORT: Record<string, string> = {
 };
 
 function slotAudioShort(movie: MovieWithTracks | null): string | null {
-  const track = movie ? mainAudioTrack(movie) : null;
+  const release = primaryRelease(movie);
+  const track = release ? mainAudioTrack(release) : null;
   if (!track) return null;
   const profile =
     track.profile && track.profile !== "None" ? track.profile : null;
@@ -123,7 +131,8 @@ function slotAudioShort(movie: MovieWithTracks | null): string | null {
 }
 
 function slotAudioFull(movie: MovieWithTracks | null): string | null {
-  const track = movie ? mainAudioTrack(movie) : null;
+  const release = primaryRelease(movie);
+  const track = release ? mainAudioTrack(release) : null;
   return track ? formatAudioLabel(track) : null;
 }
 
@@ -155,9 +164,11 @@ function slotTitle(slot: FranchiseWithSlots["slots"][number]): string | null {
 /** Quality tier for a single linked film (or "missing" when none is linked). */
 export function slotTier(movie: MovieWithTracks | null): SlotTier {
   if (!movie) return "missing";
-  const fourK = is4K(movie);
-  const hdr = isAnyHDR(movie);
-  const atmos = premiumAudio(movie) != null;
+  const release = primaryRelease(movie);
+  if (!release) return "basic";
+  const fourK = is4K(release);
+  const hdr = isAnyHDR(release);
+  const atmos = premiumAudio(release) != null;
   const score = [fourK, hdr, atmos].filter(Boolean).length;
   if (score >= 3) return "elite";
   if (score === 2) return "premium-2";
@@ -176,14 +187,15 @@ export function computeFranchiseSummary(
 
   const slots: FranchiseSlotSummary[] = sorted.map((slot, index) => {
     const movie = (slot.movie ?? null) as MovieWithTracks | null;
+    const release = primaryRelease(movie);
     const filled = slot.movieId != null;
-    const fourK = movie ? is4K(movie) : false;
-    const hdr = movie ? isAnyHDR(movie) : false;
-    const atmos = movie ? premiumAudio(movie) != null : false;
+    const fourK = release ? is4K(release) : false;
+    const hdr = release ? isAnyHDR(release) : false;
+    const atmos = release ? premiumAudio(release) != null : false;
     const elite = fourK && hdr && atmos;
     const durationLabel =
-      movie?.durationSeconds != null
-        ? formatDuration(movie.durationSeconds)
+      release?.durationSeconds != null
+        ? formatDuration(release.durationSeconds)
         : null;
     return {
       index,
@@ -207,15 +219,15 @@ export function computeFranchiseSummary(
       genreLabels: movie
         ? orderedMovieGenres(movie).map((g) => genreLabel(g.name) ?? g.name)
         : [],
-      versionLabel: movie ? displayMovieVersionLabel(movie.version) : null,
-      releaseTypeLabel: movie
-        ? dictLabel(RELEASE_TYPES, movie.releaseType)
+      versionLabel: release ? displayMovieVersionLabel(release.version) : null,
+      releaseTypeLabel: release
+        ? dictLabel(RELEASE_TYPES, release.releaseType)
         : null,
-      videoCodec: movie?.videoTrack?.codec
-        ? codecShort(movie.videoTrack.codec)
+      videoCodec: release?.videoTrack?.codec
+        ? codecShort(release.videoTrack.codec)
         : null,
-      videoBitrate: movie ? videoBitrateLabel(movie) : null,
-      resolutionPixels: movie ? videoResolutionPixels(movie) : null,
+      videoBitrate: release ? videoBitrateLabel(release) : null,
+      resolutionPixels: release ? videoResolutionPixels(release) : null,
     };
   });
 
@@ -237,8 +249,9 @@ export function computeFranchiseSummary(
   for (const slot of sorted) {
     const movie = slot.movie as MovieWithTracks | null;
     if (!movie) continue;
-    if (movie.durationSeconds && movie.durationSeconds > 0) {
-      runtimeSeconds += movie.durationSeconds;
+    const release = primaryRelease(movie);
+    if (release?.durationSeconds && release.durationSeconds > 0) {
+      runtimeSeconds += release.durationSeconds;
       runtimeHas = true;
     }
     if (movie.rating != null) {
@@ -246,9 +259,10 @@ export function computeFranchiseSummary(
       ratedCount += 1;
     }
     if (
-      is4K(movie) &&
-      isAnyHDR(movie) &&
-      premiumAudio(movie) != null
+      release &&
+      is4K(release) &&
+      isAnyHDR(release) &&
+      premiumAudio(release) != null
     ) {
       ownedElite += 1;
     }

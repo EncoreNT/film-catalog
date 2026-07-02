@@ -1,10 +1,37 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# AGENTS.md — Film Catalog
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+Домашний каталог фильмов на Next.js 16 + SQLite. Подробные спеки для AI — в **`.cursor/rules/`**.
 
-## Cover orientation convention
+## Быстрый старт
 
-- **Movie covers are vertical** (portrait, 2:3). Rendered with `object-cover` in portrait containers (e.g. `aspect-[2/3]`).
-- **Franchise covers are horizontal** (landscape, 16:9). The list card (`FranchiseCard`) and the detail hero both render the cover with `object-cover` in a 16:9 frame (`aspect-[16/9]`). Upload 16:9 artwork — other aspect ratios are center-cropped to fill the frame. The upload UI (`FranchiseCoverUpload`) previews and hints 16:9.
+```bash
+npm install && npm run db:migrate && npm run dev
+```
+
+Требования: Node 20+, ffprobe в PATH. Данные: `data/catalog.db`, `data/covers/`.
+
+## Документация для моделей
+
+| Rule | Когда читать |
+|------|--------------|
+| [`00-project-overview`](.cursor/rules/00-project-overview.mdc) | Всегда — стек, команды, язык UI |
+| [`01-architecture`](.cursor/rules/01-architecture.mdc) | Всегда — структура, слои, маршруты, потоки данных |
+| [`02-data-model`](.cursor/rules/02-data-model.mdc) | Prisma, lib — сущности, связи, zod |
+| [`03-api-routes`](.cursor/rules/03-api-routes.mdc) | `src/app/api/**` |
+| [`04-nextjs-ui`](.cursor/rules/04-nextjs-ui.mdc) | Pages, components, дизайн-система |
+| [`05-domain-pipelines`](.cursor/rules/05-domain-pipelines.mdc) | scanner, ffprobe, фильтры, обложки |
+| [`06-engineering-standards`](.cursor/rules/06-engineering-standards.mdc) | **Всегда** — ADR, тесты, слои, reuse, БД |
+
+**Перед ресерчем кодовой базы** — открыть релевантные rules.
+
+## ADR
+
+Архитектурные решения — [`docs/adr/`](docs/adr/README.md). Шаблон и правила в README.
+
+## Next.js 16
+
+Breaking changes относительно training data. Перед правками App Router читать `node_modules/next/dist/docs/`. `params` / `searchParams` — Promise.
+
+## Человеческая документация
+
+[`README.md`](README.md) — установка, SCAN_ROOT, возможности.
