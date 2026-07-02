@@ -2,16 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Library } from "lucide-react";
 import { Button } from "./primitives/Button";
 import { ConfirmDialog } from "./primitives/ConfirmDialog";
 
 interface MovieApproveButtonProps {
   movieId: number;
   title: string;
+  /** Компактный вид для шапки карточки фильма. */
+  compact?: boolean;
 }
 
-export function MovieApproveButton({ movieId, title }: MovieApproveButtonProps) {
+export function MovieApproveButton({
+  movieId,
+  title,
+  compact = false,
+}: MovieApproveButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,8 +42,16 @@ export function MovieApproveButton({ movieId, title }: MovieApproveButtonProps) 
 
   return (
     <>
-      <Button type="button" variant="primary" onClick={() => setOpen(true)}>
-        <Library className="h-4 w-4" aria-hidden />
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setOpen(true)}
+        className={
+          compact
+            ? "font-mono-tech min-h-8 px-3 py-1.5 text-[11px] tracking-wide"
+            : undefined
+        }
+      >
         В каталог
       </Button>
 

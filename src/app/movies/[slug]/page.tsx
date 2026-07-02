@@ -62,18 +62,13 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
 
   return (
     <div className="space-y-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link
-          href="/"
-          className="focus-ring inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-accent"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Назад к каталогу
-        </Link>
-        {movie.status === "DRAFT" ? (
-          <MovieApproveButton movieId={movie.id} title={movie.title} />
-        ) : null}
-      </div>
+      <Link
+        href="/"
+        className="focus-ring inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-accent"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Назад к каталогу
+      </Link>
 
       {mergeCandidates.length > 1 ? (
         <DuplicateMergeBanner
@@ -105,14 +100,23 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
 
         <div className="space-y-8">
           <header>
-            <div className="flex items-start justify-between gap-4">
-              <p className="font-mono-tech text-accent">
-                {movie.status === "DRAFT"
-                  ? "черновик"
-                  : movie.status === "EXCLUDED"
-                    ? "исключён"
-                    : "каталог"}
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-mono-tech text-accent">
+                  {movie.status === "DRAFT"
+                    ? "черновик"
+                    : movie.status === "EXCLUDED"
+                      ? "исключён"
+                      : "каталог"}
+                </p>
+                {movie.status === "DRAFT" ? (
+                  <MovieApproveButton
+                    compact
+                    movieId={movie.id}
+                    title={movie.title}
+                  />
+                ) : null}
+              </div>
               <Link
                 href={`/movies/${movie.slug}/edit`}
                 className="focus-ring font-mono-tech -mt-0.5 inline-flex shrink-0 items-center gap-1 text-[11px] text-faint transition-colors hover:text-accent"
