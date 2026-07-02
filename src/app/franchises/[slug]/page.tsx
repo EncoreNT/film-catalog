@@ -18,8 +18,8 @@ import { getFranchiseMetrics } from "@/lib/franchise-metrics";
 import {
   countFilledSlots,
   countTotalSlots,
-  pluralFilms,
 } from "@/lib/franchise-utils";
+import { pluralRu } from "@/lib/russian-plural";
 import { FranchiseCompletionMeter } from "@/components/FranchiseCompletionMeter";
 import { FranchiseSlotsView } from "@/components/FranchiseSlotsView";
 
@@ -142,7 +142,7 @@ export default async function FranchisePage({ params }: PageProps) {
               <div className="max-w-3xl space-y-4">
                 <div>
                   <p className="font-mono-tech text-accent">
-                    {total} {pluralFilms(total)}
+                    {total} {pluralRu(total, "фильм", "фильма", "фильмов")}
                   </p>
                   <h1 className="font-display mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
                     {franchise.name}

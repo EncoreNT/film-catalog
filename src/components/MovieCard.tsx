@@ -24,6 +24,7 @@ import {
   movieHasFile,
   pickPrimaryRelease,
 } from "@/lib/release-primary";
+import { pluralRu } from "@/lib/russian-plural";
 
 interface MovieCardProps {
   movie: MovieWithTracks;
@@ -44,6 +45,12 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const duration = formatDuration(primary?.durationSeconds ?? null);
   const genres = orderedMovieGenres(movie);
   const releaseCount = movie.releases.length;
+  const releaseCountLabel = `${releaseCount} ${pluralRu(
+    releaseCount,
+    "релиз",
+    "релиза",
+    "релизов",
+  )}`;
   const hasExternal = movieHasExternalStorage(movie.releases);
   const hasFile = movieHasFile(movie.releases);
 
@@ -175,8 +182,8 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                 >
                   <span
                     className="font-mono-tech inline-flex cursor-pointer items-center gap-1 rounded-full border border-accent/25 bg-bg-deep/85 px-1.5 py-0.5 text-[0.6rem] tabular-nums text-accent/70 backdrop-blur-sm transition-colors duration-300 group-hover:border-accent/45 group-hover:text-accent/90"
-                    title={`${releaseCount} ${releaseCount === 1 ? "релиз" : releaseCount < 5 ? "релиза" : "релизов"} у фильма`}
-                    aria-label={`${releaseCount} ${releaseCount === 1 ? "релиз" : releaseCount < 5 ? "релиза" : "релизов"} у фильма. Наведите для списка.`}
+                    title={`${releaseCountLabel} у фильма`}
+                    aria-label={`${releaseCountLabel} у фильма. Наведите для списка.`}
                   >
                     <Layers className="h-3 w-3" aria-hidden />
                     {releaseCount}

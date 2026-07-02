@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search } from "lucide-react";
 import { InfoHint } from "./InfoHint";
 import {
@@ -28,6 +38,16 @@ interface SelectProps {
   compact?: boolean;
 }
 
+interface MenuCoords {
+  top: number;
+  left: number;
+  minWidth: number;
+}
+
+const emptySubscribe = () => () => {};
+const getMounted = () => true;
+const getServerSnapshot = () => false;
+
 export function Select({
   value,
   onChange,
@@ -42,8 +62,16 @@ export function Select({
 }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuCoords, setMenuCoords] = useState<MenuCoords | null>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    getMounted,
+    getServerSnapshot,
+  );
 
   const ordered = useMemo(
     () => sortOptions(options, preserveOrder),
@@ -73,17 +101,49 @@ export function Select({
     return `${ch}rem`;
   }, [ordered, selected.label]);
 
-  const close = () => {
+  const close = useCallback(() => {
     setOpen(false);
     setQuery("");
-  };
+    setMenuCoords(null);
+  }, []);
+
+  const updateMenuCoords = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    setMenuCoords({
+      top: rect.bottom + 8,
+      left: rect.left,
+      minWidth: rect.width,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPortalTarget(null);
+      return;
+    }
+    const host = triggerRef.current?.closest("dialog");
+    const dialog =
+      host instanceof HTMLDialogElement && host.open ? host : null;
+    setPortalTarget(dialog ?? document.body);
+    updateMenuCoords();
+    const onLayoutChange = () => updateMenuCoords();
+    window.addEventListener("scroll", onLayoutChange, true);
+    window.addEventListener("resize", onLayoutChange);
+    return () => {
+      window.removeEventListener("scroll", onLayoutChange, true);
+      window.removeEventListener("resize", onLayoutChange);
+    };
+  }, [open, updateMenuCoords]);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        close();
-      }
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (listRef.current?.contains(target)) return;
+      close();
     };
     const esc = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
@@ -94,7 +154,69 @@ export function Select({
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("keydown", esc);
     };
-  }, [open]);
+  }, [open, close]);
+
+  const listbox = open && menuCoords ? (
+    <ul
+      ref={listRef}
+      role="listbox"
+      className="surface-elevated scroll-subtle fixed z-[80] max-h-72 w-max max-w-[min(90vw,20rem)] overflow-auto p-1 shadow-2xl"
+      style={{
+        top: menuCoords.top,
+        left: menuCoords.left,
+        minWidth: menuCoords.minWidth,
+      }}
+    >
+      {showSearch ? (
+        <li className="px-1 pb-1 pt-2">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted/60"
+              aria-hidden
+            />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onBlur={() => {
+                const trimmed = trimInput(query);
+                if (trimmed !== query) setQuery(trimmed);
+              }}
+              placeholder="Поиск…"
+              className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
+            />
+          </div>
+        </li>
+      ) : null}
+      {filtered.length === 0 ? (
+        <li className="px-3 py-2 text-sm text-muted">Ничего не найдено</li>
+      ) : null}
+      {filtered.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <li key={opt.value} role="option" aria-selected={active}>
+            <button
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                close();
+              }}
+              className={`flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm transition-colors ${
+                active
+                  ? "bg-accent/10 text-accent"
+                  : "text-text hover:bg-bg-surface-hover"
+              }`}
+            >
+              <span className="whitespace-nowrap">{opt.label}</span>
+              {active ? (
+                <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+              ) : null}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  ) : null;
 
   return (
     <div className={compact ? "relative" : "flex flex-col gap-2"}>
@@ -106,7 +228,7 @@ export function Select({
           {hint ? <InfoHint text={hint} label={label} /> : null}
         </div>
       )}
-      <div className="relative" ref={ref}>
+      <div className="relative" ref={triggerRef}>
         <button
           id={fieldId}
           type="button"
@@ -136,63 +258,11 @@ export function Select({
             aria-hidden
           />
         </button>
-
-        {open ? (
-          <ul
-            role="listbox"
-            className="surface-elevated absolute z-50 mt-2 max-h-72 min-w-full w-max max-w-[min(90vw,20rem)] overflow-auto p-1 shadow-2xl"
-          >
-            {showSearch ? (
-              <li className="px-1 pb-1 pt-2">
-                <div className="relative">
-                  <Search
-                    className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted/60"
-                    aria-hidden
-                  />
-                  <input
-                    autoFocus
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onBlur={() => {
-                      const trimmed = trimInput(query);
-                      if (trimmed !== query) setQuery(trimmed);
-                    }}
-                    placeholder="Поиск…"
-                    className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
-                  />
-                </div>
-              </li>
-            ) : null}
-            {filtered.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-muted">Ничего не найдено</li>
-            ) : null}
-            {filtered.map((opt) => {
-              const active = opt.value === value;
-              return (
-                <li key={opt.value} role="option" aria-selected={active}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange(opt.value);
-                      close();
-                    }}
-                    className={`flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm transition-colors ${
-                      active
-                        ? "bg-accent/10 text-accent"
-                        : "text-text hover:bg-bg-surface-hover"
-                    }`}
-                  >
-                    <span className="whitespace-nowrap">{opt.label}</span>
-                    {active ? (
-                      <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-                    ) : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
       </div>
+
+      {mounted && listbox && portalTarget
+        ? createPortal(listbox, portalTarget)
+        : null}
     </div>
   );
 }

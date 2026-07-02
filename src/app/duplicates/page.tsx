@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { findAllDuplicateGroups } from "@/lib/alternative-quality";
+import { pluralRu } from "@/lib/russian-plural";
 
 export default async function DuplicatesPage() {
   const groups = await findAllDuplicateGroups();
@@ -39,7 +40,12 @@ export default async function DuplicatesPage() {
                       </Link>
                       <p className="font-mono-tech mt-0.5 text-xs text-muted">
                         {movie.status.toLowerCase()} · {movie._count.releases}{" "}
-                        {movie._count.releases === 1 ? "релиз" : "релиза"}
+                        {pluralRu(
+                          movie._count.releases,
+                          "релиз",
+                          "релиза",
+                          "релизов",
+                        )}
                       </p>
                     </div>
                     {group.movies.length >= 2 ? (

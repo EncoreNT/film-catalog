@@ -9,10 +9,12 @@ import {
   Copy,
   CopyPlus,
   Disc3,
+  HardDrive,
   Layers,
   Menu,
   MonitorPlay,
   Pencil,
+  Plug,
   Plus,
   ScanSearch,
   Star,
@@ -34,6 +36,26 @@ interface MovieReleasePanelProps {
   initialActiveReleaseId: number;
 }
 
+function ReleaseTabStorageIcon({
+  external,
+  label,
+}: {
+  external: boolean;
+  label: string | null;
+}) {
+  const Icon = external ? Plug : HardDrive;
+  const title = external
+    ? label
+      ? `Внешний диск · ${label}`
+      : "Внешний диск"
+    : "Локальный диск";
+
+  return (
+    <span title={title} className="inline-flex shrink-0">
+      <Icon className="h-3 w-3" aria-hidden />
+    </span>
+  );
+}
 function tagIcon(kind: ReleaseDetailView["tags"][number]["kind"]) {
   switch (kind) {
     case "resolution":
@@ -634,22 +656,28 @@ export function MovieReleasePanel({
                   aria-selected={active}
                   aria-controls={`release-panel-${release.id}`}
                   onClick={() => selectRelease(release.id)}
-                  className={`focus-ring font-mono-tech rounded-t-[calc(var(--radius)-2px)] border px-4 py-2.5 text-xs transition-colors ${
+                  className={`focus-ring font-mono-tech inline-flex items-center gap-1.5 rounded-t-[calc(var(--radius)-2px)] border px-4 py-2.5 text-xs transition-colors ${
                     active
                       ? "border-border border-b-transparent bg-bg-surface text-accent shadow-[inset_0_1px_0_var(--accent-glow)]"
                       : "border-transparent bg-transparent text-muted hover:text-text"
                   }`}
                 >
+                  <ReleaseTabStorageIcon
+                    external={release.storageExternal}
+                    label={release.storageLabel}
+                  />
                   {release.label}
                 </button>
               );
             })}
           </div>
         ) : (
-          <div className="px-5 py-3 sm:px-6">
-            <p className="font-mono-tech text-faint">
-              релиз · {activeRelease.label}
-            </p>
+          <div className="flex items-center gap-1.5 px-5 py-3 text-faint sm:px-6">
+            <ReleaseTabStorageIcon
+              external={activeRelease.storageExternal}
+              label={activeRelease.storageLabel}
+            />
+            <p className="font-mono-tech">релиз · {activeRelease.label}</p>
           </div>
         )}
         <ReleasePanelActions

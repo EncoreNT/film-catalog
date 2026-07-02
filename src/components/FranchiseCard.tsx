@@ -5,7 +5,7 @@ import { Clapperboard, Star } from "lucide-react";
 import type { FranchiseWithSlots } from "@/lib/franchise-include";
 import { franchiseCoverUrlFromFranchise } from "@/lib/franchise-cover-url";
 import { computeFranchiseSummary } from "@/lib/franchise-summary";
-import { pluralFilms } from "@/lib/franchise-utils";
+import { pluralRu } from "@/lib/russian-plural";
 import { FranchiseQualityReel } from "./FranchiseQualityReel";
 
 interface FranchiseCardProps {
@@ -84,7 +84,7 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
           <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
             <div className="min-w-0">
               <p className="font-mono-tech text-[0.65rem] text-accent">
-                {summary.total} {pluralFilms(summary.total)}
+                {summary.total} {pluralRu(summary.total, "фильм", "фильма", "фильмов")}
               </p>
               <h3 className="font-display mt-0.5 line-clamp-2 text-xl font-bold text-text">
                 {franchise.name}
@@ -119,7 +119,7 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
               value={rating}
               title={
                 summary.ratedCount > 0
-                  ? `Средняя оценка ${rating} по ${summary.ratedCount} ${pluralFilms(summary.ratedCount)}`
+                  ? `Средняя оценка ${rating} по ${summary.ratedCount} ${pluralRu(summary.ratedCount, "фильму", "фильмам", "фильмам")}`
                   : "Нет оценённых фильмов"
               }
               icon={
@@ -131,7 +131,8 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
               extra={
                 summary.ratedCount > 0 ? (
                   <span className="font-mono-tech shrink-0 text-[0.6rem] text-faint">
-                    · {summary.ratedCount} {pluralFilms(summary.ratedCount)}
+                    · {summary.ratedCount}{" "}
+                    {pluralRu(summary.ratedCount, "фильм", "фильма", "фильмов")}
                   </span>
                 ) : null
               }

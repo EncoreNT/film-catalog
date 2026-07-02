@@ -5,9 +5,13 @@ import Link from "next/link";
 import { Check, Loader2 } from "lucide-react";
 import type { MergeCandidate } from "@/lib/merge-preview-types";
 import { movieStatusLabel } from "@/lib/merge-preview-types";
+import { formatMergeCandidateSelectLabel } from "@/lib/merge-candidate-label";
+import { displayFilePath } from "@/lib/display-path";
+import { pluralRu } from "@/lib/russian-plural";
 import { Modal } from "./primitives/Modal";
 import { Button } from "./primitives/Button";
 import { Radio } from "./primitives/Radio";
+import { Select } from "./primitives/Select";
 import { ApiCoverImage } from "./primitives/ApiCoverImage";
 
 type FieldChoice = "canonical" | "other";
@@ -32,6 +36,14 @@ function formatWatchedAt(iso: string | null): string | null {
     month: "short",
     year: "numeric",
   });
+}
+
+function releaseCountLabel(count: number): string {
+  return `${count} ${pluralRu(count, "релиз", "релиза", "релизов")}`;
+}
+
+function cardCountLabel(count: number): string {
+  return `${count} ${pluralRu(count, "карточка", "карточки", "карточек")}`;
 }
 
 function CandidateCard({
@@ -78,14 +90,15 @@ function CandidateCard({
 
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono-tech text-sm text-accent">#{candidate.id}</span>
             {isCanonical ? (
               <span className="font-mono-tech rounded-full border border-accent/50 bg-accent/15 px-2 py-0.5 text-[10px] text-accent">
-                каноничный
+                основная
               </span>
             ) : null}
             {isOther ? (
               <span className="font-mono-tech rounded-full border border-red-400/40 bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">
-                будет удалён
+                будет удалена
               </span>
             ) : null}
             {isCurrentPage ? (
@@ -98,13 +111,6 @@ function CandidateCard({
             </span>
           </div>
 
-          <p className="font-display text-base font-semibold leading-tight text-text">
-            {candidate.title}
-            {candidate.year ? (
-              <span className="font-normal text-muted"> ({candidate.year})</span>
-            ) : null}
-          </p>
-
           <div className="font-mono-tech flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted">
             {candidate.rating != null ? (
               <span>★ {candidate.rating.toFixed(1)}</span>
@@ -114,10 +120,7 @@ function CandidateCard({
             {candidate.watchedAt ? (
               <span>· просмотр {formatWatchedAt(candidate.watchedAt)}</span>
             ) : null}
-            <span>
-              · {candidate.releases.length}{" "}
-              {candidate.releases.length === 1 ? "релиз" : "релиза"}
-            </span>
+            <span>· {releaseCountLabel(candidate.releases.length)}</span>
             {candidate.coverUrl ? <span>· обложка</span> : null}
           </div>
         </div>
@@ -160,10 +163,12 @@ function CandidateCard({
             ) : null}
             {release.storageName ? (
               <span className="text-muted"> · {release.storageName}</span>
-            ) : null}
+            ) : (
+              <span className="text-muted"> · локальный</span>
+            )}
             {release.filePath ? (
               <span className="mt-0.5 block truncate text-[10px] text-faint">
-                {release.filePath}
+                {displayFilePath(release.filePath)}
               </span>
             ) : null}
           </li>
@@ -254,6 +259,14 @@ export function MergeMoviesModal({
 
   const canonical = candidates.find((c) => c.id === canonicalId) ?? candidates[0];
   const others = candidates.filter((c) => c.id !== canonicalId);
+  const otherOptions = useMemo(
+    () =>
+      others.map((dup) => ({
+        value: String(dup.id),
+        label: formatMergeCandidateSelectLabel(dup),
+      })),
+    [others],
+  );
   const other =
     candidates.find((c) => c.id === otherId && c.id !== canonicalId) ??
     others[0] ??
@@ -325,6 +338,9 @@ export function MergeMoviesModal({
     }
   };
 
+  const groupTitle = candidates[0]?.title ?? "";
+  const groupYear = candidates[0]?.year ?? null;
+
   const hasConflicts =
     conflicts.description ||
     conflicts.coverPath ||
@@ -362,9 +378,23 @@ export function MergeMoviesModal({
     >
       <div className="space-y-5">
         <p className="text-sm text-muted">
-          Выберите, какая карточка останется каноничной. Релизы второго фильма
-          перейдут под неё, файлы и треки сохранятся.
+          Выберите карточку, которая останется основной. Релизы второй карточки
+          перейдут в неё; файлы и дорожки сохранятся.
         </p>
+
+        {groupTitle ? (
+          <div className="rounded-[var(--radius)] border border-border bg-bg-elevated px-4 py-3">
+            <p className="font-mono-tech text-[10px] text-faint">
+              {cardCountLabel(candidates.length)} в группе дублей
+            </p>
+            <h3 className="font-display mt-1 text-xl font-semibold leading-tight text-text">
+              {groupTitle}
+              {groupYear ? (
+                <span className="font-normal text-muted"> ({groupYear})</span>
+              ) : null}
+            </h3>
+          </div>
+        ) : null}
 
         <div className="grid gap-3 lg:grid-cols-2">
           {candidates.map((candidate) => (
@@ -381,23 +411,15 @@ export function MergeMoviesModal({
 
         {others.length > 1 ? (
           <div>
-            <label className="font-mono-tech mb-2 block text-xs text-faint">
-              объединить сейчас с
-            </label>
-            <select
-              value={other?.id ?? ""}
-              onChange={(e) => setOtherId(Number(e.target.value))}
-              className="focus-ring w-full rounded-[var(--radius)] border border-border-strong bg-bg-surface px-3 py-2 text-sm text-text"
-            >
-              {others.map((dup) => (
-                <option key={dup.id} value={dup.id}>
-                  {dup.title}
-                  {dup.year ? ` (${dup.year})` : ""} — {dup.releases.length} рел.
-                </option>
-              ))}
-            </select>
+            <Select
+              label="С какой карточкой объединить"
+              value={other ? String(other.id) : otherOptions[0]?.value ?? ""}
+              onChange={(v) => setOtherId(Number(v))}
+              options={otherOptions}
+              preserveOrder
+            />
             <p className="mt-1 text-xs text-faint">
-              Остальные дубли можно объединить повторно после этого шага.
+              Остальные дубли можно будет объединить следующим шагом.
             </p>
           </div>
         ) : null}
@@ -408,9 +430,9 @@ export function MergeMoviesModal({
               <Check className="h-4 w-4 text-accent" aria-hidden />
               После объединения:{" "}
               <strong>
-                {canonical.releases.length + other.releases.length} релиза
+                {releaseCountLabel(canonical.releases.length + other.releases.length)}
               </strong>{" "}
-              под «{canonical.title}»
+              в карточке #{canonical.id}
             </p>
           </div>
         ) : null}
@@ -418,13 +440,13 @@ export function MergeMoviesModal({
         {hasConflicts && canonical && other ? (
           <div className="space-y-4 rounded-[var(--radius)] border border-border-strong bg-bg-surface p-4">
             <p className="font-mono-tech text-xs text-muted">
-              конфликтующие поля — выберите, что сохранить
+              поля с разными значениями — выберите, что сохранить
             </p>
             {conflicts.rating ? (
               <ConflictPicker
                 label="оценка"
-                canonicalLabel={`★ ${canonical.rating!.toFixed(1)} (каноничный)`}
-                otherLabel={`★ ${other.rating!.toFixed(1)} (удаляемый)`}
+                canonicalLabel={`★ ${canonical.rating!.toFixed(1)} (основная карточка)`}
+                otherLabel={`★ ${other.rating!.toFixed(1)} (удаляемая карточка)`}
                 value={choices.rating ?? "canonical"}
                 onChange={(v) => setChoices((c) => ({ ...c, rating: v }))}
               />
@@ -441,8 +463,8 @@ export function MergeMoviesModal({
             {conflicts.coverPath ? (
               <ConflictPicker
                 label="обложка"
-                canonicalLabel="обложка каноничного"
-                otherLabel="обложка удаляемого"
+                canonicalLabel="обложка основной карточки"
+                otherLabel="обложка удаляемой карточки"
                 value={choices.coverPath ?? "canonical"}
                 onChange={(v) => setChoices((c) => ({ ...c, coverPath: v }))}
               />

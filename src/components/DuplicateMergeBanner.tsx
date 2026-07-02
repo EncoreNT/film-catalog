@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Layers } from "lucide-react";
 import type { MergeCandidate } from "@/lib/merge-preview-types";
+import { formatMergeCandidateFacts } from "@/lib/merge-candidate-label";
+import { pluralRu } from "@/lib/russian-plural";
 import { MergeMoviesModal } from "./MergeMoviesModal";
 
 interface DuplicateMergeBannerProps {
@@ -22,6 +24,16 @@ export function DuplicateMergeBanner({
   const duplicates = candidates.filter((c) => c.id !== currentMovieId);
   if (duplicates.length === 0) return null;
 
+  const current = candidates.find((c) => c.id === currentMovieId);
+  const groupTitle = current?.title ?? duplicates[0]?.title ?? "";
+  const groupYear = current?.year ?? duplicates[0]?.year ?? null;
+  const matchLabel = pluralRu(
+    duplicates.length,
+    "совпадение",
+    "совпадения",
+    "совпадений",
+  );
+
   return (
     <>
       <div className="surface-card flex flex-col gap-3 border border-accent/25 bg-accent/5 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -29,12 +41,19 @@ export function DuplicateMergeBanner({
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden />
           <div>
             <p className="text-sm font-medium text-text">
-              Похоже, это дубль другого фильма
+              Похоже, у этой карточки есть дубли
             </p>
+            {groupTitle ? (
+              <p className="font-display mt-1 text-base font-semibold text-text">
+                {groupTitle}
+                {groupYear ? (
+                  <span className="font-normal text-muted"> ({groupYear})</span>
+                ) : null}
+              </p>
+            ) : null}
             <p className="mt-1 text-sm text-muted">
-              Найдено {duplicates.length}{" "}
-              {duplicates.length === 1 ? "совпадение" : "совпадения"} по названию и году.
-              Объедините, чтобы собрать релизы в одной карточке.
+              Найдено {duplicates.length} {matchLabel} с таким же названием.
+              Объедините карточки, чтобы собрать релизы вместе.
             </p>
             <ul className="mt-2 space-y-1 text-xs text-muted">
               {duplicates.map((dup) => (
@@ -43,15 +62,10 @@ export function DuplicateMergeBanner({
                     href={`/movies/${dup.slug}`}
                     className="text-accent hover:underline"
                   >
-                    {dup.title}
-                    {dup.year ? ` (${dup.year})` : ""}
+                    #{dup.id}
                   </Link>
                   {" · "}
-                  {dup.releases.length}{" "}
-                  {dup.releases.length === 1 ? "релиз" : "релиза"}
-                  {dup.releases.length > 0
-                    ? ` (${dup.releases.map((r) => r.label).join(", ")})`
-                    : null}
+                  {formatMergeCandidateFacts(dup)}
                 </li>
               ))}
             </ul>

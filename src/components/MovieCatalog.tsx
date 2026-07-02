@@ -15,6 +15,7 @@ import { ArrowDownUp, Loader2, MonitorPlay, Plus, ScanSearch, Sparkles, Sun, Wav
 import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import { QualityGauge } from "./QualityGauge";
 import type { ArchiveMetrics } from "@/lib/archive-metrics";
+import { pluralRu } from "@/lib/russian-plural";
 
 const AddMovieForm = dynamic(
   () => import("./AddMovieForm").then((module) => module.AddMovieForm),
@@ -29,15 +30,6 @@ const SORT_OPTIONS = [
   { value: "watchedAt", label: "Дата просмотра" },
   { value: "durationSeconds", label: "Продолжительность" },
 ] as const;
-
-function pluralFilm(n: number): string {
-  const mod100 = n % 100;
-  const mod10 = n % 10;
-  if (mod100 >= 11 && mod100 <= 19) return "фильмов";
-  if (mod10 === 1) return "фильм";
-  if (mod10 >= 2 && mod10 <= 4) return "фильма";
-  return "фильмов";
-}
 
 interface Facet {
   value: string | null;
@@ -386,7 +378,7 @@ export function MovieCatalog({
             {total}
           </span>
           <span className="font-mono-tech text-sm text-muted">
-            {pluralFilm(total)}
+            {pluralRu(total, "фильм", "фильма", "фильмов")}
           </span>
         </div>
 
