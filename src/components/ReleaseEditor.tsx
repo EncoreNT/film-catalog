@@ -175,9 +175,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [confirmKind, setConfirmKind] = useState<null | "delete" | "probe">(
-    null,
-  );
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const markDirty = () => setIsDirty(true);
@@ -312,29 +310,6 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     }
   };
 
-  const handleRescan = async () => {
-    if (!release) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/movies/${movieId}/releases/${release.id}/probe`,
-        { method: "POST" },
-      );
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Не удалось проанализировать файл");
-      }
-      setConfirmKind(null);
-      setIsDirty(false);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleDelete = async () => {
     if (!release) return;
     setActionLoading(true);
@@ -348,7 +323,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
         const data = await res.json();
         throw new Error(data.error ?? "Не удалось удалить релиз");
       }
-      setConfirmKind(null);
+      setConfirmDelete(false);
       router.push(`/movies/${movieSlug}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
@@ -382,21 +357,41 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     mode === "edit" && release ? releaseTabLabel(release) : "новый релиз";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 pb-28">
-      <div className="space-y-6">
-        <div className="surface-card space-y-6 p-5">
-          <h2 className="font-display text-xl font-semibold">
-            Релиз · {releaseLabel}
-          </h2>
+    <form onSubmit={handleSubmit} className="pb-28">
+      <div className="surface-card mb-6 space-y-5 p-5 sm:p-6">
+        <h2 className="font-display text-xl font-semibold">
+          Релиз · {releaseLabel}
+        </h2>
 
-          <Field
-            label="Путь к файлу"
-            placeholder="/Volumes/Seagate/Movies/film.mkv"
-            hint="Абсолютный путь к видеофайлу. Для чтения дорожек нажмите «Заполнить данные из файла»."
-          >
+        <StoragePicker
+          compact
+          storageKind={form.storageKind}
+          onStorageKindChange={(value) => {
+            form.setStorageKind(value);
+            markDirty();
+          }}
+          externalStorages={form.externalStorages}
+          selectedStorageId={form.selectedStorageId}
+          onSelectedStorageIdChange={(value) => {
+            form.setSelectedStorageId(value);
+            markDirty();
+          }}
+          newStorageName={form.newStorageName}
+          onNewStorageNameChange={(value) => {
+            form.setNewStorageName(value);
+            markDirty();
+          }}
+        />
+
+        <Field
+          label="Путь к файлу"
+          placeholder="/Volumes/Seagate/Movies/film.mkv"
+          hint="Абсолютный путь к видеофайлу."
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <input
               id="путь-к-файлу"
-              className={`focus-ring min-h-11 w-full rounded-[var(--radius)] border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${
+              className={`focus-ring min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${
                 form.fileFillError ? "border-danger/50" : "border-border"
               }`}
               value={form.filePath}
@@ -421,100 +416,56 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
               }
               placeholder="/Volumes/Seagate/Movies/film.mkv"
             />
-            <div className="space-y-2 pt-1">
-              <Button
-                type="button"
-                variant="secondary"
-                loading={form.fillingFromFile}
-                onClick={handleFillFromFile}
-                disabled={!form.filePath.trim() || form.fillingFromFile}
+            <Button
+              type="button"
+              variant="secondary"
+              loading={form.fillingFromFile}
+              onClick={handleFillFromFile}
+              disabled={!form.filePath.trim() || form.fillingFromFile}
+              className="shrink-0 sm:mt-0"
+            >
+              <ScanSearch className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Заполнить из файла</span>
+              <span className="sm:hidden">Из файла</span>
+            </Button>
+          </div>
+          <div id="file-path-fill-feedback" className="pt-1">
+            {form.fileFillError ? (
+              <p
+                className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+                role="alert"
               >
-                <ScanSearch className="h-4 w-4" aria-hidden />
-                Заполнить данные из файла
-              </Button>
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>{form.fileFillError}</span>
+              </p>
+            ) : form.fileFillMessage ? (
+              <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+                <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>{form.fileFillMessage}</span>
+              </p>
+            ) : form.pendingFileMeta ? (
+              <p className="text-xs text-accent">
+                Метаданные файла готовы к сохранению
+              </p>
+            ) : form.filePath.trim() ? (
+              <p className="text-xs text-faint">
+                файл не проверялся — путь сохранится как указано
+              </p>
+            ) : (
+              <p className="text-xs text-faint">
+                не указан — будет сброшен при сохранении
+              </p>
+            )}
+          </div>
+        </Field>
+      </div>
 
-              <div id="file-path-fill-feedback">
-                {form.fileFillError ? (
-                  <p
-                    className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
-                    role="alert"
-                  >
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                    <span>{form.fileFillError}</span>
-                  </p>
-                ) : form.fileFillMessage ? (
-                  <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                    <span>{form.fileFillMessage}</span>
-                  </p>
-                ) : form.pendingFileMeta ? (
-                  <p className="text-xs text-accent">
-                    Метаданные файла готовы к сохранению
-                  </p>
-                ) : form.filePath.trim() ? (
-                  <p className="text-xs text-faint">
-                    файл не проверялся — путь сохранится как указано
-                  </p>
-                ) : (
-                  <p className="text-xs text-faint">
-                    не указан — будет сброшен при сохранении
-                  </p>
-                )}
-              </div>
-            </div>
-          </Field>
-
-          <StoragePicker
-            storageKind={form.storageKind}
-            onStorageKindChange={(value) => {
-              form.setStorageKind(value);
-              markDirty();
-            }}
-            externalStorages={form.externalStorages}
-            selectedStorageId={form.selectedStorageId}
-            onSelectedStorageIdChange={(value) => {
-              form.setSelectedStorageId(value);
-              markDirty();
-            }}
-            newStorageName={form.newStorageName}
-            onNewStorageNameChange={(value) => {
-              form.setNewStorageName(value);
-              markDirty();
-            }}
-          />
-
-          <DurationInput
-            valueSeconds={form.durationSeconds}
-            onChange={(s) => {
-              form.setDurationSeconds(s);
-              markDirty();
-            }}
-            hint="Хранится в секундах. При сканировании заполняется из ffprobe."
-          />
-
-          <Select
-            label="Тип релиза"
-            value={form.releaseType}
-            onChange={(v) => {
-              form.setReleaseType(v);
-              markDirty();
-            }}
-            options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
-            hint="Источник копии: BDRemux, BDRip, WEB-DL и т.д."
-          />
-          <Select
-            label="Версия"
-            value={form.version}
-            onChange={(v) => {
-              form.setVersion(v);
-              markDirty();
-            }}
-            options={MOVIE_VERSIONS}
-            hint="Монтажная версия: театральная, режиссёрская и т.д."
-          />
-        </div>
-
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] lg:items-start lg:gap-8">
         <TrackEditorSection
+          tabbed
+          variant="balanced"
+          videoColumnsOnXl
+          audioGridCols="adaptive"
           video={form.video}
           onVideoChange={patchVideo}
           audioRows={form.audioRows}
@@ -544,6 +495,40 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
           mainTrackStyle="star"
           minAudioRows={0}
         />
+
+        <aside className="surface-card space-y-5 p-5 sm:p-6 lg:sticky lg:top-24">
+          <h2 className="font-display text-xl font-semibold">Параметры</h2>
+
+          <DurationInput
+            valueSeconds={form.durationSeconds}
+            onChange={(s) => {
+              form.setDurationSeconds(s);
+              markDirty();
+            }}
+            hint="Из ffprobe при сканировании."
+          />
+
+          <Select
+            label="Тип релиза"
+            value={form.releaseType}
+            onChange={(v) => {
+              form.setReleaseType(v);
+              markDirty();
+            }}
+            options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
+            hint="BDRemux, BDRip, WEB-DL…"
+          />
+          <Select
+            label="Версия"
+            value={form.version}
+            onChange={(v) => {
+              form.setVersion(v);
+              markDirty();
+            }}
+            options={MOVIE_VERSIONS}
+            hint="Театральная, режиссёрская…"
+          />
+        </aside>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-deep/80 backdrop-blur-xl">
@@ -579,35 +564,20 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Link
               href={`/movies/${movieSlug}`}
-              className="focus-ring font-mono-tech rounded-[var(--radius)] border border-border-strong px-4 py-2 text-sm text-muted transition-colors hover:text-text"
+              className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:bg-bg-surface-hover hover:text-accent"
             >
               Отмена
             </Link>
             {mode === "edit" && release ? (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setConfirmKind("probe")}
-                  disabled={
-                    loading ||
-                    actionLoading ||
-                    !release.filePath?.trim()
-                  }
-                >
-                  <ScanSearch className="h-4 w-4" aria-hidden />
-                  Пересканировать
-                </Button>
-                <Button
-                  type="button"
-                  variant="danger"
-                  onClick={() => setConfirmKind("delete")}
-                  disabled={loading || actionLoading}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                  Удалить релиз
-                </Button>
-              </>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => setConfirmDelete(true)}
+                disabled={loading || actionLoading}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Удалить релиз
+              </Button>
             ) : null}
             <Button
               type="submit"
@@ -622,26 +592,15 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
       </div>
 
       {mode === "edit" ? (
-        <>
-          <ConfirmDialog
-            open={confirmKind === "probe"}
-            onClose={() => setConfirmKind(null)}
-            onConfirm={handleRescan}
-            loading={actionLoading}
-            title="Пересканировать файл?"
-            description="Дорожки и длительность будут перезаписаны данными из ffprobe. Несохранённые правки в форме будут потеряны."
-            confirmLabel="Пересканировать"
-          />
-          <ConfirmDialog
-            open={confirmKind === "delete"}
-            onClose={() => setConfirmKind(null)}
-            onConfirm={handleDelete}
-            loading={actionLoading}
-            title="Удалить релиз?"
-            description="Релиз и все его дорожки будут удалены. Файл на диске не затрагивается."
-            confirmLabel="Удалить"
-          />
-        </>
+        <ConfirmDialog
+          open={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={handleDelete}
+          loading={actionLoading}
+          title="Удалить релиз?"
+          description="Релиз и все его дорожки будут удалены. Файл на диске не затрагивается."
+          confirmLabel="Удалить"
+        />
       ) : null}
     </form>
   );

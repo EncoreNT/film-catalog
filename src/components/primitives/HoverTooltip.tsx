@@ -17,21 +17,31 @@ interface HoverTooltipProps {
   content: ReactNode;
   disabled?: boolean;
   className?: string;
+  /**
+   * When true, the tooltip stays open while hovered and its content can be
+   * clicked (links, buttons). Adds a short hide delay so the pointer can
+   * travel from the anchor into the tooltip without dismissing it.
+   */
+  interactive?: boolean;
 }
 
 const GAP = 8;
 const VIEWPORT_PADDING = 12;
 /** Fallback height before the tooltip is measured in the DOM. */
 const ESTIMATED_HEIGHT = 220;
+/** Grace period before dismissing an interactive tooltip on anchor leave. */
+const INTERACTIVE_HIDE_DELAY = 120;
 
 export function HoverTooltip({
   children,
   content,
   disabled = false,
   className = "",
+  interactive = false,
 }: HoverTooltipProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [placement, setPlacement] = useState<TooltipPlacement>("top");
@@ -41,6 +51,31 @@ export function HoverTooltip({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const cancelHide = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  }, []);
+
+  const hide = useCallback(() => {
+    cancelHide();
+    setVisible(false);
+    setPositioned(false);
+  }, [cancelHide]);
+
+  const scheduleHide = useCallback(() => {
+    if (!interactive) {
+      hide();
+      return;
+    }
+    cancelHide();
+    hideTimerRef.current = setTimeout(() => {
+      setVisible(false);
+      setPositioned(false);
+    }, INTERACTIVE_HIDE_DELAY);
+  }, [cancelHide, hide, interactive]);
 
   const updatePosition = useCallback(() => {
     const anchor = anchorRef.current;
@@ -82,14 +117,14 @@ export function HoverTooltip({
 
   const show = useCallback(() => {
     if (disabled) return;
+    cancelHide();
     setPositioned(false);
     setVisible(true);
-  }, [disabled]);
+  }, [cancelHide, disabled]);
 
-  const hide = useCallback(() => {
-    setVisible(false);
-    setPositioned(false);
-  }, []);
+  useEffect(() => {
+    return () => cancelHide();
+  }, [cancelHide]);
 
   useLayoutEffect(() => {
     if (!visible) return;
@@ -118,7 +153,7 @@ export function HoverTooltip({
         ref={anchorRef}
         className={className}
         onMouseEnter={show}
-        onMouseLeave={hide}
+        onMouseLeave={scheduleHide}
         onFocus={show}
         onBlur={hide}
       >
@@ -129,9 +164,11 @@ export function HoverTooltip({
             <div
               ref={tooltipRef}
               role="tooltip"
-              className={`pointer-events-none fixed z-[100] transition-opacity duration-100 ${
-                positioned ? "opacity-100" : "opacity-0"
-              }`}
+              onMouseEnter={cancelHide}
+              onMouseLeave={hide}
+              className={`fixed z-[100] transition-opacity duration-100 ${
+                interactive ? "pointer-events-auto" : "pointer-events-none"
+              } ${positioned ? "opacity-100" : "opacity-0"}`}
               style={{
                 left: coords.x,
                 top: coords.y,

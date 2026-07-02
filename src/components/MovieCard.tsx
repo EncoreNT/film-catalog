@@ -8,6 +8,8 @@ import { movieCoverUrlFromMovie } from "@/lib/cover-url";
 import { orderedMovieGenres } from "@/lib/movie-genres";
 import { genreLabel } from "@/lib/dictionaries";
 import { ApiCoverImage } from "./primitives/ApiCoverImage";
+import { HoverTooltip } from "./primitives/HoverTooltip";
+import { MovieReleasesTooltip } from "./MovieReleasesTooltip";
 import { PremiumBadge } from "./PremiumBadge";
 import { SpecTag } from "./SpecTag";
 import {
@@ -30,6 +32,7 @@ interface MovieCardProps {
 
 export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const primary = pickPrimaryRelease(movie.releases);
+  const primaryId = primary?.id ?? null;
   const coverUrl = movieCoverUrlFromMovie(movie);
   const premium4K = primary ? is4K(primary) : false;
   const premiumHdr = primary ? premiumHDR(primary) : null;
@@ -146,26 +149,41 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
             </div>
           )}
 
-          {movie.rating != null ? (
-            <span
-              className="font-mono-tech absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)] transition-[border-color,box-shadow] duration-500 group-hover:border-accent/70 group-hover:shadow-[0_0_24px_var(--accent-glow)]"
-              style={{ transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)" }}
-              aria-label={`Оценка ${movie.rating} из 10`}
-              title={`Оценка ${movie.rating} из 10`}
-            >
-              {movie.rating}
-              <Star className="h-3 w-3 fill-accent text-accent" aria-hidden />
-            </span>
-          ) : null}
-
-          {releaseCount > 1 ? (
-            <span
-              className="font-mono-tech absolute right-2 top-12 z-10 inline-flex items-center gap-1 rounded-full border border-border-strong bg-bg-deep/90 px-2 py-1 text-[0.65rem] text-muted"
-              title={`${releaseCount} релиза`}
-            >
-              <Layers className="h-3 w-3" aria-hidden />
-              ×{releaseCount}
-            </span>
+          {movie.rating != null || releaseCount > 1 ? (
+            <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1.5">
+              {movie.rating != null ? (
+                <span
+                  className="font-mono-tech inline-flex items-center gap-1 rounded-full border border-accent/40 bg-bg-deep/90 px-2 py-1 text-xs text-accent shadow-[0_0_16px_var(--accent-glow)] transition-[border-color,box-shadow] duration-500 group-hover:border-accent/70 group-hover:shadow-[0_0_24px_var(--accent-glow)]"
+                  style={{ transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)" }}
+                  aria-label={`Оценка ${movie.rating} из 10`}
+                  title={`Оценка ${movie.rating} из 10`}
+                >
+                  {movie.rating}
+                  <Star className="h-3 w-3 fill-accent text-accent" aria-hidden />
+                </span>
+              ) : null}
+              {releaseCount > 1 ? (
+                <HoverTooltip
+                  interactive
+                  content={
+                    <MovieReleasesTooltip
+                      releases={movie.releases}
+                      movieSlug={movie.slug}
+                      primaryReleaseId={primaryId}
+                    />
+                  }
+                >
+                  <span
+                    className="font-mono-tech inline-flex cursor-pointer items-center gap-1 rounded-full border border-accent/25 bg-bg-deep/85 px-1.5 py-0.5 text-[0.6rem] tabular-nums text-accent/70 backdrop-blur-sm transition-colors duration-300 group-hover:border-accent/45 group-hover:text-accent/90"
+                    title={`${releaseCount} ${releaseCount === 1 ? "релиз" : releaseCount < 5 ? "релиза" : "релизов"} у фильма`}
+                    aria-label={`${releaseCount} ${releaseCount === 1 ? "релиз" : releaseCount < 5 ? "релиза" : "релизов"} у фильма. Наведите для списка.`}
+                  >
+                    <Layers className="h-3 w-3" aria-hidden />
+                    {releaseCount}
+                  </span>
+                </HoverTooltip>
+              ) : null}
+            </div>
           ) : null}
 
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-deep via-bg-deep/92 to-transparent px-3 pb-3 pt-16">

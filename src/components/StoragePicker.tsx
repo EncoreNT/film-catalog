@@ -22,6 +22,7 @@ interface StoragePickerProps {
   onSelectedStorageIdChange: (value: string) => void;
   newStorageName: string;
   onNewStorageNameChange: (value: string) => void;
+  compact?: boolean;
 }
 
 export function StoragePicker({
@@ -32,27 +33,42 @@ export function StoragePicker({
   onSelectedStorageIdChange,
   newStorageName,
   onNewStorageNameChange,
+  compact = false,
 }: StoragePickerProps) {
   return (
-    <div className="space-y-3">
-      <p className="font-mono-tech text-muted">хранилище</p>
-      <SegmentedControl
-        ariaLabel="Хранилище"
-        value={storageKind}
-        onChange={(v) => onStorageKindChange(v as StorageKind)}
-        options={[
-          {
-            value: "local",
-            label: "Локальный диск",
-            icon: <HardDrive className="h-4 w-4" />,
-          },
-          {
-            value: "external",
-            label: "Внешний диск",
-            icon: <Plug className="h-4 w-4" />,
-          },
-        ]}
-      />
+    <div className={compact ? "space-y-2" : "space-y-3"}>
+      <div
+        className={
+          compact
+            ? "flex flex-wrap items-center gap-x-4 gap-y-2"
+            : undefined
+        }
+      >
+        {!compact ? (
+          <p className="font-mono-tech text-muted">хранилище</p>
+        ) : (
+          <span className="text-sm text-muted">Хранилище</span>
+        )}
+        <SegmentedControl
+          ariaLabel="Хранилище"
+          value={storageKind}
+          onChange={(v) => onStorageKindChange(v as StorageKind)}
+          fullWidth={!compact}
+          size={compact ? "compact" : "default"}
+          options={[
+            {
+              value: "local",
+              label: compact ? "Локальный" : "Локальный диск",
+              icon: <HardDrive className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />,
+            },
+            {
+              value: "external",
+              label: compact ? "Внешний" : "Внешний диск",
+              icon: <Plug className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />,
+            },
+          ]}
+        />
+      </div>
       {storageKind === "external" ? (
         externalStorages.length > 0 ? (
           <Select

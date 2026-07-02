@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { ReleaseEditor } from "@/components/ReleaseEditor";
+import { MovieReleasePageHeader } from "@/components/MovieReleasePageHeader";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -28,7 +29,14 @@ export default async function NewReleasePage({ params }: PageProps) {
 
   const movie = await prisma.movie.findUnique({
     where: { slug },
-    select: { id: true, slug: true, title: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      year: true,
+      coverPath: true,
+      updatedAt: true,
+    },
   });
   if (!movie) notFound();
 
@@ -44,12 +52,7 @@ export default async function NewReleasePage({ params }: PageProps) {
         </Link>
       </div>
 
-      <header>
-        <p className="font-mono-tech text-accent">новый релиз</p>
-        <h1 className="font-display mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          {movie.title}
-        </h1>
-      </header>
+      <MovieReleasePageHeader movie={movie} eyebrow="новый релиз" />
 
       <ReleaseEditor
         mode="create"

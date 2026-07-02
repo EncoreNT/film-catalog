@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { releaseInclude } from "@/lib/movie-include";
 import { ReleaseEditor } from "@/components/ReleaseEditor";
+import { MovieReleasePageHeader } from "@/components/MovieReleasePageHeader";
 import { releaseTabLabel } from "@/lib/spec-tags";
 import type { ReleaseWithTracks } from "@/lib/movie-query";
 
@@ -35,7 +36,14 @@ export default async function EditReleasePage({ params }: PageProps) {
 
   const movie = await prisma.movie.findUnique({
     where: { slug },
-    select: { id: true, slug: true, title: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      year: true,
+      coverPath: true,
+      updatedAt: true,
+    },
   });
   if (!movie) notFound();
 
@@ -59,13 +67,11 @@ export default async function EditReleasePage({ params }: PageProps) {
         </Link>
       </div>
 
-      <header>
-        <p className="font-mono-tech text-accent">редактирование релиза</p>
-        <h1 className="font-display mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          {movie.title}
-        </h1>
-        <p className="font-mono-tech mt-2 text-muted">{releaseLabel}</p>
-      </header>
+      <MovieReleasePageHeader
+        movie={movie}
+        eyebrow="редактирование релиза"
+        releaseLabel={releaseLabel}
+      />
 
       <ReleaseEditor
         mode="edit"

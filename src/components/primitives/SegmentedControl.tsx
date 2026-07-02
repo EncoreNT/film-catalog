@@ -5,6 +5,9 @@ interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
   options: { value: T; label: string; icon?: React.ReactNode }[];
   ariaLabel?: string;
+  /** Stretch to container width (default). */
+  fullWidth?: boolean;
+  size?: "default" | "compact";
 }
 
 export function SegmentedControl<T extends string>({
@@ -12,12 +15,17 @@ export function SegmentedControl<T extends string>({
   onChange,
   options,
   ariaLabel,
+  fullWidth = true,
+  size = "default",
 }: SegmentedControlProps<T>) {
+  const compact = size === "compact";
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="flex w-full gap-1 rounded-[var(--radius-sm)] border border-border bg-bg-elevated p-1"
+      className={`flex gap-1 rounded-[var(--radius-sm)] border border-border bg-bg-elevated p-1 ${
+        fullWidth ? "w-full" : "inline-flex w-auto"
+      }`}
     >
       {options.map((opt) => {
         const active = opt.value === value;
@@ -28,7 +36,9 @@ export function SegmentedControl<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`focus-ring flex min-h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium transition-all duration-200 ${
+            className={`focus-ring flex cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-sm)] font-medium transition-all duration-200 ${
+              fullWidth ? "min-h-10 flex-1" : compact ? "min-h-8 px-3" : "min-h-9 px-4"
+            } ${compact ? "py-1.5 text-xs" : "px-3 py-2 text-sm"} ${
               active
                 ? "bg-accent text-bg-deep shadow-[0_0_16px_var(--accent-glow)]"
                 : "text-muted hover:text-text"
