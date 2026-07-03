@@ -1,0 +1,44 @@
+import { describe, expect, it } from "vitest";
+import {
+  hdrShortLabel,
+  isPremiumRussianAtmosTrack,
+  isSpatialAudioProfile,
+  normalizeAudioProfile,
+} from "@/lib/media/quality-predicates";
+
+describe("quality-predicates", () => {
+  it("isSpatialAudioProfile", () => {
+    expect(isSpatialAudioProfile("Atmos")).toBe(true);
+    expect(isSpatialAudioProfile("DTS:X MA")).toBe(true);
+    expect(isSpatialAudioProfile("None")).toBe(false);
+    expect(isSpatialAudioProfile("HD MA")).toBe(false);
+  });
+
+  it("isPremiumRussianAtmosTrack", () => {
+    expect(
+      isPremiumRussianAtmosTrack({
+        profile: "Atmos",
+        language: "rus",
+        isDefault: true,
+      }),
+    ).toBe(true);
+    expect(
+      isPremiumRussianAtmosTrack({
+        profile: "Atmos",
+        language: "eng",
+        isDefault: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("normalizeAudioProfile", () => {
+    expect(normalizeAudioProfile("None")).toBeNull();
+    expect(normalizeAudioProfile("Atmos")).toBe("Atmos");
+  });
+
+  it("hdrShortLabel", () => {
+    expect(hdrShortLabel(null)).toBe("SDR");
+    expect(hdrShortLabel("HDR10")).toBe("HDR10");
+    expect(hdrShortLabel("DV:Profile7")).toBe("DV");
+  });
+});

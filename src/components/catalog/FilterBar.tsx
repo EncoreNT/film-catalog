@@ -3,8 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
-  ArrowDownAZ,
-  ArrowDownWideNarrow,
   ChevronDown,
   Clapperboard,
   MonitorPlay,
@@ -31,270 +29,32 @@ import {
   sortGenreFacets,
   type GenreSortMode,
 } from "@/lib/catalog/genre-facet-sort";
-
-const FILTER_DEFAULTS: Record<string, string> = {
-  sort: "title",
-  watched: "all",
-};
-
-// Property-facet param keys rendered inside the collapsible panel.
-const FACET_KEYS = [
-  "resolution",
-  "genre",
-  "audioChannels",
-  "audioFormat",
-  "audioTranslation",
-] as const;
-const SCALAR_FACET_KEYS = ["hdr", "premiumAudio"] as const;
-const SCALAR_KEYS = ["q", "minRating", "multiRelease", ...SCALAR_FACET_KEYS] as const;
-const LEGACY_FACET_KEYS = ["language", "channelLayout", "subtitleLang", "audioScope"] as const;
-
-const SEGMENT_SHELL =
-  "inline-flex rounded-[var(--radius-sm)] border border-border bg-bg-elevated/50";
-
-const CLEAR_FACET_PARAMS = Object.fromEntries(
-  [...FACET_KEYS, ...SCALAR_FACET_KEYS, ...LEGACY_FACET_KEYS].map((key) => [
-    key,
-    null,
-  ]),
-) as Record<string, null>;
-
-const CLEAR_ALL_FILTER_PARAMS = {
-  ...CLEAR_FACET_PARAMS,
-  q: null,
-  minRating: null,
-  multiRelease: null,
-  sort: null,
-  watched: null,
-};
-
-function facetCountMap(facets: Facet[]): Map<string, number> {
-  return new Map(
-    facets.filter((f) => f.value).map((f) => [f.value!, f.count]),
-  );
-}
-
-function countActiveFilters(params: URLSearchParams): number {
-  let n = 0;
-  for (const key of SCALAR_KEYS) {
-    if (params.has(key)) n++;
-  }
-  for (const key of FACET_KEYS) {
-    if (params.has(key)) n++;
-  }
-  for (const [key, def] of Object.entries(FILTER_DEFAULTS)) {
-    const v = params.get(key);
-    if (v && v !== def) n++;
-  }
-  return n;
-}
-
-function countFacetFilters(params: URLSearchParams): number {
-  let n = 0;
-  for (const key of FACET_KEYS) {
-    if (params.has(key)) n++;
-  }
-  for (const key of SCALAR_FACET_KEYS) {
-    if (params.has(key)) n++;
-  }
-  return n;
-}
-
-interface Facet {
-  value: string | null;
-  count: number;
-}
-
-function GenreSortToggle({
-  value,
-  onChange,
-}: {
-  value: GenreSortMode;
-  onChange: (mode: GenreSortMode) => void;
-}) {
-  return (
-    <div
-      className={`${SEGMENT_SHELL} p-0.5`}
-      role="group"
-      aria-label="Сортировка жанров"
-    >
-      {(
-        [
-          ["alpha", "А–Я", ArrowDownAZ],
-          ["count", "по числу", ArrowDownWideNarrow],
-        ] as const
-      ).map(([mode, text, Icon]) => {
-        const active = value === mode;
-        return (
-          <button
-            key={mode}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange(mode)}
-            className={`focus-ring inline-flex min-h-7 items-center gap-1 rounded-[calc(var(--radius-sm)-2px)] px-2 py-1 font-mono-tech text-[0.6rem] transition-colors ${
-              active
-                ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
-                : "text-muted hover:bg-bg-surface hover:text-text"
-            }`}
-          >
-            <Icon className="h-3 w-3" aria-hidden />
-            {text}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+import {
+  CLEAR_ALL_FILTER_PARAMS,
+  CLEAR_FACET_PARAMS,
+  countActiveFilters,
+  countFacetFilters,
+  facetCountMap,
+  hasFacets,
+  parseMulti,
+  sortByDict,
+  toggleMulti,
+  type FilterBarFacets,
+} from "@/lib/catalog/filter-bar-utils";
+import {
+  Divider,
+  FacetSection,
+  GenreSortToggle,
+  HDR_ANY,
+  HDR_OPTIONS,
+  QualityLadder,
+  SEGMENT_SHELL,
+  translationLabel,
+} from "@/components/catalog/FilterFacetParts";
 
 interface FilterBarProps {
-  facets: {
-    resolutions: Facet[];
-    russianChannelLayouts: Facet[];
-    originalChannelLayouts: Facet[];
-    russianTranslationTypes: Facet[];
-    russianAudioFormats: Facet[];
-    originalAudioFormats: Facet[];
-    genres: Facet[];
-  };
+  facets: FilterBarFacets;
   updateParams: (updates: Record<string, string | null>) => void;
-}
-
-function parseMulti(value: string | null): string[] {
-  return value ? value.split(",").filter(Boolean) : [];
-}
-
-function toggleMulti(current: string[], value: string): string[] {
-  return current.includes(value)
-    ? current.filter((v) => v !== value)
-    : [...current, value];
-}
-
-function hasFacets(facets: Facet[]): boolean {
-  return facets.some((f) => f.value && f.count > 0);
-}
-
-function dictOrder(value: string, dict: { value: string }[]): number {
-  const idx = dict.findIndex(
-    (d) => d.value.toLowerCase() === value.toLowerCase(),
-  );
-  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
-}
-
-function sortByDict<T extends { value: string | null }>(
-  items: T[],
-  dict: { value: string }[],
-): T[] {
-  return [...items]
-    .filter((f) => f.value)
-    .sort((a, b) => dictOrder(a.value!, dict) - dictOrder(b.value!, dict));
-}
-
-const translationLabel = (value: string) =>
-  AUDIO_TRANSLATION_TYPES.find((t) => t.value === value)?.label ?? value;
-
-const HDR_OPTIONS = [
-  { value: "HDR10", label: "HDR10" },
-  { value: "HDR10+", label: "HDR10+" },
-  { value: "DolbyVision", label: "Dolby Vision" },
-  { value: "HLG", label: "HLG" },
-] as const;
-const HDR_ANY = "HDR_ANY";
-
-function FacetSection({
-  index,
-  icon,
-  title,
-  hint,
-  headerActions,
-  children,
-}: {
-  index: string;
-  icon: React.ReactNode;
-  title: string;
-  hint?: string;
-  headerActions?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2.5">
-        <span className="font-mono text-[0.62rem] uppercase tracking-wider text-faint/70 tabular-nums">
-          {index}
-        </span>
-        <span className="text-accent/80" aria-hidden>
-          {icon}
-        </span>
-        <h3 className="font-mono-tech text-faint">{title}</h3>
-        {headerActions || hint ? (
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            {headerActions}
-            {hint ? (
-              <span className="font-mono-tech text-[0.6rem] text-faint/70">
-                {hint}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function QualityLadder({
-  options,
-  active,
-  counts,
-  onToggle,
-}: {
-  options: { value: string; label: string }[];
-  active: string[];
-  counts: Map<string, number>;
-  onToggle: (value: string) => void;
-}) {
-  if (options.length === 0) return null;
-  return (
-    <div className={`${SEGMENT_SHELL} flex-wrap p-1`}>
-      {options.map((opt, i) => {
-        const on = active.includes(opt.value);
-        const count = counts.get(opt.value);
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onToggle(opt.value)}
-            aria-pressed={on}
-            className={`focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-[calc(var(--radius-sm)-3px)] px-3 py-1.5 text-xs transition-all duration-200 ${
-              i > 0 ? "ml-0.5" : ""
-            } ${
-              on
-                ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
-                : "text-muted hover:bg-bg-surface hover:text-text"
-            }`}
-          >
-            <span className={on ? "text-accent" : "text-text/90"}>
-              {opt.label}
-            </span>
-            {count != null ? (
-              <span
-                className={`tabular-nums text-[0.6rem] ${
-                  on ? "text-accent/70" : "text-faint"
-                }`}
-              >
-                {count}
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Divider() {
-  return (
-    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-  );
 }
 
 export function FilterBar({ facets, updateParams }: FilterBarProps) {

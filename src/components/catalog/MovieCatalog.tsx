@@ -8,6 +8,7 @@ import { FilterBar } from "@/components/catalog/FilterBar";
 import { EmptyCatalog } from "@/components/catalog/EmptyCatalog";
 import { Modal } from "@/components/primitives/Modal";
 import { Pagination } from "@/components/primitives/Pagination";
+import { PageHeader } from "@/components/primitives/PageHeader";
 import { Select } from "@/components/primitives/Select";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -207,8 +208,8 @@ export function MovieCatalog({
       sp.set("limit", String(limit));
       const res = await fetch(`/api/movies?${sp.toString()}`);
       if (!res.ok) throw new Error("Network error");
-      const data = (await res.json()) as { movies: MovieWithTracks[] };
-      setExtraMovies((prev) => [...prev, ...data.movies]);
+      const data = (await res.json()) as { items: MovieWithTracks[] };
+      setExtraMovies((prev) => [...prev, ...data.items]);
       setLoadedPages((prev) => prev + 1);
     } catch {
       // ignore — пользователь может повторить
@@ -235,32 +236,30 @@ export function MovieCatalog({
       {isPending ? <div className="catalog-loading-bar" aria-hidden /> : null}
       {/* Compact header — title + actions in one line, metrics as chips below */}
       <section className="mb-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="font-mono-tech text-accent">{viewLabel}</p>
-            <h1 className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-              {viewTitle}
-            </h1>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setAddOpen(true)}
-              className="focus-ring flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-border-strong bg-bg-surface px-3 py-1.5 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:text-accent"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">Добавить вручную</span>
-              <span className="sm:hidden">Добавить</span>
-            </button>
-            <Link
-              href="/scan"
-              className="focus-ring flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-sm font-semibold text-bg-deep shadow-[0_0_20px_var(--accent-glow)] transition-all duration-200 hover:bg-accent-bright"
-            >
-              <ScanSearch className="h-4 w-4" aria-hidden />
-              Скан
-            </Link>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow={viewLabel}
+          title={viewTitle}
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => setAddOpen(true)}
+                className="focus-ring flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-border-strong bg-bg-surface px-3 py-1.5 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:text-accent"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Добавить вручную</span>
+                <span className="sm:hidden">Добавить</span>
+              </button>
+              <Link
+                href="/scan"
+                className="focus-ring flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-sm font-semibold text-bg-deep shadow-[0_0_20px_var(--accent-glow)] transition-all duration-200 hover:bg-accent-bright"
+              >
+                <ScanSearch className="h-4 w-4" aria-hidden />
+                Скан
+              </Link>
+            </>
+          }
+        />
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Link

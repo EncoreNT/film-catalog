@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -6,14 +5,40 @@ import {
   type MovieWithTracks,
 } from "@/lib/movies/movie-include";
 
-export async function loadMovieBySlug(slug: string): Promise<MovieWithTracks> {
-  const movie = await prisma.movie.findUnique({
+export const movieStubSelect = {
+  id: true,
+  slug: true,
+  title: true,
+  year: true,
+  coverPath: true,
+  updatedAt: true,
+} as const;
+
+export type MovieStub = {
+  id: number;
+  slug: string;
+  title: string;
+  year: number | null;
+  coverPath: string | null;
+  updatedAt: Date;
+};
+
+export async function loadMovieBySlug(
+  slug: string,
+): Promise<MovieWithTracks | null> {
+  return prisma.movie.findUnique({
     where: { slug },
     include: movieInclude,
   });
+}
 
-  if (!movie) notFound();
-  return movie;
+export async function loadMovieStubBySlug(
+  slug: string,
+): Promise<MovieStub | null> {
+  return prisma.movie.findUnique({
+    where: { slug },
+    select: movieStubSelect,
+  });
 }
 
 export async function generateMovieMetadata(

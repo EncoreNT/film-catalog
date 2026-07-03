@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { releaseInclude } from "@/lib/movies/movie-include";
-import { syncReleaseTracksFromProbe } from "@/lib/releases/movie-tracks";
+import { syncReleaseTracksFromProbe } from "@/lib/releases/release-tracks";
 import { probeMediaFile } from "@/lib/media/ffprobe";
 
 type ReleaseDb = Pick<PrismaClient, "release" | "$transaction">;

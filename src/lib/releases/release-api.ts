@@ -1,7 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { probeMediaFile } from "@/lib/media/ffprobe";
 import { loadMovieFileMeta } from "@/lib/releases/load-movie-file-meta";
-import { syncReleaseTracks } from "@/lib/releases/movie-tracks";
+import { syncReleaseTracks } from "@/lib/releases/release-tracks";
 import type { z } from "zod";
 import type { movieCreateSchema, releaseCreateSchema, releaseUpdateSchema } from "@/lib/api/validators";
 

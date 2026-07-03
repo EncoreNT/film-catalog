@@ -5,7 +5,7 @@ import { probeMediaFile } from "@/lib/media/ffprobe";
 import { maybeExtractCover } from "@/lib/covers/cover-storage";
 import { parseMovieName } from "@/lib/media/name-parser";
 import { computeFileHashPrefix } from "@/lib/media/file-hash";
-import { syncReleaseTracksFromProbe } from "@/lib/releases/movie-tracks";
+import { syncReleaseTracksFromProbe } from "@/lib/releases/release-tracks";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
 import { MovieStatus } from "@/generated/prisma/client";

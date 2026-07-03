@@ -1,5 +1,5 @@
-import { BackLink } from "@/components/primitives/BackLink";
-import { EditPageHeader } from "@/components/layout/EditPageHeader";
+import { notFound } from "next/navigation";
+import { EntityEditLayout } from "@/components/layout/EntityEditLayout";
 import { MovieEditor } from "@/components/movies/MovieForm";
 import {
   generateMovieMetadata,
@@ -23,6 +23,7 @@ export async function generateMetadata({
 export default async function EditMoviePage({ params }: PageProps) {
   const { slug } = await params;
   const movie = await loadMovieBySlug(slug);
+  if (!movie) notFound();
 
   const franchiseMemberships = await getMovieFranchiseMemberships(
     prisma,
@@ -30,14 +31,13 @@ export default async function EditMoviePage({ params }: PageProps) {
   );
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <BackLink href={`/movies/${movie.slug}`}>Назад к фильму</BackLink>
-      </div>
-
-      <EditPageHeader eyebrow="редактирование" title={movie.title} />
-
+    <EntityEditLayout
+      backHref={`/movies/${movie.slug}`}
+      backLabel="Назад к фильму"
+      eyebrow="редактирование"
+      title={movie.title}
+    >
       <MovieEditor movie={movie} franchiseMemberships={franchiseMemberships} />
-    </div>
+    </EntityEditLayout>
   );
 }

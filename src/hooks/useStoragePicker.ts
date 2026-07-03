@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { StorageKind, StorageOption } from "@/lib/shared/storage-types";
+import { validateStorageSelection } from "@/lib/shared/storage-validation";
 
 interface InitialExternalStorage {
   id: number;
@@ -63,12 +64,8 @@ export function useStoragePicker(
     setStorageKindState("external");
   }, []);
 
-  const validateStorage = (): string | null => {
-    if (storageKind === "external" && !selectedStorageId) {
-      return "Выберите внешний диск или создайте новый";
-    }
-    return null;
-  };
+  const validateStorage = (): string | null =>
+    validateStorageSelection(storageKind, selectedStorageId);
 
   /** null = local disk; number = external drive id. */
   const resolveExternalStorageId = async (): Promise<number | null> => {

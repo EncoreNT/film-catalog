@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   Check,
-  Loader2,
   ScanSearch,
   Trash2,
 } from "lucide-react";
-import type { ReleaseWithTracks } from "@/lib/movies/movie-query";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
+import { FormActionBar } from "@/components/primitives/FormActionBar";
 import { Field } from "@/components/primitives/Field";
 import { Select } from "@/components/primitives/Select";
 import { DurationInput } from "@/components/primitives/DurationInput";
@@ -35,7 +35,7 @@ import { trimOnInputBlur } from "@/lib/shared/text-trim";
 import {
   applyProbeToTrackEditor,
   probeFilePath,
-} from "@/lib/media/probe-from-file";
+} from "@/hooks/useProbeFile";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
 
 interface ReleaseEditorBaseProps {
@@ -494,65 +494,38 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
         </aside>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-deep/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            {loading || actionLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent" aria-hidden />
-                <span className="font-mono-tech text-sm text-muted">
-                  {actionLoading ? "выполнение…" : "сохранение…"}
-                </span>
-              </>
-            ) : error ? (
-              <span className="truncate text-sm text-danger" role="alert">
-                {error}
-              </span>
-            ) : isDirty ? (
-              <>
-                <span className="h-2 w-2 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" aria-hidden />
-                <span className="font-mono-tech text-sm text-accent">
-                  несохранённые изменения
-                </span>
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4 shrink-0 text-accent/70" aria-hidden />
-                <span className="font-mono-tech text-sm text-muted">
-                  все изменения сохранены
-                </span>
-              </>
-            )}
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Link
-              href={`/movies/${movieSlug}`}
-              className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:bg-bg-surface-hover hover:text-accent"
-            >
-              Отмена
-            </Link>
-            {mode === "edit" && release ? (
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => setConfirmDelete(true)}
-                disabled={loading || actionLoading}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-                Удалить релиз
-              </Button>
-            ) : null}
-            <Button
-              type="submit"
-              variant="primary"
-              loading={loading}
-              disabled={(mode === "edit" && !isDirty && !loading) || loading}
-            >
-              {mode === "create" ? "Создать релиз" : "Сохранить"}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <FormActionBar
+        isDirty={isDirty}
+        saving={loading}
+        actionLoading={actionLoading}
+        error={error}
+      >
+        <Link
+          href={`/movies/${movieSlug}`}
+          className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:bg-bg-surface-hover hover:text-accent"
+        >
+          Отмена
+        </Link>
+        {mode === "edit" && release ? (
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => setConfirmDelete(true)}
+            disabled={loading || actionLoading}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Удалить релиз
+          </Button>
+        ) : null}
+        <Button
+          type="submit"
+          variant="primary"
+          loading={loading}
+          disabled={(mode === "edit" && !isDirty && !loading) || loading}
+        >
+          {mode === "create" ? "Создать релиз" : "Сохранить"}
+        </Button>
+      </FormActionBar>
 
       {mode === "edit" ? (
         <ConfirmDialog

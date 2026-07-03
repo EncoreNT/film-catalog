@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { ArrowUpDown } from "lucide-react";
+import { SegmentedControl } from "@/components/primitives/SegmentedControl";
 import { useRouter } from "next/navigation";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
 import { MovieCard } from "@/components/movies/MovieCard";
 import { FranchisePlaceholder } from "@/components/franchises/FranchisePlaceholder";
 import { MoviePickerDialog } from "@/components/franchises/MoviePickerDialog";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
+import { apiFetch } from "@/lib/api/client";
 
 type SortMode = "story" | "year";
 
@@ -57,15 +59,15 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
         yearHint: slot.yearHint,
       }));
 
-      const res = await fetch(`/api/franchises/${franchiseId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slots: payload }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Не удалось привязать фильм");
-      }
+      await apiFetch(
+        `/api/franchises/${franchiseId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slots: payload }),
+        },
+        "Не удалось привязать фильм",
+      );
       setPickerSlotId(null);
       router.refresh();
     } catch (err) {
@@ -79,36 +81,17 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-mono-tech text-muted">фильмы франшизы</h2>
-        <div
-          className="inline-flex rounded-[var(--radius-sm)] border border-border bg-bg-elevated p-0.5"
-          role="group"
-          aria-label="Сортировка фильмов"
-        >
-          <button
-            type="button"
-            onClick={() => setSortMode("story")}
-            aria-pressed={sortMode === "story"}
-            className={`focus-ring rounded-[6px] px-3 py-1.5 text-xs transition-colors ${
-              sortMode === "story"
-                ? "bg-accent/15 text-accent"
-                : "text-muted hover:text-text"
-            }`}
-          >
-            хронология мира
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortMode("year")}
-            aria-pressed={sortMode === "year"}
-            className={`focus-ring rounded-[6px] px-3 py-1.5 text-xs transition-colors ${
-              sortMode === "year"
-                ? "bg-accent/15 text-accent"
-                : "text-muted hover:text-text"
-            }`}
-          >
-            год выхода
-          </button>
-        </div>
+        <SegmentedControl
+          value={sortMode}
+          onChange={setSortMode}
+          fullWidth={false}
+          size="compact"
+          ariaLabel="Сортировка фильмов"
+          options={[
+            { value: "story", label: "хронология мира" },
+            { value: "year", label: "год выхода" },
+          ]}
+        />
       </div>
 
       <div className="film-perfs mb-2 h-3 w-full opacity-40" aria-hidden />

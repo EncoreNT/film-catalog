@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { releaseCreateSchema } from "@/lib/api/validators";
 import { releaseInclude } from "@/lib/movies/movie-include";
-import { maybeExtractCover } from "@/lib/covers/cover-storage";
-import { createReleaseWithTracks } from "@/lib/releases/release-api";
+import { createRelease } from "@/lib/releases/create-release";
 import {
   isErrorResponse,
-  jsonError,
+  mapDomainError,
+  parseRequestBody,
   parseRouteId,
   type RouteContext,
 } from "@/lib/api/api-utils";
@@ -28,36 +28,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const movieId = await parseRouteId(context.params);
   if (isErrorResponse(movieId)) return movieId;
 
+  const data = await parseRequestBody(request, releaseCreateSchema);
+  if (isErrorResponse(data)) return data;
+
   try {
-    const body = await request.json();
-    const data = releaseCreateSchema.parse(body);
-
-    const movie = await prisma.movie.findUnique({
-      where: { id: movieId },
-      select: { id: true, coverPath: true },
-    });
-    if (!movie) return jsonError("Фильм не найден", 404);
-
-    const release = await prisma.$transaction(async (tx) => {
-      const created = await createReleaseWithTracks(tx, movieId, data);
-      return tx.release.findUnique({
-        where: { id: created.id },
-        include: releaseInclude,
-      });
-    });
-
-    const trimmedPath = data.filePath?.trim();
-    if (trimmedPath && !movie.coverPath) {
-      try {
-        await maybeExtractCover(movieId, trimmedPath, false);
-      } catch {
-        // non-fatal
-      }
-    }
-
+    const release = await createRelease(movieId, data);
     return NextResponse.json(release, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Не удалось создать релиз";
-    return jsonError(message, 400);
+    return mapDomainError(err, "Не удалось создать релиз");
   }
 }

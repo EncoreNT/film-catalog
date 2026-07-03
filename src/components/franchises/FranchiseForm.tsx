@@ -15,6 +15,7 @@ import {
 } from "@/components/franchises/FranchiseSlotsEditor";
 import { FranchiseDeleteButton } from "@/components/franchises/FranchiseDeleteButton";
 import { trimInput, trimMultilineOptional } from "@/lib/shared/text-trim";
+import { apiFetch, uploadCoverAfterCreate } from "@/lib/api/client";
 
 interface FranchiseFormProps {
   mode: "create" | "edit";
@@ -56,16 +57,15 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
       };
 
       if (mode === "create") {
-        const res = await fetch("/api/franchises", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-          const d = await res.json().catch(() => null);
-          throw new Error(d?.error ?? "Не удалось создать");
-        }
-        const created = (await res.json()) as FranchiseWithSlots;
+        const created = await apiFetch<FranchiseWithSlots>(
+          "/api/franchises",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+          "Не удалось создать",
+        );
         await uploadCoverIfNeeded(created.id);
         router.push(`/franchises/${created.slug}`);
         router.refresh();
@@ -74,16 +74,15 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
       if (!franchise) throw new Error("Нет данных франшизы");
 
-      const res = await fetch(`/api/franchises/${franchise.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => null);
-        throw new Error(d?.error ?? "Не удалось сохранить");
-      }
-      const updated = (await res.json()) as FranchiseWithSlots;
+      const updated = await apiFetch<FranchiseWithSlots>(
+        `/api/franchises/${franchise.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+        "Не удалось сохранить",
+      );
       await uploadCoverIfNeeded(updated.id);
       router.push(`/franchises/${updated.slug}`);
       router.refresh();
@@ -95,20 +94,11 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
   };
 
   const uploadCoverIfNeeded = async (franchiseId: number) => {
-    if (coverFile) {
-      const formData = new FormData();
-      formData.append("cover", coverFile);
-      await fetch(`/api/franchises/${franchiseId}/cover`, {
-        method: "POST",
-        body: formData,
-      });
-    } else if (coverUrl) {
-      await fetch(`/api/franchises/${franchiseId}/cover`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: coverUrl }),
-      });
-    }
+    await uploadCoverAfterCreate(
+      `/api/franchises/${franchiseId}/cover`,
+      coverFile,
+      coverUrl,
+    );
   };
 
   const editFooter = (

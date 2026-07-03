@@ -6,6 +6,7 @@ import { ImagePlus, RefreshCw, Check, Upload } from "lucide-react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { trimInput } from "@/lib/shared/text-trim";
+import { uploadCover } from "@/lib/api/client";
 
 type Source =
   | { kind: "none" }
@@ -161,16 +162,20 @@ export function ImageCoverUpload({
 
   const sendCover = async (body: BodyInit, contentType?: string) => {
     if (entityId == null) return;
-    const res = await fetch(uploadPath(entityId), {
-      method: "POST",
-      headers: contentType ? { "Content-Type": contentType } : undefined,
-      body,
-    });
-    if (!res.ok) {
-      const d = await res.json().catch(() => null);
-      throw new Error(d?.error ?? "Не удалось загрузить обложку");
+    let updated: { updatedAt: string };
+    if (body instanceof FormData) {
+      const file = body.get("cover");
+      if (!(file instanceof File)) {
+        throw new Error("Не удалось загрузить обложку");
+      }
+      updated = await uploadCover(uploadPath(entityId), { kind: "file", file });
+    } else {
+      const payload = JSON.parse(String(body)) as { url: string };
+      updated = await uploadCover(uploadPath(entityId), {
+        kind: "url",
+        url: payload.url,
+      });
     }
-    const updated = (await res.json()) as { updatedAt: string };
     setStored(true);
     setStoredVersion(updated.updatedAt);
     onUploaded?.();

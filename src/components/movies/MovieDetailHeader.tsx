@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { Library, Pencil } from "lucide-react";
+import Link from "next/link";
 import { MovieApproveButton } from "@/components/movies/MovieApproveButton";
+import { TagPill } from "@/components/primitives/TagPill";
 import { formatDuration } from "@/lib/shared/format";
 import { displayGenreName } from "@/lib/shared/dictionaries";
 import type { MovieStatus } from "@/generated/prisma/client";
@@ -82,12 +83,7 @@ export function MovieDetailHeader({
       {genres.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {genres.map((g) => (
-            <span
-              key={g.id}
-              className="font-mono-tech rounded-full border border-border-strong bg-bg-elevated px-3 py-1 text-xs text-text"
-            >
-              {displayGenreName(g.name)}
-            </span>
+            <TagPill key={g.id}>{displayGenreName(g.name)}</TagPill>
           ))}
         </div>
       ) : null}
@@ -103,13 +99,13 @@ export function MovieDetailHeader({
           <ul className="flex flex-wrap gap-2">
             {franchiseMemberships.map((membership) => (
               <li key={membership.id}>
-                <Link
+                <TagPill
                   href={`/franchises/${membership.franchise.slug}`}
-                  className="focus-ring inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-bg-elevated px-3 py-1.5 text-xs text-text transition-colors hover:border-accent/50 hover:text-accent"
+                  icon={<Library className="h-3.5 w-3.5 text-accent" aria-hidden />}
+                  className="py-1.5"
                 >
-                  <Library className="h-3.5 w-3.5 text-accent" aria-hidden />
                   {membership.franchise.name}
-                </Link>
+                </TagPill>
               </li>
             ))}
           </ul>

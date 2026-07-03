@@ -6,91 +6,103 @@ alwaysApply: false
 
 # Доменные pipeline-ы (src/lib)
 
-## scanner.ts — сканирование
+## media/scanner.ts — сканирование
 
 - `walkVideoFiles` — рекурсия, skip `.*` dirs, extensions: mkv, mp4, avi, mov, webm, …
 - Skip fast path: same `filePath` + `fileSize` + `fileMtime`
-- Hash: `computeFileHashPrefix` — первые 16MB (`file-hash.ts`)
+- Hash: `computeFileHashPrefix` — первые 16MB (`media/file-hash.ts`)
 - Move detection: same `fileHash` + `fileSize`, different path → update path in place
 - Priority: `existing` at path > `movedMovie` by hash > create new DRAFT
 - `parseMovieName(fileName, parentFolder)` → title, year, releaseType
-- Tracks: `syncMovieTracksFromProbe` (`movie-tracks.ts` + `apply-probe.ts`)
+- Tracks: `syncMovieTracksFromProbe` (`movies/movie-tracks.ts` + `media/apply-probe.ts`)
 - Cover: `maybeExtractCover` — non-fatal
 
-## ffprobe.ts — медиа-анализ
+## media/ffprobe.ts — медиа-анализ
 
 - `probeMediaFile(path, signal?)` → duration, video, audio[], subtitles[]
-- Parses ffprobe JSON; HDR detection (HDR10, DV, HLG); resolution labels via `resolution.ts`
-- Audio: `channels.ts` — normalizeCodec, channelsToLayout, detectAudioProfile, detectTranslationType
+- Parses ffprobe JSON; HDR detection (HDR10, DV, HLG); resolution labels via `media/resolution.ts`
+- Audio: `media/channels.ts` — normalizeCodec, channelsToLayout, detectAudioProfile, detectTranslationType
 
-## name-parser.ts
+## media/name-parser.ts
 
 Strips release group tags, quality, codecs from filename. Extracts year, releaseType (bluray, web-dl, …). Falls back to parent folder name for title.
 
-## movie-query.ts — фильтрация каталога
+## movies/movie-query.ts — фильтрация каталога
 
 - `parseListQuery` → zod
-- `buildMovieWhere` — status tabs, genre, resolution, hdr, audio scope/channels/format/translation, watched range, rating, duration, premium audio
+- `buildMovieListWhere` / `buildMovieWhere` — status tabs, genre, resolution, hdr, audio scope/channels/format/translation, watched range, rating, duration, premium audio, multiRelease
+- `fetchMultiReleaseMovieIds` — `release.groupBy` + `having count >= 2`
 - `buildMovieOrder` — title, year, rating, duration, watchedAt, createdAt
-- Audio scope: `audio-track-scope.ts` + `russian-audio-formats.ts`
+- Audio scope: `catalog/audio-track-scope.ts` + `catalog/russian-audio-formats.ts`
 
-## catalog-facets.ts
+## catalog/catalog-facets.ts
 
 Counts for filter chips, scoped by active status tab. Cached on home page.
 
-## cover-storage.ts + mkv.ts
+## covers/cover-storage.ts + media/mkv.ts
 
 - Covers dir: `dataPath("covers")` → `./data/covers/`
-- `saveCoverBuffer(movieId, buffer, ext)` — assert ext via `cover-formats-mkv.ts`
+- `saveCoverBuffer(movieId, buffer, ext)` — assert ext via `covers/cover-formats-mkv.ts`
 - `extractFirstMkvAttachment` — mkvextract for embedded posters
 - Franchise covers: separate naming `franchise-<id>.<ext>` in franchise cover route
 
-## cover-url.ts / franchise-cover-url.ts
+## covers/cover-url.ts / covers/franchise-cover-url.ts
 
 Build API URLs with `?v=updatedAt.getTime()` for cache busting. Never link directly to filesystem paths.
 
-## Slugs
+## shared/slug.ts + domain slugs
 
-- `slug.ts` — base transliteration
-- `movie-slug.ts` / `franchise-slug.ts` — `resolveMovieSlug`, `resolveFranchiseSlug` with numeric suffix dedup
+- `shared/slug.ts` — base transliteration
+- `movies/movie-slug.ts` / `franchises/franchise-slug.ts` — `resolveMovieSlug`, `resolveFranchiseSlug` with numeric suffix dedup
 
-## Franchises
+## franchises/
 
 - `franchise-slots.ts` — `syncFranchiseSlots` (full replace)
-- `franchise-slot-placement.ts` — story order helpers
+- `franchise-slot-placement.ts` — `placeMovieInFranchise`, `parsePlacementTarget`
 - `franchise-metrics.ts` — 4K/HDR/Atmos/DTS-HD MA counts across filled slots
 - `franchise-summary.ts`, `franchise-query.ts` — list queries
 - `movie-franchise-memberships.ts` — attach/detach movie to slot
 
-## alternative-quality.ts / movie-merge.ts
+## merge/
 
-- `findDuplicateMovies` — merge candidates by `matchKey` (not title+year heuristic)
-- `findAllDuplicateGroups` — for `/duplicates` page
-- `releaseTabLabel` — tab label for a release (was alternative-quality cross-links)
-- `mergeMovies` / `planMerge` — manual merge transaction (variant C)
+- `movie-merge.ts` — `mergeMovies` / `planMerge` — manual merge transaction
+- `merge-preview.ts` — merge candidate cards for `/duplicates`
+- `alternative-quality.ts` — duplicate detection helpers
 
-## archive-metrics.ts
+## catalog/archive-metrics.ts
 
-Total/catalog/draft/excluded counts + aggregate stats for dashboard.
+Total/catalog/draft/excluded counts + aggregate stats for dashboard. Elite tier: `archiveEliteTierWhere` from `media/quality-predicates.ts` (specs may split across releases).
 
-## display-path.ts
+## shared/display-path.ts
 
 Human-readable file paths (truncate home dir, storage name prefix).
 
-## load-movie-file-meta.ts
+## movies/load-movie-file-meta.ts
 
 `readMovieFileMeta`, `assertMovieFileReadable` — stat + hash for manual file path entry.
 
-## build-movie-payload.ts
+## movies/build-movie-payload.ts
 
-Assembles PATCH payload from form state (used by edit flows).
+Assembles create/update PATCH payload from form state (tracks in `build-movie-payload-tracks.ts`).
 
-## Prisma client
+## movies/approve-movie.ts
 
-`lib/prisma.ts` — BetterSqlite3 adapter, DATABASE_URL default `file:./data/catalog.db`. Import from `@/lib/prisma`, types from `@/generated/prisma/client`.
+`approveMovie` — DRAFT → CATALOG with `movieInclude`.
+
+## media/quality-predicates.ts
+
+Shared audio/HDR predicates: premium Russian Atmos filter, archive elite tier, franchise slot tier inputs.
+
+## api/client.ts
+
+Browser-side fetch helpers (`apiFetch`, `approveMovie`, `uploadCover`) — thin wrappers over REST routes.
+
+## db/prisma.ts
+
+BetterSqlite3 adapter, DATABASE_URL default `file:./data/catalog.db`. Import from `@/lib/db/prisma`, types from `@/generated/prisma/client`.
 
 ## Тесты рядом
 
-`*.test.ts` для: name-parser, movie-query, slug, ffprobe helpers, catalog-facets, channels, cover-url, franchise-slug, …
+`lib/<domain>/*.test.ts` для: name-parser, movie-query, slug, ffprobe helpers, catalog-facets, channels, cover-url, franchise-slug, validators, apply-probe, build-movie-payload, archive-metrics, resolve-active-release, duration, franchise-slot-placement, approve-movie, …
 
 При изменении логики — обновлять или добавлять тест, если поведение нетривиальное.

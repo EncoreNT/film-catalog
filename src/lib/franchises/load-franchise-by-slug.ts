@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -8,14 +7,11 @@ import {
 
 export async function loadFranchiseBySlug(
   slug: string,
-): Promise<FranchiseWithSlots> {
-  const franchise = await prisma.franchise.findUnique({
+): Promise<FranchiseWithSlots | null> {
+  return prisma.franchise.findUnique({
     where: { slug },
     include: franchiseInclude,
   });
-
-  if (!franchise) notFound();
-  return franchise;
 }
 
 export async function generateFranchiseMetadata(

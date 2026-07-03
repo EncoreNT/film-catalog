@@ -5,9 +5,12 @@ import { releaseInclude } from "@/lib/movies/movie-include";
 import { BackLink } from "@/components/primitives/BackLink";
 import { ReleaseEditor } from "@/components/releases/ReleaseEditor";
 import { MovieReleasePageHeader } from "@/components/releases/MovieReleasePageHeader";
-import { generateMovieMetadata } from "@/lib/movies/load-movie-by-slug";
+import {
+  generateMovieMetadata,
+  loadMovieStubBySlug,
+} from "@/lib/movies/load-movie-by-slug";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
-import type { ReleaseWithTracks } from "@/lib/movies/movie-query";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 interface PageProps {
   params: Promise<{ slug: string; releaseId: string }>;
@@ -25,17 +28,7 @@ export default async function EditReleasePage({ params }: PageProps) {
   const releaseIdNum = Number(releaseId);
   if (!Number.isInteger(releaseIdNum) || releaseIdNum <= 0) notFound();
 
-  const movie = await prisma.movie.findUnique({
-    where: { slug },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      year: true,
-      coverPath: true,
-      updatedAt: true,
-    },
-  });
+  const movie = await loadMovieStubBySlug(slug);
   if (!movie) notFound();
 
   const release = await prisma.release.findFirst({

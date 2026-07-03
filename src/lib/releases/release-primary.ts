@@ -1,7 +1,6 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
+import { isPremiumRussianAtmosTrack } from "@/lib/media/quality-predicates";
 import { releaseHasExternalStorage } from "@/lib/releases/release-storage";
-
-export type { ReleaseWithTracks };
 
 const RESOLUTION_RANK: Record<string, number> = {
   "4K": 100,
@@ -38,14 +37,7 @@ function hdrScore(hdr: string | null | undefined): number {
 }
 
 function premiumAudioScore(release: ReleaseWithTracks): number {
-  const hasPremium = release.audioTracks.some((t) => {
-    const profile = t.profile && t.profile !== "None" ? t.profile : null;
-    return (
-      (profile === "Atmos" || profile === "DTS:X MA") &&
-      t.language === "rus" &&
-      t.isDefault
-    );
-  });
+  const hasPremium = release.audioTracks.some(isPremiumRussianAtmosTrack);
   return hasPremium ? 20 : 0;
 }
 

@@ -3,9 +3,10 @@ import { movieListQuerySchema } from "@/lib/api/validators";
 import { RUS_AUDIO_FORMATS } from "@/lib/catalog/russian-audio-formats";
 import { audioTrackScopeWhere } from "@/lib/catalog/audio-track-scope";
 import { normalizeSearchQuery } from "@/lib/movies/movie-match-key";
+import { premiumRussianAtmosAudioTrackWhere } from "@/lib/media/quality-predicates";
 import { prisma } from "@/lib/db/prisma";
 
-export type { MovieWithTracks, ReleaseWithTracks } from "@/lib/movies/movie-include";
+export type { MovieWithTracks } from "@/lib/movies/movie-include";
 
 export function parseListQuery(searchParams: URLSearchParams) {
   const raw = Object.fromEntries(searchParams.entries());
@@ -32,10 +33,18 @@ interface BuildMovieWhereContext {
 
 /** Movie ids with 2+ releases (for multiRelease catalog filter). */
 export async function fetchMultiReleaseMovieIds(): Promise<number[]> {
-  const rows = await prisma.movie.findMany({
-    select: { id: true, _count: { select: { releases: true } } },
+  const groups = await prisma.release.groupBy({
+    by: ["movieId"],
+    _count: { _all: true },
+    having: {
+      movieId: {
+        _count: {
+          gte: 2,
+        },
+      },
+    },
   });
-  return rows.filter((m) => m._count.releases >= 2).map((m) => m.id);
+  return groups.map((g) => g.movieId);
 }
 
 export async function buildMovieListWhere(
@@ -150,11 +159,7 @@ export function buildMovieWhere(
   if (query.premiumAudio === "true") {
     releaseFilters.push({
       audioTracks: {
-        some: {
-          isDefault: true,
-          language: "rus",
-          profile: { in: ["Atmos", "DTS:X MA"] },
-        },
+        some: premiumRussianAtmosAudioTrackWhere,
       },
     });
   }

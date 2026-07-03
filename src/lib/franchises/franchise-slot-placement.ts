@@ -1,12 +1,11 @@
 import type { Prisma } from "@/generated/prisma/client";
+import type { z } from "zod";
+import { franchisePlacementSchema } from "@/lib/api/validators";
 import { prisma } from "@/lib/db/prisma";
 
 type DbClient = Prisma.TransactionClient | typeof prisma;
 
-export type SlotPlacementTarget =
-  | { kind: "end" }
-  | { kind: "before"; slotId: number }
-  | { kind: "fill"; slotId: number };
+export type SlotPlacementTarget = z.infer<typeof franchisePlacementSchema>;
 
 interface PlaceArgs {
   movieId: number;
@@ -92,13 +91,7 @@ export async function releaseMovieFromFranchise(
 }
 
 export function parsePlacementTarget(raw: unknown): SlotPlacementTarget {
-  if (typeof raw !== "object" || raw === null) return { kind: "end" };
-  const t = raw as { kind?: unknown; slotId?: unknown };
-  if (t.kind === "before" && typeof t.slotId === "number") {
-    return { kind: "before", slotId: t.slotId };
-  }
-  if (t.kind === "fill" && typeof t.slotId === "number") {
-    return { kind: "fill", slotId: t.slotId };
-  }
+  const parsed = franchisePlacementSchema.safeParse(raw ?? { kind: "end" });
+  if (parsed.success) return parsed.data;
   return { kind: "end" };
 }

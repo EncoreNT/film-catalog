@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { franchiseCoverUrlFromFranchise } from "@/lib/covers/franchise-cover-url";
 import { getFranchiseMetrics } from "@/lib/franchises/franchise-metrics";
 import {
@@ -23,6 +24,7 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function FranchisePage({ params }: PageProps) {
   const { slug } = await params;
   const franchise = await loadFranchiseBySlug(slug);
+  if (!franchise) notFound();
 
   const metrics = await getFranchiseMetrics(franchise.id);
 

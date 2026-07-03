@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/primitives/Button";
+import { PageHeader } from "@/components/primitives/PageHeader";
 import { Field } from "@/components/primitives/Field";
 import { StoragePicker } from "@/components/shared/StoragePicker";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
@@ -14,6 +15,7 @@ import {
   type ScanProgress,
 } from "@/components/scan/ScanProgressModal";
 import { parseNdjsonStream } from "@/lib/api/ndjson-stream";
+import { approveMovie, parseApiError } from "@/lib/api/client";
 import type { ScanStreamEvent, ScanSummary } from "@/lib/media/scanner";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 
@@ -62,7 +64,7 @@ export function ScanPageClient({
     const statsData = await statsRes.json();
     setStats({ draft: statsData.draft, catalog: statsData.catalog });
     const draftsData = await draftsRes.json();
-    setDrafts(draftsData.movies ?? []);
+    setDrafts(draftsData.items ?? []);
     router.refresh();
   };
 
@@ -101,8 +103,7 @@ export function ScanPageClient({
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Сканирование не удалось");
+        throw new Error(await parseApiError(res, "Сканирование не удалось"));
       }
 
       const handleEvent = (event: ScanStreamEvent) => {
@@ -149,13 +150,17 @@ export function ScanPageClient({
   };
 
   const approveDraft = async (id: number) => {
-    await fetch(`/api/movies/${id}/approve`, { method: "POST" });
-    setDrafts((prev) => prev.filter((movie) => movie.id !== id));
-    setStats((prev) => ({
-      catalog: prev.catalog + 1,
-      draft: Math.max(0, prev.draft - 1),
-    }));
-    router.refresh();
+    try {
+      await approveMovie(id);
+      setDrafts((prev) => prev.filter((movie) => movie.id !== id));
+      setStats((prev) => ({
+        catalog: prev.catalog + 1,
+        draft: Math.max(0, prev.draft - 1),
+      }));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось опубликовать фильм");
+    }
   };
 
   const pct =
@@ -165,14 +170,10 @@ export function ScanPageClient({
 
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          Сканирование
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          Укажите корневую папку с фильмами и запустите сканирование
-        </p>
-      </div>
+      <PageHeader
+        title="Сканирование"
+        subtitle="Укажите корневую папку с фильмами и запустите сканирование"
+      />
 
       <ScanStatsCards catalog={stats.catalog} draft={stats.draft} />
 

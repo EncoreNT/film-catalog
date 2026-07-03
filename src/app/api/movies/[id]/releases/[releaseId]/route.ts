@@ -3,11 +3,14 @@ import { prisma } from "@/lib/db/prisma";
 import { releaseUpdateSchema } from "@/lib/api/validators";
 import { releaseInclude } from "@/lib/movies/movie-include";
 import { updateReleaseWithTracks } from "@/lib/releases/release-api";
+import { deleteRelease } from "@/lib/releases/delete-release";
 import { findReleaseForMovie } from "@/lib/releases/probe-release";
 import {
   isErrorResponse,
   jsonError,
+  mapDomainError,
   parseReleaseId,
+  parseRequestBody,
   parseRouteId,
   type ReleaseRouteContext,
 } from "@/lib/api/api-utils";
@@ -22,10 +25,10 @@ export async function PATCH(request: NextRequest, context: ReleaseRouteContext) 
   const release = await findReleaseForMovie(prisma, movieId, releaseId);
   if (!release) return jsonError("Релиз не найден", 404);
 
-  try {
-    const body = await request.json();
-    const data = releaseUpdateSchema.parse(body);
+  const data = await parseRequestBody(request, releaseUpdateSchema);
+  if (isErrorResponse(data)) return data;
 
+  try {
     const updated = await prisma.$transaction(async (tx) => {
       await updateReleaseWithTracks(tx, releaseId, data);
       return tx.release.findUnique({
@@ -36,8 +39,7 @@ export async function PATCH(request: NextRequest, context: ReleaseRouteContext) 
 
     return NextResponse.json(updated);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Не удалось обновить релиз";
-    return jsonError(message, 400);
+    return mapDomainError(err, "Не удалось обновить релиз");
   }
 }
 
@@ -48,14 +50,10 @@ export async function DELETE(_request: NextRequest, context: ReleaseRouteContext
   const releaseId = await parseReleaseId(context.params);
   if (isErrorResponse(releaseId)) return releaseId;
 
-  const release = await findReleaseForMovie(prisma, movieId, releaseId);
-  if (!release) return jsonError("Релиз не найден", 404);
-
-  const count = await prisma.release.count({ where: { movieId } });
-  if (count <= 1) {
-    return jsonError("Нельзя удалить единственный релиз фильма", 400);
+  try {
+    await deleteRelease(movieId, releaseId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return mapDomainError(err, "Не удалось удалить релиз");
   }
-
-  await prisma.release.delete({ where: { id: releaseId } });
-  return NextResponse.json({ ok: true });
 }

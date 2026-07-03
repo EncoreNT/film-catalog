@@ -78,8 +78,9 @@ prisma.movie.findUnique({ where: { slug }, include: movieInclude });
 
 // Список с фильтрами (фильтры по releases.some { … })
 const query = parseListQuery(searchParams);
+const where = await buildMovieListWhere(query);
 prisma.movie.findMany({
-  where: buildMovieWhere(query),
+  where,
   orderBy: buildMovieOrder(query),
   include: movieInclude,
 });
@@ -87,7 +88,7 @@ prisma.movie.findMany({
 
 ## Валидация входа
 
-Zod в `lib/validators.ts`:
+Zod в `lib/api/validators.ts`:
 
 - `movieCreateSchema` / `movieUpdateSchema` — work-level
 - `releaseCreateSchema` / `releaseUpdateSchema` — file-level

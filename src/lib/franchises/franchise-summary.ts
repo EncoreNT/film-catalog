@@ -6,8 +6,8 @@ import {
   displayMovieVersionLabel,
   dictLabel,
   RELEASE_TYPES,
-  parseHdrValue,
 } from "@/lib/shared/dictionaries";
+import { hdrShortLabel, normalizeAudioProfile } from "@/lib/media/quality-predicates";
 import { formatDuration } from "@/lib/shared/format";
 import { pickPrimaryRelease } from "@/lib/releases/release-primary";
 import {
@@ -95,38 +95,17 @@ function slotResolution(movie: MovieWithTracks | null): string | null {
 
 function slotDynamicRange(movie: MovieWithTracks | null): string | null {
   const v = primaryRelease(movie)?.videoTrack;
-  if (!v?.hdr) return "SDR";
-  const { base } = parseHdrValue(v.hdr);
-  if (base === "SDR") return "SDR";
-  if (base === "HDR10") return "HDR10";
-  if (base === "HDR10+") return "HDR10+";
-  if (base === "DolbyVision") return "DV";
-  return "HDR";
+  return hdrShortLabel(v?.hdr ?? null);
 }
-
-const AUDIO_SHORT: Record<string, string> = {
-  truehd: "TRUEHD",
-  eac3: "EAC3",
-  ac3: "AC3",
-  "dts-hd": "DTS-HD",
-  dts: "DTS",
-  aac: "AAC",
-  flac: "FLAC",
-  opus: "OPUS",
-  vorbis: "VORBIS",
-  pcm: "PCM",
-  mp3: "MP3",
-};
 
 function slotAudioShort(movie: MovieWithTracks | null): string | null {
   const release = primaryRelease(movie);
   const track = release ? mainAudioTrack(release) : null;
   if (!track) return null;
-  const profile =
-    track.profile && track.profile !== "None" ? track.profile : null;
+  const profile = normalizeAudioProfile(track.profile);
   if (profile === "Atmos") return "ATMOS";
   if (profile === "DTS:X MA") return "DTS:X";
-  if (track.codec) return AUDIO_SHORT[track.codec] ?? track.codec.toUpperCase();
+  if (track.codec) return codecShort(track.codec)?.toUpperCase() ?? track.codec.toUpperCase();
   return profile;
 }
 

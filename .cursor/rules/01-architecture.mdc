@@ -99,9 +99,9 @@ film-catalog/
 ## Поток: сканирование
 
 ```
-/scan UI → POST /api/scan { scanRoot, externalDrive?, driveName? }
+/scan UI → POST /api/scan { scanRoot, externalStorageId? }
          → setScanRoot (Setting table или SCAN_ROOT env)
-         → scanDirectory (lib/scanner.ts)
+         → scanDirectory (lib/media/scanner.ts)
               walkVideoFiles (рекурсия, skip dot-dirs)
               для каждого файла:
                 skip если size+mtime совпали
@@ -131,8 +131,8 @@ Status counts: archive-metrics.ts
 ```
 Файл на диске: data/covers/<movieId>.<ext>  или  franchise-<id>.<ext>
 DB поле: coverPath = "covers/..." (относительно data/)
-URL фильма:  /api/covers/[id]?v=<updatedAt>     → lib/cover-url.ts
-URL франшизы: /api/franchises/[id]/cover?v=...   → lib/franchise-cover-url.ts
+URL фильма:  /api/covers/[id]?v=<updatedAt>     → lib/covers/cover-url.ts
+URL франшизы: /api/franchises/[id]/cover?v=...   → lib/covers/franchise-cover-url.ts
 Upload: POST multipart → saveCoverBuffer / franchise cover route
 Extract: maybeExtractCover из MKV attachment (scanner + create movie)
 ```
@@ -149,18 +149,18 @@ Metrics: franchise-metrics.ts (4K, HDR, Atmos counts по слотам)
 
 ## Slug-стратегия
 
-- Фильмы: `resolveMovieSlug` (`lib/movie-slug.ts`) — транслит + dedup suffix
-- Франшизы: `resolveFranchiseSlug` (`lib/franchise-slug.ts`)
+- Фильмы: `resolveMovieSlug` (`lib/movies/movie-slug.ts`) — транслит + dedup suffix
+- Франшизы: `resolveFranchiseSlug` (`lib/franchises/franchise-slug.ts`)
 - URL всегда по slug, не по id
 
 ## Настройки
 
 - `getScanRoot` / `setScanRoot` — ключ `scanRoot` в таблице Setting, fallback `process.env.SCAN_ROOT`
-- Prisma singleton: `src/lib/prisma.ts`, adapter BetterSqlite3, path из DATABASE_URL
+- Prisma singleton: `src/lib/db/prisma.ts`, adapter BetterSqlite3, path из DATABASE_URL
 
 ## Тесты
 
-Vitest рядом с кодом: `src/lib/*.test.ts`. Запуск: `npm test`. Покрывают парсеры, query builders, ffprobe helpers — не E2E.
+Vitest рядом с кодом: `src/lib/<domain>/*.test.ts`. Запуск: `npm test`. Покрывают парсеры, query builders, ffprobe helpers — не E2E.
 
 ## Что НЕ трогать без необходимости
 

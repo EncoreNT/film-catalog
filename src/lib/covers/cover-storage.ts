@@ -8,6 +8,22 @@ import { extractFirstMkvAttachment } from "@/lib/covers/mkv";
 const COVERS_DIR = dataPath("covers");
 
 /**
+ * Write a cover image buffer to data/covers/<baseName><ext> and return the
+ * relative path (covers/…). Shared by movie and franchise cover saves.
+ */
+export async function saveEntityCoverBuffer(
+  baseName: string,
+  buffer: Buffer,
+  ext: string,
+): Promise<string> {
+  assertCoverImageExtension(ext);
+  await mkdir(COVERS_DIR, { recursive: true });
+  const coverFileName = `${baseName}${ext}`;
+  await writeFile(path.join(COVERS_DIR, coverFileName), buffer);
+  return `covers/${coverFileName}`;
+}
+
+/**
  * Persist a cover image buffer for a movie and record its relative path.
  * Mirrors the convention used by the /api/movies/[id]/cover upload route:
  * files live in data/covers/<id><ext> and are served via /api/covers/[id].
@@ -17,11 +33,11 @@ export async function saveCoverBuffer(
   buffer: Buffer,
   ext: string,
 ): Promise<string> {
-  assertCoverImageExtension(ext);
-  await mkdir(COVERS_DIR, { recursive: true });
-  const coverFileName = `${movieId}${ext}`;
-  await writeFile(path.join(COVERS_DIR, coverFileName), buffer);
-  const relativeCoverPath = `covers/${coverFileName}`;
+  const relativeCoverPath = await saveEntityCoverBuffer(
+    String(movieId),
+    buffer,
+    ext,
+  );
   await prisma.movie.update({
     where: { id: movieId },
     data: { coverPath: relativeCoverPath },

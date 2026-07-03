@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "./Button";
+import { NativeDialog } from "./NativeDialog";
 
 interface ModalProps {
   open: boolean;
@@ -23,17 +24,6 @@ export function Modal({
   size = "default",
   bodyClassName,
 }: ModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  if (!open) return null;
-
   const width =
     size === "xwide"
       ? "w-[min(100%-2rem,1080px)]"
@@ -42,10 +32,11 @@ export function Modal({
         : "w-[min(100%-2rem,640px)]";
 
   return (
-    <dialog
-      ref={dialogRef}
-      className={`fixed inset-0 z-[100] m-auto flex ${width} max-h-[90dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 open:animate-in`}
+    <NativeDialog
+      open={open}
       onClose={onClose}
+      zIndex={100}
+      className={`fixed inset-0 m-auto flex ${width} max-h-[90dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 open:animate-in`}
     >
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-bg-elevated px-5 py-4">
         <h2 className="font-display text-xl font-semibold">{title}</h2>
@@ -70,6 +61,6 @@ export function Modal({
           {footer}
         </div>
       ) : null}
-    </dialog>
+    </NativeDialog>
   );
 }

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # API Routes
 
-Общие утилиты: `lib/api-utils.ts` — `jsonError`, `parseRouteId`, `RouteContext`, `isErrorResponse`.
+Общие утилиты: `lib/api/api-utils.ts` — `jsonError`, `parseRouteId`, `RouteContext`, `isErrorResponse`.
 
 Ошибки: `{ error: string }` + HTTP status. Сообщения на русском.
 
@@ -23,7 +23,7 @@ alwaysApply: false
 | POST | `/api/movies/[id]/cover` | Upload обложки (multipart) |
 | GET | `/api/movies/[id]/franchises` | Членства фильма во франшизах |
 | POST | `/api/movies/[id]/franchises` | Привязать к франшизе |
-| PATCH | `/api/movies/[id]/franchises/[franchiseId]` | Обновить storyOrder в слоте |
+| PATCH | `/api/movies/[id]/franchises/[franchiseId]` | Переместить/заполнить слот (`target`: end/before/fill) |
 | DELETE | `/api/movies/[id]/franchises/[franchiseId]` | Отвязать |
 
 Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-fatal).

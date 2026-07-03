@@ -1,3 +1,5 @@
+import { secondsToHmsParts } from "@/lib/shared/duration-parts";
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -35,10 +37,7 @@ export function formatDuration(
   style: "short" | "long" = "short",
 ): string | null {
   if (seconds == null || seconds <= 0) return null;
-  const total = Math.round(seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
+  const { h, m, s } = secondsToHmsParts(seconds);
   if (style === "long") {
     if (h > 0) {
       return `${h} ч ${m} мин`;

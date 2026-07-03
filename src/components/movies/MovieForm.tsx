@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, EyeOff, Loader2, Trash2 } from "lucide-react";
+import { EyeOff, Trash2 } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
+import { FormActionBar } from "@/components/primitives/FormActionBar";
 import { Field, TextAreaField } from "@/components/primitives/Field";
 import { DatePicker } from "@/components/primitives/DatePicker";
 import { InfoHint } from "@/components/primitives/InfoHint";
@@ -16,6 +17,7 @@ import { GenrePicker } from "@/components/movies/GenrePicker";
 import { YearInput } from "@/components/primitives/YearInput";
 import { CoverUpload } from "@/components/primitives/CoverUpload";
 import { buildMovieUpdatePayload } from "@/lib/movies/build-movie-payload";
+import { apiFetch, approveMovie } from "@/lib/api/client";
 
 interface MovieEditorProps {
   movie: MovieWithTracks;
@@ -49,25 +51,24 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
     setError(null);
     setLoading(true);
     try {
-      const movieRes = await fetch(`/api/movies/${movie.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          buildMovieUpdatePayload({
-            title,
-            year,
-            description,
-            genres,
-            rating: movie.rating,
-            watchedAt,
-          }),
-        ),
-      });
-      if (!movieRes.ok) {
-        const data = await movieRes.json();
-        throw new Error(data.error ?? "Ошибка сохранения");
-      }
-      const updated = (await movieRes.json()) as MovieWithTracks;
+      const updated = await apiFetch<MovieWithTracks>(
+        `/api/movies/${movie.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            buildMovieUpdatePayload({
+              title,
+              year,
+              description,
+              genres,
+              rating: movie.rating,
+              watchedAt,
+            }),
+          ),
+        },
+        "Ошибка сохранения",
+      );
       setIsDirty(false);
       if (updated.slug !== movie.slug) {
         router.replace(`/movies/${updated.slug}/edit`);
@@ -84,8 +85,10 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   const handleApprove = async () => {
     setLoading(true);
     try {
-      await fetch(`/api/movies/${movie.id}/approve`, { method: "POST" });
+      await approveMovie(movie.id);
       router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
       setLoading(false);
     }
@@ -94,15 +97,15 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   const handleHide = async () => {
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/movies/${movie.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "EXCLUDED" }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Не удалось скрыть фильм");
-      }
+      await apiFetch(
+        `/api/movies/${movie.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "EXCLUDED" }),
+        },
+        "Не удалось скрыть фильм",
+      );
       setConfirmKind(null);
       router.push("/");
     } catch (err) {
@@ -115,11 +118,11 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   const handleDelete = async () => {
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/movies/${movie.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Не удалось удалить фильм");
-      }
+      await apiFetch(
+        `/api/movies/${movie.id}`,
+        { method: "DELETE" },
+        "Не удалось удалить фильм",
+      );
       setConfirmKind(null);
       router.push("/");
     } catch (err) {
@@ -209,72 +212,51 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
         </aside>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-deep/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent" aria-hidden />
-                <span className="font-mono-tech text-sm text-muted">сохранение…</span>
-              </>
-            ) : error ? (
-              <span className="truncate text-sm text-danger" role="alert">
-                {error}
-              </span>
-            ) : isDirty ? (
-              <>
-                <span className="h-2 w-2 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" aria-hidden />
-                <span className="font-mono-tech text-sm text-accent">несохранённые изменения</span>
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4 shrink-0 text-accent/70" aria-hidden />
-                <span className="font-mono-tech text-sm text-muted">все изменения сохранены</span>
-              </>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {movie.status === "DRAFT" ? (
-              <Button
-                type="button"
-                variant="secondary"
-                loading={loading}
-                onClick={handleApprove}
-              >
-                В каталог
-              </Button>
-            ) : null}
-            {movie.status !== "EXCLUDED" ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setConfirmKind("hide")}
-                disabled={loading || actionLoading}
-              >
-                <EyeOff className="h-4 w-4" aria-hidden />
-                Скрыть
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="danger"
-              onClick={() => setConfirmKind("delete")}
-              disabled={loading || actionLoading}
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-              Удалить
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              loading={loading}
-              disabled={!isDirty && !loading}
-            >
-              Сохранить
-            </Button>
-          </div>
-        </div>
-      </div>
+      <FormActionBar
+        isDirty={isDirty}
+        saving={loading}
+        actionLoading={actionLoading}
+        error={error}
+      >
+        {movie.status === "DRAFT" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            loading={loading}
+            onClick={handleApprove}
+          >
+            В каталог
+          </Button>
+        ) : null}
+        {movie.status !== "EXCLUDED" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setConfirmKind("hide")}
+            disabled={loading || actionLoading}
+          >
+            <EyeOff className="h-4 w-4" aria-hidden />
+            Скрыть
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="danger"
+          onClick={() => setConfirmKind("delete")}
+          disabled={loading || actionLoading}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+          Удалить
+        </Button>
+        <Button
+          type="submit"
+          variant="primary"
+          loading={loading}
+          disabled={!isDirty && !loading}
+        >
+          Сохранить
+        </Button>
+      </FormActionBar>
 
       <ConfirmDialog
         open={confirmKind === "hide"}

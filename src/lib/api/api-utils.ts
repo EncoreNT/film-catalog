@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { ZodError, type z } from "zod";
 
 export type RouteContext = { params: Promise<{ id: string }> };
 export type ReleaseRouteContext = {
@@ -46,8 +47,60 @@ export async function parseMovieFranchiseIds(
   return { movieId, franchiseId };
 }
 
-export function isErrorResponse(
-  value: number | NextResponse | { movieId: number; franchiseId: number },
-): value is NextResponse {
+export function isErrorResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse;
+}
+
+export async function parseRequestBody<T extends z.ZodType>(
+  request: NextRequest,
+  schema: T,
+): Promise<z.infer<T> | NextResponse> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("Некорректный запрос", 400);
+  }
+  try {
+    return schema.parse(body);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return jsonError(
+        err.issues[0]?.message ?? "Некорректные данные",
+        400,
+      );
+    }
+    throw err;
+  }
+}
+
+const DOMAIN_ERROR_STATUS: Record<string, number> = {
+  "Фильм не найден": 404,
+  "Релиз не найден": 404,
+  "Франшиза не найдена": 404,
+  "Слот не найден": 404,
+  "Внешний диск не найден": 400,
+  "Файл не найден по указанному пути": 404,
+};
+
+export function mapDomainError(
+  err: unknown,
+  fallback = "Ошибка",
+): NextResponse {
+  const message = err instanceof Error ? err.message : fallback;
+  const status = DOMAIN_ERROR_STATUS[message] ?? 400;
+  return jsonError(message, status);
+}
+
+export function paginatedResponse<T>(
+  items: T[],
+  pagination: { page: number; limit: number; total: number },
+) {
+  return NextResponse.json({
+    items,
+    pagination: {
+      ...pagination,
+      pages: Math.ceil(pagination.total / pagination.limit),
+    },
+  });
 }

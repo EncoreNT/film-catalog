@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { DuplicateGroup } from "@/lib/merge/alternative-quality";
+import type { DuplicateGroup } from "@/lib/merge/duplicate-groups";
 import { pluralRu } from "@/lib/shared/russian-plural";
 
 interface DuplicateGroupListProps {

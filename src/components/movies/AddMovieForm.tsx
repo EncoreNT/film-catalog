@@ -36,8 +36,9 @@ import { emptyAudioFormRow } from "@/lib/movies/movie-form-types";
 import {
   applyProbeToTrackEditor,
   probeFilePath,
-} from "@/lib/media/probe-from-file";
+} from "@/hooks/useProbeFile";
 import { buildMovieCreatePayload } from "@/lib/movies/build-movie-payload";
+import { apiFetch, uploadCoverAfterCreate } from "@/lib/api/client";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
 
 interface AddMovieFormProps {
@@ -174,38 +175,20 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
         subtitleRows: subRows,
       });
 
-      const res = await fetch("/api/movies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error ?? "Ошибка добавления");
-      }
-      const movie = await res.json();
-      if (coverFile) {
-        try {
-          const coverForm = new FormData();
-          coverForm.append("cover", coverFile);
-          await fetch(`/api/movies/${movie.id}/cover`, {
-            method: "POST",
-            body: coverForm,
-          });
-        } catch {
-          // Cover upload is non-fatal; the movie is already created.
-        }
-      } else if (coverUrl) {
-        try {
-          await fetch(`/api/movies/${movie.id}/cover`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: coverUrl }),
-          });
-        } catch {
-          // Cover upload is non-fatal; the movie is already created.
-        }
-      }
+      const movie = await apiFetch<{ id: number; slug: string }>(
+        "/api/movies",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+        "Ошибка добавления",
+      );
+      await uploadCoverAfterCreate(
+        `/api/movies/${movie.id}/cover`,
+        coverFile,
+        coverUrl,
+      );
       onDone?.();
       router.push(`/movies/${movie.slug}`);
     } catch (err) {

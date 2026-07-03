@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(storage, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Create failed";
+    const message = err instanceof Error ? err.message : "Не удалось создать диск";
     return jsonError(message, 400);
   }
 }

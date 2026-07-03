@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { movieUpdateSchema } from "@/lib/api/validators";
 import { movieInclude } from "@/lib/movies/movie-include";
-import { syncMovieGenres } from "@/lib/movies/genres";
+import { syncMovieGenres } from "@/lib/movies/sync-movie-genres";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
 import type { z } from "zod";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
-import type { ReleaseWithTracks } from "@/lib/movies/movie-query";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 function release(
   partial: Partial<ReleaseWithTracks> & { id: number },

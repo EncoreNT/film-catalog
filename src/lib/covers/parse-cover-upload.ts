@@ -20,7 +20,7 @@ export async function parseCoverUploadRequest(
     const body = await request.json().catch(() => null);
     const url = typeof body?.url === "string" ? body.url.trim() : "";
     if (!url) {
-      return { message: "No url", status: 400 };
+      return { message: "Не указан URL", status: 400 };
     }
     return fetchRemoteCoverBuffer(url);
   }
@@ -28,7 +28,7 @@ export async function parseCoverUploadRequest(
   const formData = await request.formData();
   const file = formData.get("cover");
   if (!file || !(file instanceof File)) {
-    return { message: "No cover file", status: 400 };
+    return { message: "Файл обложки не передан", status: 400 };
   }
   if (file.size > COVER_MAX_BYTES) {
     return {

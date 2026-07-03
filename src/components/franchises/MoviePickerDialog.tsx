@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Film, Loader2, Search, X } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { Button } from "@/components/primitives/Button";
+import { NativeDialog } from "@/components/primitives/NativeDialog";
 import { trimInput } from "@/lib/shared/text-trim";
 import { pickPrimaryRelease } from "@/lib/releases/release-primary";
+import { useDebouncedApiSearch } from "@/hooks/useDebouncedApiSearch";
 
 interface MoviePickerDialogProps {
   open: boolean;
@@ -29,93 +31,42 @@ export function MoviePickerDialog(props: MoviePickerDialogProps) {
 }
 
 function MoviePickerDialogContent({
+  open,
   onClose,
   onPick,
   excludeIds = [],
   saving = false,
   slotLabel,
 }: MoviePickerDialogProps) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<MovieWithTracks[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [touched, setTouched] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const buildUrl = useCallback(
+    (q: string) =>
+      `/api/movies?q=${encodeURIComponent(q)}&status=CATALOG&limit=${PAGE_SIZE}`,
+    [],
+  );
+
+  const { query, results, loading, touched, onQueryChange } =
+    useDebouncedApiSearch<MovieWithTracks>({ buildUrl, enabled: open });
+
+  useEffect(() => {
+    const t = setTimeout(() => inputRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, []);
 
   const excludeSet = new Set(excludeIds);
-
-  const runSearch = useCallback(async (q: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/movies?q=${encodeURIComponent(q)}&status=CATALOG&limit=${PAGE_SIZE}`,
-      );
-      const data = (await res.json()) as { movies: MovieWithTracks[] };
-      setResults(data.movies ?? []);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (!dialog.open) dialog.showModal();
-    const onCancel = (e: Event) => {
-      e.preventDefault();
-      onClose();
-    };
-    dialog.addEventListener("cancel", onCancel);
-    const t = setTimeout(() => inputRef.current?.focus(), 60);
-    return () => {
-      dialog.removeEventListener("cancel", onCancel);
-      clearTimeout(t);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [onClose]);
-
-  // initial catalog sample shown on first open — state updates only land
-  // after the awaited fetch, so no synchronous setState in the effect body.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(
-          `/api/movies?q=&status=CATALOG&limit=${PAGE_SIZE}`,
-        );
-        const data = (await res.json()) as { movies: MovieWithTracks[] };
-        if (!cancelled) setResults(data.movies ?? []);
-      } catch {
-        if (!cancelled) setResults([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const onQueryChange = (value: string) => {
-    setQuery(value);
-    setTouched(true);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      void runSearch(value);
-    }, 250);
-  };
-
   const visible = results.filter((m) => !excludeSet.has(m.id));
 
   return (
-    <dialog
-      ref={dialogRef}
-      className="fixed inset-0 z-[120] m-auto flex w-[min(100%-2rem,720px)] max-h-[88dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm open:animate-in"
+    <NativeDialog
+      open={open}
       onClose={onClose}
-      aria-label={slotLabel ? `Привязка фильма · ${slotLabel}` : "Привязка фильма"}
+      preventCancel={saving}
+      zIndex={120}
+      ariaLabel={
+        slotLabel ? `Привязка фильма · ${slotLabel}` : "Привязка фильма"
+      }
+      className="fixed inset-0 m-auto flex w-[min(100%-2rem,720px)] max-h-[88dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm open:animate-in"
     >
       <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0">
@@ -235,6 +186,6 @@ function MoviePickerDialogContent({
           </div>
         ) : null}
       </div>
-    </dialog>
+    </NativeDialog>
   );
 }

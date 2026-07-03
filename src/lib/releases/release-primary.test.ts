@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pickPrimaryRelease, rankRelease } from "@/lib/releases/release-primary";
-import type { ReleaseWithTracks } from "@/lib/releases/release-primary";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 function release(
   partial: Partial<ReleaseWithTracks> & { id: number },

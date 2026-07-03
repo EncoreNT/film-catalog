@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { franchiseInclude } from "@/lib/franchises/franchise-include";
-import { FranchisesListClient } from "./FranchisesListClient";
+import { FranchisesList } from "@/components/franchises/FranchisesList";
 
 export const metadata = {
   title: "Франшизы",
@@ -12,5 +12,5 @@ export default async function FranchisesPage() {
     include: franchiseInclude,
   });
 
-  return <FranchisesListClient franchises={franchises} />;
+  return <FranchisesList franchises={franchises} />;
 }

@@ -2,6 +2,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import { MovieStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getCatalogFacets } from "@/lib/catalog/catalog-facets";
+import {
+  archiveEliteTierWhere,
+  russianAtmosAudioWhere,
+} from "@/lib/media/quality-predicates";
 
 export interface ArchiveMetrics {
   fourK: number;
@@ -12,42 +16,25 @@ export interface ArchiveMetrics {
 
 export const catalogWhere = { status: MovieStatus.CATALOG } as const;
 
-export const russianAtmosAudioWhere = {
-  releases: {
-    some: {
-      audioTracks: {
-        some: {
-          isDefault: true,
-          language: "rus",
-          profile: { in: ["Atmos", "DTS:X MA"] as const },
-        },
-      },
-    },
-  },
-} satisfies Prisma.MovieWhereInput;
-
+/** @deprecated Use archiveEliteTierWhere from quality-predicates — kept for imports. */
 export const eliteTierWhere = {
   ...catalogWhere,
-  AND: [
-    {
-      releases: {
-        some: { videoTrack: { resolutionLabel: "4K" } },
-      },
-    },
-    {
-      releases: {
-        some: { videoTrack: { hdr: { notIn: ["SDR"] } } },
-      },
-    },
-    russianAtmosAudioWhere,
-  ],
+  ...archiveEliteTierWhere,
 } satisfies Prisma.MovieWhereInput;
 
-export async function getArchiveMetrics(): Promise<ArchiveMetrics> {
+export { russianAtmosAudioWhere } from "@/lib/media/quality-predicates";
+
+export async function countArchiveMetrics(
+  extraWhere?: Prisma.MovieWhereInput,
+): Promise<ArchiveMetrics> {
+  const scopedWhere: Prisma.MovieWhereInput = extraWhere
+    ? { AND: [catalogWhere, extraWhere] }
+    : catalogWhere;
+
   const [fourK, hdr10, russianAtmos, elite] = await Promise.all([
     prisma.movie.count({
       where: {
-        ...catalogWhere,
+        ...scopedWhere,
         releases: {
           some: { videoTrack: { resolutionLabel: "4K" } },
         },
@@ -55,7 +42,7 @@ export async function getArchiveMetrics(): Promise<ArchiveMetrics> {
     }),
     prisma.movie.count({
       where: {
-        ...catalogWhere,
+        ...scopedWhere,
         releases: {
           some: { videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } } },
         },
@@ -63,14 +50,23 @@ export async function getArchiveMetrics(): Promise<ArchiveMetrics> {
     }),
     prisma.movie.count({
       where: {
-        ...catalogWhere,
+        ...scopedWhere,
         ...russianAtmosAudioWhere,
       },
     }),
-    prisma.movie.count({ where: eliteTierWhere }),
+    prisma.movie.count({
+      where: {
+        ...scopedWhere,
+        ...archiveEliteTierWhere,
+      },
+    }),
   ]);
 
   return { fourK, hdr10, russianAtmos, elite };
+}
+
+export async function getArchiveMetrics(): Promise<ArchiveMetrics> {
+  return countArchiveMetrics();
 }
 
 export async function getStatusCounts() {
@@ -85,19 +81,13 @@ export async function getStatusCounts() {
 
 export async function getStatsOverview() {
   const [
-    total,
-    catalog,
-    draft,
-    excluded,
+    statusCounts,
     withoutCover,
     watched,
     avgRating,
     facets,
   ] = await Promise.all([
-    prisma.movie.count(),
-    prisma.movie.count({ where: { status: MovieStatus.CATALOG } }),
-    prisma.movie.count({ where: { status: MovieStatus.DRAFT } }),
-    prisma.movie.count({ where: { status: MovieStatus.EXCLUDED } }),
+    getStatusCounts(),
     prisma.movie.count({
       where: { coverPath: null, status: MovieStatus.CATALOG },
     }),
@@ -110,10 +100,10 @@ export async function getStatsOverview() {
   ]);
 
   return {
-    total,
-    catalog,
-    draft,
-    excluded,
+    total: statusCounts.totalCount,
+    catalog: statusCounts.catalogCount,
+    draft: statusCounts.draftCount,
+    excluded: statusCounts.excludedCount,
     withoutCover,
     watched,
     avgRating: avgRating._avg.rating,

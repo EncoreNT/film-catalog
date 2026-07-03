@@ -3,7 +3,7 @@ import { movieCreateSchema } from "@/lib/api/validators";
 import { MovieStatus } from "@/generated/prisma/client";
 import { maybeExtractCover } from "@/lib/covers/cover-storage";
 import { movieInclude } from "@/lib/movies/movie-include";
-import { syncMovieGenres } from "@/lib/movies/genres";
+import { syncMovieGenres } from "@/lib/movies/sync-movie-genres";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
 import {

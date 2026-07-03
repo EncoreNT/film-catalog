@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { computeFranchiseSummary, slotTier } from "@/lib/franchises/franchise-summary";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
-import type { MovieWithTracks, ReleaseWithTracks } from "@/lib/movies/movie-query";
+import type { MovieWithTracks } from "@/lib/movies/movie-include";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 type MovieOpts = {
   id?: number;

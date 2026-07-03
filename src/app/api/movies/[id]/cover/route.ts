@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -32,6 +33,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       payload.buffer,
       payload.ext,
     );
+    revalidatePath("/");
+    revalidatePath(`/movies/${updated.slug}`);
+    revalidatePath(`/movies/${updated.slug}/edit`);
     return NextResponse.json(updated);
   } catch {
     return jsonError("Не удалось сохранить обложку", 500);

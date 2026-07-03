@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "./Button";
+import { NativeDialog } from "./NativeDialog";
 
 type Tone = "danger" | "accent";
 
@@ -29,30 +30,8 @@ export function ConfirmDialog({
   tone = "danger",
   loading = false,
 }: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descId = useId();
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const onCancel = (e: Event) => {
-      e.preventDefault();
-      if (!loading) onClose();
-    };
-    dialog.addEventListener("cancel", onCancel);
-    return () => dialog.removeEventListener("cancel", onCancel);
-  }, [open, loading, onClose]);
-
-  if (!open) return null;
 
   const isDanger = tone === "danger";
   const iconWrap = isDanger
@@ -60,12 +39,14 @@ export function ConfirmDialog({
     : "border-accent/30 bg-accent/10 text-accent";
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-labelledby={titleId}
-      aria-describedby={descId}
-      className="confirm-dialog fixed inset-0 z-[110] m-auto flex w-[min(100%-2rem,440px)] max-w-[440px] flex-col rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+    <NativeDialog
+      open={open}
       onClose={onClose}
+      preventCancel={loading}
+      zIndex={110}
+      ariaLabelledBy={titleId}
+      ariaDescribedBy={descId}
+      className="confirm-dialog fixed inset-0 m-auto flex w-[min(100%-2rem,440px)] max-w-[440px] flex-col rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
     >
       <div className="flex items-start gap-4 p-5 pb-4">
         <span
@@ -108,6 +89,6 @@ export function ConfirmDialog({
           {confirmLabel}
         </Button>
       </div>
-    </dialog>
+    </NativeDialog>
   );
 }

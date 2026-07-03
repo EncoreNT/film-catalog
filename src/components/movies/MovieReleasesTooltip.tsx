@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Star } from "lucide-react";
-import type { ReleaseWithTracks } from "@/lib/movies/movie-query";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
 import { is4K, isAnyHDR, premiumAudio } from "@/lib/media/spec-tags";
 

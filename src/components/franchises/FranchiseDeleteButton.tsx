@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
+import { apiFetch } from "@/lib/api/client";
 
 interface FranchiseDeleteButtonProps {
   franchiseId: number;
@@ -24,13 +25,11 @@ export function FranchiseDeleteButton({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/franchises/${franchiseId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Не удалось удалить франшизу");
-      }
+      await apiFetch(
+        `/api/franchises/${franchiseId}`,
+        { method: "DELETE" },
+        "Не удалось удалить франшизу",
+      );
       setOpen(false);
       router.push("/franchises");
       router.refresh();

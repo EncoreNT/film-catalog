@@ -1,4 +1,4 @@
-import { findAllDuplicateGroups } from "@/lib/merge/alternative-quality";
+import { findAllDuplicateGroups } from "@/lib/merge/duplicate-groups";
 import { DuplicatesPageHeader } from "@/components/duplicates/DuplicatesPageHeader";
 import { DuplicateGroupList } from "@/components/duplicates/DuplicateGroupList";
 

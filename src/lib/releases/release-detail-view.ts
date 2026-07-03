@@ -1,5 +1,8 @@
+import {
+  isSpatialAudioProfile,
+} from "@/lib/media/quality-predicates";
 import type { SpecTagKind } from "@/lib/media/spec-tags";
-import type { ReleaseWithTracks } from "@/lib/movies/movie-query";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { displayFilePath } from "@/lib/shared/display-path";
 import {
   releaseHasExternalStorage,
@@ -82,9 +85,7 @@ export type ReleaseDetailView = {
 function buildAudioTrack(
   track: ReleaseWithTracks["audioTracks"][number],
 ): ReleaseDetailAudioTrack {
-  const profile =
-    track.profile && track.profile !== "None" ? track.profile : null;
-  const is3D = profile === "Atmos" || profile === "DTS:X MA";
+  const is3D = isSpatialAudioProfile(track.profile);
   const bitrate = formatBitrateKbps(track.bitrate);
 
   return {

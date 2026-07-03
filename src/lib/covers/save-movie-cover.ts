@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { saveCoverBuffer } from "@/lib/covers/cover-storage";
 
@@ -18,10 +17,6 @@ export async function saveMovieCover(
   if (!updated) {
     throw new Error("Фильм не найден");
   }
-
-  revalidatePath("/");
-  revalidatePath(`/movies/${updated.slug}`);
-  revalidatePath(`/movies/${updated.slug}/edit`);
 
   return updated;
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { StarRating } from "@/components/primitives/StarRating";
+import { apiFetch } from "@/lib/api/client";
 
 interface MovieRatingProps {
   movieId: number;
@@ -27,17 +28,20 @@ export function MovieRating({ movieId, value, watchedAt }: MovieRatingProps) {
       if (!watchedAt && next != null) {
         payload.watchedAt = new Date().toISOString();
       }
-      const res = await fetch(`/api/movies/${movieId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setRating(previous);
-        setError(data.error ?? "Не удалось сохранить оценку");
-      } else {
+      try {
+        await apiFetch(
+          `/api/movies/${movieId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+          "Не удалось сохранить оценку",
+        );
         router.refresh();
+      } catch {
+        setRating(previous);
+        setError("Не удалось сохранить оценку");
       }
     });
   };

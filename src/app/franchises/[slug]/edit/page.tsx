@@ -1,5 +1,5 @@
-import { BackLink } from "@/components/primitives/BackLink";
-import { EditPageHeader } from "@/components/layout/EditPageHeader";
+import { notFound } from "next/navigation";
+import { EntityEditLayout } from "@/components/layout/EntityEditLayout";
 import { FranchiseForm } from "@/components/franchises/FranchiseForm";
 import {
   generateFranchiseMetadata,
@@ -18,20 +18,17 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function FranchiseEditPage({ params }: PageProps) {
   const { slug } = await params;
   const franchise = await loadFranchiseBySlug(slug);
+  if (!franchise) notFound();
 
   return (
-    <div className="space-y-8">
-      <BackLink href={`/franchises/${franchise.slug}`}>
-        Назад к франшизе
-      </BackLink>
-
-      <EditPageHeader
-        eyebrow="редактирование"
-        title={franchise.name}
-        titleClassName="font-display mt-1 text-3xl font-bold sm:text-4xl"
-      />
-
+    <EntityEditLayout
+      backHref={`/franchises/${franchise.slug}`}
+      backLabel="Назад к франшизе"
+      eyebrow="редактирование"
+      title={franchise.name}
+      titleClassName="font-display text-3xl font-bold sm:text-4xl"
+    >
       <FranchiseForm mode="edit" franchise={franchise} />
-    </div>
+    </EntityEditLayout>
   );
 }

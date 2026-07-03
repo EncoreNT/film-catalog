@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
+import { approveMovie } from "@/lib/api/client";
 
 interface MovieApproveButtonProps {
   movieId: number;
@@ -26,11 +27,7 @@ export function MovieApproveButton({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/movies/${movieId}/approve`, { method: "POST" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Не удалось опубликовать фильм");
-      }
+      await approveMovie(movieId);
       setOpen(false);
       router.refresh();
     } catch (err) {

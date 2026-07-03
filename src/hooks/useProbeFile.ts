@@ -1,3 +1,5 @@
+"use client";
+
 import type { ProbeResult } from "@/lib/media/ffprobe";
 import {
   probeToAudioRows,
