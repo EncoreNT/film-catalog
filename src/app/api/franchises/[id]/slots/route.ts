@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import {
   isErrorResponse,
   parseRouteId,
   type RouteContext,
-} from "@/lib/api-utils";
+} from "@/lib/api/api-utils";
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   const franchiseId = await parseRouteId(context.params);

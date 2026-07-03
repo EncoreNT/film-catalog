@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { franchiseUpdateSchema } from "@/lib/validators";
-import { franchiseInclude } from "@/lib/franchise-include";
-import { resolveFranchiseSlug } from "@/lib/franchise-slug";
-import { syncFranchiseSlots } from "@/lib/franchise-slots";
+import { prisma } from "@/lib/db/prisma";
+import { franchiseUpdateSchema } from "@/lib/api/validators";
+import { franchiseInclude } from "@/lib/franchises/franchise-include";
+import { resolveFranchiseSlug } from "@/lib/franchises/franchise-slug";
+import { syncFranchiseSlots } from "@/lib/franchises/franchise-slots";
 import {
   isErrorResponse,
   jsonError,
   parseRouteId,
   type RouteContext,
-} from "@/lib/api-utils";
+} from "@/lib/api/api-utils";
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   const franchiseId = await parseRouteId(context.params);

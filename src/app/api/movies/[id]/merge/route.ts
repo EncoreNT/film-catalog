@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mergeSchema } from "@/lib/validators";
-import { mergeMovies } from "@/lib/movie-merge";
+import { mergeSchema } from "@/lib/api/validators";
+import { mergeMovies } from "@/lib/merge/movie-merge";
 import {
   isErrorResponse,
   jsonError,
   parseRouteId,
   type RouteContext,
-} from "@/lib/api-utils";
+} from "@/lib/api/api-utils";
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const movieId = await parseRouteId(context.params);

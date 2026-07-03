@@ -22,10 +22,27 @@ film-catalog/
 │   │   ├── franchises/        # Список + [slug] detail + edit
 │   │   └── api/               # Route Handlers (REST)
 │   ├── components/            # React-компоненты
-│   │   ├── primitives/        # Button, Field, Modal, Select, …
-│   │   └── …                  # Доменные: MovieCard, FranchiseForm, …
+│   │   ├── primitives/        # Button, Field, Modal, ImageCoverUpload, …
+│   │   ├── layout/            # AmbientBackground, ErrorScene, EditPageHeader
+│   │   ├── catalog/           # MovieCatalog, FilterBar, EmptyCatalog
+│   │   ├── movies/            # MovieCard, MovieForm, …
+│   │   ├── releases/          # ReleaseEditor, MovieReleasePanel, …
+│   │   ├── franchises/        # FranchiseForm, FranchiseCard, …
+│   │   ├── scan/              # ScanProgressModal, DraftQueueGrid, …
+│   │   ├── duplicates/        # DuplicateGroupList, …
+│   │   └── shared/            # StoragePicker, TrackEditorSection, SpecTag
 │   ├── hooks/                 # Client hooks (useStoragePicker, useTrackEditor)
-│   ├── lib/                   # Бизнес-логика, утилиты, Prisma helpers
+│   ├── lib/                   # Бизнес-логика по доменам
+│   │   ├── db/                # prisma, settings, data-path
+│   │   ├── api/               # api-utils, validators, ndjson-stream
+│   │   ├── shared/            # slug, format, dictionaries, text-trim, …
+│   │   ├── media/             # scanner, ffprobe, spec-tags, probe-from-file
+│   │   ├── covers/            # cover-storage, serve/save/upload helpers
+│   │   ├── movies/            # movie-query, movie-include, create-movie, …
+│   │   ├── releases/          # release-api, release-primary, …
+│   │   ├── catalog/           # catalog-facets, archive-metrics, …
+│   │   ├── franchises/        # franchise-slots, franchise-summary, …
+│   │   └── merge/             # movie-merge, merge-preview, …
 │   └── generated/prisma/      # Сгенерированный Prisma Client (не редактировать)
 ├── data/                      # Runtime data (gitignored)
 └── .cursor/rules/             # Спеки для AI
@@ -50,12 +67,12 @@ film-catalog/
 └──────────────────────────┬──────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────┐
-│  Domain lib           src/lib/*.ts                      │
+│  Domain lib           src/lib/<domain>/*.ts              │
 │  scanner, ffprobe, movie-query, franchise-slots, …      │
 └──────────────────────────┬──────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────┐
-│  Prisma + SQLite      src/lib/prisma.ts                 │
+│  Prisma + SQLite      src/lib/db/prisma.ts              │
 │  better-sqlite3 adapter, singleton in dev              │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -74,8 +91,8 @@ film-catalog/
 
 ## Ключевые include-объекты Prisma
 
-- `movieInclude` (`lib/movie-include.ts`) — videoTrack, audioTracks, subtitleTracks, storage, movieGenres→genre
-- `franchiseInclude` (`lib/franchise-include.ts`) — slots→movie (с movieInclude), orderBy storyOrder
+- `movieInclude` (`lib/movies/movie-include.ts`) — releases (releaseInclude), movieGenres→genre
+- `franchiseInclude` (`lib/franchises/franchise-include.ts`) — slots→movie (с movieInclude), orderBy storyOrder
 
 **Всегда** использовать эти константы вместо ad-hoc include.
 

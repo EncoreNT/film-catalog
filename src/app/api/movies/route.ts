@@ -1,25 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import {
   buildMovieListWhere,
   buildMovieOrder,
   parseListQuery,
-} from "@/lib/movie-query";
-import { movieCreateSchema } from "@/lib/validators";
-import { MovieStatus } from "@/generated/prisma/client";
-import { maybeExtractCover } from "@/lib/cover-storage";
-import { movieInclude } from "@/lib/movie-include";
-import { syncMovieGenres } from "@/lib/genres";
-import { resolveMovieSlug } from "@/lib/movie-slug";
-import { computeMatchKey } from "@/lib/movie-match-key";
-import {
-  createReleaseWithTracks,
-  extractReleaseInputFromMovieCreate,
-  readReleaseFileMeta,
-  resolveReleaseProbeData,
-} from "@/lib/release-api";
-import { loadMovieFileMeta } from "@/lib/load-movie-file-meta";
-import { probeMediaFile } from "@/lib/ffprobe";
+} from "@/lib/movies/movie-query";
+import { movieCreateSchema } from "@/lib/api/validators";
+import { movieInclude } from "@/lib/movies/movie-include";
+import { createMovie, probeOnlyMovie } from "@/lib/movies/create-movie";
+import { loadMovieFileMeta } from "@/lib/releases/load-movie-file-meta";
+import { jsonError } from "@/lib/api/api-utils";
 
 export async function GET(request: NextRequest) {
   const query = parseListQuery(request.nextUrl.searchParams);
@@ -44,88 +34,24 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = movieCreateSchema.parse(body);
-    const releaseInput = extractReleaseInputFromMovieCreate(data);
 
     if (data.probeOnly) {
-      const filePath = releaseInput?.filePath ?? data.filePath;
-      if (!filePath?.trim()) {
-        return NextResponse.json(
-          { error: "Укажите путь к файлу для автозаполнения" },
-          { status: 400 },
-        );
-      }
       try {
-        const { assertMovieFileReadable } = await loadMovieFileMeta();
-        await assertMovieFileReadable(filePath);
-      } catch {
-        return NextResponse.json(
-          { error: "Файл не найден по указанному пути" },
-          { status: 404 },
-        );
-      }
-      const probe = await probeMediaFile(filePath);
-      const meta = await readReleaseFileMeta(filePath);
-      return NextResponse.json({
-        durationSeconds: probe.durationSeconds,
-        video: probe.video,
-        audio: probe.audio,
-        subtitles: probe.subtitles,
-        fileSize: meta.fileSize,
-        fileMtime: meta.fileMtime?.toISOString(),
-        fileHash: meta.fileHash,
-      });
-    }
-
-    const genreNames = data.genres ?? [];
-    const slug = await resolveMovieSlug(prisma, data.title);
-    const matchKey = computeMatchKey(data.title, data.year ?? null);
-
-    const movie = await prisma.$transaction(async (tx) => {
-      const created = await tx.movie.create({
-        data: {
-          slug,
-          title: data.title,
-          year: data.year ?? null,
-          description: data.description ?? null,
-          matchKey,
-          status: data.status ?? MovieStatus.CATALOG,
-        },
-      });
-
-      if (releaseInput) {
-        await createReleaseWithTracks(tx, created.id, releaseInput);
-      }
-
-      if (genreNames.length > 0) {
-        await syncMovieGenres(tx, created.id, genreNames);
-      }
-
-      return tx.movie.findUnique({
-        where: { id: created.id },
-        include: movieInclude,
-      });
-    });
-
-    const trimmedPath = releaseInput?.filePath?.trim();
-    if (trimmedPath && movie && !movie.coverPath) {
-      try {
-        await maybeExtractCover(movie.id, trimmedPath, false);
-      } catch {
-        // non-fatal
+        const result = await probeOnlyMovie(data);
+        return NextResponse.json(result);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Не удалось проанализировать файл";
+        const status = message.includes("не найден") ? 404 : 400;
+        return jsonError(message, status);
       }
     }
 
-    const result =
-      movie ??
-      (await prisma.movie.findUnique({
-        where: { slug },
-        include: movieInclude,
-      }));
-
+    const result = await createMovie(data);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Create failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 }
 

@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { franchiseInclude } from "@/lib/franchise-include";
+import { prisma } from "@/lib/db/prisma";
+import { franchiseInclude } from "@/lib/franchises/franchise-include";
 import { FranchisesListClient } from "./FranchisesListClient";
 
 export const metadata = {

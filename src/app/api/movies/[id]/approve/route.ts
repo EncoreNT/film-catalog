@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { MovieStatus } from "@/generated/prisma/client";
-import { movieInclude } from "@/lib/movie-include";
+import { movieInclude } from "@/lib/movies/movie-include";
 import {
   isErrorResponse,
   parseRouteId,
   type RouteContext,
-} from "@/lib/api-utils";
+} from "@/lib/api/api-utils";
 
 export async function POST(_request: NextRequest, context: RouteContext) {
   const movieId = await parseRouteId(context.params);

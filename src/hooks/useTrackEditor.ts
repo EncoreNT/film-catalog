@@ -1,12 +1,14 @@
+"use client";
+
 import { useCallback, useState } from "react";
-import { normalizeAudioProfile } from "@/lib/dictionaries";
-import type { AudioFormRow, SubtitleFormRow } from "@/lib/movie-form-types";
+import { normalizeAudioProfile } from "@/lib/shared/dictionaries";
+import type { AudioFormRow, SubtitleFormRow } from "@/lib/movies/movie-form-types";
 import {
   createAudioRowKey,
   createSubtitleRowKey,
   emptyAudioFormRow,
   emptySubtitleFormRow,
-} from "@/lib/movie-form-types";
+} from "@/lib/movies/movie-form-types";
 
 interface UseTrackEditorOptions {
   initialAudio?: AudioFormRow[];
@@ -90,9 +92,7 @@ export function useTrackEditor(options: UseTrackEditorOptions = {}) {
 
   return {
     audioRows,
-    setAudioRows,
     subtitleRows,
-    setSubtitleRows,
     updateAudio,
     addAudioRow,
     removeAudioRow,

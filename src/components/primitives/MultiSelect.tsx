@@ -9,7 +9,7 @@ import {
   sortOptions,
   type SelectOption,
 } from "./select-utils";
-import { trimInput } from "@/lib/text-trim";
+import { trimInput } from "@/lib/shared/text-trim";
 
 interface MultiSelectProps {
   value: string[];

@@ -1,15 +1,15 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { getResolutionLabel } from "@/lib/resolution";
+import { getResolutionLabel } from "@/lib/shared/resolution";
 import {
   RESOLUTION_REFERENCE_PX,
   RESOLUTIONS,
   type DictOption,
-} from "@/lib/dictionaries";
+} from "@/lib/shared/dictionaries";
 import { Select } from "./Select";
 import { InfoHint } from "./InfoHint";
-import { trimInput } from "@/lib/text-trim";
+import { trimInput } from "@/lib/shared/text-trim";
 
 type BitrateUnit = "kbps" | "Mbps";
 

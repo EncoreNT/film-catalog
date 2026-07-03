@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { recomputeAllMatchKeys } from "../src/lib/movie-match-key";
+import { recomputeAllMatchKeys } from "../src/lib/movies/movie-match-key";
 
 async function main() {
   const { total, updated } = await recomputeAllMatchKeys();
@@ -12,6 +12,6 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    const { prisma } = await import("../src/lib/prisma");
+    const { prisma } = await import("../src/lib/db/prisma");
     await prisma.$disconnect();
   });

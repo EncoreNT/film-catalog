@@ -48,6 +48,8 @@ docs/adr/0002-franchise-slots-model.md
 
 | ADR | Title | Status |
 |-----|-------|--------|
-| — | *(пока пусто — добавляйте по мере решений)* | — |
+| [0001](0001-movie-release-split.md) | Movie / Release split | Accepted |
+| [0002](0002-external-storage-only.md) | External storage only (null = local disk) | Accepted |
+| [0003](0003-lib-components-domain-layout.md) | Domain layout for `lib/` and `components/` | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

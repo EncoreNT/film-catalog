@@ -1,20 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getScanRoot, setScanRoot } from "@/lib/settings";
-import { scanDirectory, type ScanProgressEvent } from "@/lib/scanner";
-import { scanRequestSchema, scanRootSchema } from "@/lib/validators";
-import { prisma } from "@/lib/prisma";
-
-export async function GET() {
-  const scanRoot = await getScanRoot();
-  return NextResponse.json({ scanRoot });
-}
+import { NextRequest } from "next/server";
+import { setScanRoot } from "@/lib/db/settings";
+import { scanDirectory, type ScanProgressEvent } from "@/lib/media/scanner";
+import { scanRequestSchema } from "@/lib/api/validators";
+import { prisma } from "@/lib/db/prisma";
+import { jsonError } from "@/lib/api/api-utils";
+import { ndjsonResponse } from "@/lib/api/ndjson-stream";
 
 export async function POST(request: NextRequest) {
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
+    return jsonError("Некорректный запрос", 400);
   }
 
   let scanRoot: string;
@@ -25,7 +22,7 @@ export async function POST(request: NextRequest) {
     externalStorageId = parsed.externalStorageId ?? null;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid scan root";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 
   if (externalStorageId != null) {
@@ -33,7 +30,7 @@ export async function POST(request: NextRequest) {
       where: { id: externalStorageId },
     });
     if (!storage) {
-      return NextResponse.json({ error: "Внешний диск не найден" }, { status: 400 });
+      return jsonError("Внешний диск не найден", 400);
     }
   }
 
@@ -73,23 +70,5 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "application/x-ndjson; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      "X-Accel-Buffering": "no",
-    },
-  });
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { scanRoot } = scanRootSchema.parse(body);
-    await setScanRoot(scanRoot);
-    return NextResponse.json({ scanRoot });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Invalid scan root";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
+  return ndjsonResponse(stream);
 }

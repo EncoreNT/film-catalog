@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
-import { ReleaseEditor } from "@/components/ReleaseEditor";
-import { MovieReleasePageHeader } from "@/components/MovieReleasePageHeader";
+import { prisma } from "@/lib/db/prisma";
+import { BackLink } from "@/components/primitives/BackLink";
+import { ReleaseEditor } from "@/components/releases/ReleaseEditor";
+import { MovieReleasePageHeader } from "@/components/releases/MovieReleasePageHeader";
+import { generateMovieMetadata } from "@/lib/movies/load-movie-by-slug";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -14,14 +14,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-
-  const movie = await prisma.movie.findUnique({
-    where: { slug },
-    select: { title: true },
-  });
-  if (!movie) return {};
-
-  return { title: `Новый релиз: ${movie.title}` };
+  return generateMovieMetadata(slug, "Новый релиз");
 }
 
 export default async function NewReleasePage({ params }: PageProps) {
@@ -43,13 +36,7 @@ export default async function NewReleasePage({ params }: PageProps) {
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link
-          href={`/movies/${movie.slug}`}
-          className="focus-ring inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-accent"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Назад к фильму
-        </Link>
+        <BackLink href={`/movies/${movie.slug}`}>Назад к фильму</BackLink>
       </div>
 
       <MovieReleasePageHeader movie={movie} eyebrow="новый релиз" />

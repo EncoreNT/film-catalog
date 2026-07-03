@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { Film, ScanSearch } from "lucide-react";
-import { GrainOverlay } from "@/components/GrainOverlay";
-import { AmbientBackground } from "@/components/AmbientBackground";
+import { GrainOverlay } from "@/components/layout/GrainOverlay";
+import { AmbientBackground } from "@/components/layout/AmbientBackground";
 import "./globals.css";
 
 const fraunces = Fraunces({

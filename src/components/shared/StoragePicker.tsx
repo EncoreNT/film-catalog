@@ -1,0 +1,306 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronDown,
+  HardDrive,
+  Loader2,
+  Plug,
+  Plus,
+  Search,
+} from "lucide-react";
+import { InfoHint } from "@/components/primitives/InfoHint";
+import { SegmentedControl } from "@/components/primitives/SegmentedControl";
+import { trimInput } from "@/lib/shared/text-trim";
+import type { StorageKind, StorageOption } from "@/lib/shared/storage-types";
+
+interface StoragePickerProps {
+  storageKind: StorageKind;
+  onStorageKindChange: (value: StorageKind) => void;
+  externalStorages: StorageOption[];
+  selectedStorageId: string;
+  onSelectedStorageIdChange: (value: string) => void;
+  onCreateExternalStorage: (name: string) => Promise<void>;
+  /** Hide section title — when wrapped in an external card header. */
+  embedded?: boolean;
+  /** @deprecated Use embedded */
+  compact?: boolean;
+}
+
+export type { StorageKind, StorageOption } from "@/lib/shared/storage-types";
+
+export function StoragePicker({
+  storageKind,
+  onStorageKindChange,
+  externalStorages,
+  selectedStorageId,
+  onSelectedStorageIdChange,
+  onCreateExternalStorage,
+  embedded = false,
+  compact = false,
+}: StoragePickerProps) {
+  const isEmbedded = embedded || compact;
+
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [creatingName, setCreatingName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedStorage = useMemo(
+    () =>
+      externalStorages.find((s) => String(s.id) === selectedStorageId) ?? null,
+    [externalStorages, selectedStorageId],
+  );
+
+  const trimmedQuery = query.trim();
+  const filteredStorages = useMemo(() => {
+    if (!trimmedQuery) return externalStorages;
+    const q = trimmedQuery.toLowerCase();
+    return externalStorages.filter((s) => s.name.toLowerCase().includes(q));
+  }, [externalStorages, trimmedQuery]);
+
+  const canCreate =
+    trimmedQuery.length > 0 &&
+    !externalStorages.some(
+      (s) => s.name.toLowerCase() === trimmedQuery.toLowerCase(),
+    );
+
+  const openDropdown = useCallback(() => {
+    setOpen(true);
+    setQuery("");
+    setError(null);
+    setTimeout(() => inputRef.current?.focus(), 40);
+  }, []);
+
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+    setCreatingName(null);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        closeDropdown();
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDropdown();
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, closeDropdown]);
+
+  const pickStorage = (storage: StorageOption) => {
+    onSelectedStorageIdChange(String(storage.id));
+    closeDropdown();
+  };
+
+  const createStorage = async (name: string) => {
+    setCreatingName(name);
+    setError(null);
+    try {
+      await onCreateExternalStorage(name);
+      closeDropdown();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось создать диск");
+    } finally {
+      setCreatingName(null);
+    }
+  };
+
+  return (
+    <div className={isEmbedded ? "space-y-2" : "space-y-3"}>
+      <div
+        className={
+          isEmbedded
+            ? "flex flex-wrap items-center gap-x-4 gap-y-2"
+            : "flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4"
+        }
+      >
+        {isEmbedded ? (
+          <span className="flex items-center gap-1.5 text-sm text-muted">
+            Хранилище
+            <InfoHint
+              label="Хранилище"
+              text="Локальный — без записи в каталоге дисков. Внешний — выберите или создайте именованный накопитель."
+            />
+          </span>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <p className="font-mono-tech text-muted">хранилище</p>
+            <InfoHint
+              label="Хранилище"
+              text="Локальный — без записи в каталоге дисков. Внешний — выберите или создайте именованный накопитель."
+            />
+          </div>
+        )}
+        <SegmentedControl
+          ariaLabel="Хранилище"
+          value={storageKind}
+          onChange={(v) => onStorageKindChange(v as StorageKind)}
+          fullWidth={!isEmbedded}
+          size={isEmbedded ? "compact" : "default"}
+          options={[
+            {
+              value: "local",
+              label: isEmbedded ? "Локальный" : "Локальный диск",
+              icon: (
+                <HardDrive
+                  className={isEmbedded ? "h-3.5 w-3.5" : "h-4 w-4"}
+                  aria-hidden
+                />
+              ),
+            },
+            {
+              value: "external",
+              label: isEmbedded ? "Внешний" : "Внешний диск",
+              icon: (
+                <Plug
+                  className={isEmbedded ? "h-3.5 w-3.5" : "h-4 w-4"}
+                  aria-hidden
+                />
+              ),
+            },
+          ]}
+        />
+      </div>
+
+      {storageKind === "external" ? (
+        <div className="relative max-w-md" ref={containerRef}>
+          <button
+            type="button"
+            onClick={open ? closeDropdown : openDropdown}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            className={`focus-ring flex min-h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-sm)] border px-3 text-sm transition-colors ${
+              open
+                ? "border-accent/50 bg-bg-surface"
+                : "border-border bg-bg-surface text-text hover:border-border-strong"
+            }`}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <Plug
+                className="h-3.5 w-3.5 shrink-0 text-accent/70"
+                aria-hidden
+              />
+              <span
+                className={`truncate ${selectedStorage ? "text-text" : "text-muted"}`}
+              >
+                {selectedStorage?.name ?? "Выберите или создайте диск…"}
+              </span>
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${
+                open ? "rotate-180" : ""
+              }`}
+              aria-hidden
+            />
+          </button>
+
+          {open ? (
+            <div
+              role="listbox"
+              className="surface-elevated scroll-subtle absolute z-50 mt-1 max-h-64 w-full overflow-auto p-1 shadow-2xl"
+            >
+              <div className="px-1 pb-1 pt-1">
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted/60"
+                    aria-hidden
+                  />
+                  <input
+                    ref={inputRef}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onBlur={() => {
+                      const trimmed = trimInput(query);
+                      if (trimmed !== query) setQuery(trimmed);
+                    }}
+                    placeholder="Поиск или создание…"
+                    className="focus-ring min-h-8 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
+                  />
+                </div>
+              </div>
+
+              {filteredStorages.length === 0 && !canCreate ? (
+                <p className="px-3 py-2 text-sm text-muted">
+                  {trimmedQuery
+                    ? "Ничего не найдено"
+                    : "Нет сохранённых внешних дисков"}
+                </p>
+              ) : null}
+
+              {filteredStorages.map((s) => {
+                const selected = String(s.id) === selectedStorageId;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    disabled={creatingName != null}
+                    onClick={() => pickStorage(s)}
+                    className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      selected
+                        ? "bg-accent/15 text-accent"
+                        : "text-text hover:bg-bg-surface-hover"
+                    }`}
+                  >
+                    <Plug
+                      className="h-3.5 w-3.5 shrink-0 text-accent/70"
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                    {s._count?.releases != null ? (
+                      <span className="font-mono-tech shrink-0 text-xs text-faint">
+                        {s._count.releases}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+
+              {canCreate ? (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  disabled={creatingName != null}
+                  onClick={() => createStorage(trimmedQuery)}
+                  className="mt-0.5 flex w-full items-center gap-2 rounded-[var(--radius-sm)] border border-accent/30 bg-accent/10 px-3 py-1.5 text-left text-sm text-accent transition-colors hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">Создать «{trimmedQuery}»</span>
+                  {creatingName === trimmedQuery ? (
+                    <Loader2
+                      className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin"
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {error ? (
+        <p className="text-xs text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}

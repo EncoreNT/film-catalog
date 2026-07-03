@@ -1,10 +1,12 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { prisma } from "@/lib/prisma";
-import { MovieEditor } from "@/components/MovieForm";
-import { movieInclude } from "@/lib/movie-include";
-import { getMovieFranchiseMemberships } from "@/lib/movie-franchise-memberships";
+import { BackLink } from "@/components/primitives/BackLink";
+import { EditPageHeader } from "@/components/layout/EditPageHeader";
+import { MovieEditor } from "@/components/movies/MovieForm";
+import {
+  generateMovieMetadata,
+  loadMovieBySlug,
+} from "@/lib/movies/load-movie-by-slug";
+import { getMovieFranchiseMemberships } from "@/lib/movies/movie-franchise-memberships";
+import { prisma } from "@/lib/db/prisma";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -15,25 +17,12 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-
-  const movie = await prisma.movie.findUnique({
-    where: { slug },
-    select: { title: true },
-  });
-  if (!movie) return {};
-
-  return { title: `Редактирование: ${movie.title}` };
+  return generateMovieMetadata(slug, "Редактирование");
 }
 
 export default async function EditMoviePage({ params }: PageProps) {
   const { slug } = await params;
-
-  const movie = await prisma.movie.findUnique({
-    where: { slug },
-    include: movieInclude,
-  });
-
-  if (!movie) notFound();
+  const movie = await loadMovieBySlug(slug);
 
   const franchiseMemberships = await getMovieFranchiseMemberships(
     prisma,
@@ -43,21 +32,10 @@ export default async function EditMoviePage({ params }: PageProps) {
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link
-          href={`/movies/${movie.slug}`}
-          className="focus-ring inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-accent"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Назад к фильму
-        </Link>
+        <BackLink href={`/movies/${movie.slug}`}>Назад к фильму</BackLink>
       </div>
 
-      <header>
-        <p className="font-mono-tech text-accent">редактирование</p>
-        <h1 className="font-display mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          {movie.title}
-        </h1>
-      </header>
+      <EditPageHeader eyebrow="редактирование" title={movie.title} />
 
       <MovieEditor movie={movie} franchiseMemberships={franchiseMemberships} />
     </div>

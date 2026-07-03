@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useState } from "react";
 
 export interface FilePathCheckState {
@@ -28,9 +30,5 @@ export function useFilePathCheck() {
     }
   }, []);
 
-  const resetFilePathCheck = useCallback(() => {
-    setState({ checking: false, exists: null });
-  }, []);
-
-  return { ...state, checkFilePath, resetFilePathCheck, setState };
+  return { checking: state.checking, exists: state.exists, checkFilePath };
 }

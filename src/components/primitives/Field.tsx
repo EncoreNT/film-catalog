@@ -1,6 +1,6 @@
 import { type InputHTMLAttributes, type ReactNode } from "react";
 import { InfoHint } from "./InfoHint";
-import { trimOnInputBlur, trimOnTextareaBlur } from "@/lib/text-trim";
+import { trimOnInputBlur, trimOnTextareaBlur } from "@/lib/shared/text-trim";
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;

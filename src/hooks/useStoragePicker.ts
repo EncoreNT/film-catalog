@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { StorageKind, StorageOption } from "@/components/StoragePicker";
+import type { StorageKind, StorageOption } from "@/lib/shared/storage-types";
 
 interface InitialExternalStorage {
   id: number;
@@ -86,7 +86,5 @@ export function useStoragePicker(
     createExternalStorage,
     validateStorage,
     resolveExternalStorageId,
-    /** @deprecated Use resolveExternalStorageId */
-    resolveStorageId: resolveExternalStorageId,
   };
 }

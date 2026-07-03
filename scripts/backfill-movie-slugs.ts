@@ -1,22 +1,9 @@
 import "dotenv/config";
-import { prisma } from "../src/lib/prisma";
-import { resolveMovieSlug } from "../src/lib/movie-slug";
+import { recomputeAllMovieSlugs } from "../src/lib/movies/movie-slug";
 
 async function main() {
-  const movies = await prisma.movie.findMany({
-    select: { id: true, title: true },
-    orderBy: { id: "asc" },
-  });
-
-  for (const movie of movies) {
-    const slug = await resolveMovieSlug(prisma, movie.title, movie.id);
-    await prisma.movie.update({
-      where: { id: movie.id },
-      data: { slug },
-    });
-  }
-
-  console.log(`Backfilled slugs for ${movies.length} movies`);
+  const { total, updated } = await recomputeAllMovieSlugs();
+  console.log(`slug backfill: ${updated}/${total} movies updated`);
 }
 
 main()
@@ -25,5 +12,6 @@ main()
     process.exit(1);
   })
   .finally(async () => {
+    const { prisma } = await import("../src/lib/db/prisma");
     await prisma.$disconnect();
   });

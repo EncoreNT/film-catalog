@@ -2,13 +2,13 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { InfoHint } from "./InfoHint";
-import { trimInput } from "@/lib/text-trim";
+import { trimInput } from "@/lib/shared/text-trim";
 import {
   defaultDurationFormat,
-  formatDuration,
+  formatDurationField,
   parseDuration,
   type DurationFormat,
-} from "@/lib/duration";
+} from "@/lib/shared/duration";
 
 interface DurationInputProps {
   /** Stored duration in seconds (source of truth). */
@@ -33,7 +33,7 @@ export function DurationInput({
 }: DurationInputProps) {
   const fieldId = useId();
   const [format, setFormat] = useState<DurationFormat>(defaultDurationFormat());
-  const [text, setText] = useState(() => formatDuration(format, valueSeconds));
+  const [text, setText] = useState(() => formatDurationField(format, valueSeconds));
   const [touched, setTouched] = useState(false);
 
   const active = FORMATS.find((f) => f.id === format)!;
@@ -57,7 +57,7 @@ export function DurationInput({
     // drops an in-progress invalid draft so the user starts clean).
     const carry = error == null ? seconds : valueSeconds;
     setFormat(next);
-    setText(formatDuration(next, carry));
+    setText(formatDurationField(next, carry));
     setTouched(false);
   };
 

@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { FranchiseWithSlots } from "@/lib/franchise-include";
-import { FranchiseCard } from "@/components/FranchiseCard";
-import { EmptyFranchises } from "@/components/EmptyFranchises";
-import { FranchiseForm } from "@/components/FranchiseForm";
+import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
+import { FranchiseCard } from "@/components/franchises/FranchiseCard";
+import { EmptyFranchises } from "@/components/franchises/EmptyFranchises";
+import { FranchiseForm } from "@/components/franchises/FranchiseForm";
 import { Modal } from "@/components/primitives/Modal";
 import { Button } from "@/components/primitives/Button";
 

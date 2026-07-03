@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import {
   buildFranchiseOrder,
   buildFranchiseWhere,
   parseFranchiseListQuery,
-} from "@/lib/franchise-query";
-import { franchiseCreateSchema } from "@/lib/validators";
-import { franchiseInclude } from "@/lib/franchise-include";
-import { resolveFranchiseSlug } from "@/lib/franchise-slug";
-import { syncFranchiseSlots } from "@/lib/franchise-slots";
-import { jsonError } from "@/lib/api-utils";
+} from "@/lib/franchises/franchise-query";
+import { franchiseCreateSchema } from "@/lib/api/validators";
+import { franchiseInclude } from "@/lib/franchises/franchise-include";
+import { resolveFranchiseSlug } from "@/lib/franchises/franchise-slug";
+import { syncFranchiseSlots } from "@/lib/franchises/franchise-slots";
+import { jsonError } from "@/lib/api/api-utils";
 
 export async function GET(request: NextRequest) {
   const query = parseFranchiseListQuery(request.nextUrl.searchParams);

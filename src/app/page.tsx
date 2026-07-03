@@ -1,21 +1,22 @@
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import {
   buildMovieListWhere,
   buildMovieOrder,
   parseListQuery,
-} from "@/lib/movie-query";
-import { movieInclude } from "@/lib/movie-include";
+} from "@/lib/movies/movie-query";
+import { movieInclude } from "@/lib/movies/movie-include";
 import {
   getArchiveMetrics,
   getStatusCounts,
-} from "@/lib/archive-metrics";
+} from "@/lib/catalog/archive-metrics";
 import {
   getCatalogFacets,
   getCatalogGenreFacets,
-} from "@/lib/catalog-facets";
-import { MovieCatalog } from "@/components/MovieCatalog";
+} from "@/lib/catalog/catalog-facets";
+import { MovieCatalog } from "@/components/catalog/MovieCatalog";
+import { CatalogSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { MovieStatus } from "@/generated/prisma/client";
 
 const getCachedArchiveMetrics = unstable_cache(
@@ -57,9 +58,6 @@ async function CatalogContent({
   const limit = query.limit ?? 48;
   const skip = (page - 1) * limit;
 
-  // Scope the property-filter facet counts to the active tab so the chips
-  // reflect what's actually in the current view (Catalog / Drafts / Hidden),
-  // not the whole archive.
   const statuses = (query.status ?? "CATALOG")
     .split(",")
     .filter(Boolean) as MovieStatus[];
@@ -109,18 +107,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const resolved = await searchParams;
 
   return (
-    <Suspense
-      fallback={
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              className="aspect-[2/3] animate-pulse rounded-[var(--radius)] bg-bg-surface"
-            />
-          ))}
-        </div>
-      }
-    >
+    <Suspense fallback={<CatalogSkeleton />}>
       <CatalogContent searchParams={resolved} />
     </Suspense>
   );

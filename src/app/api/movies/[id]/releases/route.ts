@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { releaseCreateSchema } from "@/lib/validators";
-import { releaseInclude } from "@/lib/movie-include";
-import { maybeExtractCover } from "@/lib/cover-storage";
-import { createReleaseWithTracks } from "@/lib/release-api";
+import { prisma } from "@/lib/db/prisma";
+import { releaseCreateSchema } from "@/lib/api/validators";
+import { releaseInclude } from "@/lib/movies/movie-include";
+import { maybeExtractCover } from "@/lib/covers/cover-storage";
+import { createReleaseWithTracks } from "@/lib/releases/release-api";
 import {
   isErrorResponse,
   jsonError,
   parseRouteId,
   type RouteContext,
-} from "@/lib/api-utils";
+} from "@/lib/api/api-utils";
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   const movieId = await parseRouteId(context.params);

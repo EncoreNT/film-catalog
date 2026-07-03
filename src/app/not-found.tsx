@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ErrorScene } from "@/components/ErrorScene";
+import { ErrorScene } from "@/components/layout/ErrorScene";
 
 export const metadata: Metadata = {
   title: "Сеанс не найдён",

@@ -10,8 +10,9 @@ import {
   DOLBY_VISION_PROFILES,
   buildHdrValue,
   parseHdrValue,
+  DV_BASE,
   type DictOption,
-} from "@/lib/dictionaries";
+} from "@/lib/shared/dictionaries";
 
 interface HdrInputProps {
   /** Stored hdr value: "SDR", a base format, or "DV:P8" for Dolby Vision + profile. */
@@ -22,7 +23,6 @@ interface HdrInputProps {
 }
 
 const DEFAULT_BASE = "HDR10";
-const DV_BASE = "DolbyVision";
 
 function isHdr(value: string): boolean {
   return value !== "SDR" && value !== "" && value != null;

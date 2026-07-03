@@ -19,7 +19,7 @@ import {
   parseISODate,
   startOfDay,
   toISODate,
-} from "@/lib/calendar";
+} from "@/lib/shared/calendar";
 
 interface DatePickerProps {
   label: string;
