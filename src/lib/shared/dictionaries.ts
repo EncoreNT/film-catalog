@@ -178,6 +178,7 @@ export const LANGUAGES: DictOption[] = [
   { value: "kor", label: "Корейский" },
   { value: "chi", label: "Китайский" },
   { value: "tur", label: "Турецкий" },
+  { value: "tha", label: "Тайский" },
   { value: "ara", label: "Арабский" },
   { value: "und", label: "Неизвестный" },
 ];

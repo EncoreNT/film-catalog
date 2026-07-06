@@ -16,6 +16,15 @@ export interface ArchiveMetrics {
 
 export const catalogWhere = { status: MovieStatus.CATALOG } as const;
 
+export function mergeMovieWhere(
+  ...parts: Prisma.MovieWhereInput[]
+): Prisma.MovieWhereInput {
+  const defined = parts.filter((part) => Object.keys(part).length > 0);
+  if (defined.length === 0) return {};
+  if (defined.length === 1) return defined[0]!;
+  return { AND: defined };
+}
+
 /** @deprecated Use archiveEliteTierWhere from quality-predicates — kept for imports. */
 export const eliteTierWhere = {
   ...catalogWhere,
@@ -27,38 +36,30 @@ export { russianAtmosAudioWhere } from "@/lib/media/quality-predicates";
 export async function countArchiveMetrics(
   extraWhere?: Prisma.MovieWhereInput,
 ): Promise<ArchiveMetrics> {
-  const scopedWhere: Prisma.MovieWhereInput = extraWhere
-    ? { AND: [catalogWhere, extraWhere] }
+  const scopedWhere = extraWhere
+    ? mergeMovieWhere(catalogWhere, extraWhere)
     : catalogWhere;
 
   const [fourK, hdr10, russianAtmos, elite] = await Promise.all([
     prisma.movie.count({
-      where: {
-        ...scopedWhere,
+      where: mergeMovieWhere(scopedWhere, {
         releases: {
           some: { videoTrack: { resolutionLabel: "4K" } },
         },
-      },
+      }),
     }),
     prisma.movie.count({
-      where: {
-        ...scopedWhere,
+      where: mergeMovieWhere(scopedWhere, {
         releases: {
           some: { videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } } },
         },
-      },
+      }),
     }),
     prisma.movie.count({
-      where: {
-        ...scopedWhere,
-        ...russianAtmosAudioWhere,
-      },
+      where: mergeMovieWhere(scopedWhere, russianAtmosAudioWhere),
     }),
     prisma.movie.count({
-      where: {
-        ...scopedWhere,
-        ...archiveEliteTierWhere,
-      },
+      where: mergeMovieWhere(scopedWhere, archiveEliteTierWhere),
     }),
   ]);
 

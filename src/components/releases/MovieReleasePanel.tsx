@@ -131,7 +131,7 @@ export function MovieReleasePanel({
         aria-labelledby={
           showTabs ? `release-tab-${activeRelease.id}` : undefined
         }
-        className="p-5 sm:p-6"
+        className="min-w-0 p-5 sm:p-6"
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

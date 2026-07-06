@@ -7,6 +7,7 @@ import { displayGenreName } from "@/lib/shared/dictionaries";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
 import { formatFileSizeGB } from "@/lib/shared/format";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
+import { sortReleasesByQuality } from "@/lib/releases/release-primary";
 import type { MergeCandidate, MergeCandidateRelease } from "@/lib/merge/merge-preview-types";
 
 export type { MergeCandidate, MergeCandidateRelease } from "@/lib/merge/merge-preview-types";
@@ -56,8 +57,8 @@ function toMergeCandidate(movie: MergeCandidateMovie): MergeCandidate {
     description: movie.description,
     genres: orderedMovieGenres(movie).map((g) => displayGenreName(g.name)),
     franchiseNames: movie.slots.map((s) => s.franchise.name),
-    releases: movie.releases.map((r) =>
-      toMergeCandidateRelease(r as ReleaseWithTracks),
+    releases: sortReleasesByQuality(movie.releases as ReleaseWithTracks[]).map(
+      (r) => toMergeCandidateRelease(r),
     ),
   };
 }

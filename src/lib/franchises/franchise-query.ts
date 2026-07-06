@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { franchiseListQuerySchema } from "@/lib/api/validators";
+import { normalizeSearchText } from "@/lib/shared/search-text";
 
 export function parseFranchiseListQuery(searchParams: URLSearchParams) {
   const raw = Object.fromEntries(searchParams.entries());
@@ -13,15 +14,18 @@ export function parseFranchiseListQuery(searchParams: URLSearchParams) {
 }
 
 export function buildFranchiseWhere(
-  query: ReturnType<typeof parseFranchiseListQuery>,
+  _query: ReturnType<typeof parseFranchiseListQuery>,
 ): Prisma.FranchiseWhereInput {
-  const where: Prisma.FranchiseWhereInput = {};
+  // Text search is applied in listFranchises (SQLite + Cyrillic need ru-aware matching).
+  return {};
+}
 
-  if (query.q) {
-    where.name = { contains: query.q };
-  }
-
-  return where;
+/** Normalized needle for franchise name search, or null when q is empty. */
+export function franchiseSearchNeedle(
+  q: string | undefined,
+): string | null {
+  if (!q?.trim()) return null;
+  return normalizeSearchText(q);
 }
 
 export function buildFranchiseOrder(

@@ -104,6 +104,26 @@ describe("buildCatalogFacetsFromRows", () => {
     ]);
   });
 
+  it("counts TrueHD Atmos toward TrueHD codec badge", () => {
+    const facets = buildCatalogFacetsFromRows(
+      [
+        {
+          movieId: 5,
+          language: "eng",
+          translationType: "original",
+          channelLayout: "7.1",
+          codec: "truehd",
+          profile: "Atmos",
+        },
+      ],
+      [],
+    );
+
+    expect(facets.originalAudioFormats.find((f) => f.value === "truehd")?.count).toBe(
+      1,
+    );
+  });
+
   it("excludes original translation type from Russian dub type badges", () => {
     const facets = buildCatalogFacetsFromRows(
       [

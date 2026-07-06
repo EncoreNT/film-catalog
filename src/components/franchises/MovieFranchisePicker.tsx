@@ -6,6 +6,9 @@ import { ChevronDown, Library, Loader2, Plus, Search, X } from "lucide-react";
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { FranchiseSlotPickerDialog } from "@/components/franchises/FranchiseSlotPickerDialog";
 import type { MovieFranchiseMembership } from "@/lib/movies/movie-franchise-memberships";
+import {
+  searchTextEquals,
+} from "@/lib/shared/search-text";
 import { trimInput } from "@/lib/shared/text-trim";
 
 interface MovieFranchisePickerProps {
@@ -177,9 +180,7 @@ export function MovieFranchisePicker({
   const trimmedQuery = query.trim();
   const canCreate =
     trimmedQuery.length > 0 &&
-    !results.some(
-      (r) => r.name.toLowerCase() === trimmedQuery.toLowerCase(),
-    );
+    !results.some((r) => searchTextEquals(r.name, trimmedQuery));
 
   return (
     <div className="flex flex-col gap-2">

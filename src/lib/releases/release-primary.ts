@@ -57,16 +57,28 @@ export function rankRelease(release: ReleaseWithTracks): number {
   );
 }
 
+/** Sort releases best quality first; stable tie-break by id. */
+export function compareReleasesByQuality(
+  a: ReleaseWithTracks,
+  b: ReleaseWithTracks,
+): number {
+  const diff = rankRelease(b) - rankRelease(a);
+  if (diff !== 0) return diff;
+  return a.id - b.id;
+}
+
+export function sortReleasesByQuality<T extends ReleaseWithTracks>(
+  releases: T[],
+): T[] {
+  return [...releases].sort(compareReleasesByQuality);
+}
+
 /** Pick the best release for catalog badges and card display. */
 export function pickPrimaryRelease<T extends ReleaseWithTracks>(
   releases: T[],
 ): T | null {
   if (releases.length === 0) return null;
-  return [...releases].sort((a, b) => {
-    const diff = rankRelease(b) - rankRelease(a);
-    if (diff !== 0) return diff;
-    return a.id - b.id;
-  })[0];
+  return sortReleasesByQuality(releases)[0] ?? null;
 }
 
 /** True when any release has a readable file path. */

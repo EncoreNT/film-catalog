@@ -86,6 +86,25 @@ describe("buildMovieWhere", () => {
     ]);
   });
 
+  it("filters original Atmos when audioScope is original", () => {
+    const where = buildMovieWhere(
+      queryFrom({
+        premiumAudio: "true",
+        audioScope: "original",
+      }),
+    );
+    expect(where.releases).toEqual({
+      some: {
+        audioTracks: {
+          some: {
+            translationType: "original",
+            profile: { in: ["Atmos", "DTS:X MA"] },
+          },
+        },
+      },
+    });
+  });
+
   it("keeps single audio filter without AND wrapper", () => {
     const where = buildMovieWhere(queryFrom({ language: "rus" }));
     expect(where.releases).toEqual({

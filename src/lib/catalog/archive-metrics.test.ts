@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MovieStatus } from "@/generated/prisma/client";
-import { eliteTierWhere } from "@/lib/catalog/archive-metrics";
+import { catalogWhere, eliteTierWhere, mergeMovieWhere } from "@/lib/catalog/archive-metrics";
 import { archiveEliteTierWhere } from "@/lib/media/quality-predicates";
 
 describe("archive elite tier semantics", () => {
@@ -48,5 +48,19 @@ describe("archive elite tier semantics", () => {
     for (const clause of andClauses ?? []) {
       expect(clause).toHaveProperty("releases.some");
     }
+  });
+
+  it("merges franchise scope with elite tier without dropping AND", () => {
+    const franchiseScope = {
+      slots: { some: { franchiseId: 42 } },
+    };
+    const merged = mergeMovieWhere(
+      catalogWhere,
+      franchiseScope,
+      archiveEliteTierWhere,
+    );
+    expect(merged).toEqual({
+      AND: [catalogWhere, franchiseScope, archiveEliteTierWhere],
+    });
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hdrShortLabel,
+  isPremiumOriginalSpatialTrack,
   isPremiumRussianAtmosTrack,
   isSpatialAudioProfile,
   normalizeAudioProfile,
@@ -27,6 +28,22 @@ describe("quality-predicates", () => {
         profile: "Atmos",
         language: "eng",
         isDefault: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("isPremiumOriginalSpatialTrack", () => {
+    expect(
+      isPremiumOriginalSpatialTrack({
+        profile: "Atmos",
+        translationType: "original",
+      }),
+    ).toBe(true);
+    expect(
+      isPremiumOriginalSpatialTrack({
+        profile: "Atmos",
+        translationType: "dub",
+        isDefault: false,
       }),
     ).toBe(false);
   });

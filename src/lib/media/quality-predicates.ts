@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { ORIGINAL_TRANSLATION_TYPE } from "@/lib/catalog/russian-audio-formats";
 import { parseHdrValue } from "@/lib/shared/dictionaries";
 
 /** Spatial / object-based audio profiles (Atmos, DTS:X). */
@@ -10,6 +11,7 @@ export type AudioTrackLike = {
   profile?: string | null;
   language?: string | null;
   isDefault?: boolean;
+  translationType?: string | null;
 };
 
 export function normalizeAudioProfile(
@@ -41,6 +43,19 @@ export function isPremiumRussianAtmosTrack(track: AudioTrackLike): boolean {
 export const premiumRussianAtmosAudioTrackWhere = {
   isDefault: true,
   language: "rus",
+  profile: { in: [...SPATIAL_AUDIO_PROFILES] },
+} satisfies Prisma.AudioTrackWhereInput;
+
+/** Original-language mix with Atmos or DTS:X MA — catalog facet filter. */
+export function isPremiumOriginalSpatialTrack(track: AudioTrackLike): boolean {
+  return (
+    isSpatialAudioProfile(track.profile) &&
+    track.translationType === ORIGINAL_TRANSLATION_TYPE
+  );
+}
+
+export const premiumOriginalSpatialAudioTrackWhere = {
+  translationType: ORIGINAL_TRANSLATION_TYPE,
   profile: { in: [...SPATIAL_AUDIO_PROFILES] },
 } satisfies Prisma.AudioTrackWhereInput;
 

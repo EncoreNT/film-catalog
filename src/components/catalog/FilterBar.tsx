@@ -540,27 +540,24 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
                         </div>
                       ) : null}
 
-                      {audioScope === "rus" ? (
-                        <div className="space-y-2">
-                          <p className="font-mono-tech text-[0.6rem] text-faint/70">
-                            объектный звук
-                          </p>
-                          <Chip
-                            active={premiumAudioActive}
-                            onClick={() =>
-                              updateParams({
-                                premiumAudio: premiumAudioActive ? null : "true",
-                              })
-                            }
-                          >
-                            <Sparkles
-                              className="h-3.5 w-3.5"
-                              aria-hidden
-                            />
-                            Рус. Atmos · DTS:X
-                          </Chip>
-                        </div>
-                      ) : null}
+                      <div className="space-y-2">
+                        <p className="font-mono-tech text-[0.6rem] text-faint/70">
+                          объектный звук
+                        </p>
+                        <Chip
+                          active={premiumAudioActive}
+                          onClick={() =>
+                            updateParams({
+                              premiumAudio: premiumAudioActive ? null : "true",
+                            })
+                          }
+                        >
+                          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                          {audioScope === "rus"
+                            ? "Рус. Atmos · DTS:X"
+                            : "Atmos · DTS:X"}
+                        </Chip>
+                      </div>
                     </div>
                   </section>
                 ) : null}

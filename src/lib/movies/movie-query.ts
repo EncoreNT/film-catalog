@@ -3,7 +3,7 @@ import { movieListQuerySchema } from "@/lib/api/validators";
 import { RUS_AUDIO_FORMATS } from "@/lib/catalog/russian-audio-formats";
 import { audioTrackScopeWhere } from "@/lib/catalog/audio-track-scope";
 import { normalizeSearchQuery } from "@/lib/movies/movie-match-key";
-import { premiumRussianAtmosAudioTrackWhere } from "@/lib/media/quality-predicates";
+import { premiumOriginalSpatialAudioTrackWhere, premiumRussianAtmosAudioTrackWhere } from "@/lib/media/quality-predicates";
 import { prisma } from "@/lib/db/prisma";
 
 export type { MovieWithTracks } from "@/lib/movies/movie-include";
@@ -157,9 +157,13 @@ export function buildMovieWhere(
   }
 
   if (query.premiumAudio === "true") {
+    const premiumScope = query.audioScope === "original" ? "original" : "rus";
     releaseFilters.push({
       audioTracks: {
-        some: premiumRussianAtmosAudioTrackWhere,
+        some:
+          premiumScope === "original"
+            ? premiumOriginalSpatialAudioTrackWhere
+            : premiumRussianAtmosAudioTrackWhere,
       },
     });
   }

@@ -23,6 +23,7 @@ import {
   movieHasExternalStorage,
   movieHasFile,
   pickPrimaryRelease,
+  sortReleasesByQuality,
 } from "@/lib/releases/release-primary";
 import { pluralRu } from "@/lib/shared/russian-plural";
 
@@ -174,7 +175,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                   interactive
                   content={
                     <MovieReleasesTooltip
-                      releases={movie.releases}
+                      releases={sortReleasesByQuality(movie.releases)}
                       movieSlug={movie.slug}
                       primaryReleaseId={primaryId}
                     />

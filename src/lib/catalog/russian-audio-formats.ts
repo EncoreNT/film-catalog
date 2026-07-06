@@ -6,9 +6,10 @@ import type { Prisma } from "@/generated/prisma/client";
  * condition that matches a single Russian audio track.
  *
  * Profiles are stored as `null` for plain codecs and as "HD MA" / "Atmos" /
- * "DTS:X MA" for profiled ones, so plain-format presets use `profile: null`
- * to stay disjoint from the object-sound tiers (Atmos / DTS:X), which are
- * exposed separately via the `premiumAudio` toggle.
+ * "DTS:X MA" for profiled ones. Plain E-AC-3 uses `profile: null` to stay
+ * disjoint from Atmos; TrueHD matches any profile (most UHD remuxes are
+ * TrueHD Atmos). Object-sound tiers (Atmos / DTS:X) are also exposed via
+ * the `premiumAudio` toggle.
  */
 export interface RusAudioFormat {
   value: string;
@@ -28,7 +29,7 @@ export const RUS_AUDIO_FORMATS: RusAudioFormat[] = [
   {
     value: "truehd",
     label: "TrueHD",
-    where: { codec: "truehd", profile: null },
+    where: { codec: "truehd" },
   },
   { value: "aac", label: "AAC", where: { codec: "aac" } },
   { value: "flac", label: "FLAC", where: { codec: "flac" } },

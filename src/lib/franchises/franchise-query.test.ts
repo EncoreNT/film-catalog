@@ -10,9 +10,9 @@ function queryFrom(params: Record<string, string>) {
 }
 
 describe("buildFranchiseWhere", () => {
-  it("filters by name contains q", () => {
+  it("returns empty where (search handled in listFranchises)", () => {
     const where = buildFranchiseWhere(queryFrom({ q: "john" }));
-    expect(where.name).toEqual({ contains: "john" });
+    expect(where).toEqual({});
   });
 
   it("returns empty where without q", () => {

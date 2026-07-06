@@ -61,7 +61,7 @@ function FilePathCopyButtons({ filePath }: { filePath: string }) {
 
 export function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {release.showRibbon ? <SpecRibbon release={release} /> : null}
 
       {release.tags.length > 0 ? (
@@ -122,9 +122,9 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
         {release.audioTracks.length === 0 ? (
           <p className="text-sm text-muted">Нет данных</p>
         ) : (
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <div
-              className="font-mono-tech grid grid-cols-[20px_56px_minmax(96px,1fr)_minmax(110px,1.4fr)_60px_72px] items-center gap-x-2 gap-y-1 border-b border-border pb-2 text-faint"
+              className="font-mono-tech grid grid-cols-[20px_56px_minmax(0,1fr)_minmax(0,1.2fr)_56px_64px] items-center gap-x-2 gap-y-1 border-b border-border pb-2 text-faint"
               aria-hidden
             >
               <span />
@@ -137,9 +137,9 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
             {release.audioTracks.map((track) => (
               <div
                 key={track.id}
-                className="border-b border-border/60 py-2.5 last:border-0 last:pb-1"
+                className="min-w-0 border-b border-border/60 py-2.5 last:border-0 last:pb-1"
               >
-                <div className="grid grid-cols-[20px_56px_minmax(96px,1fr)_minmax(110px,1.4fr)_60px_72px] items-center gap-x-2 gap-y-1">
+                <div className="grid grid-cols-[20px_56px_minmax(0,1fr)_minmax(0,1.2fr)_56px_64px] items-center gap-x-2 gap-y-1">
                   <span className="flex items-center">
                     {track.isDefault ? (
                       <Star
@@ -148,7 +148,7 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
                       />
                     ) : null}
                   </span>
-                  <span className="flex items-center">
+                  <span className="flex min-w-0 items-center">
                     {track.langLabel ? (
                       <span
                         className={`font-mono rounded-md px-2 py-1 text-xs tracking-wide ${
@@ -163,16 +163,19 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
                       <span className="font-mono text-sm text-faint">—</span>
                     )}
                   </span>
-                  <span className="flex items-center">
+                  <span className="flex min-w-0 items-center">
                     {track.translation ? (
-                      <span className="font-mono-tech rounded-md border border-border bg-bg-surface px-2 py-1 text-[0.65rem] text-muted">
+                      <span
+                        className="font-mono-tech max-w-full truncate rounded-md border border-border bg-bg-surface px-2 py-1 text-[0.65rem] text-muted"
+                        title={track.translation}
+                      >
                         {track.translation}
                       </span>
                     ) : (
                       <span className="font-mono text-sm text-faint">—</span>
                     )}
                   </span>
-                  <span className="flex items-center">
+                  <span className="flex min-w-0 items-center overflow-hidden">
                     {track.formatLabel ? (
                       track.is3D ? (
                         <SpecTag
@@ -194,25 +197,25 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
                       <span className="font-mono text-sm text-faint">—</span>
                     )}
                   </span>
-                  <span className="flex items-center">
+                  <span className="flex min-w-0 items-center">
                     {track.channelLayout ? (
                       <SpecTag kind="channel">{track.channelLayout}</SpecTag>
                     ) : (
                       <span className="font-mono text-sm text-faint">—</span>
                     )}
                   </span>
-                  <span className="font-mono text-right text-xs text-muted tabular-nums">
+                  <span className="font-mono min-w-0 truncate text-right text-xs text-muted tabular-nums">
                     {track.bitrate ?? "—"}
                   </span>
+                  {track.title ? (
+                    <p
+                      className="font-mono-tech col-span-full mt-0.5 min-w-0 truncate pl-7 text-xs text-faint"
+                      title={track.title}
+                    >
+                      {track.title}
+                    </p>
+                  ) : null}
                 </div>
-                {track.title ? (
-                  <p
-                    className="font-mono-tech mt-1 truncate pl-[78px] text-xs text-faint"
-                    title={track.title}
-                  >
-                    {track.title}
-                  </p>
-                ) : null}
               </div>
             ))}
           </div>
