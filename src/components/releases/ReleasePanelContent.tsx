@@ -254,6 +254,14 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
 
       <section className="border-t border-border pt-6">
         <h2 className="font-mono-tech mb-4 text-muted">файл</h2>
+        {release.storageLabel ? (
+          <div className="mb-3">
+            <ReleaseStorageBadge
+              label={release.storageLabel}
+              external={release.storageExternal}
+            />
+          </div>
+        ) : null}
         {release.filePathDisplay ? (
           <>
             <p className="break-all text-xs text-muted">{release.filePathDisplay}</p>
@@ -268,12 +276,6 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
           <p className="font-mono-tech mt-2 text-xs text-muted">
             {release.fileSizeLabel}
           </p>
-        ) : null}
-        {release.storageLabel ? (
-          <ReleaseStorageBadge
-            label={release.storageLabel}
-            external={release.storageExternal}
-          />
         ) : null}
         <p className="font-mono-tech mt-2 text-xs text-muted">
           добавлен {release.createdAtLabel} · обновлён {release.updatedAtLabel}
