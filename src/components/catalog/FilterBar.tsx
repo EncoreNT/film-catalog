@@ -15,8 +15,13 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Chip } from "@/components/primitives/Chip";
-import { Select } from "@/components/primitives/Select";
-import { RatingStepper } from "@/components/primitives/RatingStepper";
+import {
+  MinRatingFilter,
+  MultiReleaseFilter,
+  parseMinRating,
+  parseWatchedFilter,
+  WatchedFilter,
+} from "@/components/catalog/FilterToolbarControls";
 import {
   AUDIO_TRANSLATION_TYPES,
   CHANNEL_LAYOUTS,
@@ -214,46 +219,21 @@ export function FilterBar({ facets, updateParams }: FilterBarProps) {
             aria-label="Поиск по названию"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:flex lg:items-center">
-          <Select
-            compact
-            label="Просмотр"
-            value={searchParams.get("watched") ?? "all"}
-            onChange={(v) => updateParams({ watched: v })}
-            preserveOrder
-            options={[
-              { value: "all", label: "Все" },
-              { value: "watched", label: "Просмотренные" },
-              { value: "unwatched", label: "Непросмотренные" },
-            ]}
+        <div className="flex flex-wrap items-center gap-2">
+          <WatchedFilter
+            value={parseWatchedFilter(searchParams.get("watched"))}
+            onChange={(v) => updateParams({ watched: v === "all" ? null : v })}
           />
-          <Select
-            compact
-            label="Релизы"
-            value={searchParams.get("multiRelease") === "true" ? "multi" : "all"}
-            onChange={(v) =>
-              updateParams({ multiRelease: v === "multi" ? "true" : null })
+          <MultiReleaseFilter
+            active={searchParams.get("multiRelease") === "true"}
+            onChange={(on) =>
+              updateParams({ multiRelease: on ? "true" : null })
             }
-            preserveOrder
-            options={[
-              { value: "all", label: "Все" },
-              { value: "multi", label: "Несколько релизов" },
-            ]}
           />
-          <div className="col-span-2 lg:col-span-1 lg:w-44">
-            <RatingStepper
-              compact
-              label="Мин. оценка"
-              min={1}
-              max={10}
-              value={
-                searchParams.get("minRating")
-                  ? parseInt(searchParams.get("minRating")!, 10)
-                  : null
-              }
-              onChange={(v) => updateParams({ minRating: v?.toString() ?? null })}
-            />
-          </div>
+          <MinRatingFilter
+            value={parseMinRating(searchParams.get("minRating"))}
+            onChange={(v) => updateParams({ minRating: v?.toString() ?? null })}
+          />
         </div>
       </form>
 

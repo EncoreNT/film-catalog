@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { MovieCard } from "@/components/movies/MovieCard";
@@ -86,23 +86,61 @@ export function MovieCatalog({
   const searchParams = useSearchParams();
   const status = searchParams.get("status") ?? "CATALOG";
   const [addOpen, setAddOpen] = useState(false);
-  const [extraMovies, setExtraMovies] = useState<MovieWithTracks[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadedPages, setLoadedPages] = useState(0);
   const [isPending, startTransition] = useTransition();
 
-  // "Показать ещё" accumulates extra pages into extraMovies. When the user
-  // changes filters / sort / page, the server passes a new first page as
-  // `movies`, but extraMovies from the previous query would otherwise survive
-  // and get concatenated — producing duplicate ids (and React key collisions).
-  // Reset the accumulated state whenever the query string changes.
-  const filterKey = searchParams.toString();
+  // Два режима просмотра каталога, различаются URL-параметром `mode`:
+  //  - `mode=more`  — «Показать ещё»: накапливать страницы на клиенте,
+  //    показываем страницы 1..page. Каждое нажатие грузит ОДНУ страницу
+  //    (масштабируется до сотен страниц, без мегабатчей).
+  //  - без mode     — пагинация: прыжок на страницу page, показываем ТОЛЬКО её.
+  // URL всегда отражает реальное состояние, поэтому пагинация, кнопка «назад»
+  // браузера, refresh и шеринг ссылки работают одинаково и без no-op'ов.
+  const mode = searchParams.get("mode") === "more" ? "more" : "page";
+  // filterKey — поисковые параметры БЕЗ page/mode: его смена = новый фильтр/сорт
+  // = сброс накопления. Смена только page/mode = навигация в том же результате.
+  const filterKey = (() => {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete("page");
+    sp.delete("mode");
+    return sp.toString();
+  })();
+
+  const [priorMovies, setPriorMovies] = useState<MovieWithTracks[]>([]);
+  const [prevPage, setPrevPage] = useState(page);
+  const [prevMode, setPrevMode] = useState(mode);
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  // prevMoviesRef хранит `movies` предыдущего рендера — нужен, чтобы при
+  // переходе page→page+1 в режиме more добавить старую страницу в накопление.
+  const prevMoviesRef = useRef(movies);
+
   if (filterKey !== prevFilterKey) {
+    // Сменился фильтр/сорт — новый результат, накопление неактуально.
     setPrevFilterKey(filterKey);
-    setExtraMovies([]);
-    setLoadedPages(0);
+    setPrevPage(page);
+    setPrevMode(mode);
+    setPriorMovies([]);
+  } else if (page !== prevPage || mode !== prevMode) {
+    // Та же выборка, но перешли на другую страницу / сменили режим.
+    if (mode === "page") {
+      // Прыжок пагинацией — показываем только запрошенную страницу.
+      setPriorMovies([]);
+    } else if (page === prevPage + 1) {
+      // «Показать ещё» (mode=more, +1 страница): добавляем прежнюю страницу
+      // в накопление. Из режима page в more — текущая страница становится
+      // «предыдущей», поверх неё догрузится новая.
+      const oldPageMovies = prevMoviesRef.current;
+      setPriorMovies((prev) =>
+        prevMode === "more" ? [...prev, ...oldPageMovies] : [...oldPageMovies],
+      );
+    } else {
+      // Непредвиденный скачок page в режиме more — сбрасываем накопление,
+      // чтобы не показать «дыру» между страницами.
+      setPriorMovies([]);
+    }
+    setPrevPage(page);
+    setPrevMode(mode);
   }
+  prevMoviesRef.current = movies;
 
   // Filter/sort changes go through a transition with `scroll: false` so the
   // URL updates and the server re-fetches the catalog without scrolling back
@@ -120,8 +158,9 @@ export function MovieCatalog({
         else params.set(key, value);
       }
       // Reshuffling the result set can move the current page out of range,
-      // so drop any page offset on a filter/sort change.
+      // so drop any page offset and accumulate mode on a filter/sort change.
       params.delete("page");
+      params.delete("mode");
       if (opts?.forceCatalog) params.set("status", "CATALOG");
       const qs = params.toString();
       startTransition(() => {
@@ -152,6 +191,7 @@ export function MovieCatalog({
     if (nextOrder === "asc") params.delete("order");
     else params.set("order", nextOrder);
     params.delete("page");
+    params.delete("mode");
     const qs = params.toString();
     startTransition(() => {
       router.push(qs ? `/?${qs}` : "/", { scroll: false });
@@ -176,46 +216,42 @@ export function MovieCatalog({
   };
 
   const pages = Math.max(1, Math.ceil(total / limit));
-  // Defense-in-depth: even if two pages ever overlap (e.g. a non-stable sort
-  // shifts a movie between pages between requests), dedup by id so React keys
-  // stay unique. First occurrence wins, preserving the first-page order.
+  // В режиме more показываем накопленные страницы + текущую; в режиме page —
+  // только текущую. Дедуп по id на случай нестабильной сортировки между страницами.
   const allMovies: MovieWithTracks[] = [];
   {
     const seen = new Set<number>();
-    for (const movie of [...movies, ...extraMovies]) {
+    const source = mode === "more" ? [...priorMovies, ...movies] : movies;
+    for (const movie of source) {
       if (seen.has(movie.id)) continue;
       seen.add(movie.id);
       allMovies.push(movie);
     }
   }
   const shownCount = allMovies.length;
-  const canLoadMore = page + loadedPages < pages && shownCount < total;
+  const canLoadMore = page < pages && shownCount < total;
 
   const buildHref = (p: number) => {
     const sp = new URLSearchParams(searchParams.toString());
+    // Клик по пагинации — это прыжок (режим page): очищаем накопление.
+    sp.delete("mode");
     if (p === 1) sp.delete("page");
     else sp.set("page", String(p));
     const qs = sp.toString();
     return qs ? `/?${qs}` : "/";
   };
 
-  const handleLoadMore = async () => {
-    setLoadingMore(true);
-    try {
-      const nextPage = page + loadedPages + 1;
-      const sp = new URLSearchParams(searchParams.toString());
-      sp.set("page", String(nextPage));
-      sp.set("limit", String(limit));
-      const res = await fetch(`/api/movies?${sp.toString()}`);
-      if (!res.ok) throw new Error("Network error");
-      const data = (await res.json()) as { items: MovieWithTracks[] };
-      setExtraMovies((prev) => [...prev, ...data.items]);
-      setLoadedPages((prev) => prev + 1);
-    } catch {
-      // ignore — пользователь может повторить
-    } finally {
-      setLoadingMore(false);
-    }
+  const handleLoadMore = () => {
+    // «Показать ещё» — переходим на page+1 в режиме more. Сервер отдаёт только
+    // новую страницу (один пакет по limit фильмов), клиент добавляет её к уже
+    // просмотренному. URL меняется → пагинация и «назад» браузера работают.
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("page", String(page + 1));
+    sp.set("mode", "more");
+    const qs = sp.toString();
+    startTransition(() => {
+      router.push(qs ? `/?${qs}` : "/", { scroll: false });
+    });
   };
 
   const hasAnyMovies = totalCount > 0;
@@ -411,10 +447,10 @@ export function MovieCatalog({
               <button
                 type="button"
                 onClick={handleLoadMore}
-                disabled={loadingMore}
+                disabled={isPending}
                 className="focus-ring flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-bg-surface px-5 py-2.5 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:text-accent hover:shadow-[0_0_20px_var(--accent-glow)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loadingMore ? (
+                {isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 ) : (
                   <Plus className="h-4 w-4" aria-hidden />
