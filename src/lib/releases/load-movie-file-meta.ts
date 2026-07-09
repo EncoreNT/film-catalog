@@ -1,7 +1,8 @@
-/**
- * Runtime-only import for movie file paths outside ./data.
- * Keeps Turbopack NFT from tracing the whole project (see next build warning).
- */
+import * as movieFileMeta from "./movie-file-meta";
+
+export { assertMovieFileReadable, readMovieFileMeta } from "./movie-file-meta";
+
+/** Lazy accessor kept for existing call sites; module is bundled statically. */
 export async function loadMovieFileMeta() {
-  return import(/* turbopackIgnore: true */ "./movie-file-meta");
+  return movieFileMeta;
 }
