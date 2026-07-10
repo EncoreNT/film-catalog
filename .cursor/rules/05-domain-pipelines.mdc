@@ -32,7 +32,7 @@ Strips release group tags, quality, codecs from filename. Extracts year, release
 - `parseListQuery` → zod
 - `buildMovieListWhere` / `buildMovieWhere` — status tabs, genre, resolution, hdr, audio scope/channels/format/translation, watched range, rating, duration, premium audio, multiRelease
 - `fetchMultiReleaseMovieIds` — `release.groupBy` + `having count >= 2`
-- `buildMovieOrder` — title, year, rating, duration, watchedAt, createdAt
+- `buildMovieOrder` — title, year, rating, watchedAt, createdAt; duration/fileSize via `fetchMovieList` release aggregates
 - Audio scope: `catalog/audio-track-scope.ts` + `catalog/russian-audio-formats.ts`
 
 ## catalog/catalog-facets.ts

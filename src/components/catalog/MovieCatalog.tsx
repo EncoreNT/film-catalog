@@ -31,6 +31,7 @@ const SORT_OPTIONS = [
   { value: "rating", label: "Оценка" },
   { value: "watchedAt", label: "Дата просмотра" },
   { value: "durationSeconds", label: "Продолжительность" },
+  { value: "fileSize", label: "Размер файла" },
 ] as const;
 
 const STATUS_TAB_CLASS = {

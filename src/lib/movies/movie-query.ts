@@ -265,9 +265,10 @@ export function buildMovieOrder(
     case "watchedAt":
       return [{ watchedAt: order }, { id: order }];
     case "durationSeconds":
-      // Prisma cannot order Movie by max(release.durationSeconds) on SQLite;
-      // use createdAt as a stable proxy until denormalized duration is added.
-      return [{ createdAt: order }, { id: order }];
+    case "fileSize":
+      throw new Error(
+        `Sort "${query.sort}" is handled by fetchMovieList release aggregate ordering`,
+      );
     default:
       return [{ title: order }, { id: order }];
   }

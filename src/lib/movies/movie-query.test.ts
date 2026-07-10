@@ -136,10 +136,10 @@ describe("buildMovieOrder", () => {
       { watchedAt: "asc" },
       { id: "asc" },
     ]);
-    expect(buildMovieOrder(queryFrom({ sort: "durationSeconds" }))).toEqual([
-      { createdAt: "asc" },
-      { id: "asc" },
-    ]);
+    expect(() =>
+      buildMovieOrder(queryFrom({ sort: "durationSeconds" })),
+    ).toThrow();
+    expect(() => buildMovieOrder(queryFrom({ sort: "fileSize" }))).toThrow();
     expect(buildMovieOrder(queryFrom({ sort: "createdAt" }))).toEqual([
       { createdAt: "asc" },
       { id: "asc" },

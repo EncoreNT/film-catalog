@@ -16,9 +16,15 @@ describe("movieListQuerySchema", () => {
     expect(parsed.limit).toBe(24);
   });
 
+  it("accepts fileSize sort", () => {
+    expect(movieListQuerySchema.parse({ sort: "fileSize" }).sort).toBe(
+      "fileSize",
+    );
+  });
+
   it("rejects invalid sort field", () => {
     expect(() =>
-      movieListQuerySchema.parse({ sort: "fileSize" }),
+      movieListQuerySchema.parse({ sort: "unknown" }),
     ).toThrow();
   });
 

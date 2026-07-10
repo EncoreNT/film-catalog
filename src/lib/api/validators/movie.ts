@@ -140,7 +140,15 @@ export const movieListQuerySchema = z.object({
   watchedFrom: z.string().optional(),
   watchedTo: z.string().optional(),
   sort: z
-    .enum(["title", "year", "createdAt", "rating", "watchedAt", "durationSeconds"])
+    .enum([
+      "title",
+      "year",
+      "createdAt",
+      "rating",
+      "watchedAt",
+      "durationSeconds",
+      "fileSize",
+    ])
     .optional(),
   order: z.enum(["asc", "desc"]).optional(),
   page: z.coerce.number().int().min(1).optional(),

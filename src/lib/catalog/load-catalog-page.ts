@@ -1,11 +1,6 @@
 import { unstable_cache } from "next/cache";
-import { prisma } from "@/lib/db/prisma";
-import {
-  buildMovieListWhere,
-  buildMovieOrder,
-  parseListQuery,
-} from "@/lib/movies/movie-query";
-import { movieInclude } from "@/lib/movies/movie-include";
+import { parseListQuery } from "@/lib/movies/movie-query";
+import { fetchMovieList } from "@/lib/movies/fetch-movie-list";
 import {
   getArchiveMetrics,
   getStatusCounts,
@@ -43,32 +38,21 @@ export async function loadCatalogPage(
   }
 
   const query = parseListQuery(params);
-  const where = await buildMovieListWhere(query);
-  const orderBy = buildMovieOrder(query);
   const page = query.page ?? 1;
   const limit = query.limit ?? 48;
-  const skip = (page - 1) * limit;
 
   const statuses = (query.status ?? "CATALOG")
     .split(",")
     .filter(Boolean) as MovieStatus[];
 
   const [
-    movies,
-    total,
+    { items: movies, total },
     { totalCount, catalogCount, draftCount, excludedCount },
     archiveMetrics,
     facets,
     genreFacets,
   ] = await Promise.all([
-    prisma.movie.findMany({
-      where,
-      orderBy,
-      skip,
-      take: limit,
-      include: movieInclude,
-    }),
-    prisma.movie.count({ where }),
+    fetchMovieList(query),
     getStatusCounts(),
     getCachedArchiveMetrics(),
     getCachedCatalogFacets(statuses),
