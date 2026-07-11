@@ -33,6 +33,7 @@ import {
 } from "@/lib/shared/dictionaries";
 import { trimOnInputBlur } from "@/lib/shared/text-trim";
 import {
+  applyParsedFilePathFields,
   applyProbeToTrackEditor,
   probeFilePath,
 } from "@/hooks/useProbeFile";
@@ -188,6 +189,10 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     form.setFileFillMessage(null);
     try {
       const data = await probeFilePath(trimmed, { title: movieTitle || "probe" });
+      applyParsedFilePathFields(trimmed, {
+        releaseType: form.releaseType,
+        setReleaseType: form.setReleaseType,
+      });
       applyProbeToTrackEditor(data, {
         setDurationSeconds: form.setDurationSeconds,
         setVideo: form.setVideo,

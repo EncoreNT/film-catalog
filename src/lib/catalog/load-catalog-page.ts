@@ -3,6 +3,7 @@ import { parseListQuery } from "@/lib/movies/movie-query";
 import { fetchMovieList } from "@/lib/movies/fetch-movie-list";
 import {
   getArchiveMetrics,
+  getArchiveTotals,
   getStatusCounts,
 } from "@/lib/catalog/archive-metrics";
 import {
@@ -14,6 +15,12 @@ import { MovieStatus } from "@/generated/prisma/client";
 const getCachedArchiveMetrics = unstable_cache(
   getArchiveMetrics,
   ["archive-metrics"],
+  { revalidate: 60 },
+);
+
+const getCachedArchiveTotals = unstable_cache(
+  getArchiveTotals,
+  ["archive-totals"],
   { revalidate: 60 },
 );
 
@@ -49,12 +56,14 @@ export async function loadCatalogPage(
     { items: movies, total },
     { totalCount, catalogCount, draftCount, excludedCount },
     archiveMetrics,
+    archiveTotals,
     facets,
     genreFacets,
   ] = await Promise.all([
     fetchMovieList(query),
     getStatusCounts(),
     getCachedArchiveMetrics(),
+    getCachedArchiveTotals(),
     getCachedCatalogFacets(statuses),
     getCachedCatalogGenreFacets(statuses),
   ]);
@@ -73,5 +82,6 @@ export async function loadCatalogPage(
     draftCount,
     excludedCount,
     archiveMetrics,
+    archiveTotals,
   };
 }

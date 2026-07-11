@@ -53,6 +53,8 @@ describe("probeToAudioRows", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].profile).toBe("None");
     expect(rows[0].channelLayout).toBe("7.1");
+    expect(rows[0].language).toBe("rus");
+    expect(rows[0].translationType).toBe("dub");
     expect(rows[0].rowKey).toMatch(/^audio-/);
   });
 });

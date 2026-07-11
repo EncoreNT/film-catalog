@@ -6,12 +6,22 @@ import {
   archiveEliteTierWhere,
   russianAtmosAudioWhere,
 } from "@/lib/media/quality-predicates";
+import {
+  movieDurationSortKey,
+  movieFileSizeSortKey,
+  releaseAggregateSortSelect,
+} from "@/lib/movies/movie-release-sort";
 
 export interface ArchiveMetrics {
   fourK: number;
   hdr10: number;
   russianAtmos: number;
   elite: number;
+}
+
+export interface ArchiveTotals {
+  durationSeconds: number;
+  fileSizeBytes: number;
 }
 
 export const catalogWhere = { status: MovieStatus.CATALOG } as const;
@@ -68,6 +78,25 @@ export async function countArchiveMetrics(
 
 export async function getArchiveMetrics(): Promise<ArchiveMetrics> {
   return countArchiveMetrics();
+}
+
+export async function getArchiveTotals(): Promise<ArchiveTotals> {
+  const movies = await prisma.movie.findMany({
+    where: catalogWhere,
+    select: releaseAggregateSortSelect,
+  });
+
+  let durationSeconds = 0;
+  let fileSizeBytes = 0;
+
+  for (const movie of movies) {
+    const duration = movieDurationSortKey(movie.releases);
+    if (duration != null) durationSeconds += duration;
+    const size = movieFileSizeSortKey(movie.releases);
+    if (size != null) fileSizeBytes += size;
+  }
+
+  return { durationSeconds, fileSizeBytes };
 }
 
 export async function getStatusCounts() {

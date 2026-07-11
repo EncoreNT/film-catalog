@@ -1,5 +1,6 @@
 import { execa } from "execa";
 import { getResolutionLabel } from "@/lib/shared/resolution";
+import { enrichProbedAudioTracks } from "@/lib/media/enrich-probe-audio";
 import {
   dedupeDefaultAudioTracks,
   detectVideoHdr,
@@ -72,7 +73,9 @@ export async function probeMediaFile(
     };
   }
 
-  const audio: ProbedAudioTrack[] = audioStreams.map(parseAudioStream);
+  const audio: ProbedAudioTrack[] = enrichProbedAudioTracks(
+    audioStreams.map(parseAudioStream),
+  );
   dedupeDefaultAudioTracks(audio);
 
   const subtitles: ProbedSubtitleTrack[] =

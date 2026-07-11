@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
-import { Film, ScanSearch } from "lucide-react";
+import { Film } from "lucide-react";
 import { GrainOverlay } from "@/components/layout/GrainOverlay";
 import { AmbientBackground } from "@/components/layout/AmbientBackground";
 import "./globals.css";
@@ -81,13 +81,6 @@ export default function RootLayout({
                 className="focus-ring rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-text"
               >
                 Дубли
-              </Link>
-              <Link
-                href="/scan"
-                className="focus-ring flex items-center gap-2 rounded-lg border border-border-strong px-3.5 py-2 text-sm text-text transition-all duration-300 hover:border-accent/50 hover:text-accent hover:shadow-[0_0_20px_var(--accent-glow)]"
-              >
-                <ScanSearch className="h-4 w-4" aria-hidden />
-                Скан
               </Link>
             </nav>
           </div>

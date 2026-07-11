@@ -23,7 +23,6 @@ import { StoragePicker } from "@/components/shared/StoragePicker";
 import {
   RELEASE_TYPES,
 } from "@/lib/shared/dictionaries";
-import { parseMoviePath } from "@/lib/media/name-parser";
 import { GenrePicker } from "@/components/movies/GenrePicker";
 import { DurationInput } from "@/components/primitives/DurationInput";
 import { YearInput } from "@/components/primitives/YearInput";
@@ -34,6 +33,7 @@ import { useTrackEditor } from "@/hooks/useTrackEditor";
 import type { VideoFieldState } from "@/lib/movies/movie-form-types";
 import { emptyAudioFormRow } from "@/lib/movies/movie-form-types";
 import {
+  applyParsedFilePathFields,
   applyProbeToTrackEditor,
   probeFilePath,
 } from "@/hooks/useProbeFile";
@@ -112,10 +112,14 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
   const handleFilePathBlur = () => {
     const trimmed = filePath.trim();
     if (!trimmed) return;
-    const parsed = parseMoviePath(trimmed);
-    if (!title) setTitle(parsed.title);
-    if (year == null && parsed.year) setYear(parsed.year);
-    if (!releaseType && parsed.releaseType) setReleaseType(parsed.releaseType);
+    applyParsedFilePathFields(trimmed, {
+      title,
+      year,
+      releaseType,
+      setTitle,
+      setYear,
+      setReleaseType,
+    });
     void checkFilePath(trimmed);
   };
 
@@ -127,7 +131,16 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
     setError(null);
     setAutoFilling(true);
     try {
-      const data = await probeFilePath(filePath, { title: title || "probe" });
+      const trimmed = filePath.trim();
+      applyParsedFilePathFields(trimmed, {
+        title,
+        year,
+        releaseType,
+        setTitle,
+        setYear,
+        setReleaseType,
+      });
+      const data = await probeFilePath(trimmed, { title: title || "probe" });
       applyProbeToTrackEditor(data, {
         setDurationSeconds,
         setVideo,

@@ -12,6 +12,10 @@ import type {
   VideoFieldState,
 } from "@/lib/movies/movie-form-types";
 import type { MovieFileMetaPayload } from "@/lib/movies/build-movie-payload";
+import {
+  parseMoviePath,
+  type ParsedName,
+} from "@/lib/media/name-parser";
 
 export interface ProbeTrackEditor {
   setDurationSeconds?: (seconds: number) => void;
@@ -19,6 +23,33 @@ export interface ProbeTrackEditor {
   setAudioRowsFromProbe: (rows: AudioFormRow[]) => void;
   setSubtitleRowsFromProbe: (rows: SubtitleFormRow[]) => void;
   setPendingFileMeta?: (meta: MovieFileMetaPayload) => void;
+}
+
+export interface ParsedFilePathFieldSetters {
+  setTitle?: (value: string) => void;
+  setYear?: (value: number | null) => void;
+  setReleaseType?: (value: string) => void;
+  title?: string;
+  year?: number | null;
+  releaseType?: string;
+}
+
+/** Parse title/year/releaseType from a file path without overwriting user input. */
+export function applyParsedFilePathFields(
+  filePath: string,
+  setters: ParsedFilePathFieldSetters,
+): ParsedName {
+  const parsed = parseMoviePath(filePath);
+  if (setters.setTitle && !setters.title?.trim() && parsed.title) {
+    setters.setTitle(parsed.title);
+  }
+  if (setters.setYear && setters.year == null && parsed.year) {
+    setters.setYear(parsed.year);
+  }
+  if (setters.setReleaseType && !setters.releaseType && parsed.releaseType) {
+    setters.setReleaseType(parsed.releaseType);
+  }
+  return parsed;
 }
 
 export async function probeFilePath(

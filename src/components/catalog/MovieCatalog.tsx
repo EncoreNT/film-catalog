@@ -15,8 +15,13 @@ import Link from "next/link";
 import { ArrowDownUp, Loader2, Plus, ScanSearch } from "lucide-react";
 import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import { QualityGauge } from "@/components/primitives/QualityGauge";
-import type { ArchiveMetrics } from "@/lib/catalog/archive-metrics";
+import { ArchiveTotalsRow } from "@/components/catalog/ArchiveTotalsRow";
+import type { ArchiveMetrics, ArchiveTotals } from "@/lib/catalog/archive-metrics";
 import { ARCHIVE_QUALITY_METRIC_DEFS } from "@/lib/catalog/archive-quality-metrics";
+import {
+  formatArchiveTotalDuration,
+  formatArchiveTotalSize,
+} from "@/lib/shared/format";
 import { pluralRu } from "@/lib/shared/russian-plural";
 
 const AddMovieForm = dynamic(
@@ -69,6 +74,7 @@ interface MovieCatalogProps {
   draftCount?: number;
   excludedCount?: number;
   archiveMetrics?: ArchiveMetrics;
+  archiveTotals?: ArchiveTotals;
 }
 
 export function MovieCatalog({
@@ -82,6 +88,7 @@ export function MovieCatalog({
   draftCount = 0,
   excludedCount = 0,
   archiveMetrics = { fourK: 0, hdr10: 0, russianAtmos: 0, elite: 0 },
+  archiveTotals = { durationSeconds: 0, fileSizeBytes: 0 },
 }: MovieCatalogProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -348,6 +355,12 @@ export function MovieCatalog({
                 );
               })}
             </div>
+            <ArchiveTotalsRow
+              durationLabel={formatArchiveTotalDuration(
+                archiveTotals.durationSeconds,
+              )}
+              sizeLabel={formatArchiveTotalSize(archiveTotals.fileSizeBytes)}
+            />
           </div>
         ) : null}
       </section>

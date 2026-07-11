@@ -50,6 +50,40 @@ export function formatDuration(
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** Human-readable total runtime for archive / franchise summaries. */
+export function formatArchiveTotalDuration(
+  seconds: number | null | undefined,
+): string | null {
+  if (seconds == null || seconds <= 0) return null;
+  const totalHours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (totalHours >= 24) {
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    return `${days} д ${hours} ч`;
+  }
+  if (totalHours > 0) {
+    return `${totalHours} ч ${minutes} мин`;
+  }
+  return `${minutes} мин`;
+}
+
+/** Total on-disk size: GiB below 1 TiB, otherwise TiB. */
+export function formatArchiveTotalSize(
+  bytes: number | null | undefined,
+): string | null {
+  if (bytes == null || bytes <= 0) return null;
+  const tebibytes = bytes / 1024 ** 4;
+  if (tebibytes >= 1) {
+    return `${tebibytes.toFixed(1)} ТБ`;
+  }
+  const gibibytes = bytes / 1024 ** 3;
+  if (gibibytes >= 100) {
+    return `${Math.round(gibibytes)} ГБ`;
+  }
+  return `${gibibytes.toFixed(1)} ГБ`;
+}
+
 /** File size in gibibytes (GiB), labeled as «ГБ» for the UI. */
 export function formatFileSizeGB(
   bytes: number | null | undefined,
