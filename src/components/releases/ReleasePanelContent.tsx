@@ -10,12 +10,6 @@ import { SpecRibbon, tagIcon } from "@/components/releases/ReleaseSpecRibbon";
 
 type CopyTarget = "file" | "dir";
 
-/* 2xl console cell framing — a subtle inset card sitting inside the
-   console tray. No backdrop-blur here (the tray already blurs); keeps
-   the scrolling console GPU-friendly. */
-const CARD_2XL =
-  "2xl:border 2xl:border-border 2xl:bg-bg-base/55 2xl:p-5 2xl:rounded-[var(--radius-sm)]";
-
 function FilePathCopyButtons({ filePath }: { filePath: string }) {
   const [copied, setCopied] = useState<CopyTarget | null>(null);
 
@@ -92,20 +86,19 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
         </div>
       ) : null}
 
-      {/* Bento: below 2xl a vertical stack with hairline dividers; at 2xl a
-          12-col grid — VIDEO hero + SUBTITRES side, AUDIO full width,
-          FILE + storage meta on the last row. DOM order keeps the mobile
-          reading order (video → audio → subtitles → file → meta); 2xl:order
-          reflows into the bento. */}
-      <div className="grid grid-cols-1 gap-0 2xl:grid-cols-12 2xl:gap-5">
-        <section
-          className={`min-w-0 2xl:order-1 2xl:col-span-7 ${CARD_2XL}`}
-        >
+      {/* Console: a vertical flow of full-width sections separated by
+         hairline dividers. Each section owns its own height - the video
+         block no longer stretches to match a long subtitle list, and the
+         file + storage meta live in one merged provenance block instead
+         of two split cards with dead space. DOM order is the reading
+         order on every breakpoint: video, audio, subtitles, file. */}
+      <div className="min-w-0">
+        <section className="pt-0">
           <h2 className="font-mono-tech mb-4 text-muted">видео</h2>
           {release.video.hasData ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-baseline gap-2">
-                <span className="font-mono text-3xl font-medium leading-none tracking-tight text-text tabular-nums sm:text-4xl 2xl:text-4xl">
+            <div className="flex flex-col gap-4 sm:max-w-xl sm:flex-row sm:items-end sm:gap-8">
+              <div className="flex shrink-0 items-baseline gap-2">
+                <span className="font-mono text-4xl font-medium leading-none tracking-tight text-text tabular-nums sm:text-5xl">
                   {release.video.vBitrateValue ?? "—"}
                 </span>
                 {release.video.vBitrateUnit ? (
@@ -114,22 +107,22 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
                   </span>
                 ) : null}
               </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 2xl:grid-cols-3">
-                <div>
+              <dl className="grid grid-cols-3 gap-x-6 gap-y-2 sm:flex-1">
+                <div className="flex flex-col gap-1.5">
                   <dt className="font-mono-tech text-faint">кодек</dt>
-                  <dd className="font-mono mt-1.5 text-sm text-text">
+                  <dd className="font-mono text-sm text-text">
                     {release.video.codec ?? "—"}
                   </dd>
                 </div>
-                <div>
+                <div className="flex flex-col gap-1.5">
                   <dt className="font-mono-tech text-faint">fps</dt>
-                  <dd className="font-mono mt-1.5 text-sm text-text tabular-nums">
+                  <dd className="font-mono text-sm text-text tabular-nums">
                     {release.video.fps ?? "—"}
                   </dd>
                 </div>
-                <div>
+                <div className="flex flex-col gap-1.5">
                   <dt className="font-mono-tech text-faint">разрешение</dt>
-                  <dd className="font-mono mt-1.5 text-sm text-text">
+                  <dd className="font-mono text-sm text-text">
                     {release.video.resolution}
                   </dd>
                 </div>
@@ -140,9 +133,7 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
           )}
         </section>
 
-        <section
-          className={`min-w-0 border-t border-border/70 pt-6 2xl:order-3 2xl:col-span-12 ${CARD_2XL}`}
-        >
+        <section className="min-w-0 border-t border-border/70 pt-5">
           <h2 className="font-mono-tech mb-4 text-muted">аудиодорожки</h2>
           {release.audioTracks.length === 0 ? (
             <p className="text-sm text-muted">Нет данных</p>
@@ -247,14 +238,17 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
           )}
         </section>
 
-        <section
-          className={`min-w-0 border-t border-border/70 pt-6 2xl:order-2 2xl:col-span-5 ${CARD_2XL}`}
-        >
-          <h2 className="font-mono-tech mb-4 text-muted">субтитры</h2>
+        <section className="min-w-0 border-t border-border/70 pt-5">
+          <h2 className="font-mono-tech mb-4 text-muted">
+            субтитры
+            {release.subtitleTracks.length > 0
+              ? ` · ${release.subtitleTracks.length}`
+              : ""}
+          </h2>
           {release.subtitleTracks.length === 0 ? (
             <p className="text-sm text-muted">Нет субтитров</p>
           ) : (
-            <ul className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 2xl:grid-cols-1">
+            <ul className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 xl:grid-cols-3">
               {release.subtitleTracks.map((track) => (
                 <li
                   key={track.id}
@@ -285,10 +279,45 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
           )}
         </section>
 
-        <section
-          className={`min-w-0 border-t border-border/70 pt-6 2xl:order-4 2xl:col-span-7 ${CARD_2XL}`}
-        >
+        <section className="min-w-0 border-t border-border/70 pt-5">
           <h2 className="font-mono-tech mb-4 text-muted">файл</h2>
+          {release.storageLabel ||
+          release.fileSizeLabel ||
+          release.createdAtLabel ||
+          release.updatedAtLabel ? (
+            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              {release.storageLabel ? (
+                <ReleaseStorageBadge
+                  label={release.storageLabel}
+                  external={release.storageExternal}
+                />
+              ) : null}
+              {release.fileSizeLabel ? (
+                <span className="font-mono-tech text-faint">
+                  размер{" "}
+                  <span className="font-mono text-sm text-text tabular-nums">
+                    {release.fileSizeLabel}
+                  </span>
+                </span>
+              ) : null}
+              {release.createdAtLabel ? (
+                <span className="font-mono-tech text-faint">
+                  добавлен{" "}
+                  <span className="font-mono text-sm text-muted">
+                    {release.createdAtLabel}
+                  </span>
+                </span>
+              ) : null}
+              {release.updatedAtLabel ? (
+                <span className="font-mono-tech text-faint">
+                  обновлён{" "}
+                  <span className="font-mono text-sm text-muted">
+                    {release.updatedAtLabel}
+                  </span>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           {release.filePathDisplay ? (
             <>
               <p className="break-all text-xs text-muted">
@@ -301,42 +330,6 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
           ) : (
             <p className="font-mono-tech text-xs text-faint">путь не указан</p>
           )}
-        </section>
-
-        <section
-          className={`min-w-0 border-t border-border/70 pt-6 2xl:order-5 2xl:col-span-5 ${CARD_2XL}`}
-        >
-          <h2 className="font-mono-tech mb-4 text-muted">хранилище</h2>
-          {release.storageLabel ? (
-            <div className="mb-4">
-              <ReleaseStorageBadge
-                label={release.storageLabel}
-                external={release.storageExternal}
-              />
-            </div>
-          ) : null}
-          <dl className="grid grid-cols-2 gap-4 2xl:grid-cols-1">
-            {release.fileSizeLabel ? (
-              <div>
-                <dt className="font-mono-tech text-faint">размер</dt>
-                <dd className="font-mono mt-1.5 text-sm text-text tabular-nums">
-                  {release.fileSizeLabel}
-                </dd>
-              </div>
-            ) : null}
-            <div>
-              <dt className="font-mono-tech text-faint">добавлен</dt>
-              <dd className="font-mono mt-1.5 text-sm text-muted">
-                {release.createdAtLabel}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-mono-tech text-faint">обновлён</dt>
-              <dd className="font-mono mt-1.5 text-sm text-muted">
-                {release.updatedAtLabel}
-              </dd>
-            </div>
-          </dl>
         </section>
       </div>
     </div>

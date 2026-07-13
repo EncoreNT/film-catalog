@@ -56,7 +56,7 @@ export function MovieDetailHeader({
           <span className="font-mono-tech">редактировать</span>
         </Link>
       </div>
-      <h1 className="font-display mt-3 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl xl:text-5xl 2xl:text-6xl">
+      <h1 className="font-display mt-3 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-5xl xl:text-6xl 2xl:text-6xl">
         {movie.title}
       </h1>
       <div className="font-mono-tech mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">

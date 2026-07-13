@@ -47,36 +47,38 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
         />
       ) : null}
 
-      {/* Title band — full width and compact so the technical console sits
-          high on the page, right where the user wants video/audio. */}
-      <div className="detail-reveal">
-        <MovieDetailHeader
-          movie={movie}
-          genres={genres}
-          displayDuration={displayDuration}
-        />
-      </div>
+      {/* Title band — full-width statement across the page. The header
+          (status, title, year, genres, edit) sits above the two-column
+          body so the H1 can stretch wide instead of wrapping inside the
+          narrow identity rail. */}
+      <MovieDetailHeader
+        movie={movie}
+        genres={genres}
+        displayDuration={displayDuration}
+      />
 
-      {/* Body. Left: framed poster, synopsis and franchise tags — this
-          whole identity column is sticky on wide screens so it stays in
-          view while only the technical console on the right scrolls.
-          Right: the technical console (releases, video, audio, subtitles,
-          file). The column is wide enough for a comfortable synopsis
-          measure and the gap to the console is generous. Below lg it
+      {/* Body. Left: identity rail (poster, synopsis, franchises,
+          rating) — sticky on wide screens so it stays in view while only
+          the technical console on the right scrolls. Right: technical
+          console (releases, video, audio, subtitles, file). Below lg it
           collapses to a single column. */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[380px_minmax(0,1fr)] xl:gap-12 2xl:grid-cols-[420px_minmax(0,1fr)] 2xl:gap-16">
-        <div className="detail-reveal detail-reveal--2 space-y-6 lg:space-y-7 lg:sticky lg:top-6 lg:self-start">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)] xl:gap-12 2xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)] 2xl:gap-16">
+        <div className="detail-reveal detail-reveal--2 space-y-5 lg:sticky lg:top-4 lg:self-start">
           <MovieCoverHero coverUrl={coverUrl} title={movie.title} />
 
           {movie.description ? (
-            <div className="rounded-[var(--radius-sm)] border border-border/60 bg-bg-elevated/40 p-4 2xl:p-5">
-              <p className="text-sm leading-relaxed text-muted 2xl:text-[0.95rem]">
-                {movie.description}
-              </p>
-            </div>
+            <p className="text-sm leading-relaxed text-muted 2xl:text-[0.95rem]">
+              {movie.description}
+            </p>
           ) : null}
 
           <MovieFranchises memberships={franchiseMemberships} />
+
+          <MovieRatingWatchedSection
+            movieId={movie.id}
+            rating={movie.rating}
+            watchedAt={movie.watchedAt}
+          />
         </div>
 
         <div className="detail-reveal detail-reveal--3 min-w-0">
@@ -94,14 +96,6 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
           )}
         </div>
       </div>
-
-      {/* Rating + watched — the least important information, so it lives
-          last, full width at the very bottom of the page. */}
-      <MovieRatingWatchedSection
-        movieId={movie.id}
-        rating={movie.rating}
-        watchedAt={movie.watchedAt}
-      />
     </div>
   );
 }
