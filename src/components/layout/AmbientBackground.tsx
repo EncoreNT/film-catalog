@@ -4,36 +4,72 @@ export function AmbientBackground() {
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       aria-hidden
     >
-      {/* Deep warm base gradient */}
+      {/* Deep coal base — cinematic black with whisper of warmth */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, #1c1611 0%, #15110d 45%, #120e0a 100%)",
+            "radial-gradient(ellipse 130% 95% at 50% 8%, #1f1830 0%, #15121f 30%, #0c0a12 62%, #07060a 100%)",
         }}
       />
-      {/* Amber projector glow — top center */}
+
+      {/* Tech grid — present and visible, masked to fade lower */}
+      <div className="tech-grid absolute inset-0 opacity-100" />
+
+      {/* Projector god-ray — warm beam from top center, cinematic */}
+      <div className="projector-beam absolute -top-24 left-1/2 h-[80rem] w-[48rem] -translate-x-1/2 rotate-[5deg] opacity-90" />
+
+      {/* Gold projector hotspot — top center, the primary cinematic glow */}
       <div
-        className="ambient-blob-1 absolute -top-40 left-1/2 h-[60rem] w-[60rem] -translate-x-1/2 rounded-full opacity-50 blur-[120px]"
+        className="glow-hotspot ambient-blob-1 absolute top-[2%] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 opacity-95"
         style={{
           background:
-            "radial-gradient(circle, rgba(232,176,90,0.16) 0%, transparent 60%)",
+            "radial-gradient(circle, rgba(232,176,90,0.55) 0%, rgba(232,176,90,0.20) 40%, transparent 72%)",
+          filter: "blur(50px)",
         }}
       />
-      {/* Ember glow — bottom right */}
+
+      {/* Ember warm counter — bottom center, keeps cinema warmth */}
       <div
-        className="ambient-blob-2 absolute -bottom-32 -right-20 h-[40rem] w-[40rem] rounded-full opacity-40 blur-[100px]"
+        className="glow-hotspot ambient-blob-2 absolute -bottom-20 left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 opacity-70"
         style={{
           background:
-            "radial-gradient(circle, rgba(200,112,56,0.18) 0%, transparent 60%)",
+            "radial-gradient(circle, rgba(200,112,56,0.30) 0%, transparent 66%)",
+          filter: "blur(50px)",
         }}
       />
-      {/* Cool counterbalance — left, very subtle */}
+
+      {/* Central warm hotspot — keeps cinema warmth in the middle */}
       <div
-        className="absolute top-1/3 -left-32 h-[36rem] w-[36rem] rounded-full opacity-30 blur-[110px]"
+        className="glow-hotspot absolute top-[45%] left-1/2 h-[26rem] w-[40rem] -translate-x-1/2 opacity-55"
         style={{
           background:
-            "radial-gradient(circle, rgba(86,120,160,0.08) 0%, transparent 60%)",
+            "radial-gradient(ellipse, rgba(200,112,56,0.20) 0%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
+      />
+
+      {/* Neural-violet nebula — right-mid, a quiet tech hint */}
+      <div
+        className="glow-hotspot ambient-blob-neural absolute top-[20%] -right-8 h-[28rem] w-[28rem] opacity-45"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(139,92,246,0.40) 0%, rgba(139,92,246,0.12) 42%, transparent 72%)",
+          filter: "blur(55px)",
+        }}
+      />
+
+      {/* Fine tech grid overlay for density, masked to upper area */}
+      <div
+        className="absolute inset-0 opacity-60"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(232,176,90,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(232,176,90,0.05) 1px, transparent 1px)",
+          backgroundSize: "14px 14px",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 80% 65% at 50% 35%, #000 0%, transparent 85%)",
+          maskImage:
+            "radial-gradient(ellipse 80% 65% at 50% 35%, #000 0%, transparent 85%)",
         }}
       />
     </div>

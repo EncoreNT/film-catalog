@@ -19,13 +19,20 @@ export {
   premiumHDR,
   premiumHdrView,
   releaseTabLabel,
+  releaseTier,
+  bestRussianDubTrack,
+  catalogTierRibbon,
+  audioTrackChannelCount,
   type PremiumHDR,
   type PremiumHdrView,
   type SpecTagKind,
+  type ReleaseTier,
 } from "@/lib/media/release-tags";
 
 export {
   catalogCardTags,
+  catalogCardTech,
+  type CardTech,
 } from "@/lib/media/catalog-card-tags";
 
 export type { CatalogCardTag } from "@/lib/media/release-tags";

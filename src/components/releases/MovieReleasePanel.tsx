@@ -67,14 +67,14 @@ export function MovieReleasePanel({
 
   if (!activeRelease) {
     return (
-      <section className="surface-card mt-8 p-5">
+      <section className="surface-card p-5">
         <p className="text-sm text-muted">У фильма пока нет релизов.</p>
       </section>
     );
   }
 
   return (
-    <section className="surface-card mt-8">
+    <section className="surface-card overflow-hidden">
       <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/50 sm:flex-row sm:items-stretch sm:justify-between">
         {showTabs ? (
           <div
@@ -131,7 +131,7 @@ export function MovieReleasePanel({
         aria-labelledby={
           showTabs ? `release-tab-${activeRelease.id}` : undefined
         }
-        className="min-w-0 p-5 sm:p-6"
+        className="min-w-0 p-4 sm:p-5 2xl:p-5"
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

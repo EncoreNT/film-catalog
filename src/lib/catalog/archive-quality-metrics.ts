@@ -11,6 +11,11 @@ export interface ArchiveQualityFilterParams {
 export interface ArchiveQualityMetricDef {
   key: keyof ArchiveMetrics;
   label: string;
+  /** Compact label for dense rails (catalog header). Falls back to `label`. */
+  shortLabel?: string;
+  /** Two-line stacked label for cells that name multiple formats (e.g. HDR10 / HDR10+).
+   *  When present, the rail renders it as a small spec pair instead of `shortLabel`. */
+  stackedLabel?: [string, string];
   caption?: string;
   elite?: boolean;
   icon: LucideIcon;
@@ -28,6 +33,7 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   {
     key: "fourK",
     label: "4K",
+    shortLabel: "4K",
     caption: "разрешение Ultra HD",
     icon: MonitorPlay,
     isActive: ({ resolution }, isCatalog) => isCatalog && resolution === "4K",
@@ -39,6 +45,7 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   {
     key: "hdr10",
     label: "HDR10 / HDR10+",
+    stackedLabel: ["HDR10", "HDR10+"],
     caption: "расширенный динамический диапазон",
     icon: Sun,
     isActive: ({ hdr }, isCatalog) => isCatalog && hdr === "HDR10,HDR10+",
@@ -50,6 +57,7 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   {
     key: "russianAtmos",
     label: "рус. Atmos",
+    shortLabel: "рус. Atmos",
     caption: "объёмный звук · главная дорожка",
     icon: Waves,
     isActive: ({ premiumAudio }, isCatalog) =>
@@ -62,6 +70,7 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   {
     key: "elite",
     label: "4K + HDR + рус. Atmos",
+    shortLabel: "4K+HDR+Atmos",
     elite: true,
     icon: Sparkles,
     isActive: ({ resolution, hdr, premiumAudio }, isCatalog) =>

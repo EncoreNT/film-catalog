@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
-import Link from "next/link";
-import { Film } from "lucide-react";
+import { Fraunces, Manrope, JetBrains_Mono } from "next/font/google";
 import { GrainOverlay } from "@/components/layout/GrainOverlay";
 import { AmbientBackground } from "@/components/layout/AmbientBackground";
+import { SiteHeader } from "@/components/layout/SiteHeader";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -12,9 +11,10 @@ const fraunces = Fraunces({
   weight: ["400", "500", "600", "700", "900"],
 });
 
-const inter = Inter({
-  variable: "--font-inter",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const jetbrains = JetBrains_Mono({
@@ -27,7 +27,8 @@ export const metadata: Metadata = {
     default: "Кинозал — личный архив фильмов",
     template: "%s · Кинозал",
   },
-  description: "Домашний каталог фильмов: технические характеристики, звуковые дорожки, субтитры и обложки.",
+  description:
+    "Домашний каталог фильмов: технические характеристики, звуковые дорожки, субтитры и обложки.",
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",
@@ -42,51 +43,15 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${fraunces.variable} ${inter.variable} ${jetbrains.variable} h-full overflow-x-hidden`}
+      className={`${fraunces.variable} ${manrope.variable} ${jetbrains.variable} h-full overflow-x-hidden`}
     >
       <body className="relative min-h-dvh antialiased">
         <AmbientBackground />
         <GrainOverlay />
 
-        <header className="sticky top-0 z-40 border-b border-border bg-bg-deep/70 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-            <Link href="/" className="focus-ring group flex items-center gap-3 rounded-lg">
-              <span
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border-strong bg-gradient-to-br from-accent-soft to-transparent text-accent transition-all duration-300 group-hover:border-accent/60 group-hover:shadow-[0_0_24px_var(--accent-glow)]"
-              >
-                <Film className="h-5 w-5" aria-hidden />
-              </span>
-              <div className="leading-tight">
-                <p className="font-display text-lg font-semibold tracking-tight text-text">
-                  Кинозал
-                </p>
-                <p className="font-mono-tech text-faint">личный архив</p>
-              </div>
-            </Link>
-            <nav className="flex items-center gap-2">
-              <Link
-                href="/"
-                className="focus-ring rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-text"
-              >
-                Каталог
-              </Link>
-              <Link
-                href="/franchises"
-                className="focus-ring rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-text"
-              >
-                Франшизы
-              </Link>
-              <Link
-                href="/duplicates"
-                className="focus-ring rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-text"
-              >
-                Дубли
-              </Link>
-            </nav>
-          </div>
-        </header>
+        <SiteHeader />
 
-        <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
+        <main className="container-wide relative z-10 px-6 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10 xl:px-14 2xl:px-20 3xl:px-24">
           {children}
         </main>
       </body>

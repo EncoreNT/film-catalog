@@ -15,10 +15,10 @@ export function MovieRatingWatchedSection({
   const relativeWatched = formatRelativeDate(watchedAt);
 
   return (
-    <section className="surface-card p-4 sm:p-5">
-      <h2 className="font-mono-tech mb-3 text-muted">оценка и просмотр</h2>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:gap-0">
-        <div className="flex flex-col gap-2 sm:flex-1 sm:pr-5">
+    <section className="surface-card p-5 sm:p-6">
+      <h2 className="font-mono-tech mb-4 text-muted">оценка и просмотр</h2>
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-stretch sm:gap-0">
+        <div className="flex flex-col gap-2 sm:flex-1 sm:pr-6">
           <span className="font-mono-tech text-faint">оценка</span>
           <MovieRating
             movieId={movieId}
@@ -30,11 +30,11 @@ export function MovieRatingWatchedSection({
           className="hidden w-px self-stretch bg-border sm:block"
           aria-hidden
         />
-        <div className="flex flex-col gap-2 sm:flex-1 sm:pl-5">
+        <div className="flex flex-col gap-2 sm:flex-1 sm:pl-6">
           <span className="font-mono-tech text-faint">просмотрен</span>
           {watchedAt ? (
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-xl font-medium tracking-wide text-text">
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-2xl font-medium tracking-wide text-text">
                 {formatDate(watchedAt)}
               </span>
               {relativeWatched ? (

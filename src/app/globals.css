@@ -1,27 +1,73 @@
 @import "tailwindcss";
 
 :root {
-  /* Warm coal palette — projection-room warmth, not cold black */
-  --bg-deep: #15110d;
-  --bg-base: #1c1611;
-  --bg-elevated: #241c15;
-  --bg-surface: rgba(255, 240, 220, 0.04);
-  --bg-surface-hover: rgba(255, 240, 220, 0.07);
-  --border-hairline: rgba(255, 220, 180, 0.1);
-  --border-strong: rgba(255, 220, 180, 0.18);
-  --text-primary: #f4ede0;
-  --text-muted: #a89a86;
-  --text-faint: #6b5f50;
+  /* ── Cinematic Tech palette ──
+     Deep coal shifted slightly cool so the neural-violet tech glow reads
+     against it, while the gold projector accent keeps the projection-room
+     warmth. Gold = cinematic primary, neural-violet = AI/tech secondary,
+     cyan = laser/scan highlights. */
+
+  /* Surfaces — cool coal, not pure black, not warm brown.
+     Alpha bumped from 0.05/0.09 → 0.13/0.17 so glass cards stay readable
+     over the ambient background instead of dissolving into it. */
+  --bg-deep: #0b0a0f;
+  --bg-base: #121119;
+  --bg-elevated: #1a1822;
+  --bg-surface: rgba(170, 162, 210, 0.13);
+  --bg-surface-hover: rgba(170, 162, 210, 0.17);
+  --bg-glass: rgba(20, 18, 28, 0.62);
+
+  /* Hairlines — cool violet-tinted, readable on coal */
+  --border-hairline: rgba(176, 168, 214, 0.10);
+  --border-strong: rgba(176, 168, 214, 0.20);
+  --border-neural: rgba(139, 92, 246, 0.32);
+
+  /* Text — cool white with quiet warmth */
+  --text-primary: #f3f1f7;
+  --text-muted: #a39fb2;
+  --text-faint: #645f76;
+
+  /* Gold — cinematic projector beam, primary accent (kept) */
   --accent: #e8b05a;
   --accent-bright: #f6c878;
-  --accent-glow: rgba(232, 176, 90, 0.22);
-  --accent-soft: rgba(232, 176, 90, 0.08);
+  --accent-glow: rgba(232, 176, 90, 0.26);
+  --accent-soft: rgba(232, 176, 90, 0.10);
+
+  /* Neural violet — AI/tech secondary glow (new) */
+  --neural: #8b5cf6;
+  --neural-bright: #a78bfa;
+  --neural-glow: rgba(139, 92, 246, 0.28);
+  --neural-soft: rgba(139, 92, 246, 0.10);
+
+  /* Cyan — laser/scan highlight (new) */
+  --cyan: #38bdf8;
+  --cyan-bright: #7dd3fc;
+  --cyan-glow: rgba(56, 189, 248, 0.22);
+
+  /* Crimson — deep ruby for the top release tier (formerly "platinum"
+     silver, which never read as elite). Jewel-tone crimson pairs with
+     gold the way a ruby pairs with gold jewelry: warm-on-warm but
+     deeper and rarer, so the hierarchy reads ruby > gold > regular.
+     Slightly desaturated to avoid the "danger red" UI tell. */
+  --crimson: #c43d5a;
+  --crimson-bright: #f06880;
+  --crimson-glow: rgba(196, 61, 90, 0.34);
+  --crimson-soft: rgba(196, 61, 90, 0.10);
+
+  /* Ember — warm counter-balance (kept) */
   --ember: #c87038;
+  --ember-bright: #e08a4e;
   --ember-glow: rgba(200, 112, 56, 0.18);
-  --danger: #e07a5a;
+
+  --danger: #f87171;
+  --success: #5eead4;
+
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --radius: 14px;
-  --radius-sm: 8px;
+  --ease-tech: cubic-bezier(0.32, 0.72, 0, 1);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+  --container-max: 2400px;
 }
 
 @theme inline {
@@ -30,26 +76,44 @@
   --color-bg-elevated: var(--bg-elevated);
   --color-bg-surface: var(--bg-surface);
   --color-bg-surface-hover: var(--bg-surface-hover);
+  --color-bg-glass: var(--bg-glass);
   --color-border: var(--border-hairline);
   --color-border-strong: var(--border-strong);
+  --color-border-neural: var(--border-neural);
   --color-text: var(--text-primary);
   --color-muted: var(--text-muted);
   --color-faint: var(--text-faint);
   --color-accent: var(--accent);
   --color-accent-bright: var(--accent-bright);
   --color-accent-soft: var(--accent-soft);
+  --color-neural: var(--neural);
+  --color-neural-bright: var(--neural-bright);
+  --color-neural-soft: var(--neural-soft);
+  --color-cyan: var(--cyan);
+  --color-cyan-bright: var(--cyan-bright);
+  --color-crimson: var(--crimson);
+  --color-crimson-bright: var(--crimson-bright);
+  --color-crimson-soft: var(--crimson-soft);
   --color-ember: var(--ember);
+  --color-ember-bright: var(--ember-bright);
   --color-danger: var(--danger);
+  --color-success: var(--success);
   --font-display: var(--font-fraunces);
   --font-mono: var(--font-jetbrains);
-  --font-ui: var(--font-inter);
+  --font-ui: var(--font-manrope);
+  --font-sans: var(--font-manrope);
+  --breakpoint-3xl: 120rem;
+  --breakpoint-4xl: 160rem;
 }
 
 body {
   background: var(--bg-deep);
   color: var(--text-primary);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .font-display {
@@ -64,23 +128,117 @@ body {
   font-size: 0.7rem;
 }
 
+/* Micro mono label — one step below .font-mono-tech, for sub-labels and hints
+   inside dense panels (sidebar sub-headings like "тип озвучки", "каналы"). */
+.font-micro {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.6rem;
+}
+
+/* Sticky catalog toolbar — glass frame on scroll; padding-inline keeps count/sort off the border. */
+.catalog-sticky-deck {
+  padding: 0.25rem 0 0.5rem;
+  transition:
+    padding 0.25s ease,
+    margin-bottom 0.3s ease;
+}
+
+.catalog-sticky-deck--active {
+  padding: 0.625rem 1rem 0.75rem;
+  margin-bottom: 0.375rem;
+  border-radius: var(--radius);
+}
+
+.catalog-sticky-deck--active::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    168deg,
+    rgba(28, 24, 40, 0.88) 0%,
+    rgba(12, 10, 18, 0.82) 45%,
+    rgba(18, 15, 28, 0.86) 100%
+  );
+  backdrop-filter: blur(28px) saturate(200%) brightness(0.84);
+  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(0.84);
+  border: 1px solid rgba(176, 168, 214, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+    inset 0 0 24px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 12px 36px rgba(0, 0, 0, 0.32);
+}
+
+.catalog-sticky-deck--active::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 1;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent 4%,
+    rgba(232, 176, 90, 0.55) 28%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(139, 92, 246, 0.42) 72%,
+    transparent 96%
+  );
+  pointer-events: none;
+}
+
+.container-wide {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+}
+
+/* Surfaces — glassmorphism with inner refraction (neurox-tier) */
 .surface-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .surface-elevated {
   background: var(--bg-elevated);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.surface-glass {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.36);
 }
 
 .focus-ring:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.focus-ring-neural:focus-visible {
+  outline: 2px solid var(--neural);
+  outline-offset: 2px;
+}
+
+/* Glow helpers */
+.glow-accent { box-shadow: 0 0 24px var(--accent-glow); }
+.glow-neural { box-shadow: 0 0 24px var(--neural-glow); }
+.glow-cyan { box-shadow: 0 0 20px var(--cyan-glow); }
 
 /* Hide native number-input spinners — we don't use them in the UI */
 input[type="number"]::-webkit-inner-spin-button,
@@ -91,6 +249,24 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* ── Neurox-tier tech grid background ──
+   Two layers: thin violet grid + bigger cyan grid, masked to fade at edges. */
+.tech-grid {
+  background-image:
+    linear-gradient(to right, rgba(139, 92, 246, 0.16) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 92, 246, 0.16) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(ellipse 95% 85% at 50% 40%, #000 0%, transparent 92%);
+  mask-image: radial-gradient(ellipse 95% 85% at 50% 40%, #000 0%, transparent 92%);
+}
+.tech-grid-fine {
+  background-image:
+    linear-gradient(to right, rgba(56, 189, 248, 0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.10) 1px, transparent 1px);
+  background-size: 14px 14px;
 }
 
 /* Film perforation strip */
@@ -105,6 +281,18 @@ input[type="number"] {
   background-position: center;
 }
 
+/* Vertical film perforation strip — sprocket holes running top→bottom */
+.film-perfs-y {
+  background-image: radial-gradient(
+    circle at center,
+    var(--bg-deep) 4px,
+    transparent 4.5px
+  );
+  background-size: 100% 22px;
+  background-repeat: repeat-y;
+  background-position: center;
+}
+
 /* Ambient drifting glow */
 @keyframes drift-slow {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -114,11 +302,18 @@ input[type="number"] {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1.1); }
   50% { transform: translate3d(-50px, 40px, 0) scale(0.95); }
 }
+@keyframes drift-neural {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50% { transform: translate3d(60px, -50px, 0) scale(0.9); }
+}
 .ambient-blob-1 {
   animation: drift-slow 18s ease-in-out infinite;
 }
 .ambient-blob-2 {
   animation: drift-slower 24s ease-in-out infinite;
+}
+.ambient-blob-neural {
+  animation: drift-neural 28s ease-in-out infinite;
 }
 
 /* Confirm dialog entrance animation */
@@ -150,16 +345,69 @@ input[type="number"] {
   }
 }
 
-/* Vertical film perforation strip — sprocket holes running top→bottom */
-.film-perfs-y {
-  background-image: radial-gradient(
-    circle at center,
-    var(--bg-deep) 4px,
-    transparent 4.5px
-  );
-  background-size: 100% 22px;
-  background-repeat: repeat-y;
-  background-position: center;
+/* ── Hi-tech laser card effects ──
+   Dual-laser: warm gold perimeter trace + cool cyan counter-trace,
+   so cards read as both cinematic and neural-tech. */
+
+/* Gold laser head travels around card perimeter on hover */
+.laser-trace {
+  stroke-dasharray: 0.12 0.88;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+.group\/laser:hover .laser-trace,
+.group\/laser:focus-within .laser-trace {
+  opacity: 1;
+  animation: laser-perimeter 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.laser-trace--delayed {
+  animation-delay: 0.15s;
+}
+@keyframes laser-perimeter {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Cyan counter-laser — runs the opposite direction, offset in time */
+.laser-trace-cyan {
+  stroke-dasharray: 0.08 0.92;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+.group\/laser:hover .laser-trace-cyan,
+.group\/laser:focus-within .laser-trace-cyan {
+  opacity: 0.85;
+  animation: laser-perimeter-rev 2.1s cubic-bezier(0.4, 0, 0.2, 1) 0.12s forwards;
+}
+@keyframes laser-perimeter-rev {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 1; }
+}
+
+/* Subtle idle scan — projector calibration line */
+.laser-scan-line {
+  animation: laser-scan-sweep 6s ease-in-out infinite;
+}
+@keyframes laser-scan-sweep {
+  0% { opacity: 0; transform: translateY(0); }
+  8% { opacity: 0.35; }
+  92% { opacity: 0.15; }
+  100% { opacity: 0; transform: translateY(calc(100% * 66.67)); }
+}
+
+/* Neural pulse — soft breathing glow for tech chips and active states */
+@keyframes neural-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.neural-pulse {
+  animation: neural-pulse 3.2s ease-in-out infinite;
+}
+
+/* Horizontal scan sweep — used in hero/HUD strips */
+@keyframes scan-h {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(220%); }
 }
 
 /* Warm glow behind the big error code — projector beam catching the numerals */
@@ -225,10 +473,11 @@ input[type="number"] {
     transparent,
     var(--accent),
     var(--accent-bright),
+    var(--neural-bright),
     var(--accent),
     transparent
   );
-  box-shadow: 0 0 12px var(--accent-glow);
+  box-shadow: 0 0 14px var(--accent-glow), 0 0 22px var(--neural-glow);
   animation: catalog-loading-sweep 1.05s var(--ease) infinite;
 }
 @keyframes catalog-loading-sweep {
@@ -243,7 +492,7 @@ input[type="number"] {
 /* Subtle scrollbars for modals and compact panels */
 .scroll-subtle {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 220, 180, 0.22) transparent;
+  scrollbar-color: rgba(176, 168, 214, 0.22) transparent;
 }
 .scroll-subtle::-webkit-scrollbar {
   width: 8px;
@@ -253,14 +502,496 @@ input[type="number"] {
   background: transparent;
 }
 .scroll-subtle::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 220, 180, 0.16);
+  background-color: rgba(176, 168, 214, 0.16);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 .scroll-subtle::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 220, 180, 0.28);
+  background-color: rgba(176, 168, 214, 0.30);
 }
+
+/* Gradient text — gold→neural, used sparingly for hero/feature headlines */
+.text-gradient-cinematic {
+  background: linear-gradient(120deg, var(--accent-bright) 0%, var(--accent) 40%, var(--neural-bright) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ── Cinematic-tech flourish layer ──
+   The pieces that make the interface feel alive: animated gradient borders,
+   sheen sweeps, holographic foil, anamorphic lens flares. */
+
+/* Animated gradient border — gold↔neural↔cyan hue rotation, always visible */
+@keyframes border-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.gradient-border-cinematic {
+  position: relative;
+  background-clip: padding-box;
+}
+.gradient-border-cinematic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    120deg,
+    rgba(232, 176, 90, 0.45),
+    rgba(139, 92, 246, 0.35),
+    rgba(56, 189, 248, 0.25),
+    rgba(232, 176, 90, 0.45)
+  );
+  background-size: 300% 300%;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-shimmer 6s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.55;
+  transition: opacity 0.4s var(--ease);
+}
+.group\/laser:hover .gradient-border-cinematic::before,
+.gradient-border-cinematic:hover::before {
+  opacity: 1;
+}
+
+/* Static gradient hairline (no animation) for rest-state framing */
+.gradient-hairline {
+  position: relative;
+}
+.gradient-hairline::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    140deg,
+    rgba(232, 176, 90, 0.75) 0%,
+    rgba(139, 92, 246, 0.6) 50%,
+    rgba(56, 189, 248, 0.45) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Sheen sweep — diagonal light passes across an element on hover */
+@keyframes sheen-pass {
+  0% { transform: translateX(-130%) skewX(-12deg); }
+  60%, 100% { transform: translateX(230%) skewX(-12deg); }
+}
+.sheen-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.sheen-layer::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  left: 0;
+  height: 140%;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 246, 220, 0.18),
+    rgba(167, 139, 250, 0.12),
+    transparent
+  );
+  filter: blur(2px);
+  transform: translateX(-130%) skewX(-12deg);
+}
+.group\/laser:hover .sheen-layer::after,
+.group:hover .sheen-layer::after {
+  animation: sheen-pass 0.9s var(--ease) forwards;
+}
+
+/* Holographic foil — iridescent shift for elite cards, very subtle at rest */
+@keyframes holo-shift {
+  0% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(40deg); }
+  100% { filter: hue-rotate(0deg); }
+}
+.holo-foil {
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    rgba(232, 176, 90, 0.18),
+    rgba(139, 92, 246, 0.18),
+    rgba(56, 189, 248, 0.16),
+    rgba(244, 114, 182, 0.14),
+    rgba(232, 176, 90, 0.18)
+  );
+  background-size: 200% 200%;
+  animation: holo-shift 8s ease-in-out infinite;
+}
+
+/* Anamorphic lens flare — horizontal blue streak, cinematic + tech */
+@keyframes flare-drift {
+  0%, 100% { opacity: 0.35; transform: translateX(0) scaleX(1); }
+  50% { opacity: 0.6; transform: translateX(8%) scaleX(1.08); }
+}
+.lens-flare {
+  position: absolute;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(56, 189, 248, 0.0) 0%,
+    rgba(56, 189, 248, 0.5) 20%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(56, 189, 248, 0.5) 80%,
+    transparent
+  );
+  filter: blur(1px);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+  animation: flare-drift 11s ease-in-out infinite;
+}
+
+/* God-ray / projector beam — soft diagonal light shaft from top */
+.projector-beam {
+  background: linear-gradient(
+    180deg,
+    rgba(232, 176, 90, 0.16) 0%,
+    rgba(232, 176, 90, 0.05) 40%,
+    transparent 80%
+  );
+  filter: blur(8px);
+}
+
+/* Glass frame — neurox-tier: blur + inner refraction + top edge highlight */
+.glass-frame {
+  background: rgba(20, 18, 28, 0.42);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(176, 168, 214, 0.08);
+}
+.glass-frame-top-glow {
+  position: relative;
+}
+.glass-frame-top-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 176, 90, 0.55),
+    rgba(139, 92, 246, 0.45),
+    transparent
+  );
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Rest-state laser outline — a constant trace so cards always read
+   as laser-framed, not just on hover. The full animated trace still plays
+   on hover via .laser-trace. */
+.laser-rest-outline {
+  opacity: 0.85;
+  transition: opacity 0.4s var(--ease);
+}
+.group\/laser:hover .laser-rest-outline {
+  opacity: 0;
+}
+
+/* Ambient glow hotspots — concentrated, not diffuse, like neurox nebulas */
+.glow-hotspot {
+  border-radius: 999px;
+  filter: blur(70px);
+  pointer-events: none;
+}
+
+/* ── Glow shadow utilities ──
+   Tailwind v4 does not reliably generate arbitrary box-shadow with var()/rgba()/#hex
+   in this project, so glow shadows are defined as explicit classes. Hover states
+   escalate via the .group/laser parent selector. */
+
+.glow-accent-8  { box-shadow: 0 0 8px rgba(232,176,90,0.55); }
+.glow-accent-10 { box-shadow: 0 0 10px rgba(232,176,90,0.55); }
+.glow-accent-12 { box-shadow: 0 0 12px rgba(232,176,90,0.55); }
+.glow-accent-14 { box-shadow: 0 0 14px rgba(232,176,90,0.60); }
+.glow-accent-16 { box-shadow: 0 0 16px rgba(232,176,90,0.60); }
+.glow-accent-18 { box-shadow: 0 0 18px rgba(232,176,90,0.55); }
+.glow-accent-22 { box-shadow: 0 0 22px rgba(232,176,90,0.55); }
+.glow-accent-26 { box-shadow: 0 0 26px rgba(232,176,90,0.55); }
+.glow-accent-28 { box-shadow: 0 0 28px rgba(232,176,90,0.55); }
+.glow-accent-32 { box-shadow: 0 0 32px rgba(232,176,90,0.55); }
+.glow-accent-36 { box-shadow: 0 0 36px rgba(232,176,90,0.55); }
+.glow-accent-40 { box-shadow: 0 0 40px rgba(232,176,90,0.55); }
+.glow-accent-44 { box-shadow: 0 0 44px rgba(232,176,90,0.55); }
+.glow-accent-48 { box-shadow: 0 0 48px rgba(232,176,90,0.55); }
+
+.glow-neural-8  { box-shadow: 0 0 8px rgba(139,92,246,0.55); }
+.glow-neural-10 { box-shadow: 0 0 10px rgba(139,92,246,0.55); }
+.glow-neural-12 { box-shadow: 0 0 12px rgba(139,92,246,0.55); }
+.glow-neural-14 { box-shadow: 0 0 14px rgba(139,92,246,0.55); }
+.glow-neural-16 { box-shadow: 0 0 16px rgba(139,92,246,0.60); }
+.glow-neural-22 { box-shadow: 0 0 22px rgba(139,92,246,0.55); }
+.glow-neural-28 { box-shadow: 0 0 28px rgba(139,92,246,0.55); }
+.glow-neural-32 { box-shadow: 0 0 32px rgba(139,92,246,0.55); }
+
+.glow-cyan-12 { box-shadow: 0 0 12px rgba(56,189,248,0.50); }
+.glow-cyan-14 { box-shadow: 0 0 14px rgba(56,189,248,0.50); }
+
+.glow-ember-12 { box-shadow: 0 0 12px rgba(200,112,56,0.45); }
+.glow-ember-24 { box-shadow: 0 0 24px rgba(200,112,56,0.40); }
+.glow-ember-40 { box-shadow: 0 0 40px rgba(200,112,56,0.40); }
+
+/* Combined dual glows (accent + neural) */
+.glow-dual-18-28 { box-shadow: 0 0 18px rgba(232,176,90,0.55), 0 0 28px rgba(139,92,246,0.55); }
+.glow-dual-26-20 { box-shadow: 0 0 26px rgba(232,176,90,0.55), 0 0 20px rgba(139,92,246,0.55); }
+.glow-dual-28-22 { box-shadow: 0 0 28px rgba(232,176,90,0.55), 0 0 22px rgba(139,92,246,0.55); }
+.glow-dual-30-22 { box-shadow: 0 0 30px rgba(232,176,90,0.55), 0 0 22px rgba(139,92,246,0.55); }
+.glow-dual-32-22 { box-shadow: 0 0 32px rgba(232,176,90,0.55), 0 0 22px rgba(139,92,246,0.55); }
+.glow-dual-44-32 { box-shadow: 0 0 44px rgba(232,176,90,0.55), 0 0 32px rgba(139,92,246,0.55); }
+
+/* Inset hairline borders */
+.glow-inset-hairline        { box-shadow: inset 0 0 0 1px rgba(176,168,214,0.10); }
+.glow-inset-hairline-acc    { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.32); }
+.glow-inset-hairline-acc-s  { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.45); }
+.glow-inset-neural          { box-shadow: inset 0 0 0 1px rgba(139,92,246,0.45); }
+.glow-inset-top-accent      { box-shadow: inset 0 1px 0 rgba(232,176,90,0.55); }
+
+/* Poster frame rest/hover states */
+.glow-poster-rest  { box-shadow: inset 0 0 0 1px rgba(176,168,214,0.10); }
+.glow-poster-hover { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.32), 0 0 36px rgba(232,176,90,0.55); }
+.glow-poster-elite-rest  { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.20); }
+.glow-poster-elite-hover{ box-shadow: inset 0 0 0 1px rgba(232,176,90,0.45), 0 0 56px rgba(232,176,90,0.55), 0 0 32px rgba(139,92,246,0.55); }
+.group\/laser:hover .glow-poster-rest  { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.32), 0 0 36px rgba(232,176,90,0.55); }
+.group\/laser:hover .glow-poster-elite-rest { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.45), 0 0 56px rgba(232,176,90,0.55), 0 0 32px rgba(139,92,246,0.55); }
+
+/* Corner bracket hover escalation */
+.group\/laser:hover .glow-corner-accent { box-shadow: 0 0 16px rgba(232,176,90,0.70); }
+.group\/laser:hover .glow-corner-neural { box-shadow: 0 0 16px rgba(232,176,90,0.70); }
+
+/* Bezel hover escalation */
+.group\/laser:hover .glow-bezel        { box-shadow: 0 0 32px rgba(232,176,90,0.55), 0 0 22px rgba(139,92,246,0.55); }
+.group\/laser:hover .glow-bezel-elite  { box-shadow: 0 0 44px rgba(232,176,90,0.55), 0 0 32px rgba(139,92,246,0.55); }
+
+/* ── Tier system: Gold / Ruby card framing ── */
+/* Gold = 4K + HDR + AC3 5.1 — warm gold glow. Inset ring is very subtle
+   now — the tier signal at the top comes from the flat laser-line accent
+   (.tier-laser-top-gold), not from a heavy solid ring. */
+.glow-poster-gold-rest    { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.12), 0 0 16px rgba(232,176,90,0.18); }
+.glow-bezel-gold          { box-shadow: 0 0 22px rgba(232,176,90,0.30), 0 0 14px rgba(200,140,40,0.22); }
+.group\/laser:hover .glow-poster-gold-rest { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.30), 0 0 48px rgba(232,176,90,0.48), 0 0 26px rgba(200,140,40,0.32); }
+.group\/laser:hover .glow-bezel-gold       { box-shadow: 0 0 40px rgba(232,176,90,0.55), 0 0 26px rgba(200,140,40,0.40); }
+
+/* Outer card elevation by tier — rest-state signal before hover.
+   Ruby glow is intentionally BRIGHTER, WIDER and more saturated than
+   gold so the hierarchy reads: ruby (deep crimson brilliance) > gold
+   (warm) > rest. Crimson glow cuts through the coal background like a
+   jewel in a dark setting — the "top tier" signal the old silver
+   treatment never delivered. */
+.glow-card-rest {
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.glow-card-gold {
+  box-shadow:
+    0 12px 38px rgba(232, 176, 90, 0.28),
+    0 6px 18px rgba(200, 140, 40, 0.18),
+    0 2px 10px rgba(0, 0, 0, 0.45);
+}
+.glow-card-ruby {
+  box-shadow:
+    0 14px 48px rgba(196, 61, 90, 0.42),
+    0 8px 26px rgba(160, 40, 70, 0.28),
+    0 3px 12px rgba(0, 0, 0, 0.42);
+}
+.group:hover .glow-card-rest {
+  box-shadow:
+    0 24px 72px rgba(232, 176, 90, 0.28),
+    0 14px 48px rgba(139, 92, 246, 0.22),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.group:hover .glow-card-gold {
+  box-shadow:
+    0 24px 68px rgba(232, 176, 90, 0.48),
+    0 14px 44px rgba(200, 140, 40, 0.32),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.group:hover .glow-card-ruby {
+  box-shadow:
+    0 28px 84px rgba(196, 61, 90, 0.60),
+    0 16px 52px rgba(160, 40, 70, 0.42),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* Ruby = 4K + HDR + Atmos 7.1 — deep crimson brilliance, brighter and
+   more saturated than gold. Inset ring is subtle — the laser-top line
+   is the primary tier signal, the outer glow carries the hierarchy. */
+.glow-poster-ruby-rest { box-shadow: inset 0 0 0 1px rgba(196,61,90,0.18), 0 0 22px rgba(196,61,90,0.32); }
+.glow-bezel-ruby       { box-shadow: 0 0 26px rgba(196,61,90,0.40), 0 0 16px rgba(160,40,70,0.26); }
+.group\/laser:hover .glow-poster-ruby-rest { box-shadow: inset 0 0 0 1px rgba(240,104,128,0.46), 0 0 64px rgba(196,61,90,0.64), 0 0 34px rgba(160,40,70,0.40); }
+.group\/laser:hover .glow-bezel-ruby       { box-shadow: 0 0 48px rgba(196,61,90,0.62), 0 0 30px rgba(160,40,70,0.42); }
+
+/* ── Flat laser-line tier accents (top edge) ──
+   Replaces the old heavy inset ring as the primary tier signal.
+   A thin, semi-transparent gradient line at the top edge — flat, no
+   volumetric glass. Fades transparent → tier color → transparent,
+   clipped inside the rounded card. Brightens on hover. */
+.tier-laser-top {
+  position: absolute;
+  top: 0;
+  left: 6%;
+  right: 6%;
+  height: 1.5px;
+  z-index: 6;
+  pointer-events: none;
+  border-radius: 999px;
+  opacity: 0.35;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tier-laser-top-gold {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(232, 176, 90, 0.55) 30%,
+    rgba(248, 220, 150, 0.75) 50%,
+    rgba(232, 176, 90, 0.55) 70%,
+    transparent 100%);
+}
+.tier-laser-top-ruby {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(196, 61, 90, 0.55) 25%,
+    rgba(240, 104, 128, 0.90) 50%,
+    rgba(196, 61, 90, 0.55) 75%,
+    transparent 100%);
+  box-shadow: 0 0 8px rgba(196, 61, 90, 0.45);
+}
+.group\/laser:hover .tier-laser-top-gold {
+  opacity: 0.95;
+  box-shadow: 0 0 10px rgba(232, 176, 90, 0.50);
+}
+.group\/laser:hover .tier-laser-top-ruby {
+  opacity: 1;
+  box-shadow: 0 0 14px rgba(196, 61, 90, 0.75), 0 0 6px rgba(240, 104, 128, 0.55);
+}
+
+/* Ruby gradient border — deep crimson metal */
+.gradient-border-ruby::before {
+  background: linear-gradient(
+    120deg,
+    rgba(240, 104, 128, 0.55),
+    rgba(196, 61, 90, 0.40),
+    rgba(240, 104, 128, 0.45),
+    rgba(160, 40, 70, 0.50)
+  );
+}
+
+/* Tier holo sheens — rest-state iridescence, warm gold / deep crimson ruby */
+.holo-gold {
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    rgba(232, 176, 90, 0.22),
+    rgba(200, 140, 40, 0.16),
+    rgba(244, 200, 120, 0.20),
+    rgba(232, 176, 90, 0.22)
+  );
+  background-size: 200% 200%;
+  animation: holo-shift 8s ease-in-out infinite;
+}
+.holo-ruby {
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    rgba(240, 104, 128, 0.28),
+    rgba(196, 61, 90, 0.20),
+    rgba(230, 80, 110, 0.24),
+    rgba(160, 40, 70, 0.18),
+    rgba(240, 104, 128, 0.28)
+  );
+  background-size: 200% 200%;
+  animation: holo-shift 8s ease-in-out infinite;
+}
+
+/* Drop-shadow for SVG/icon glow */
+.drop-glow-accent { filter: drop-shadow(0 0 6px rgba(232,176,90,0.60)); }
+.drop-glow-accent-lg { filter: drop-shadow(0 0 10px rgba(232,176,90,0.60)); }
+
+/* ── Movie detail page: poster frame + entry reveal ── */
+
+/* Double-bezel poster frame — outer "tray" + inner "glass plate".
+   Top edge carries the gold→neural hairline glow; hover adds a warm
+   projector glow so the poster reads as a physical, machined object
+   sitting in an aluminum tray, not a flat image on the background. */
+.poster-frame {
+  position: relative;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  background: rgba(20, 18, 28, 0.55);
+  border: 1px solid var(--border-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 22px 70px rgba(0, 0, 0, 0.5);
+  transition:
+    border-color 0.5s var(--ease),
+    box-shadow 0.5s var(--ease);
+}
+.poster-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 176, 90, 0.6) 30%,
+    rgba(139, 92, 246, 0.45) 70%,
+    transparent
+  );
+  pointer-events: none;
+}
+.poster-frame:hover {
+  border-color: rgba(232, 176, 90, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 28px 90px rgba(0, 0, 0, 0.55),
+    0 0 44px rgba(232, 176, 90, 0.26);
+}
+.poster-frame-inner {
+  border-radius: calc(var(--radius) - 0.5rem);
+}
+
+/* Page entry reveal — gentle focus-pull fade-up for the hero + console.
+   Staggered via the --2 / --3 modifiers. Reduced motion snaps to the
+   final state via the global @media (prefers-reduced-motion) block. */
+@keyframes detail-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+.detail-reveal {
+  animation: detail-reveal 0.8s var(--ease) both;
+}
+.detail-reveal--2 { animation-delay: 0.09s; }
+.detail-reveal--3 { animation-delay: 0.18s; }
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -281,5 +1012,25 @@ input[type="number"] {
     animation: none;
     background: var(--accent);
     box-shadow: none;
+  }
+  .laser-trace,
+  .laser-trace-cyan {
+    opacity: 0.5;
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .laser-scan-line {
+    animation: none;
+    opacity: 0;
+  }
+  .neural-pulse {
+    animation: none;
+    opacity: 0.8;
+  }
+  .ambient-blob-1,
+  .ambient-blob-2,
+  .ambient-blob-neural {
+    animation: none;
   }
 }

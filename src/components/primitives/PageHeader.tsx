@@ -19,7 +19,13 @@ export function PageHeader({
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="font-mono-tech text-accent">{eyebrow}</p>
+          <p className="font-mono-tech flex items-center gap-2 text-accent">
+            <span
+              className="neural-pulse h-1.5 w-1.5 rounded-full bg-neural-bright shadow-[0_0_10px_rgba(139,92,246,0.55)]"
+              aria-hidden
+            />
+            {eyebrow}
+          </p>
         ) : null}
         <h1 className={eyebrow ? `mt-2 ${titleClassName}` : titleClassName}>
           {title}

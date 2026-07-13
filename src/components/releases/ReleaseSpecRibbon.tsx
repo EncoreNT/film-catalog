@@ -63,12 +63,12 @@ export function SpecRibbon({ release }: { release: ReleaseDetailView }) {
         <span
           className={`inline-flex items-baseline gap-1.5 rounded-md border px-2.5 py-1 ${
             release.premium4K
-              ? "border-accent/45 bg-accent/10 shadow-[0_0_14px_var(--accent-glow)]"
-              : "border-border-strong bg-bg-elevated"
+              ? "border-border-strong border-l-2 border-l-accent/70 bg-bg-elevated shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]"
+              : "border-border-strong bg-bg-elevated shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
           }`}
         >
           <span
-            className={`font-display text-base font-semibold leading-none ${
+            className={`font-mono text-sm font-semibold leading-none ${
               release.premium4K ? "text-accent-bright" : "text-text"
             }`}
           >

@@ -38,14 +38,14 @@ export function QualityGauge({
   const share = pct(count, total);
   const isSm = size === "sm";
 
-  const className = `group relative flex ${isSm ? "min-h-0 gap-2 p-2" : "min-h-[5.5rem] gap-3 p-3"} items-center overflow-hidden rounded-[var(--radius)] border text-left transition-all duration-200 ${
-    interactive ? "focus-ring cursor-pointer" : ""
-  } ${
+  const className = `group relative flex ${isSm ? "min-h-0 gap-2 p-2" : "min-h-[5.5rem] gap-3 p-3"} items-center overflow-hidden rounded-[var(--radius)] border text-left backdrop-blur-md transition-all duration-300 ${
+    interactive ? "focus-ring cursor-pointer active:scale-[0.98] " : ""
+  }${
     active
       ? elite
-        ? "border-accent/70 bg-gradient-to-br from-accent/12 to-transparent shadow-[0_0_28px_var(--accent-glow)] ring-1 ring-accent/60"
-        : "border-accent/55 bg-bg-surface shadow-[0_0_28px_var(--accent-glow)] ring-1 ring-accent/40"
-      : "border-border bg-bg-surface hover:border-accent/40 hover:bg-bg-surface-hover"
+        ? "border-accent/70 bg-gradient-to-br from-accent/14 via-neural-soft to-transparent shadow-[0_0_30px_rgba(232,176,90,0.55),0_0_22px_rgba(139,92,246,0.55)] ring-1 ring-accent/60"
+        : "border-accent/55 bg-bg-surface shadow-[0_0_28px_rgba(232,176,90,0.55)] ring-1 ring-accent/40"
+      : "border-border bg-bg-surface/70 hover:border-accent/40 hover:bg-bg-surface-hover"
   }`;
 
   const inner = (
@@ -59,11 +59,19 @@ export function QualityGauge({
             : "radial-gradient(ellipse 80% 120% at 0% 0%, var(--accent-soft) 0%, transparent 70%)",
         }}
       />
+      {active ? (
+        <span
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden
+        >
+          <span className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-accent-bright/12 to-transparent [animation:scan-h_3.5s_var(--ease)_infinite]" />
+        </span>
+      ) : null}
       <span
-        className={`relative flex ${isSm ? "h-7 w-7" : "h-9 w-9"} shrink-0 items-center justify-center rounded-lg transition-colors ${
+        className={`relative flex ${isSm ? "h-7 w-7" : "h-9 w-9"} shrink-0 items-center justify-center rounded-lg border border-border-strong transition-all duration-300 ${
           active
-            ? "bg-accent/25 text-accent-bright"
-            : "bg-accent/15 text-accent"
+            ? "bg-accent/25 text-accent-bright shadow-[0_0_14px_rgba(232,176,90,0.55)]"
+            : "bg-accent/12 text-accent group-hover:bg-accent/18"
         }`}
         aria-hidden
       >
@@ -98,7 +106,7 @@ export function QualityGauge({
           aria-hidden
         >
           <span
-            className="block h-full rounded-full bg-accent transition-all duration-500"
+            className="block h-full rounded-full bg-gradient-to-r from-accent to-accent-bright transition-all duration-500"
             style={{ width: `${share}%` }}
           />
         </span>
@@ -107,7 +115,7 @@ export function QualityGauge({
         <span
           className={`font-mono-tech absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[0.55rem] transition-colors ${
             active
-              ? "border-accent/50 bg-bg-deep/70 text-accent-bright"
+              ? "border-accent/55 bg-bg-deep/70 text-accent-bright"
               : "border-border bg-bg-deep/70 text-muted"
           }`}
           aria-hidden

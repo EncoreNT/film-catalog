@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Fraunces, Manrope, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { ErrorSceneFrame } from "@/components/layout/ErrorScene";
@@ -13,9 +13,10 @@ const fraunces = Fraunces({
   weight: ["400", "500", "600", "700", "900"],
 });
 
-const inter = Inter({
-  variable: "--font-inter",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const jetbrains = JetBrains_Mono({
@@ -37,7 +38,7 @@ export default function GlobalError({
   return (
     <html
       lang="ru"
-      className={`${fraunces.variable} ${inter.variable} ${jetbrains.variable} h-full`}
+      className={`${fraunces.variable} ${manrope.variable} ${jetbrains.variable} h-full`}
     >
       <body className="relative min-h-dvh antialiased">
         <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>

@@ -1,9 +1,13 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import {
+  codecFull,
+  codecShort,
   formatAudioLabel,
   mainAudioTrack,
   premiumAudio,
+  translationShort,
 } from "@/lib/media/audio-labels";
+import { formatHdrLabel } from "@/lib/shared/dictionaries";
 import {
   hdrCatalogTag,
   is4K,
@@ -14,6 +18,51 @@ import {
 } from "@/lib/media/release-tags";
 
 export type { CatalogCardTag, SpecTagKind };
+
+/**
+ * Структурированные tech-данные основного релиза для нижней линии карточки
+ * каталога: тип релиза, разрешение, видео-кодек/HDR, аудио-кодек/каналы/перевод.
+ * Используется в компактной строке с dot-паттерном (видео/аудио раскрываются
+ * по hover), чтобы экономить место на карточке.
+ */
+export interface CardTech {
+  releaseType: string | null;
+  resolution: string | null;
+  resolutionPixels: string | null;
+  is4K: boolean;
+  videoCodec: string | null;
+  hdr: string | null;
+  audioLabel: string | null;
+  audioCodecShort: string | null;
+  audioCodecFull: string | null;
+  channels: string | null;
+  translation: string | null;
+}
+
+export function catalogCardTech(release: ReleaseWithTracks): CardTech {
+  const v = release.videoTrack;
+  const meta = releaseMetaTags(release);
+  const releaseType = meta.find((t) => t.kind === "release")?.label ?? null;
+  const resTag = resolutionTag(v);
+  const main = mainAudioTrack(release);
+
+  return {
+    releaseType,
+    resolution: resTag?.label ?? null,
+    resolutionPixels: resTag?.note ?? null,
+    is4K: is4K(release),
+    videoCodec: videoCodecLabel(v?.codec),
+    hdr: v?.hdr ? formatHdrLabel(v.hdr) : null,
+    audioLabel: main ? formatAudioLabel(main) : null,
+    audioCodecShort: main ? codecShort(main.codec) : null,
+    audioCodecFull: main ? codecFull(main.codec) : null,
+    channels:
+      main?.channelLayout && main.channelLayout !== "other"
+        ? main.channelLayout
+        : null,
+    translation: main ? translationShort(main.translationType) : null,
+  };
+}
 
 const VIDEO_CODEC_SHORT: Record<string, string> = {
   hevc: "HEVC",

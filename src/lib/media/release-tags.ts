@@ -7,10 +7,12 @@ import {
   parseHdrValue,
 } from "@/lib/shared/dictionaries";
 import { formatBitrateKbps } from "@/lib/shared/resolution";
+import { normalizeAudioProfile } from "@/lib/media/quality-predicates";
 import {
   audioTrackTag,
   codecFull,
   formatAudioLabel,
+  mainAudioTrack,
 } from "@/lib/media/audio-labels";
 
 export type SpecTagKind =
@@ -242,4 +244,85 @@ export function releaseTabLabel(release: ReleaseWithTracks): string {
     parts.push(resolution === "4K" ? "4K" : resolution);
   }
   return parts.length > 0 ? parts.join(" · ") : `релиз #${release.id}`;
+}
+
+/**
+ * Каталожные тиры релиза (логика, не цвет): Ruby — 4K + любой HDR +
+ * Atmos ≥ 7.1 на лучшей русской дубляжной дорожке; Gold — 4K + любой HDR +
+ * surround ≥ 5.1 (6+ каналов) на основном треке. Ruby имеет приоритет над Gold.
+ */
+export type ReleaseTier = "ruby" | "gold" | null;
+
+/** Ribbon label for tier cards (top badge). */
+export function catalogTierRibbon(tier: ReleaseTier): string | null {
+  if (tier === "ruby") return "4K | HDR | ATMOS";
+  if (tier === "gold") return "4K | HDR";
+  return null;
+}
+
+/** Эффективное число каналов трека: channels, иначе bed-ранг из layout. */
+export function audioTrackChannelCount(
+  track: ReleaseWithTracks["audioTracks"][number],
+): number {
+  if (track.channels != null) return track.channels;
+  if (track.channelLayout && track.channelLayout !== "other") {
+    const [wide, high] = track.channelLayout.split(".");
+    const w = Number(wide);
+    const h = Number(high);
+    if (Number.isFinite(w) && Number.isFinite(h)) return w + h;
+  }
+  return 0;
+}
+
+/**
+ * Лучшая русская дубляжная дорожка релиза — для ruby-тира и ribbon ATMOS.
+ * Среди `language=rus` + `translationType=dub`: приоритет Atmos, затем
+ * больше каналов, затем isDefault.
+ */
+export function bestRussianDubTrack(
+  release: ReleaseWithTracks,
+): ReleaseWithTracks["audioTracks"][number] | null {
+  const dubTracks = release.audioTracks.filter(
+    (t) => t.language === "rus" && t.translationType === "dub",
+  );
+  if (dubTracks.length === 0) return null;
+
+  const sorted = [...dubTracks].sort((a, b) => {
+    const aAtmos = normalizeAudioProfile(a.profile) === "Atmos" ? 1 : 0;
+    const bAtmos = normalizeAudioProfile(b.profile) === "Atmos" ? 1 : 0;
+    if (bAtmos !== aAtmos) return bAtmos - aAtmos;
+    const channelDiff = audioTrackChannelCount(b) - audioTrackChannelCount(a);
+    if (channelDiff !== 0) return channelDiff;
+    if (a.isDefault && !b.isDefault) return -1;
+    if (!a.isDefault && b.isDefault) return 1;
+    return a.streamIndex - b.streamIndex;
+  });
+  return sorted[0];
+}
+
+/**
+ * Каталожные тиеры релиза (логика, не цвет).
+ *
+ * **Ruby** — 4K + любой HDR + Atmos ≥ 7.1 на {@link bestRussianDubTrack}
+ * (только дубляж). Atmos-оригинал при русской AC3-дубляже не даёт ruby.
+ *
+ * **Gold** — 4K + любой HDR + surround ≥ 5.1 на {@link mainAudioTrack}
+ * (AC3, DTS, TrueHD и др. — главное 6+ каналов на основной дорожке).
+ */
+export function releaseTier(release: ReleaseWithTracks): ReleaseTier {
+  if (!is4K(release) || !isAnyHDR(release)) return null;
+
+  const bestRusDub = bestRussianDubTrack(release);
+  if (bestRusDub) {
+    const profile = normalizeAudioProfile(bestRusDub.profile);
+    const channels = audioTrackChannelCount(bestRusDub);
+    if (profile === "Atmos" && channels >= 8) return "ruby";
+  }
+
+  const main = mainAudioTrack(release);
+  if (!main) return null;
+
+  if (audioTrackChannelCount(main) >= 6) return "gold";
+
+  return null;
 }
