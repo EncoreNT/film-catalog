@@ -47,8 +47,10 @@ against it. Accents by role, not by mood:
 - **Gold** (`--accent #e8b05a`) — primary, projector beam, active states, 4K.
 - **Neural violet** (`--neural #8b5cf6`) — AI/tech secondary.
 - **Cyan** (`--cyan #38bdf8`) — laser/scan highlight.
-- **Crimson** (`--crimson #c43d5a`, slightly desaturated) — **Ruby tier only**,
-  never danger/decoration.
+- **Crimson** (deep `--crimson #9a1b34` for glow/fills, bright `--crimson-bright #e03e62`
+  for text/gradient-tops — two shades so small badge text stays readable while
+  large surfaces keep the gemstone depth; tuned away from magenta/pink toward a
+  true ruby red) — **Ruby tier only**, never danger/decoration.
 - **Ember** (`--ember #c87038`) — warm counter-balance in ambient/laser gradients.
 - **Danger** (`--f87171`) / **Success** (`--5eead4`) — status only.
 

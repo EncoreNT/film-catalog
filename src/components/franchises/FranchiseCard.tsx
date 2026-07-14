@@ -1,11 +1,12 @@
-import type { ReactNode } from "react";
-import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import Link from "next/link";
 import { Clapperboard, Star } from "lucide-react";
+import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
+import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
 import { franchiseCoverUrlFromFranchise } from "@/lib/covers/franchise-cover-url";
 import { computeFranchiseSummary } from "@/lib/franchises/franchise-summary";
 import { pluralRu } from "@/lib/shared/russian-plural";
+import { formatArchiveTotalDuration } from "@/lib/shared/format";
 import { FranchiseQualityReel } from "@/components/franchises/FranchiseQualityReel";
 
 interface FranchiseCardProps {
@@ -18,128 +19,180 @@ function eraLabel(start: number | null, end: number | null): string | null {
   if (start == null) return `${end}`;
   if (end == null) return `${start}`;
   if (start === end) return `${start}`;
-  return `${start}\u2013${end}`;
+  return `${start}-${end}`;
 }
 
-function Stat({
-  label,
-  value,
-  icon,
-  extra,
-  title,
-}: {
-  label: string;
-  value: string | null;
-  icon?: ReactNode;
-  extra?: ReactNode;
-  title?: string;
-}) {
-  return (
-    <div className="min-w-0 px-3 first:pl-0 last:pr-0" title={title}>
-      <span className="font-mono-tech block text-[0.6rem] text-faint">
-        {label}
-      </span>
-      <span className="mt-1 flex min-w-0 items-center gap-1 text-sm font-medium tabular-nums text-text">
-        {icon}
-        <span className="truncate">{value ?? "—"}</span>
-        {extra}
-      </span>
-    </div>
-  );
-}
-
+/**
+ * Cover-forward franchise tile for the list page. The 16:9 backdrop is the
+ * hero asset (franchise covers are uploaded landscape); the title, film
+ * count and rating live on the cover so the hierarchy reads at a glance.
+ * Below sits a compact meta band: a slim tier film-strip (the per-slot
+ * quality reel collapsed to ruby / gold / standard notches) and one muted
+ * line of years / runtime. The franchise-level tier (every owned film is
+ * ruby, or every owned film is gold+) drives the LaserCardFrame treatment:
+ * ruby → crimson laser perimeter + holo-ruby, gold → warm-gold laser + holo,
+ * matching the movie-card and release-tab tier language.
+ */
 export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
   const coverUrl = franchiseCoverUrlFromFranchise(franchise);
   const summary = computeFranchiseSummary(franchise);
   const era = eraLabel(summary.yearStart, summary.yearEnd);
   const rating =
     summary.averageRating != null ? summary.averageRating.toFixed(1) : null;
+  const runtime = formatArchiveTotalDuration(summary.totalRuntimeSeconds);
+  const tier = summary.tier;
+  const filmCount = `${summary.total} ${pluralRu(
+    summary.total,
+    "фильм",
+    "фильма",
+    "фильмов",
+  )}`;
+  const cardTitle = `Оценка ${rating} из 10 по ${summary.ratedCount} ${pluralRu(
+    summary.ratedCount,
+    "фильму",
+    "фильмам",
+    "фильмам",
+  )}`;
+  const ariaLabel = `${franchise.name}. ${filmCount}${
+    rating != null ? `. Оценка ${rating} из 10` : ""
+  }`;
 
   return (
-    <Link
-      href={`/franchises/${franchise.slug}`}
-      className="focus-ring group block rounded-[var(--radius)]"
+    <article
+      className="group relative rounded-[var(--radius)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:z-10 hover:-translate-y-1 hover:scale-[1.02]"
       style={{
-        animation: `movieCardIn 0.45s var(--ease) ${index * 40}ms both`,
+        animation: `movieCardIn 0.45s var(--ease) ${index * 45}ms both`,
       }}
     >
-      <article className="surface-card overflow-hidden transition-all duration-200 group-hover:border-accent/40 group-hover:shadow-[0_0_28px_var(--accent-glow)]">
-        <div className="relative aspect-[16/9] overflow-hidden bg-bg-elevated">
-          {coverUrl ? (
-            <ApiCoverImage
-              src={coverUrl}
-              alt={`Обложка: ${franchise.name}`}
-              fill
-              sizes="(max-width: 640px) 100vw, 50vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-              loading={index < 2 ? "eager" : "lazy"}
-              fetchPriority={index === 0 ? "high" : undefined}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-accent-soft to-transparent">
-              <Clapperboard className="h-12 w-12 text-accent/40" aria-hidden />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-bg-deep via-bg-deep/55 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
-            <div className="min-w-0">
-              <p className="font-mono-tech text-[0.65rem] text-accent">
-                {summary.total} {pluralRu(summary.total, "фильм", "фильма", "фильмов")}
-              </p>
-              <h3 className="font-display mt-0.5 line-clamp-2 text-xl font-bold text-text">
-                {franchise.name}
-              </h3>
-            </div>
-            <div className="shrink-0 text-right">
-              <div className="font-display text-2xl font-bold leading-none tabular-nums text-text">
-                {summary.filled}
-                <span className="font-mono-tech text-base font-normal text-faint">
-                  {" / "}
-                  {summary.total}
-                </span>
-              </div>
-              <span className="font-mono-tech mt-1 block text-[0.6rem] text-muted">
-                собрано
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3 p-4">
-          {summary.total > 0 ? (
-            <FranchiseQualityReel slots={summary.slots} className="h-14" />
-          ) : (
-            <div className="h-14" aria-hidden />
-          )}
-
-          <div className="grid grid-cols-2 divide-x divide-border border-t border-border pt-3">
-            <Stat label="годы" value={era} />
-            <Stat
-              label="ср. оценка"
-              value={rating}
-              title={
-                summary.ratedCount > 0
-                  ? `Средняя оценка ${rating} по ${summary.ratedCount} ${pluralRu(summary.ratedCount, "фильму", "фильмам", "фильмам")}`
-                  : "Нет оценённых фильмов"
-              }
-              icon={
-                <Star
-                  className="h-3 w-3 shrink-0 fill-accent text-accent"
-                  aria-hidden
+      <Link
+        href={`/franchises/${franchise.slug}`}
+        className="focus-ring block"
+        aria-label={ariaLabel}
+      >
+        <LaserCardFrame tier={tier}>
+          <div
+            className={`relative overflow-hidden rounded-[var(--radius)] bg-bg-base transition-shadow duration-500 ${
+              tier === "ruby"
+                ? "glow-poster-ruby-rest"
+                : tier === "gold"
+                  ? "glow-poster-gold-rest"
+                  : "glow-poster-rest"
+            }`}
+          >
+            <div className="relative aspect-[16/9] overflow-hidden">
+              {coverUrl ? (
+                <ApiCoverImage
+                  src={coverUrl}
+                  alt={`Обложка: ${franchise.name}`}
+                  fill
+                  sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, (max-width:1536px) 33vw, 25vw"
+                  className="object-cover transition-transform duration-700 group-hover/laser:scale-[1.05]"
+                  style={{ transitionTimingFunction: "var(--ease)" }}
+                  loading={index < 4 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : undefined}
                 />
-              }
-              extra={
-                summary.ratedCount > 0 ? (
-                  <span className="font-mono-tech shrink-0 text-[0.6rem] text-faint">
-                    · {summary.ratedCount}{" "}
-                    {pluralRu(summary.ratedCount, "фильм", "фильма", "фильмов")}
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                  <div
+                    className="absolute inset-0 opacity-60"
+                    aria-hidden
+                    style={{
+                      background:
+                        "radial-gradient(ellipse 80% 60% at 50% 30%, var(--accent-soft) 0%, transparent 70%)",
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 opacity-40"
+                    aria-hidden
+                    style={{
+                      background:
+                        "radial-gradient(ellipse 60% 50% at 50% 100%, var(--neural-soft) 0%, transparent 70%)",
+                    }}
+                  />
+                  <Clapperboard
+                    className="relative h-12 w-12 text-accent/45"
+                    aria-hidden
+                  />
+                </div>
+              )}
+
+              {tier === "ruby" || tier === "gold" ? (
+                <>
+                  <div
+                    className={`pointer-events-none absolute inset-0 z-[2] opacity-[0.12] mix-blend-overlay transition-opacity duration-500 group-hover/laser:opacity-50 ${
+                      tier === "ruby" ? "holo-ruby" : "holo-gold"
+                    }`}
+                    aria-hidden
+                  />
+                  <div
+                    className={`tier-laser-top ${
+                      tier === "ruby"
+                        ? "tier-laser-top-ruby"
+                        : "tier-laser-top-gold"
+                    }`}
+                    aria-hidden
+                  />
+                </>
+              ) : null}
+
+              <div
+                className="pointer-events-none absolute inset-0 z-[3]"
+                aria-hidden
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(7,6,10,0.96) 0%, rgba(7,6,10,0.82) 22%, rgba(7,6,10,0.4) 45%, transparent 65%)",
+                }}
+              />
+
+              {rating != null ? (
+                <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-end p-2.5">
+                  <span
+                    className="font-mono-tech inline-flex items-center gap-1 rounded-full border border-accent/50 bg-bg-deep/90 px-2 py-[3px] text-[0.62rem] font-semibold tabular-nums text-accent-bright backdrop-blur-sm"
+                    title={cardTitle}
+                    aria-label={cardTitle}
+                  >
+                    {rating}
+                    <Star
+                      className="h-2.5 w-2.5 fill-accent text-accent"
+                      aria-hidden
+                    />
                   </span>
-                ) : null
-              }
-            />
+                </div>
+              ) : null}
+
+              <div className="absolute inset-x-0 bottom-0 z-10 p-4">
+                <p className="font-mono-tech text-[0.65rem] uppercase tracking-[0.14em] text-accent/90">
+                  {filmCount}
+                </p>
+                <h3 className="font-display mt-1 line-clamp-2 text-xl font-bold leading-tight tracking-tight text-text sm:text-2xl">
+                  {franchise.name}
+                </h3>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 bg-bg-elevated/50 px-4 py-3">
+              {summary.total > 0 ? (
+                <FranchiseQualityReel slots={summary.slots} variant="slim" />
+              ) : (
+                <div className="h-5" aria-hidden />
+              )}
+              <div className="flex items-center gap-3 font-mono-tech text-[0.65rem] tabular-nums text-muted">
+                {era ? (
+                  <span className="text-text/80">{era}</span>
+                ) : (
+                  <span className="text-faint">годы неизвестны</span>
+                )}
+                {runtime ? (
+                  <span className="ml-auto flex items-center gap-3">
+                    <span className="h-3 w-px bg-border" aria-hidden />
+                    <span>{runtime}</span>
+                  </span>
+                ) : null}
+              </div>
+            </div>
           </div>
-        </div>
-      </article>
-    </Link>
+        </LaserCardFrame>
+      </Link>
+    </article>
   );
 }

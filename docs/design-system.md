@@ -96,10 +96,10 @@ neural-violet tech-glow читался на нём, а золото держал
 | `--cyan` | `#38bdf8` | `text-cyan` | **Cyan** — laser/scan highlight, lens flare |
 | `--cyan-bright` | `#7dd3fc` | `text-cyan-bright` | Светлее cyan |
 | `--cyan-glow` | `rgba(56,189,248,0.22)` | — | Glow-тень |
-| `--crimson` | `#c43d5a` | `text-crimson` | **Crimson** — ruby tier (топовый релиз). Чуть десатурирован чтобы не читался как danger-red |
-| `--crimson-bright` | `#f06880` | `text-crimson-bright` | Светлее crimson |
-| `--crimson-glow` | `rgba(196,61,90,0.34)` | — | Glow-тень |
-| `--crimson-soft` | `rgba(196,61,90,0.10)` | `bg-crimson-soft` | Бледная crimson-подложка |
+| `--crimson` | `#9a1b34` | `text-crimson` | **Crimson deep** — гемовый рубин для glow, заливок, крупных поверхностей (подсветка карточки) |
+| `--crimson-bright` | `#e03e62` | `text-crimson-bright` | **Crimson bright** — люминесцентный рубин для мелкого текста бейджей, градиент-вершин чипов, signal-полос. Отдельный оттенок ради читабельности на тёмном (контраст ≥ AA), не розовый |
+| `--crimson-glow` | `rgba(154,27,52,0.34)` | — | Glow-тень (глубокий) |
+| `--crimson-soft` | `rgba(154,27,52,0.10)` | `bg-crimson-soft` | Бледная crimson-подложка |
 | `--ember` | `#c87038` | `text-ember` | **Ember** — тёплый противовес золота (ambient, laser-градиент) |
 | `--ember-bright` | `#e08a4e` | `text-ember-bright` | Светлее ember |
 | `--ember-glow` | `rgba(200,112,56,0.18)` | — | Glow-тень |

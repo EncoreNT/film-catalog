@@ -4,6 +4,8 @@ import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
 import type { MovieWithTracks } from "@/lib/movies/movie-include";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
+type AudioTrack = ReleaseWithTracks["audioTracks"][number];
+
 type MovieOpts = {
   id?: number;
   title?: string;
@@ -15,6 +17,60 @@ type MovieOpts = {
   atmos?: boolean;
   audioTracks?: ReleaseWithTracks["audioTracks"];
 };
+
+/** Рус. дубляж TrueHD Atmos 7.1.2 — квалифицирует релиз как ruby. */
+function atmosDubTrack(releaseId = 1): AudioTrack {
+  return {
+    id: 1,
+    releaseId,
+    streamIndex: 0,
+    codec: "truehd",
+    profile: "Atmos",
+    channels: 8,
+    channelLayout: "7.1.2",
+    bitrate: null,
+    language: "rus",
+    title: "TrueHD Atmos 7.1.2",
+    translationType: "dub",
+    isDefault: true,
+  };
+}
+
+/** Рус. дубляж AC3 5.1 — surround на основной дорожке, квалифицирует как gold. */
+function surroundDubTrack(releaseId = 1): AudioTrack {
+  return {
+    id: 1,
+    releaseId,
+    streamIndex: 0,
+    codec: "ac3",
+    profile: "None",
+    channels: 6,
+    channelLayout: "5.1",
+    bitrate: null,
+    language: "rus",
+    title: "AC3 5.1",
+    translationType: "dub",
+    isDefault: true,
+  };
+}
+
+/** Рус. дубляж AAC 2.0 — стерео, тира не даёт. */
+function stereoDubTrack(releaseId = 1): AudioTrack {
+  return {
+    id: 1,
+    releaseId,
+    streamIndex: 0,
+    codec: "aac",
+    profile: "None",
+    channels: 2,
+    channelLayout: "2.0",
+    bitrate: null,
+    language: "rus",
+    title: "AAC 2.0",
+    translationType: "dub",
+    isDefault: true,
+  };
+}
 
 function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
   return {
@@ -46,26 +102,7 @@ function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
             bitrate: null,
           }
         : null,
-    audioTracks:
-      opts.audioTracks ??
-      (opts.atmos
-        ? [
-            {
-              id: 1,
-              releaseId,
-              streamIndex: 0,
-              codec: null,
-              profile: "Atmos",
-              channels: null,
-              channelLayout: null,
-              bitrate: null,
-              language: "rus",
-              title: null,
-              translationType: null,
-              isDefault: true,
-            },
-          ]
-        : []),
+    audioTracks: opts.audioTracks ?? (opts.atmos ? [atmosDubTrack(releaseId)] : []),
     subtitleTracks: [],
   };
 }
@@ -131,27 +168,40 @@ describe("slotTier", () => {
     expect(slotTier(null)).toBe("missing");
   });
 
-  it("returns basic for a film without premium specs", () => {
-    expect(slotTier(makeMovie({ resolutionLabel: "1080p", hdr: "SDR" }))).toBe(
-      "basic",
-    );
-  });
-
-  it("counts each premium spec as one tier step", () => {
-    expect(slotTier(makeMovie({ resolutionLabel: "4K" }))).toBe("premium-1");
-    expect(slotTier(makeMovie({ hdr: "HDR10" }))).toBe("premium-1");
-    expect(slotTier(makeMovie({ atmos: true }))).toBe("premium-1");
+  it("returns standard for a non-4K film", () => {
     expect(
-      slotTier(makeMovie({ resolutionLabel: "4K", hdr: "HDR10" })),
-    ).toBe("premium-2");
+      slotTier(makeMovie({ resolutionLabel: "1080p", hdr: "SDR" })),
+    ).toBe("standard");
   });
 
-  it("reaches elite only with 4K + HDR + рус. Atmos", () => {
+  it("returns standard for 4K + HDR without qualifying surround audio", () => {
     expect(
       slotTier(
-        makeMovie({ resolutionLabel: "4K", hdr: "HDR10", atmos: true }),
+        makeMovie({
+          resolutionLabel: "4K",
+          hdr: "HDR10",
+          audioTracks: [stereoDubTrack()],
+        }),
       ),
-    ).toBe("elite");
+    ).toBe("standard");
+  });
+
+  it("returns gold for 4K + HDR + surround on the main track", () => {
+    expect(
+      slotTier(
+        makeMovie({
+          resolutionLabel: "4K",
+          hdr: "HDR10",
+          audioTracks: [surroundDubTrack()],
+        }),
+      ),
+    ).toBe("gold");
+  });
+
+  it("returns ruby for 4K + HDR + рус. Atmos 7.1.2 dub", () => {
+    expect(
+      slotTier(makeMovie({ resolutionLabel: "4K", hdr: "HDR10", atmos: true })),
+    ).toBe("ruby");
   });
 });
 
@@ -165,7 +215,7 @@ describe("computeFranchiseSummary", () => {
     expect(s.yearEnd).toBeNull();
     expect(s.totalRuntimeSeconds).toBeNull();
     expect(s.averageRating).toBeNull();
-    expect(s.allElite).toBe(false);
+    expect(s.tier).toBeNull();
   });
 
   it("marks every slot missing and uses yearHints for the era", () => {
@@ -181,6 +231,7 @@ describe("computeFranchiseSummary", () => {
     expect(s.yearStart).toBe(2014);
     expect(s.yearEnd).toBe(2023);
     expect(s.totalRuntimeSeconds).toBeNull();
+    expect(s.tier).toBeNull();
   });
 
   it("aggregates era, runtime, rating and premium counts for a mix", () => {
@@ -224,30 +275,99 @@ describe("computeFranchiseSummary", () => {
     expect(s.yearEnd).toBe(2023);
     expect(s.totalRuntimeSeconds).toBe(13000);
     expect(s.averageRating).toBe(7.5);
-    expect(s.premium).toEqual({ fourK: 1, hdr: 1, atmos: 1, elite: 1 });
-    expect(s.allElite).toBe(false);
+    expect(s.premium).toEqual({ fourK: 1, hdr: 1, atmos: 1 });
+    expect(s.tier).toBeNull();
     expect(s.slots.map((slot) => slot.tier)).toEqual([
-      "elite",
-      "basic",
+      "ruby",
+      "standard",
       "missing",
     ]);
   });
 
-  it("flags allElite only when every owned film is elite", () => {
-    const elite = makeMovie({
-      id: 1,
-      resolutionLabel: "4K",
-      hdr: "HDR10",
-      atmos: true,
-    });
+  it("flags tier ruby when every owned film is ruby", () => {
     const s = computeFranchiseSummary(
       makeFranchise([
-        makeSlot({ storyOrder: 0, movieId: 1, movie: elite }),
-        makeSlot({ storyOrder: 1, movieId: 2, movie: elite }),
+        makeSlot({
+          storyOrder: 0,
+          movieId: 1,
+          movie: makeMovie({
+            id: 1,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            atmos: true,
+          }),
+        }),
+        makeSlot({
+          storyOrder: 1,
+          movieId: 2,
+          movie: makeMovie({
+            id: 2,
+            resolutionLabel: "4K",
+            hdr: "DV:P7",
+            atmos: true,
+          }),
+        }),
       ]),
     );
-    expect(s.allElite).toBe(true);
-    expect(s.premium.elite).toBe(2);
+    expect(s.tier).toBe("ruby");
+    expect(s.slots.every((slot) => slot.tier === "ruby")).toBe(true);
+  });
+
+  it("flags tier gold when every owned film is gold", () => {
+    const s = computeFranchiseSummary(
+      makeFranchise([
+        makeSlot({
+          storyOrder: 0,
+          movieId: 1,
+          movie: makeMovie({
+            id: 1,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            audioTracks: [surroundDubTrack()],
+          }),
+        }),
+        makeSlot({
+          storyOrder: 1,
+          movieId: 2,
+          movie: makeMovie({
+            id: 2,
+            resolutionLabel: "4K",
+            hdr: "HDR10+",
+            audioTracks: [surroundDubTrack()],
+          }),
+        }),
+      ]),
+    );
+    expect(s.tier).toBe("gold");
+    expect(s.slots.every((slot) => slot.tier === "gold")).toBe(true);
+  });
+
+  it("promotes tier to gold when owned films are a ruby + gold mix", () => {
+    const s = computeFranchiseSummary(
+      makeFranchise([
+        makeSlot({
+          storyOrder: 0,
+          movieId: 1,
+          movie: makeMovie({
+            id: 1,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            atmos: true,
+          }),
+        }),
+        makeSlot({
+          storyOrder: 1,
+          movieId: 2,
+          movie: makeMovie({
+            id: 2,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            audioTracks: [surroundDubTrack()],
+          }),
+        }),
+      ]),
+    );
+    expect(s.tier).toBe("gold");
   });
 
   it("uses the default audio track for the reel, not a secondary DTS:X", () => {

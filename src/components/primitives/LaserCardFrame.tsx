@@ -68,7 +68,7 @@ export function LaserCardFrame({
             >
               <stop offset="0%" stopColor="transparent" />
               <stop offset="40%" stopColor="var(--crimson)" />
-              <stop offset="55%" stopColor="#f0d8de" />
+              <stop offset="55%" stopColor="#f6e2e6" />
               <stop offset="70%" stopColor="var(--crimson-bright)" />
               <stop offset="100%" stopColor="transparent" />
             </linearGradient>

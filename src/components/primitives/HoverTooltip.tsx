@@ -166,7 +166,7 @@ export function HoverTooltip({
               role="tooltip"
               onMouseEnter={cancelHide}
               onMouseLeave={hide}
-              className={`fixed z-[100] transition-opacity duration-100 ${
+              className={`fixed z-[100] transition-opacity duration-150 ${
                 interactive ? "pointer-events-auto" : "pointer-events-none"
               } ${positioned ? "opacity-100" : "opacity-0"}`}
               style={{
@@ -175,21 +175,13 @@ export function HoverTooltip({
                 transform,
               }}
             >
-              {placement === "bottom" ? (
+              <div className="relative overflow-hidden rounded-[var(--radius-sm)] border border-white/10 bg-bg-deep/80 shadow-[0_24px_70px_rgba(0,0,0,0.6),0_0_30px_rgba(232,176,90,0.08)] backdrop-blur-xl">
                 <div
                   aria-hidden
-                  className="mx-auto mb-[-1px] h-2 w-2 rotate-45 border-l border-t border-accent/25 bg-bg-elevated"
+                  className="pointer-events-none absolute inset-x-[12%] top-0 h-px bg-gradient-to-r from-transparent via-accent/45 to-transparent"
                 />
-              ) : null}
-              <div className="surface-elevated overflow-hidden rounded-[var(--radius-sm)] border border-accent/25 shadow-[0_12px_40px_rgba(0,0,0,0.45),0_0_24px_var(--accent-glow)]">
                 {content}
               </div>
-              {placement === "top" ? (
-                <div
-                  aria-hidden
-                  className="mx-auto mt-[-1px] h-2 w-2 rotate-45 border-b border-r border-accent/25 bg-bg-elevated"
-                />
-              ) : null}
             </div>,
             document.body,
           )

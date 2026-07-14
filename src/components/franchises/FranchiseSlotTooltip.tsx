@@ -1,37 +1,38 @@
-import {
-  AudioLines,
-  Calendar,
-  Clock,
-  Contrast,
-  Disc3,
-  Film,
-  Monitor,
-  Star,
-} from "lucide-react";
-import type { FranchiseSlotSummary, SlotTier } from "@/lib/franchises/franchise-summary";
-import { slotQualityLabel } from "@/lib/franchises/franchise-summary";
+import { Calendar, Clock, Film, Star } from "lucide-react";
+import type {
+  FranchiseSlotSummary,
+  SlotTier,
+} from "@/lib/franchises/franchise-summary";
+import { catalogTierRibbon } from "@/lib/media/spec-tags";
+import type { ReleaseTier } from "@/lib/media/spec-tags";
 
+/* Tier badge for the tooltip header — the project-wide RUBY / GOLD
+   vocabulary (not "premium"/"elite"). Standard films get a quiet neutral
+   pill so they still read, missing slots render no badge. */
 const TIER_BADGE: Record<SlotTier, { label: string; className: string } | null> =
   {
     missing: null,
-    basic: {
+    standard: {
       label: "стандарт",
-      className: "border-border-strong bg-bg-surface text-muted",
+      className: "border-border-strong/70 bg-bg-surface/70 text-muted",
     },
-    "premium-1": {
-      label: "премиум · 1/3",
-      className: "border-accent/35 bg-accent/10 text-accent",
-    },
-    "premium-2": {
-      label: "премиум · 2/3",
-      className: "border-accent/45 bg-accent/12 text-accent-bright",
-    },
-    elite: {
-      label: "элита",
+    gold: {
+      label: "GOLD",
       className:
-        "border-accent/55 bg-accent/15 text-accent-bright shadow-[0_0_10px_var(--accent-glow)]",
+        "border-accent/45 bg-accent/12 text-accent-bright shadow-[0_0_10px_var(--accent-glow)]",
+    },
+    ruby: {
+      label: "RUBY",
+      className:
+        "border-crimson/45 bg-crimson/12 text-crimson-bright shadow-[0_0_10px_rgba(154,27,52,0.4)]",
     },
   };
+
+function slotReleaseTier(slot: FranchiseSlotSummary): ReleaseTier {
+  if (slot.tier === "ruby") return "ruby";
+  if (slot.tier === "gold") return "gold";
+  return null;
+}
 
 function MetaItem({
   icon,
@@ -41,35 +42,52 @@ function MetaItem({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-muted">
-      <span className="text-accent/70">{icon}</span>
+    <span className="font-mono-tech inline-flex items-center gap-1 text-[0.7rem] tabular-nums text-muted">
+      <span className="text-accent/75">{icon}</span>
       {children}
     </span>
   );
 }
 
-function SpecRow({
+function SpecCell({
   label,
   value,
   note,
+  span,
+  tone = "standard",
 }: {
   label: string;
   value: string | null;
   note?: string | null;
+  span?: string;
+  tone?: "ruby" | "gold" | "standard";
 }) {
   if (!value) return null;
   return (
-    <div className="flex items-baseline justify-between gap-3 text-xs">
-      <span className="font-mono-tech shrink-0 text-faint">{label}</span>
-      <span className="text-right text-text">
+    <div
+      className={`rounded-[6px] border border-white/10 bg-gradient-to-b from-white/[0.045] to-white/[0.012] px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${SPEC_TONE[tone]} ${span ?? ""}`}
+    >
+      <p className="font-mono-tech text-[0.55rem] uppercase tracking-[0.12em] text-faint">
+        {label}
+      </p>
+      <p className="mt-0.5 text-xs text-text">
         {value}
         {note ? (
           <span className="font-mono-tech ml-1.5 text-faint">{note}</span>
         ) : null}
-      </span>
+      </p>
     </div>
   );
 }
+
+/* Tier accent stripe on the left edge of each machined spec plate —
+   ties the spec grid to the slot's tier without flooding the cells
+   with color. Ruby → crimson, gold → accent, standard → neutral. */
+const SPEC_TONE: Record<"ruby" | "gold" | "standard", string> = {
+  ruby: "border-l-2 border-l-crimson/70",
+  gold: "border-l-2 border-l-accent/70",
+  standard: "border-l-2 border-l-white/15",
+};
 
 interface FranchiseSlotTooltipProps {
   slot: FranchiseSlotSummary;
@@ -77,143 +95,158 @@ interface FranchiseSlotTooltipProps {
 
 export function FranchiseSlotTooltip({ slot }: FranchiseSlotTooltipProps) {
   const tierBadge = TIER_BADGE[slot.tier];
+  const releaseTier = slotReleaseTier(slot);
+  const ribbon = releaseTier ? catalogTierRibbon(releaseTier) : null;
   const position = `Фильм ${slot.index + 1}`;
 
   if (!slot.filled) {
     const hintTitle = slot.titleHint?.trim() || null;
     const hintYear = slot.yearHint ?? null;
     return (
-      <div className="w-[min(18rem,calc(100vw-2rem))] space-y-3 p-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-mono-tech text-[0.65rem] uppercase tracking-wider text-accent">
-              {position}
-            </p>
-            <p className="font-display mt-1 text-base font-semibold text-text">
-              Не добавлен
-            </p>
-          </div>
-          <Film className="h-4 w-4 shrink-0 text-ember/60" aria-hidden />
-        </div>
-        {hintTitle || hintYear ? (
-          <div className="rounded-[var(--radius-sm)] border border-ember/25 bg-ember/[0.06] px-3 py-2">
-            <p className="font-mono-tech text-[0.6rem] uppercase tracking-wider text-ember/80">
-              ожидается
-            </p>
-            {hintTitle ? (
-              <p className="mt-1 text-sm text-text">{hintTitle}</p>
-            ) : null}
-            {hintYear ? (
-              <p className="font-mono-tech mt-0.5 text-xs text-muted">
-                {hintYear}
+      <div className="relative w-[min(18rem,calc(100vw-2rem))]">
+        <div className="space-y-3 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-mono-tech text-[0.6rem] uppercase tracking-[0.18em] text-faint">
+                {position}
               </p>
-            ) : null}
+              <p className="font-display mt-1.5 text-base font-semibold text-text">
+                Не добавлен
+              </p>
+            </div>
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-ember/30 bg-ember/[0.08] text-ember/70">
+              <Film className="h-3.5 w-3.5" aria-hidden />
+            </span>
           </div>
-        ) : (
-          <p className="text-xs leading-relaxed text-muted">
-            Слот свободен — фильм ещё не привязан к франшизе.
-          </p>
-        )}
+          {hintTitle || hintYear ? (
+            <div className="rounded-md border border-ember/25 bg-ember/[0.06] px-3 py-2">
+              <p className="font-mono-tech text-[0.55rem] uppercase tracking-[0.18em] text-ember/80">
+                ожидается
+              </p>
+              {hintTitle ? (
+                <p className="mt-1 text-sm text-text">{hintTitle}</p>
+              ) : null}
+              {hintYear ? (
+                <p className="font-mono-tech mt-0.5 text-xs text-muted">
+                  {hintYear}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-xs leading-relaxed text-muted">
+              Слот свободен: фильм ещё не привязан к франшизе.
+            </p>
+          )}
+        </div>
       </div>
     );
   }
 
-  const specs = slotQualityLabel(slot);
+  const ribbonTone =
+    releaseTier === "ruby" ? "text-crimson-bright" : "text-accent-bright";
+  const specTone =
+    slot.tier === "ruby" ? "ruby" : slot.tier === "gold" ? "gold" : "standard";
 
   return (
-    <div className="w-[min(20rem,calc(100vw-2rem))] space-y-3 p-3.5">
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-mono-tech text-[0.65rem] uppercase tracking-wider text-accent">
-            {position}
-          </p>
-          {tierBadge ? (
-            <span
-              className={`font-mono-tech rounded-full border px-2 py-0.5 text-[0.55rem] uppercase tracking-wider ${tierBadge.className}`}
-            >
-              {tierBadge.label}
-            </span>
-          ) : null}
-          {slot.versionLabel ? (
-            <span className="font-mono-tech rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[0.55rem] text-accent-bright">
-              {slot.versionLabel}
-            </span>
-          ) : null}
-        </div>
-        <p className="font-display text-base font-semibold leading-snug text-text">
-          {slot.title ?? "Без названия"}
-        </p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {slot.year ? (
-            <MetaItem icon={<Calendar className="h-3 w-3" aria-hidden />}>
-              {slot.year}
-            </MetaItem>
-          ) : null}
-          {slot.durationLabel ? (
-            <MetaItem icon={<Clock className="h-3 w-3" aria-hidden />}>
-              {slot.durationLabel}
-            </MetaItem>
-          ) : null}
-          {slot.rating != null ? (
-            <MetaItem icon={<Star className="h-3 w-3 fill-accent text-accent" aria-hidden />}>
-              {slot.rating}/10
-            </MetaItem>
-          ) : null}
-        </div>
-      </div>
-
-      {slot.genreLabels.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
-          {slot.genreLabels.map((genre) => (
-            <span
-              key={genre}
-              className="font-mono-tech rounded-full border border-border-strong bg-bg-elevated px-2 py-0.5 text-[0.6rem] text-muted"
-            >
-              {genre}
-            </span>
-          ))}
-        </div>
+    <div className="relative w-[min(20rem,calc(100vw-2rem))]">
+      {releaseTier ? (
+        <>
+          <div
+            className={`tier-laser-top ${releaseTier === "ruby" ? "tier-laser-top-ruby" : "tier-laser-top-gold"}`}
+            aria-hidden
+          />
+          <div
+            className={`pointer-events-none absolute inset-0 z-[1] opacity-[0.14] mix-blend-overlay ${
+              releaseTier === "ruby" ? "holo-ruby" : "holo-gold"
+            }`}
+            aria-hidden
+          />
+        </>
       ) : null}
 
-      <div className="space-y-2 border-t border-border/80 pt-2.5">
-        <p className="font-mono-tech text-[0.6rem] uppercase tracking-wider text-faint">
-          характеристики
-        </p>
-        <div className="space-y-1.5">
-          <SpecRow
+      <div className="relative space-y-3 p-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <p className="font-mono-tech text-[0.6rem] uppercase tracking-[0.18em] text-faint">
+              {position}
+            </p>
+            {tierBadge ? (
+              <span
+                className={`font-mono-tech rounded-full border px-2 py-0.5 text-[0.55rem] uppercase tracking-[0.18em] ${tierBadge.className}`}
+              >
+                {tierBadge.label}
+              </span>
+            ) : null}
+          </div>
+          <p className="font-display text-lg font-semibold leading-snug text-text">
+            {slot.title ?? "Без названия"}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {slot.year ? (
+              <MetaItem icon={<Calendar className="h-3 w-3" aria-hidden />}>
+                {slot.year}
+              </MetaItem>
+            ) : null}
+            {slot.durationLabel ? (
+              <MetaItem icon={<Clock className="h-3 w-3" aria-hidden />}>
+                {slot.durationLabel}
+              </MetaItem>
+            ) : null}
+            {slot.rating != null ? (
+              <MetaItem
+                icon={
+                  <Star className="h-3 w-3 fill-accent text-accent" aria-hidden />
+                }
+              >
+                {slot.rating}/10
+              </MetaItem>
+            ) : null}
+          </div>
+        </div>
+
+        {slot.genreLabels.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {slot.genreLabels.map((genre) => (
+              <span
+                key={genre}
+                className="font-mono-tech rounded-full border border-border-strong/60 bg-bg-deep/40 px-2 py-0.5 text-[0.58rem] text-muted"
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-2">
+          <SpecCell
             label="видео"
             value={slot.resolution}
             note={slot.resolutionPixels}
+            tone={specTone}
           />
-          <SpecRow label="hdr" value={slot.dynamicRange} />
-          <SpecRow label="кодек" value={slot.videoCodec} />
-          <SpecRow label="битрейт" value={slot.videoBitrate} />
-          <SpecRow label="аудио" value={slot.audioFull ?? slot.audio} />
-          <SpecRow label="релиз" value={slot.releaseTypeLabel} />
+          <SpecCell label="hdr" value={slot.dynamicRange} tone={specTone} />
+          <SpecCell label="кодек" value={slot.videoCodec} tone={specTone} />
+          <SpecCell label="битрейт" value={slot.videoBitrate} tone={specTone} />
+          <SpecCell
+            label="аудио"
+            value={slot.audioFull ?? slot.audio}
+            span="col-span-2"
+            tone={specTone}
+          />
+          <SpecCell
+            label="релиз"
+            value={slot.releaseTypeLabel}
+            span="col-span-2"
+            tone={specTone}
+          />
         </div>
-        {specs !== "стандартное качество" ? (
-          <p className="font-mono-tech text-[0.6rem] text-accent/80">{specs}</p>
-        ) : null}
-      </div>
 
-      <div className="flex items-center gap-3 border-t border-border/60 pt-2 text-[0.6rem] text-faint">
-        <span className="inline-flex items-center gap-1">
-          <Monitor className="h-3 w-3" aria-hidden />
-          {slot.fourK ? "4K" : "—"}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Contrast className="h-3 w-3" aria-hidden />
-          {slot.hdr ? "HDR" : "SDR"}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <AudioLines className="h-3 w-3" aria-hidden />
-          {slot.atmos ? "Atmos" : "—"}
-        </span>
-        {slot.releaseTypeLabel ? (
-          <span className="inline-flex items-center gap-1">
-            <Disc3 className="h-3 w-3" aria-hidden />
-            {slot.releaseTypeLabel}
-          </span>
+        {ribbon ? (
+          <p
+            className={`font-mono-tech border-t border-border/60 pt-2.5 text-[0.6rem] uppercase tracking-[0.2em] ${ribbonTone}`}
+          >
+            {ribbon}
+          </p>
         ) : null}
       </div>
     </div>

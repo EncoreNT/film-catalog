@@ -19,6 +19,8 @@ import {
   codecShort,
   videoBitrateLabel,
   videoResolutionPixels,
+  releaseTier,
+  type ReleaseTier,
 } from "@/lib/media/spec-tags";
 
 function primaryRelease(movie: MovieWithTracks | null) {
@@ -27,12 +29,15 @@ function primaryRelease(movie: MovieWithTracks | null) {
 }
 
 /**
- * Per-slot quality tier. The tier encodes HOW MANY of the three premium
- * specs (4K, HDR, рус. Atmos) a film has — never a single misleading label
- * applied to the whole franchise. Missing slots are their own tier so the
- * reel can render the gap honestly.
+ * Per-slot quality tier, unified with the project's release tier language
+ * (`releaseTier` → ruby / gold / null). A linked film is "ruby" (4K + any
+ * HDR + рус. Atmos ≥ 7.1 on the best dub) or "gold" (4K + any HDR + surround
+ * ≥ 5.1 on the main track); a linked film that does not qualify is
+ * "standard", and an unlinked slot is "missing". The reel and tooltip use
+ * the same ruby / gold / standard vocabulary as the movie card and release
+ * tab, so a franchise slot reads identically to the catalog.
  */
-export type SlotTier = "missing" | "basic" | "premium-1" | "premium-2" | "elite";
+export type SlotTier = "missing" | "standard" | "gold" | "ruby";
 
 export interface FranchiseSlotSummary {
   /** 0-based position in story order. */
@@ -44,7 +49,6 @@ export interface FranchiseSlotSummary {
   fourK: boolean;
   hdr: boolean;
   atmos: boolean;
-  elite: boolean;
   /** Compact resolution badge text (4K / FHD / HD / SD) for the reel cell. */
   resolution: string | null;
   /** Compact dynamic-range badge text (HDR10 / HDR10+ / DV / SDR). */
@@ -71,7 +75,7 @@ export interface FranchiseSlotSummary {
 
 /** Compact quality summary for aria labels and tooltips. */
 export function slotQualityLabel(slot: FranchiseSlotSummary): string {
-  if (!slot.filled) return "не хватает";
+  if (!slot.filled) return "фильм не добавлен";
   const parts: string[] = [];
   if (slot.resolution) parts.push(slot.resolution);
   if (slot.dynamicRange) parts.push(slot.dynamicRange);
@@ -125,9 +129,13 @@ export interface FranchiseSummary {
   totalRuntimeSeconds: number | null;
   averageRating: number | null;
   ratedCount: number;
-  premium: { fourK: number; hdr: number; atmos: number; elite: number };
-  /** Every owned film is elite (and at least one is owned). */
-  allElite: boolean;
+  premium: { fourK: number; hdr: number; atmos: number };
+  /**
+   * Franchise-level tier, the same ruby / gold language as a single release.
+   * "ruby" when every owned film is ruby, "gold" when every owned film is
+   * gold or ruby, otherwise null. Drives the card's laser perimeter + holo.
+   */
+  tier: ReleaseTier;
 }
 
 function slotYear(slot: FranchiseWithSlots["slots"][number]): number | null {
@@ -144,15 +152,11 @@ function slotTitle(slot: FranchiseWithSlots["slots"][number]): string | null {
 export function slotTier(movie: MovieWithTracks | null): SlotTier {
   if (!movie) return "missing";
   const release = primaryRelease(movie);
-  if (!release) return "basic";
-  const fourK = is4K(release);
-  const hdr = isAnyHDR(release);
-  const atmos = premiumAudio(release) != null;
-  const score = [fourK, hdr, atmos].filter(Boolean).length;
-  if (score >= 3) return "elite";
-  if (score === 2) return "premium-2";
-  if (score === 1) return "premium-1";
-  return "basic";
+  if (!release) return "standard";
+  const tier = releaseTier(release);
+  if (tier === "ruby") return "ruby";
+  if (tier === "gold") return "gold";
+  return "standard";
 }
 
 /**
@@ -171,7 +175,6 @@ export function computeFranchiseSummary(
     const fourK = release ? is4K(release) : false;
     const hdr = release ? isAnyHDR(release) : false;
     const atmos = release ? premiumAudio(release) != null : false;
-    const elite = fourK && hdr && atmos;
     const durationLabel =
       release?.durationSeconds != null
         ? formatDuration(release.durationSeconds)
@@ -185,7 +188,6 @@ export function computeFranchiseSummary(
       fourK,
       hdr,
       atmos,
-      elite,
       resolution: slotResolution(movie),
       dynamicRange: slotDynamicRange(movie),
       audio: slotAudioShort(movie),
@@ -224,7 +226,6 @@ export function computeFranchiseSummary(
   let runtimeHas = false;
   let ratingSum = 0;
   let ratedCount = 0;
-  let ownedElite = 0;
   for (const slot of sorted) {
     const movie = slot.movie as MovieWithTracks | null;
     if (!movie) continue;
@@ -237,14 +238,6 @@ export function computeFranchiseSummary(
       ratingSum += movie.rating;
       ratedCount += 1;
     }
-    if (
-      release &&
-      is4K(release) &&
-      isAnyHDR(release) &&
-      premiumAudio(release) != null
-    ) {
-      ownedElite += 1;
-    }
   }
 
   const totalRuntimeSeconds = runtimeHas ? runtimeSeconds : null;
@@ -256,10 +249,17 @@ export function computeFranchiseSummary(
     fourK: slots.filter((s) => s.fourK).length,
     hdr: slots.filter((s) => s.hdr).length,
     atmos: slots.filter((s) => s.atmos).length,
-    elite: slots.filter((s) => s.elite).length,
   };
 
-  const allElite = filled > 0 && ownedElite === filled;
+  const owned = slots.filter((s) => s.filled);
+  let franchiseTier: ReleaseTier = null;
+  if (owned.length > 0) {
+    if (owned.every((s) => s.tier === "ruby")) {
+      franchiseTier = "ruby";
+    } else if (owned.every((s) => s.tier === "ruby" || s.tier === "gold")) {
+      franchiseTier = "gold";
+    }
+  }
 
   return {
     total,
@@ -272,6 +272,6 @@ export function computeFranchiseSummary(
     averageRating,
     ratedCount,
     premium,
-    allElite,
+    tier: franchiseTier,
   };
 }

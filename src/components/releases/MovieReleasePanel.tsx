@@ -21,10 +21,11 @@ type TierTabStyle = {
 /* The release tab is colored and labeled by its Gold/Ruby tier. The tier is
    a composite quality metric (4K + HDR + audio), not a resolution, so it
    lives here on the tab, not on the resolution plaque. Ruby → crimson,
-   Gold → accent gold, untiered releases stay neutral. The tier tag and
-   tier tint show on every tab — active tabs burn at full intensity, inactive
-   tabs use a faded version of the same tier color (still legible, clearly
-   recessed). */
+   Gold → accent gold, untiered releases stay neutral. The tab is a flat label
+   read by LIGHT, not a filled block: the tier shows through the label's text
+   color + a glowing gradient underline + the storage icon. Active tabs burn
+   at full intensity with the underline; inactive tabs use a faded version of
+   the same tier color (still legible, clearly recessed) and no underline. */
 const TIER_TAB: Record<TabTier, TierTabStyle> = {
   ruby: {
     text: "text-crimson-bright",
@@ -167,10 +168,8 @@ export function MovieReleasePanel({
                   aria-selected={active}
                   aria-controls={`release-panel-${release.id}`}
                   onClick={() => selectRelease(release.id)}
-                  className={`focus-ring font-mono-tech relative inline-flex items-center gap-1.5 rounded-t-[calc(var(--radius)-2px)] border px-4 py-2.5 text-xs transition-colors ${
-                    active
-                      ? `border-border border-b-transparent bg-bg-surface/60 ${tierTab.text}`
-                      : `border-transparent bg-transparent ${tierTab.inactiveText}`
+                  className={`focus-ring font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs transition-colors ${
+                    active ? tierTab.text : tierTab.inactiveText
                   }`}
                 >
                   {releaseTabInner(release, active, tierTab)}
@@ -189,7 +188,7 @@ export function MovieReleasePanel({
               return (
                 <div
                   key={release.id}
-                  className={`font-mono-tech relative inline-flex items-center gap-1.5 rounded-t-[calc(var(--radius)-2px)] border border-border border-b-transparent bg-bg-surface/60 px-4 py-2.5 text-xs ${tierTab.text}`}
+                  className={`font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs ${tierTab.text}`}
                 >
                   {releaseTabInner(release, true, tierTab)}
                 </div>

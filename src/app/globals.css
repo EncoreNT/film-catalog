@@ -45,14 +45,15 @@
   --cyan-glow: rgba(56, 189, 248, 0.22);
 
   /* Crimson — deep ruby for the top release tier (formerly "platinum"
-     silver, which never read as elite). Jewel-tone crimson pairs with
-     gold the way a ruby pairs with gold jewelry: warm-on-warm but
-     deeper and rarer, so the hierarchy reads ruby > gold > regular.
-     Slightly desaturated to avoid the "danger red" UI tell. */
-  --crimson: #c43d5a;
-  --crimson-bright: #f06880;
-  --crimson-glow: rgba(196, 61, 90, 0.34);
-  --crimson-soft: rgba(196, 61, 90, 0.10);
+     silver, which never read as elite). Jewel-tone ruby pairs with gold
+     the way a ruby pairs with gold jewelry: warm-on-warm but deeper and
+     rarer, so the hierarchy reads ruby > gold > regular. Tuned away from
+     the magenta/pink cast toward a true gemstone red (lower lightness,
+     less blue in the mix) so it reads as ruby, not rose. */
+  --crimson: #9a1b34;
+  --crimson-bright: #e03e62;
+  --crimson-glow: rgba(154, 27, 52, 0.34);
+  --crimson-soft: rgba(154, 27, 52, 0.10);
 
   /* Ember — warm counter-balance (kept) */
   --ember: #c87038;
@@ -752,9 +753,9 @@ input[type="number"] {
 .glow-cyan-12 { box-shadow: 0 0 12px rgba(56,189,248,0.50); }
 .glow-cyan-14 { box-shadow: 0 0 14px rgba(56,189,248,0.50); }
 
-.glow-crimson-12 { box-shadow: 0 0 12px rgba(196,61,90,0.55); }
-.glow-crimson-16 { box-shadow: 0 0 16px rgba(196,61,90,0.60); }
-.glow-crimson-22 { box-shadow: 0 0 22px rgba(196,61,90,0.55); }
+.glow-crimson-12 { box-shadow: 0 0 12px rgba(154,27,52,0.55); }
+.glow-crimson-16 { box-shadow: 0 0 16px rgba(154,27,52,0.60); }
+.glow-crimson-22 { box-shadow: 0 0 22px rgba(154,27,52,0.55); }
 
 .glow-ember-12 { box-shadow: 0 0 12px rgba(200,112,56,0.45); }
 .glow-ember-24 { box-shadow: 0 0 24px rgba(200,112,56,0.40); }
@@ -817,8 +818,8 @@ input[type="number"] {
 }
 .glow-card-ruby {
   box-shadow:
-    0 14px 48px rgba(196, 61, 90, 0.42),
-    0 8px 26px rgba(160, 40, 70, 0.28),
+    0 14px 48px rgba(154, 27, 52, 0.42),
+    0 8px 26px rgba(122, 20, 40, 0.28),
     0 3px 12px rgba(0, 0, 0, 0.42);
 }
 .group:hover .glow-card-rest {
@@ -835,18 +836,18 @@ input[type="number"] {
 }
 .group:hover .glow-card-ruby {
   box-shadow:
-    0 28px 84px rgba(196, 61, 90, 0.60),
-    0 16px 52px rgba(160, 40, 70, 0.42),
+    0 28px 84px rgba(154, 27, 52, 0.60),
+    0 16px 52px rgba(122, 20, 40, 0.42),
     0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 /* Ruby = 4K + HDR + Atmos 7.1 — deep crimson brilliance, brighter and
    more saturated than gold. Inset ring is subtle — the laser-top line
    is the primary tier signal, the outer glow carries the hierarchy. */
-.glow-poster-ruby-rest { box-shadow: inset 0 0 0 1px rgba(196,61,90,0.18), 0 0 22px rgba(196,61,90,0.32); }
-.glow-bezel-ruby       { box-shadow: 0 0 26px rgba(196,61,90,0.40), 0 0 16px rgba(160,40,70,0.26); }
-.group\/laser:hover .glow-poster-ruby-rest { box-shadow: inset 0 0 0 1px rgba(240,104,128,0.46), 0 0 64px rgba(196,61,90,0.64), 0 0 34px rgba(160,40,70,0.40); }
-.group\/laser:hover .glow-bezel-ruby       { box-shadow: 0 0 48px rgba(196,61,90,0.62), 0 0 30px rgba(160,40,70,0.42); }
+.glow-poster-ruby-rest { box-shadow: inset 0 0 0 1px rgba(154,27,52,0.18), 0 0 22px rgba(154,27,52,0.32); }
+.glow-bezel-ruby       { box-shadow: 0 0 26px rgba(154,27,52,0.40), 0 0 16px rgba(122,20,40,0.26); }
+.group\/laser:hover .glow-poster-ruby-rest { box-shadow: inset 0 0 0 1px rgba(224,62,98,0.46), 0 0 64px rgba(154,27,52,0.64), 0 0 34px rgba(122,20,40,0.40); }
+.group\/laser:hover .glow-bezel-ruby       { box-shadow: 0 0 48px rgba(154,27,52,0.62), 0 0 30px rgba(122,20,40,0.42); }
 
 /* ── Flat laser-line tier accents (top edge) ──
    Replaces the old heavy inset ring as the primary tier signal.
@@ -876,11 +877,11 @@ input[type="number"] {
 .tier-laser-top-ruby {
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(196, 61, 90, 0.55) 25%,
-    rgba(240, 104, 128, 0.90) 50%,
-    rgba(196, 61, 90, 0.55) 75%,
+    rgba(154, 27, 52, 0.55) 25%,
+    rgba(224, 62, 98, 0.90) 50%,
+    rgba(154, 27, 52, 0.55) 75%,
     transparent 100%);
-  box-shadow: 0 0 8px rgba(196, 61, 90, 0.45);
+  box-shadow: 0 0 8px rgba(154, 27, 52, 0.45);
 }
 .group\/laser:hover .tier-laser-top-gold {
   opacity: 0.95;
@@ -888,17 +889,17 @@ input[type="number"] {
 }
 .group\/laser:hover .tier-laser-top-ruby {
   opacity: 1;
-  box-shadow: 0 0 14px rgba(196, 61, 90, 0.75), 0 0 6px rgba(240, 104, 128, 0.55);
+  box-shadow: 0 0 14px rgba(154, 27, 52, 0.75), 0 0 6px rgba(224, 62, 98, 0.55);
 }
 
 /* Ruby gradient border — deep crimson metal */
 .gradient-border-ruby::before {
   background: linear-gradient(
     120deg,
-    rgba(240, 104, 128, 0.55),
-    rgba(196, 61, 90, 0.40),
-    rgba(240, 104, 128, 0.45),
-    rgba(160, 40, 70, 0.50)
+    rgba(224, 62, 98, 0.55),
+    rgba(154, 27, 52, 0.40),
+    rgba(224, 62, 98, 0.45),
+    rgba(122, 20, 40, 0.50)
   );
 }
 
@@ -917,11 +918,11 @@ input[type="number"] {
 .holo-ruby {
   background: conic-gradient(
     from 180deg at 50% 50%,
-    rgba(240, 104, 128, 0.28),
-    rgba(196, 61, 90, 0.20),
+    rgba(224, 62, 98, 0.28),
+    rgba(154, 27, 52, 0.20),
     rgba(230, 80, 110, 0.24),
-    rgba(160, 40, 70, 0.18),
-    rgba(240, 104, 128, 0.28)
+    rgba(122, 20, 40, 0.18),
+    rgba(224, 62, 98, 0.28)
   );
   background-size: 200% 200%;
   animation: holo-shift 8s ease-in-out infinite;
@@ -933,8 +934,8 @@ input[type="number"] {
 .drop-glow-accent-xl { filter: drop-shadow(0 0 14px rgba(232,176,90,0.72)); }
 .drop-glow-neural { filter: drop-shadow(0 0 6px rgba(167,139,250,0.60)); }
 .drop-glow-neural-lg { filter: drop-shadow(0 0 10px rgba(167,139,250,0.60)); }
-.drop-glow-crimson { filter: drop-shadow(0 0 6px rgba(240,104,128,0.60)); }
-.drop-glow-crimson-lg { filter: drop-shadow(0 0 10px rgba(240,104,128,0.60)); }
+.drop-glow-crimson { filter: drop-shadow(0 0 6px rgba(224,62,98,0.60)); }
+.drop-glow-crimson-lg { filter: drop-shadow(0 0 10px rgba(224,62,98,0.60)); }
 
 /* ── Movie detail page: poster frame + entry reveal ── */
 
