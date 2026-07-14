@@ -526,8 +526,17 @@ Transition: `{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }` (тот же `--ease`)
 
 - **Карточки секций** — `MachinedCard` + `CardSectionHeader` (mono-tech gold
   label + display title). Не плоский `surface-card` для форм-секций.
-- **Инпуты** — `bg-bg-elevated`, `border-border`/`border-danger/50` при ошибке,
-  `focus-ring`, `min-h-11`, `rounded-[var(--radius)]`, `text-sm`.
+- **Инпуты** — два варианта (`Field` / `TextAreaField`, `variant` prop):
+  - `filled` (дефолт) — `bg-bg-elevated`, `border-border`/`border-danger/50`
+    при ошибке, `focus-ring`, `min-h-11`, `rounded-[var(--radius)]`, `text-sm`.
+    Рабочие формы-редакторы (релиз, фильм).
+  - `underline` — прозрачный фон, без боксов: нижняя hairline-линия покоя
+    (`bg-border`) + золотая gradient laser-underline (`from-accent-bright via
+    accent to-transparent` + glow), которая **scale-in от левого края** на
+    `peer-focus` (тот же язык, что sliding-underline табов релизов/reel). Лейбл
+    — mono-tech uppercase muted. Применять в кинематографичных диалогах/формах,
+    где заполненные боксы читаются тяжело (диалог создания франшизы). При ошибке
+    линия → `--danger`.
 - **Кнопки** — `Button` с variant; primary = gold + glow, secondary = glass +
   hairline, danger = `danger/10` + `danger/30` border.
 - **Sticky action bar** — `FormActionBar` внизу формы (`bg-bg-deep/80

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Film, X } from "lucide-react";
+import { Film, Plus, X } from "lucide-react";
 import type { EditableSlot } from "@/components/franchises/FranchiseSlotsEditor";
 import { trimOnInputBlur } from "@/lib/shared/text-trim";
 
@@ -31,11 +31,19 @@ export function FranchiseSlotCard({
 
   return (
     <article
-      className="surface-card group flex gap-3 p-2.5"
+      className="group relative flex gap-3 rounded-[var(--radius-sm)] border border-border bg-bg-surface/10 p-2.5 transition-colors duration-200 hover:border-border-strong hover:bg-bg-surface/15"
       style={{
         animation: `movieCardIn 0.4s var(--ease) ${Math.min(index, 8) * 35}ms both`,
       }}
     >
+      {/* Left accent line — gold when the slot is linked, ember when empty:
+          a quiet state signal in the line-language, no filled pill. */}
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-2 left-0 w-px bg-gradient-to-b from-transparent to-transparent ${
+          filled ? "via-accent/45" : "via-ember/35"
+        }`}
+      />
       <button
         type="button"
         onClick={onPick}
@@ -46,7 +54,7 @@ export function FranchiseSlotCard({
         }
         className={`focus-ring group relative h-16 w-11 shrink-0 cursor-pointer overflow-hidden rounded-[var(--radius-sm)] border transition-all duration-200 ${
           filled
-            ? "border-border-strong hover:border-accent/60 hover:shadow-[0_0_18px_var(--accent-glow)]"
+            ? "border-border-strong hover:border-accent/60 hover:shadow-[0_0_18px_rgba(232,176,90,0.3)]"
             : "border-dashed border-ember/40 bg-bg-surface/30 hover:border-ember/70"
         }`}
       >
@@ -134,7 +142,7 @@ export function FranchiseSlotCard({
               onClick={(e) => e.stopPropagation()}
               placeholder="название (необязательно)"
               aria-label={`Фильм ${index + 1}: название`}
-              className="focus-ring min-h-8 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface px-2 py-1 text-xs text-text placeholder:text-muted/60"
+              className="focus-ring min-h-8 w-full border-0 border-b border-border bg-transparent px-1 py-1 text-xs text-text placeholder:text-muted/50 transition-colors focus:border-accent focus:shadow-[0_1px_6px_-2px_rgba(232,176,90,0.4)]"
             />
             <input
               type="number"
@@ -143,7 +151,7 @@ export function FranchiseSlotCard({
               onClick={(e) => e.stopPropagation()}
               placeholder="год"
               aria-label={`Фильм ${index + 1}: год`}
-              className="focus-ring font-mono-tech min-h-8 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface px-2 py-1 text-xs text-text placeholder:text-muted/60"
+              className="focus-ring font-mono-tech min-h-8 w-full border-0 border-b border-border bg-transparent px-1 py-1 text-xs text-text placeholder:text-muted/50 transition-colors focus:border-accent focus:shadow-[0_1px_6px_-2px_rgba(232,176,90,0.4)]"
             />
           </div>
         )}
@@ -190,10 +198,10 @@ export function AddSlotButton({ onAdd }: AddSlotButtonProps) {
       type="button"
       onClick={onAdd}
       aria-label="Добавить фильм"
-      className="focus-ring group flex min-h-[5.5rem] cursor-pointer items-center justify-center gap-2.5 rounded-[var(--radius-sm)] border-2 border-dashed border-border-strong bg-bg-surface/20 px-4 text-faint transition-all duration-200 hover:border-accent/50 hover:bg-bg-surface-hover hover:text-accent hover:shadow-[0_0_18px_var(--accent-glow)]"
+      className="focus-ring group flex min-h-[5.5rem] cursor-pointer items-center justify-center gap-2.5 rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-surface/10 px-4 text-faint transition-all duration-200 hover:border-accent/50 hover:bg-accent/5 hover:text-accent"
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border-strong bg-bg-elevated transition-colors group-hover:border-accent/50 group-hover:bg-accent/10">
-        <span className="text-lg leading-none" aria-hidden>+</span>
+      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border-strong bg-bg-elevated transition-colors group-hover:border-accent/50 group-hover:bg-accent/10 group-hover:shadow-[0_0_14px_rgba(232,176,90,0.3)]">
+        <Plus className="h-4 w-4" aria-hidden />
       </span>
       <span className="font-mono-tech text-xs">добавить фильм</span>
     </button>

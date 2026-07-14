@@ -36,9 +36,17 @@ export function Modal({
       open={open}
       onClose={onClose}
       zIndex={100}
-      className={`fixed inset-0 m-auto flex ${width} max-h-[90dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 open:animate-in`}
+      className={`fixed inset-0 m-auto flex ${width} max-h-[90dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-elevated/85 p-0 text-text shadow-[0_24px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl backdrop:bg-black/60 open:animate-in`}
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-bg-elevated px-5 py-4">
+      {/* Top-edge laser slit — warm gold→neural hairline reads as a projector
+          light leak at the modal's crown, the same line-language as tier-laser-top
+          on cards. Pointer-events-none, aria-hidden. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent"
+      />
+
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
         <h2 className="font-display text-xl font-semibold">{title}</h2>
         <Button
           variant="ghost"
@@ -57,7 +65,7 @@ export function Modal({
       </div>
 
       {footer ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border bg-bg-elevated px-5 py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
           {footer}
         </div>
       ) : null}

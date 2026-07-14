@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Field, TextAreaField } from "@/components/primitives/Field";
 import { Button } from "@/components/primitives/Button";
+import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { FranchiseCoverUpload } from "@/components/franchises/FranchiseCoverUpload";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
 import {
@@ -115,7 +116,7 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
             Отмена
           </Button>
         ) : null}
-        <Button type="button" onClick={() => void submit()} disabled={loading}>
+        <Button type="button" variant="primary" onClick={() => void submit()} disabled={loading}>
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           ) : null}
@@ -127,7 +128,7 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
   const createFooter = (
     <>
-      <Button type="button" onClick={() => void submit()} disabled={loading}>
+      <Button type="button" variant="primary" onClick={() => void submit()} disabled={loading}>
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         ) : null}
@@ -146,8 +147,8 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
   return (
     <div className="space-y-6">
-      <section className="surface-card space-y-4 p-5">
-        <p className="font-mono-tech text-faint">основное</p>
+      <MachinedCard bodyClassName="space-y-5">
+        <CardSectionHeader label="основное" title="Параметры франшизы" />
         <div className="flex flex-col gap-6 sm:flex-row">
           {mode === "edit" && franchise ? (
             <FranchiseCoverUpload
@@ -161,22 +162,24 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
               onUrlChange={setCoverUrl}
             />
           )}
-          <div className="min-w-0 flex-1 space-y-4">
+          <div className="min-w-0 flex-1 space-y-5">
             <Field
               label="Название"
               required
+              variant="underline"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <TextAreaField
               label="Описание"
+              variant="underline"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
           </div>
         </div>
-      </section>
+      </MachinedCard>
 
       <FranchiseSlotsEditor slots={slots} onChange={setSlots} />
 
@@ -188,7 +191,13 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
       {mode === "create" ? (
         // Sticky footer anchors to the bottom of the Modal's scrollable body.
-        <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center gap-3 border-t border-border bg-bg-deep/80 px-5 py-4 backdrop-blur-xl">
+        // Top-edge gold laser slit mirrors the modal crown line, so the action
+        // bar reads as part of the same line-language instead of a hard divider.
+        <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center gap-3 border-t border-border bg-bg-deep/70 px-5 py-4 backdrop-blur-xl">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-accent/45 to-transparent"
+          />
           {createFooter}
         </div>
       ) : (

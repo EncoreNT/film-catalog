@@ -2,18 +2,49 @@ import { type InputHTMLAttributes, type ReactNode } from "react";
 import { InfoHint } from "./InfoHint";
 import { trimOnInputBlur, trimOnTextareaBlur } from "@/lib/shared/text-trim";
 
+type FieldVariant = "filled" | "underline";
+
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
   /** Shown as a hover/focus "?" tooltip next to the label instead of below the field. */
   hint?: ReactNode;
+  /** "filled" = solid bg-bg-elevated input (default). "underline" = transparent
+   *  input read by LIGHT: a bottom hairline rest line + a gold gradient laser
+   *  underline that scales in on focus, no filled box. Use for cinematic
+   *  dialogs/forms where filled boxes read too heavy. */
+  variant?: FieldVariant;
   children?: ReactNode;
+}
+
+/* Rest-state bottom hairline + focused gold laser underline for the underline
+ *   variant. The rest line sits at the input's bottom edge; the focus line is a
+ *   2px gold gradient that scales in from the left on peer-focus, mirroring the
+ *   release-tab / reel-underline language. rgba() literals (not var()) for the
+ *   glow — Tailwind v4 renders arbitrary box-shadow with var() unreliably. */
+function UnderlineLines({ error }: { error?: string }) {
+  const focusLine = error
+    ? "from-danger via-danger to-transparent shadow-[0_0_8px_rgba(248,113,113,0.45)]"
+    : "from-accent-bright via-accent to-transparent shadow-[0_0_8px_rgba(232,176,90,0.45)]";
+  return (
+    <>
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-px ${error ? "bg-danger/60" : "bg-border"}`}
+      />
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 bg-gradient-to-r ${focusLine} transition-transform duration-300 ease-out peer-focus:scale-x-100`}
+      />
+    </>
+  );
 }
 
 export function Field({
   label,
   error,
   hint,
+  variant = "filled",
   className = "",
   id,
   children,
@@ -23,27 +54,47 @@ export function Field({
   ...props
 }: FieldProps) {
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const isUnderline = variant === "underline";
+  const labelClass = isUnderline
+    ? "font-mono-tech text-[11px] uppercase tracking-[0.18em] text-muted"
+    : "text-sm text-muted";
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
-        <label htmlFor={fieldId} className="text-sm text-muted">
+        <label htmlFor={fieldId} className={labelClass}>
           {label}
           {required ? <span className="ml-0.5 text-danger" aria-hidden>*</span> : null}
         </label>
         {hint ? <InfoHint text={hint} label={label} /> : null}
       </div>
       {children ?? (
-        <input
-          id={fieldId}
-          className={`focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${className}`}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${fieldId}-error` : undefined}
-          required={required}
-          onChange={onChange}
-          onBlur={(e) => trimOnInputBlur(e, onChange, onBlur)}
-          {...props}
-        />
+        isUnderline ? (
+          <div className="relative">
+            <input
+              id={fieldId}
+              className={`focus-ring peer min-h-11 w-full border-0 bg-transparent px-0 py-2 text-sm text-text placeholder:text-muted/50 ${className}`}
+              aria-invalid={!!error}
+              aria-describedby={error ? `${fieldId}-error` : undefined}
+              required={required}
+              onChange={onChange}
+              onBlur={(e) => trimOnInputBlur(e, onChange, onBlur)}
+              {...props}
+            />
+            <UnderlineLines error={error} />
+          </div>
+        ) : (
+          <input
+            id={fieldId}
+            className={`focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${className}`}
+            aria-invalid={!!error}
+            aria-describedby={error ? `${fieldId}-error` : undefined}
+            required={required}
+            onChange={onChange}
+            onBlur={(e) => trimOnInputBlur(e, onChange, onBlur)}
+            {...props}
+          />
+        )
       )}
       {error ? (
         <p id={`${fieldId}-error`} className="text-xs text-danger" role="alert">
@@ -59,12 +110,14 @@ interface TextAreaFieldProps
   label: string;
   error?: string;
   hint?: ReactNode;
+  variant?: FieldVariant;
 }
 
 export function TextAreaField({
   label,
   error,
   hint,
+  variant = "filled",
   className = "",
   id,
   onChange,
@@ -72,22 +125,41 @@ export function TextAreaField({
   ...props
 }: TextAreaFieldProps) {
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const isUnderline = variant === "underline";
+  const labelClass = isUnderline
+    ? "font-mono-tech text-[11px] uppercase tracking-[0.18em] text-muted"
+    : "text-sm text-muted";
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
-        <label htmlFor={fieldId} className="text-sm text-muted">
+        <label htmlFor={fieldId} className={labelClass}>
           {label}
         </label>
         {hint ? <InfoHint text={hint} label={label} /> : null}
       </div>
-      <textarea
-        id={fieldId}
-        className={`focus-ring min-h-28 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${className}`}
-        aria-invalid={!!error}
-        onChange={onChange}
-        onBlur={(e) => trimOnTextareaBlur(e, onChange, onBlur)}
-        {...props}
-      />
+      {isUnderline ? (
+        <div className="relative">
+          <textarea
+            id={fieldId}
+            className={`focus-ring peer min-h-28 w-full resize-y border-0 bg-transparent px-0 py-2 text-sm text-text placeholder:text-muted/50 ${className}`}
+            aria-invalid={!!error}
+            onChange={onChange}
+            onBlur={(e) => trimOnTextareaBlur(e, onChange, onBlur)}
+            {...props}
+          />
+          <UnderlineLines error={error} />
+        </div>
+      ) : (
+        <textarea
+          id={fieldId}
+          className={`focus-ring min-h-28 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${className}`}
+          aria-invalid={!!error}
+          onChange={onChange}
+          onBlur={(e) => trimOnTextareaBlur(e, onChange, onBlur)}
+          {...props}
+        />
+      )}
       {error ? (
         <p className="text-xs text-danger" role="alert">
           {error}

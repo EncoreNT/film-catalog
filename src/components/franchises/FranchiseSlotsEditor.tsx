@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Film } from "lucide-react";
+import { Film, Plus } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
+import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
 import { MoviePickerDialog } from "@/components/franchises/MoviePickerDialog";
 import { FranchiseSlotCard, AddSlotButton } from "@/components/franchises/FranchiseSlotCard";
@@ -159,20 +160,23 @@ export function FranchiseSlotsEditor({
     : -1;
 
   return (
-    <section className="surface-card space-y-4 p-5">
+    <MachinedCard bodyClassName="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="font-mono-tech text-faint">хронология мира</p>
-          <h2 className="font-display text-xl font-semibold">Фильмы франшизы</h2>
-        </div>
+        <CardSectionHeader label="хронология мира" title="Фильмы франшизы" />
         <p className="font-mono-tech text-xs text-muted tabular-nums">
           {filledCount} / {slots.length} во франшизе
         </p>
       </div>
 
       {slots.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-[var(--radius)] border-2 border-dashed border-border-strong bg-bg-surface/20 px-6 py-10 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-faint">
+        <div className="relative flex flex-col items-center gap-4 overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-surface/10 px-6 py-10 text-center">
+          {/* Top-edge gold laser slit — the drop zone reads as a calibrated
+              empty reel bay rather than a flat filled box. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-accent/55 to-transparent"
+          />
+          <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-accent shadow-[0_0_18px_rgba(232,176,90,0.25)]">
             <Film className="h-5 w-5" aria-hidden />
           </span>
           <div className="space-y-1">
@@ -181,8 +185,8 @@ export function FranchiseSlotsEditor({
               Добавьте фильмы и привяжите их из каталога
             </p>
           </div>
-          <Button type="button" onClick={addEmptySlot}>
-            <span className="text-lg leading-none" aria-hidden>+</span>
+          <Button type="button" variant="secondary" onClick={addEmptySlot}>
+            <Plus className="h-4 w-4" aria-hidden />
             Добавить фильм
           </Button>
         </div>
@@ -228,6 +232,6 @@ export function FranchiseSlotsEditor({
         onConfirm={() => removeKey && removeSlot(removeKey)}
         onClose={() => setRemoveKey(null)}
       />
-    </section>
+    </MachinedCard>
   );
 }
