@@ -15,14 +15,15 @@ import {
   codecFull,
   codecShort,
   formatAudioLabel,
-  is4K,
   premiumAudio,
   premiumHdrView,
   releaseTabLabel,
+  releaseTier,
   secondaryTags,
   translationShort,
   videoBitrateLabel,
   videoResolutionPixels,
+  type ReleaseTier,
 } from "@/lib/media/spec-tags";
 
 export type ReleaseDetailTag = {
@@ -57,10 +58,10 @@ export type ReleaseDetailView = {
   id: number;
   label: string;
   showRibbon: boolean;
-  premium4K: boolean;
   vPixels: string | null;
   premiumHdr: { label: string; isDolbyVision: boolean } | null;
   premiumAtmos: { label: string; sublabel: string } | null;
+  tier: ReleaseTier;
   tags: ReleaseDetailTag[];
   video: {
     hasData: boolean;
@@ -111,9 +112,9 @@ export function buildReleaseDetailView(
 ): ReleaseDetailView {
   const vPixels = videoResolutionPixels(release);
   const vBitrate = videoBitrateLabel(release);
-  const premium4K = is4K(release);
   const premiumHdr = premiumHdrView(release);
   const premiumAtmos = premiumAudio(release);
+  const tier = releaseTier(release);
   const hasResolution = !!(
     release.videoTrack?.resolutionLabel &&
     release.videoTrack.resolutionLabel !== "other"
@@ -132,7 +133,6 @@ export function buildReleaseDetailView(
     id: release.id,
     label: releaseTabLabel(release),
     showRibbon,
-    premium4K,
     vPixels,
     premiumHdr: premiumHdr
       ? { label: premiumHdr.label, isDolbyVision: premiumHdr.isDolbyVision }
@@ -143,6 +143,7 @@ export function buildReleaseDetailView(
           sublabel: premiumAtmos.channelLayout ?? "Object Audio",
         }
       : null,
+    tier,
     tags: secondaryTags(release).map((tag) => ({
       kind: tag.kind,
       label: tag.label,

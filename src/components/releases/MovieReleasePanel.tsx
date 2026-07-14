@@ -8,6 +8,79 @@ import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
 
+type TabTier = "ruby" | "gold" | "none";
+
+type TierTabStyle = {
+  text: string;
+  inactiveText: string;
+  underline: string;
+  glow: string;
+  tag: string;
+};
+
+/* The release tab is colored and labeled by its Gold/Ruby tier. The tier is
+   a composite quality metric (4K + HDR + audio), not a resolution, so it
+   lives here on the tab, not on the resolution plaque. Ruby → crimson,
+   Gold → accent gold, untiered releases stay neutral. The tier tag and
+   tier tint show on every tab — active tabs burn at full intensity, inactive
+   tabs use a faded version of the same tier color (still legible, clearly
+   recessed). */
+const TIER_TAB: Record<TabTier, TierTabStyle> = {
+  ruby: {
+    text: "text-crimson-bright",
+    inactiveText: "text-crimson/55 hover:text-crimson-bright",
+    underline: "bg-gradient-to-r from-transparent via-crimson to-crimson-bright",
+    glow: "shadow-[0_0_10px_var(--crimson-glow)]",
+    tag: "RUBY",
+  },
+  gold: {
+    text: "text-accent",
+    inactiveText: "text-accent/55 hover:text-accent",
+    underline: "bg-gradient-to-r from-transparent via-accent to-accent-bright",
+    glow: "shadow-[0_0_10px_var(--accent-glow)]",
+    tag: "GOLD",
+  },
+  none: {
+    text: "text-text",
+    inactiveText: "text-muted hover:text-text",
+    underline: "bg-gradient-to-r from-transparent via-muted to-text",
+    glow: "",
+    tag: "",
+  },
+};
+
+function releaseTabInner(
+  release: ReleaseDetailView,
+  active: boolean,
+  tierTab: TierTabStyle,
+) {
+  return (
+    <>
+      <ReleaseTabStorageIcon
+        external={release.storageExternal}
+        label={release.storageLabel}
+      />
+      <span>{release.label}</span>
+      {/* Tier tag on every tiered tab. It inherits the tab's currentColor, so
+          it reads at full intensity on the active tab and faded on inactive
+          ones — no separate muted styling needed. */}
+      {release.tier ? (
+        <span className="font-mono-tech text-[10px] uppercase tracking-[0.18em]">
+          {tierTab.tag}
+        </span>
+      ) : null}
+      {active ? (
+        <motion.span
+          layoutId="release-tab-underline"
+          className={`pointer-events-none absolute inset-x-3 bottom-0 h-[2px] rounded-full ${tierTab.underline} ${tierTab.glow}`}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          aria-hidden
+        />
+      ) : null}
+    </>
+  );
+}
+
 interface MovieReleasePanelProps {
   movieId: number;
   movieSlug: string;
@@ -84,6 +157,7 @@ export function MovieReleasePanel({
           >
             {releases.map((release) => {
               const active = release.id === activeId;
+              const tierTab = TIER_TAB[release.tier ?? "none"];
               return (
                 <button
                   key={release.id}
@@ -93,28 +167,34 @@ export function MovieReleasePanel({
                   aria-selected={active}
                   aria-controls={`release-panel-${release.id}`}
                   onClick={() => selectRelease(release.id)}
-                  className={`focus-ring font-mono-tech inline-flex items-center gap-1.5 rounded-t-[calc(var(--radius)-2px)] border px-4 py-2.5 text-xs transition-colors ${
+                  className={`focus-ring font-mono-tech relative inline-flex items-center gap-1.5 rounded-t-[calc(var(--radius)-2px)] border px-4 py-2.5 text-xs transition-colors ${
                     active
-                      ? "border-border border-b-transparent bg-bg-surface text-accent shadow-[inset_0_1px_0_var(--accent-glow)]"
-                      : "border-transparent bg-transparent text-muted hover:text-text"
+                      ? `border-border border-b-transparent bg-bg-surface/60 ${tierTab.text}`
+                      : `border-transparent bg-transparent ${tierTab.inactiveText}`
                   }`}
                 >
-                  <ReleaseTabStorageIcon
-                    external={release.storageExternal}
-                    label={release.storageLabel}
-                  />
-                  {release.label}
+                  {releaseTabInner(release, active, tierTab)}
                 </button>
               );
             })}
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 px-5 py-3 text-faint sm:px-6">
-            <ReleaseTabStorageIcon
-              external={activeRelease.storageExternal}
-              label={activeRelease.storageLabel}
-            />
-            <p className="font-mono-tech">релиз · {activeRelease.label}</p>
+          // Single release: render the same active-tab visual as the
+          // multi-release case (tier color + tier tag + underline) so the
+          // console header reads consistently whether there is one release
+          // or several. Static, non-interactive — there is nothing to switch.
+          <div className="flex flex-wrap gap-0 px-1 pt-1">
+            {releases.map((release) => {
+              const tierTab = TIER_TAB[release.tier ?? "none"];
+              return (
+                <div
+                  key={release.id}
+                  className={`font-mono-tech relative inline-flex items-center gap-1.5 rounded-t-[calc(var(--radius)-2px)] border border-border border-b-transparent bg-bg-surface/60 px-4 py-2.5 text-xs ${tierTab.text}`}
+                >
+                  {releaseTabInner(release, true, tierTab)}
+                </div>
+              );
+            })}
           </div>
         )}
         <ReleasePanelActions

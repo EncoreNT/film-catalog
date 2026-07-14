@@ -10,69 +10,58 @@ interface SpecTagProps {
   sharp?: boolean;
 }
 
-/* One cohesive badge language across the whole page — a flat machined
-   "instrument plaque" rather than a gold-framed jewel.
+/* A unified machined "spec pill" for inline technical badges inside the
+   release console (audio format / channels / codec / HDR / resolution).
 
-   - Premium technical specs (4K / HDR / Atmos) sit on a dark elevated
-     plaque with a thin neutral frame and a 2px gold left-edge accent bar.
-     The gold shows up only as that edge plus the mono label/icon, so the
-     elite tier reads as a labelled instrument strip, not a glowing chip.
-   - Regular technical specs (codec / channels / audio format / release
-     source) use the same plaque shape with a neutral frame and no accent
-     bar, so gold stays a single, deliberate accent.
-   - Every chip shares border weight, radius, padding and an inset top
-     highlight for a consistent physical feel. No outer neon glow. */
+   One cohesive badge language: a glass pill with a hairline frame, an
+   inset top highlight, and a quiet hover. Premium kinds (4K / HDR /
+   Atmos) sit on a warm gold glass fill so the elite tier reads inside
+   the dense audio table too; regular kinds stay neutral so gold stays
+   a single, deliberate accent. Slightly larger than the old plaque so
+   values like "7.1" and "AC3" stay legible inline. */
 const KIND_STYLES: Record<
   SpecTagKind,
-  { accent: string; border: string; bg: string; highlight: string }
+  { text: string; border: string; bg: string }
 > = {
   resolution: {
-    accent: "text-accent-bright",
-    border: "border border-border-strong border-l-2 border-l-accent/70",
-    bg: "bg-bg-elevated",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]",
+    text: "text-accent-bright",
+    border: "border-accent/30",
+    bg: "bg-accent/[0.06]",
   },
   hdr: {
-    accent: "text-accent-bright",
-    border: "border border-border-strong border-l-2 border-l-accent/70",
-    bg: "bg-bg-elevated",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]",
+    text: "text-accent-bright",
+    border: "border-accent/30",
+    bg: "bg-accent/[0.06]",
   },
   "audio-3d": {
-    accent: "text-accent-bright",
-    border: "border border-border-strong border-l-2 border-l-accent/70",
-    bg: "bg-bg-elevated",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]",
+    text: "text-accent-bright",
+    border: "border-accent/30",
+    bg: "bg-gradient-to-r from-accent/[0.12] to-accent/[0.02]",
   },
   audio: {
-    accent: "text-text",
-    border: "border border-border-strong",
-    bg: "bg-bg-elevated",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]",
+    text: "text-text",
+    border: "border-border-strong",
+    bg: "bg-bg-elevated/70",
   },
   channel: {
-    accent: "text-muted",
-    border: "border border-border-strong",
-    bg: "bg-bg-elevated/80",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+    text: "text-text",
+    border: "border-border-strong",
+    bg: "bg-bg-elevated/60",
   },
   codec: {
-    accent: "text-muted",
-    border: "border border-border-strong",
-    bg: "bg-bg-elevated/80",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+    text: "text-muted",
+    border: "border-border-strong",
+    bg: "bg-bg-elevated/70",
   },
   version: {
-    accent: "text-text",
-    border: "border border-border-strong",
+    text: "text-text",
+    border: "border-border-strong",
     bg: "bg-bg-surface",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]",
   },
   release: {
-    accent: "text-text",
-    border: "border border-border-strong",
+    text: "text-text",
+    border: "border-border-strong",
     bg: "bg-bg-surface",
-    highlight: "shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]",
   },
 };
 
@@ -88,11 +77,11 @@ export function SpecTag({
   const s = KIND_STYLES[kind];
   return (
     <span
-      className={`font-mono inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.65rem] font-medium tracking-wide ${sharp ? "rounded-none" : "rounded-md"} ${s.accent} ${s.border} ${s.bg} ${s.highlight}`}
+      className={`font-mono inline-flex items-center gap-1.5 border px-2.5 py-1 text-[0.7rem] font-medium tracking-wide shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:border-accent/35 ${sharp ? "rounded-none" : "rounded-md"} ${s.text} ${s.border} ${s.bg}`}
       title={note}
     >
       {icon ? (
-        <span className="flex shrink-0 items-center" aria-hidden>
+        <span className="flex shrink-0 items-center opacity-90" aria-hidden>
           {icon}
         </span>
       ) : null}

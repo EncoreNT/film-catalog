@@ -129,7 +129,7 @@ export function ReleasePanelActions({
           role="menu"
           aria-label="Действия с релизом"
         >
-          <div className="min-w-[11.5rem] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-surface py-1 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+          <div className="min-w-[11.5rem] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-elevated py-1 shadow-[0_12px_32px_rgba(0,0,0,0.55)]">
             <ReleaseActionsMenuItem
               label="Редактировать"
               href={`/movies/${movieSlug}/releases/${activeRelease.id}/edit`}

@@ -14,6 +14,7 @@ import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
 import { Field } from "@/components/primitives/Field";
+import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { Select } from "@/components/primitives/Select";
 import { DurationInput } from "@/components/primitives/DurationInput";
 import { TrackEditorSection } from "@/components/shared/TrackEditorSection";
@@ -327,10 +328,8 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
 
   return (
     <form onSubmit={handleSubmit} className="pb-28">
-      <div className="surface-card mb-6 space-y-5 p-5 sm:p-6">
-        <h2 className="font-display text-xl font-semibold">
-          Релиз · {releaseLabel}
-        </h2>
+      <MachinedCard className="mb-6" bodyClassName="space-y-5">
+        <CardSectionHeader label="источник" title={releaseLabel} />
 
         <StoragePicker
           compact
@@ -426,7 +425,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             )}
           </div>
         </Field>
-      </div>
+      </MachinedCard>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] lg:items-start lg:gap-8">
         <TrackEditorSection
@@ -464,38 +463,40 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
           minAudioRows={0}
         />
 
-        <aside className="surface-card space-y-5 p-5 sm:p-6 lg:sticky lg:top-24">
-          <h2 className="font-display text-xl font-semibold">Параметры</h2>
+        <aside className="lg:sticky lg:top-24">
+          <MachinedCard bodyClassName="space-y-5">
+            <CardSectionHeader label="детали релиза" title="Параметры" />
 
-          <DurationInput
-            valueSeconds={form.durationSeconds}
-            onChange={(s) => {
-              form.setDurationSeconds(s);
-              markDirty();
-            }}
-            hint="Из ffprobe при сканировании."
-          />
+            <DurationInput
+              valueSeconds={form.durationSeconds}
+              onChange={(s) => {
+                form.setDurationSeconds(s);
+                markDirty();
+              }}
+              hint="Из ffprobe при сканировании."
+            />
 
-          <Select
-            label="Тип релиза"
-            value={form.releaseType}
-            onChange={(v) => {
-              form.setReleaseType(v);
-              markDirty();
-            }}
-            options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
-            hint="BDRemux, BDRip, WEB-DL…"
-          />
-          <Select
-            label="Версия"
-            value={form.version}
-            onChange={(v) => {
-              form.setVersion(v);
-              markDirty();
-            }}
-            options={MOVIE_VERSIONS}
-            hint="Театральная, режиссёрская…"
-          />
+            <Select
+              label="Тип релиза"
+              value={form.releaseType}
+              onChange={(v) => {
+                form.setReleaseType(v);
+                markDirty();
+              }}
+              options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
+              hint="BDRemux, BDRip, WEB-DL…"
+            />
+            <Select
+              label="Версия"
+              value={form.version}
+              onChange={(v) => {
+                form.setVersion(v);
+                markDirty();
+              }}
+              options={MOVIE_VERSIONS}
+              hint="Театральная, режиссёрская…"
+            />
+          </MachinedCard>
         </aside>
       </div>
 

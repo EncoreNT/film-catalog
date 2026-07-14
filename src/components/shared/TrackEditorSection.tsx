@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Plus, Star, Trash2 } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/primitives/Button";
 import { Field } from "@/components/primitives/Field";
+import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { Select } from "@/components/primitives/Select";
 import { BitrateInput, SizeInput } from "@/components/primitives/MeasureInput";
 import { HdrInput } from "@/components/primitives/HdrInput";
@@ -525,44 +527,42 @@ export function TrackEditorSection({
 
   if (tabbed && tabItems.length > 0) {
     return (
-      <div className="surface-card p-5 sm:p-6">
-        <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-          {showSectionTitle ? (
-            <h2
-              className={`font-display shrink-0 font-semibold ${
-                isCompact ? "text-lg" : "text-xl"
-              }`}
-            >
-              Дорожки
-            </h2>
-          ) : null}
-          <div
-            className="inline-flex w-full gap-1 rounded-[var(--radius-sm)] border border-border bg-bg-elevated p-1 sm:w-auto"
-            role="tablist"
-            aria-label="Дорожки"
-          >
-            {tabItems.map((tab) => {
-              const active = tab.id === resolvedTab;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  id={`track-tab-${tab.id}`}
-                  aria-selected={active}
-                  aria-controls={`track-panel-${tab.id}`}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`focus-ring font-mono-tech min-h-8 flex-1 cursor-pointer rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:flex-initial ${
-                    active
-                      ? "bg-accent text-bg-deep shadow-[0_0_12px_var(--accent-glow)]"
-                      : "text-muted hover:text-text"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+      <MachinedCard>
+        {showSectionTitle ? (
+          <CardSectionHeader label="содержимое" title="Дорожки" />
+        ) : null}
+        <div
+          className={`${showSectionTitle ? "mt-5" : ""} flex gap-1 border-b border-border`}
+          role="tablist"
+          aria-label="Дорожки"
+        >
+          {tabItems.map((tab) => {
+            const active = tab.id === resolvedTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`track-tab-${tab.id}`}
+                aria-selected={active}
+                aria-controls={`track-panel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={`focus-ring font-mono-tech relative inline-flex items-center px-3 py-2 text-xs font-medium transition-colors ${
+                  active ? "text-accent" : "text-muted hover:text-text"
+                }`}
+              >
+                {tab.label}
+                {active ? (
+                  <motion.span
+                    layoutId="track-tab-underline"
+                    className="pointer-events-none absolute inset-x-2 bottom-[-1px] h-[2px] rounded-full bg-gradient-to-r from-transparent via-accent to-accent-bright shadow-[0_0_10px_var(--accent-glow)]"
+                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+            );
+          })}
         </div>
         <div
           role="tabpanel"
@@ -574,7 +574,7 @@ export function TrackEditorSection({
           {resolvedTab === "audio" ? audioSection : null}
           {resolvedTab === "subtitle" ? subtitleSection : null}
         </div>
-      </div>
+      </MachinedCard>
     );
   }
 

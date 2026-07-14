@@ -42,17 +42,62 @@ Client hooks: `hooks/useStoragePicker.ts`, `hooks/useTrackEditor.ts`.
 
 ## Дизайн-система (`globals.css`)
 
-Warm coal palette — «кинозал», не cold black:
+**Cinematic Tech** (neurox-tier) — cool-coal projection-room console. Полный
+гайд: [`docs/design-system.md`](../../docs/design-system.md). Решение: ADR-0004.
+
+Палитра — **cool coal**, не pure black и не warm brown. Токены в `:root`,
+проброшены в Tailwind через `@theme inline`. **Не хардкодить `#hex`/`rgba()` в
+компонентах** — только в `globals.css`.
 
 | Token | Tailwind | Назначение |
 |-------|----------|------------|
-| `--bg-deep` | `bg-bg-deep` | Фон страницы |
-| `--accent` | `text-accent` | Золотой акцент |
-| `--radius` | `rounded-[var(--radius)]` | 14px карточки |
+| `--bg-deep` `#0b0a0f` | `bg-bg-deep` | Фон страницы |
+| `--bg-elevated` `#1a1822` | `bg-bg-elevated` | Solid: инпуты, дропдауны, керны, меню |
+| `--bg-surface` `rgba(170,162,210,0.13)` | `bg-bg-surface` | Glass-карточки |
+| `--accent` `#e8b05a` | `text-accent` / `bg-accent` | **Gold** — первичный акцент, 4K, активные состояния |
+| `--neural` `#8b5cf6` | `text-neural` | Neural violet — AI/tech вторичный |
+| `--cyan` `#38bdf8` | `text-cyan` | Laser/scan highlight |
+| `--crimson` `#c43d5a` | `text-crimson` | **Ruby tier ONLY** (не danger!) |
+| `--ember` `#c87038` | `text-ember` | Тёплый противовес (ambient/laser) |
+| `--danger` `#f87171` | `text-danger` | Ошибки, удаление |
+| `--text-primary` `#f3f1f7` | `text-text` | Основной текст |
+| `--text-muted` `#a39fb2` | `text-muted` | Вторичный |
+| `--text-faint` `#645f76` | `text-faint` | Третичный, mono-метки |
+| `--radius` `16px` | `rounded-[var(--radius)]` | Карточки/инпуты/кнопки |
+| `--radius-sm` `10px` | `rounded-[var(--radius-sm)]` | Мелкие элементы |
+| `--ease` `cubic-bezier(0.16,1,0.3,1)` | — | Основной easing |
 
-Шрифты: Fraunces (display), Inter (UI, cyrillic), JetBrains Mono (tech labels).
+Шрифты (`layout.tsx`, `next/font/google`): **Fraunces** (display, serif) /
+**Manrope** (UI/body, cyrillic) / **JetBrains Mono** (tech labels). Классы:
+`.font-display`, `.font-mono-tech` (0.7rem uppercase tracking), `.font-micro`
+(0.6rem). ⚠️ Это **Manrope, не Inter**.
 
-Utility classes: `.surface-card`, `.surface-elevated`, `.focus-ring`, `.font-display`, `.font-mono-tech`.
+Поверхности: `.surface-card` (glass), `.surface-elevated` (solid),
+`.surface-glass` (premium), `.poster-frame` (double-bezel постер).
+
+**Карточный язык — double-bezel** (поднос + machined-керн):
+- Премиум-плашки — `ReleaseSpecHero` + `gradient-border-cinematic` (animated)
+  + holo + lens + `.spec-plaque-core`.
+- Форм-карточки — `MachinedCard` + `CardSectionHeader` + `gradient-hairline`
+  (static, без `overflow-hidden` → Select-дропдауны не обрезаются).
+- Каталожные — `LaserCardFrame` (SVG-laser perimeter on hover, tier-aware).
+
+**Tier-система** (`lib/media/release-tags.ts`, `releaseTier()`): Ruby (4K+HDR+
+Atmos≥7.1 на лучшем рус. дубляже) > Gold (4K+HDR+surround≥5.1) > null. Tier
+красит таб релиза и card-framing; crimson — только Ruby. Resolution-accent на
+плашке отдельный: 4K gold+halo / 1080p muted / 720p+ neutral.
+
+Эффекты: `gradient-border-cinematic` / `gradient-hairline`, `sheen-layer`,
+`holo-foil/-gold/-ruby`, `lens-flare`, `laser-trace[-cyan]`, `neural-pulse`.
+Glow-тени — **явные классы** (`.glow-accent-{8..48}`, `.glow-neural-*`,
+`.glow-crimson-*`, `.glow-card-{rest,gold,ruby}`, `.drop-glow-*`), т.к. Tailwind
+v4 тут ненадёжно генерирует arbitrary `box-shadow` с `var()`/`rgba()`.
+
+Motion: `--ease` + `motion/react` (sliding underline табов). Глобальный
+`@media (prefers-reduced-motion: reduce)` гасит все эффекты → calm static.
+
+Utility: `.focus-ring` / `.focus-ring-neural`, `.container-wide`,
+`.text-gradient-cinematic`, `.tech-grid`, `.film-perfs[-y]`, `.scroll-subtle`.
 
 ## Обложки — ориентация
 
@@ -67,8 +112,9 @@ Utility classes: `.surface-card`, `.surface-elevated`, `.focus-ring`, `.font-dis
 
 - `MovieForm`, `AddMovieForm` — probeOnly → POST create
 - `FranchiseForm` + `FranchiseSlotsEditor` — slots через syncFranchiseSlots
-- Словари опций: `lib/dictionaries.ts` (кодеки, профили, жанры, release types)
-- Spec display logic: `lib/spec-tags.ts`, `lib/format.ts`
+- Карточки секций форм — `MachinedCard` + `CardSectionHeader` (double-bezel), не плоский `surface-card`
+- Словари опций: `lib/shared/dictionaries.ts` (кодеки, профили, каналы, языки, release types, версии)
+- Spec display logic: `lib/media/spec-tags.ts`, `lib/media/release-tags.ts` (tier), `lib/shared/format.ts`
 
 ## Навигация
 

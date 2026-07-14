@@ -9,7 +9,6 @@ import {
   Waves,
 } from "lucide-react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
-import { SpecTag } from "@/components/shared/SpecTag";
 
 export function ReleaseTabStorageIcon({
   external,
@@ -51,56 +50,4 @@ export function tagIcon(kind: ReleaseDetailView["tags"][number]["kind"]) {
     default:
       return null;
   }
-}
-
-export function SpecRibbon({ release }: { release: ReleaseDetailView }) {
-  const hasResolution =
-    release.video.resolution && release.video.resolution !== "—";
-
-  return (
-    <div className="flex flex-wrap items-center gap-2.5 border-b border-accent/15 pb-5">
-      {hasResolution ? (
-        <span
-          className={`inline-flex items-baseline gap-1.5 rounded-md border px-2.5 py-1 ${
-            release.premium4K
-              ? "border-border-strong border-l-2 border-l-accent/70 bg-bg-elevated shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]"
-              : "border-border-strong bg-bg-elevated shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-          }`}
-        >
-          <span
-            className={`font-mono text-sm font-semibold leading-none ${
-              release.premium4K ? "text-accent-bright" : "text-text"
-            }`}
-          >
-            {release.video.resolution}
-          </span>
-          {release.vPixels ? (
-            <span className="font-mono text-[0.65rem] tabular-nums text-muted">
-              {release.vPixels}
-            </span>
-          ) : null}
-        </span>
-      ) : null}
-
-      {release.premiumHdr ? (
-        <SpecTag
-          kind="hdr"
-          icon={<Sun className="h-3.5 w-3.5" />}
-          note={release.premiumHdr.isDolbyVision ? "Dolby Vision" : undefined}
-        >
-          {release.premiumHdr.label}
-        </SpecTag>
-      ) : null}
-
-      {release.premiumAtmos ? (
-        <SpecTag
-          kind="audio-3d"
-          icon={<Waves className="h-3.5 w-3.5" />}
-          note="RU · главная дорожка"
-        >
-          {release.premiumAtmos.label}
-        </SpecTag>
-      ) : null}
-    </div>
-  );
 }
