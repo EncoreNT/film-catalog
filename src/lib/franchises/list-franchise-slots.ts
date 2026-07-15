@@ -10,6 +10,7 @@ export async function listFranchiseSlots(franchiseId: number) {
       movieId: true,
       titleHint: true,
       yearHint: true,
+      isAnnounced: true,
       movie: { select: { id: true, title: true, year: true, slug: true } },
     },
   });

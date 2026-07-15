@@ -184,6 +184,17 @@ export const SLOT_TIER_UNDERLINE: Record<SlotTier, string> = {
     "bg-gradient-to-r from-transparent via-crimson-bright to-transparent shadow-[0_0_6px_rgba(224,62,98,0.45)]",
 };
 
+/** Future (unreleased) empty slot — cool neural, distinct from ember "missing now". */
+export const SLOT_FUTURE_CELL =
+  "border border-dashed border-neural/40 bg-neural/[0.07]";
+export const SLOT_FUTURE_FRAME =
+  "border border-dashed border-neural/35 bg-bg-deep/80";
+export const SLOT_FUTURE_FRAME_HOVER =
+  "group-hover/slot:border-neural/55 group-hover/slot:bg-neural/[0.10]";
+export const SLOT_FUTURE_UNDERLINE =
+  "bg-gradient-to-r from-transparent via-neural/70 to-transparent shadow-[0_0_6px_rgba(139,92,246,0.35)]";
+export const SLOT_FUTURE_LABEL = "text-neural/75 group-hover/slot:text-neural-bright";
+
 export type SlotTileTone = "normal" | "gold" | "ruby";
 
 export const SLOT_TILE_BY_TONE: Record<SlotTileTone, string> = {

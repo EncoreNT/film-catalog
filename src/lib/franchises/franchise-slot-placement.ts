@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { z } from "zod";
 import { franchisePlacementSchema } from "@/lib/api/validators";
+import { assertFranchiseSlotLinkAllowed } from "@/lib/franchises/franchise-slot-future";
 import { prisma } from "@/lib/db/prisma";
 
 type DbClient = Prisma.TransactionClient | typeof prisma;
@@ -31,7 +32,7 @@ export async function placeMovieInFranchise(
   const slots = await db.franchiseSlot.findMany({
     where: { franchiseId },
     orderBy: { storyOrder: "asc" },
-    select: { id: true, storyOrder: true, movieId: true },
+    select: { id: true, storyOrder: true, movieId: true, yearHint: true, isAnnounced: true },
   });
 
   const ownIndex = slots.findIndex((s) => s.movieId === movieId);
@@ -63,6 +64,10 @@ export async function placeMovieInFranchise(
     const targetSlot = working.find((s) => s.id === target.slotId);
     if (!targetSlot) throw new Error("Слот не найден");
     if (targetSlot.movieId != null) throw new Error("Слот уже занят");
+    assertFranchiseSlotLinkAllowed({
+      yearHint: targetSlot.yearHint,
+      isAnnounced: targetSlot.isAnnounced,
+    });
     await db.franchiseSlot.update({
       where: { id: target.slotId },
       data: { movieId },

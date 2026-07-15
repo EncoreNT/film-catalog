@@ -171,6 +171,8 @@ model FranchiseSlot {
   storyOrder  Int
   titleHint   String?
   yearHint    Int?
+  /** Empty slot explicitly marked as unreleased (no year required). */
+  isAnnounced Boolean   @default(false)
   createdAt   DateTime  @default(now())
   franchise   Franchise @relation(fields: [franchiseId], references: [id], onDelete: Cascade)
   movie       Movie?    @relation(fields: [movieId], references: [id], onDelete: SetNull)

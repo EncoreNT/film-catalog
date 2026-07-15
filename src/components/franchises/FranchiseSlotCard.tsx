@@ -1,11 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { Film, Plus, X } from "lucide-react";
+import { CalendarClock, Film, Plus, X } from "lucide-react";
 import type { EditableSlot } from "@/components/franchises/FranchiseSlotsEditor";
 import { UnderlineLines } from "@/components/primitives/Field";
+import { NeuralSwitch } from "@/components/primitives/NeuralSwitch";
 import { MAX_YEAR, MIN_YEAR, clampYear } from "@/components/primitives/YearInput";
 import { trimOnInputBlur } from "@/lib/shared/text-trim";
+import { isFutureFranchiseSlotState } from "@/lib/franchises/franchise-slot-future";
+import {
+  FRANCHISE_SLOT_FUTURE_HEADLINE,
+  franchiseSlotFutureFooter,
+} from "@/lib/franchises/franchise-slot-copy";
+
+function editableSlotYear(slot: EditableSlot): number | null {
+  if (slot.movieYear != null) return slot.movieYear;
+  return slot.yearHint ?? null;
+}
 
 interface FranchiseSlotCardProps {
   slot: EditableSlot;
@@ -16,6 +27,7 @@ interface FranchiseSlotCardProps {
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
   onHintChange: (field: "titleHint" | "yearHint", value: string) => void;
+  onAnnouncedChange: (value: boolean) => void;
 }
 
 export function FranchiseSlotCard({
@@ -27,9 +39,23 @@ export function FranchiseSlotCard({
   onMove,
   onRemove,
   onHintChange,
+  onAnnouncedChange,
 }: FranchiseSlotCardProps) {
   const filled = slot.movieId != null;
   const cover = filled && slot.coverUrl ? slot.coverUrl : null;
+  const year = editableSlotYear(slot);
+  const isFutureEmpty =
+    !filled &&
+    isFutureFranchiseSlotState({
+      year,
+      filled: false,
+      isAnnounced: slot.isAnnounced,
+    });
+  const canLink = !isFutureEmpty;
+  const isUnreleased = slot.isAnnounced ?? false;
+  /** Only when year is empty — past/future year on the slot defines status itself. */
+  const showUnreleasedSwitch =
+    !filled && (isUnreleased || slot.yearHint == null);
 
   return (
     <article
@@ -43,9 +69,14 @@ export function FranchiseSlotCard({
       <span
         aria-hidden
         className={`pointer-events-none absolute inset-y-2 left-0 w-px bg-gradient-to-b from-transparent to-transparent ${
-          filled ? "via-accent/45" : "via-ember/35"
+          filled
+            ? "via-accent/45"
+            : isFutureEmpty
+              ? "via-neural/40"
+              : "via-ember/35"
         }`}
       />
+      {canLink ? (
       <button
         type="button"
         onClick={onPick}
@@ -81,6 +112,14 @@ export function FranchiseSlotCard({
           </span>
         )}
       </button>
+      ) : (
+        <span
+          className="relative flex h-16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-neural/40 bg-neural/[0.06]"
+          title={FRANCHISE_SLOT_FUTURE_HEADLINE}
+        >
+          <CalendarClock className="h-5 w-5 text-neural/65" aria-hidden />
+        </span>
+      )}
 
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -133,9 +172,6 @@ export function FranchiseSlotCard({
           </button>
         ) : (
           <div className="grid grid-cols-[1fr_5.5rem] gap-3">
-            {/* Title hint — reuses the Field underline laser (rest hairline +
-                gold gradient scale-in on focus) so the slot's title reads the
-                same as the franchise name field above. */}
             <div className="relative">
               <input
                 value={slot.titleHint ?? ""}
@@ -152,11 +188,10 @@ export function FranchiseSlotCard({
               />
               <UnderlineLines />
             </div>
-            {/* Year hint — same laser underline, digits-only, clamped to the
-                project's release-year range on blur so junk like 121 or
-                103032 can't be stored. Compact (no decade picker) to fit the
-                slot row. */}
-            <div className="relative">
+            <div
+              className={`relative ${isUnreleased ? "pointer-events-none invisible" : ""}`}
+              aria-hidden={isUnreleased}
+            >
               <input
                 type="text"
                 inputMode="numeric"
@@ -184,6 +219,15 @@ export function FranchiseSlotCard({
           </div>
         )}
 
+        {showUnreleasedSwitch ? (
+          <NeuralSwitch
+            checked={isUnreleased}
+            onChange={onAnnouncedChange}
+            label="ещё не вышел"
+            ariaLabel={`Фильм ${index + 1}: ещё не вышел`}
+          />
+        ) : null}
+
         {filled ? (
           <div className="flex items-center justify-between">
             <button
@@ -203,13 +247,28 @@ export function FranchiseSlotCard({
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={onPick}
-            className="focus-ring font-mono-tech block cursor-pointer text-[0.65rem] text-accent/80 transition-colors hover:text-accent"
-          >
-            + добавить фильм из каталога
-          </button>
+          <div className="min-h-5">
+            {!isFutureEmpty ? (
+              <button
+                type="button"
+                onClick={onPick}
+                className="focus-ring font-mono-tech block cursor-pointer text-[0.65rem] leading-5 text-accent/80 transition-colors hover:text-accent"
+              >
+                + добавить фильм из каталога
+              </button>
+            ) : (
+              <p
+                className={`font-mono-tech text-[0.65rem] leading-5 ${
+                  year != null ? "text-muted" : "text-transparent select-none"
+                }`}
+                aria-hidden={year == null}
+              >
+                {year != null
+                  ? franchiseSlotFutureFooter(year, false)
+                  : "+ добавить фильм из каталога"}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </article>

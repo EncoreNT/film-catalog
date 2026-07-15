@@ -5,6 +5,11 @@ import type { ReactNode } from "react";
 import type { FranchiseSlotSummary } from "@/lib/franchises/franchise-summary";
 import { slotQualityLabel } from "@/lib/franchises/franchise-summary";
 import {
+  SLOT_FUTURE_CELL,
+  SLOT_FUTURE_FRAME,
+  SLOT_FUTURE_FRAME_HOVER,
+  SLOT_FUTURE_LABEL,
+  SLOT_FUTURE_UNDERLINE,
   SLOT_TIER_CELL,
   SLOT_TIER_FRAME,
   SLOT_TIER_FRAME_HOVER,
@@ -135,6 +140,13 @@ function reelAriaLabel(slots: FranchiseSlotSummary[]): string {
     .join("; ")}`;
 }
 
+function futureEmptyLabel(slot: FranchiseSlotSummary): string {
+  const year = slot.year ?? slot.yearHint;
+  if (year != null) return String(year);
+  if (slot.isAnnounced) return "···";
+  return String(slot.index + 1);
+}
+
 export function FranchiseQualityReel({
   slots,
   className = "",
@@ -151,27 +163,44 @@ export function FranchiseQualityReel({
         aria-label={ariaLabel}
         className={`flex items-stretch gap-[2px] rounded-[6px] p-[3px] ring-1 ring-inset ring-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.01] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${className}`}
       >
-        {slots.map((slot) => (
+        {slots.map((slot) => {
+          const isFutureEmpty = !slot.filled && slot.isFuture;
+          return (
           <HoverTooltip
             key={slot.index}
             content={<FranchiseSlotTooltip slot={slot} />}
-            className={`group/slot relative flex h-7 flex-1 min-w-0 items-center justify-center rounded-[3px] transition-all duration-200 ${SLOT_TIER_FRAME[slot.tier]} ${SLOT_TIER_FRAME_HOVER[slot.tier]}`}
+            className={`group/slot relative flex h-7 flex-1 min-w-0 items-center justify-center rounded-[3px] transition-all duration-200 ${
+              isFutureEmpty
+                ? `${SLOT_FUTURE_FRAME} ${SLOT_FUTURE_FRAME_HOVER}`
+                : `${SLOT_TIER_FRAME[slot.tier]} ${SLOT_TIER_FRAME_HOVER[slot.tier]}`
+            }`}
           >
             {slot.filled ? (
               <>
                 {slotHeadlineLabel(slot)}
                 <span
                   aria-hidden
-                  className={`pointer-events-none absolute inset-x-[3px] bottom-0 h-[2px] rounded-full ${SLOT_TIER_UNDERLINE[slot.tier]}`}
+                  className={`pointer-events-none absolute inset-x-[3px] bottom-0 h-[2px] rounded-full ${
+                    isFutureEmpty
+                      ? SLOT_FUTURE_UNDERLINE
+                      : SLOT_TIER_UNDERLINE[slot.tier]
+                  }`}
                 />
               </>
             ) : (
-              <span className="font-mono text-[0.5rem] tabular-nums text-faint transition-colors duration-200 group-hover/slot:text-ember/80">
-                {slot.index + 1}
+              <span
+                className={`font-mono text-[0.5rem] tabular-nums transition-colors duration-200 ${
+                  isFutureEmpty
+                    ? SLOT_FUTURE_LABEL
+                    : "text-faint group-hover/slot:text-ember/80"
+                }`}
+              >
+                {isFutureEmpty ? futureEmptyLabel(slot) : slot.index + 1}
               </span>
             )}
           </HoverTooltip>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -182,29 +211,46 @@ export function FranchiseQualityReel({
       aria-label={ariaLabel}
       className={`flex items-stretch gap-[3px] ${className}`}
     >
-      {slots.map((slot) => (
+      {slots.map((slot) => {
+        const isFutureEmpty = !slot.filled && slot.isFuture;
+        return (
         <HoverTooltip
           key={slot.index}
           content={<FranchiseSlotTooltip slot={slot} />}
-          className={`group/slot relative flex-1 min-w-0 overflow-hidden rounded-[5px] transition-all duration-200 ${SLOT_TIER_CELL[slot.tier]} ${SLOT_TIER_HOVER[slot.tier]}`}
+          className={`group/slot relative flex-1 min-w-0 overflow-hidden rounded-[5px] transition-all duration-200 ${
+            isFutureEmpty
+              ? SLOT_FUTURE_CELL
+              : `${SLOT_TIER_CELL[slot.tier]} ${SLOT_TIER_HOVER[slot.tier]}`
+          }`}
         >
-          {slot.tier !== "missing" ? (
+          {slot.tier !== "missing" && !isFutureEmpty ? (
             <span
               aria-hidden
               className={`absolute inset-x-0 top-0 h-[3px] ${SLOT_TIER_SIGNAL[slot.tier]}`}
+            />
+          ) : null}
+          {isFutureEmpty ? (
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-[3px] bg-neural/40"
             />
           ) : null}
           <span className="flex h-full items-center justify-center px-[5px] pt-[7px] pb-1">
             {slot.filled ? (
               <SpecTiles slot={slot} />
             ) : (
-              <span className="font-mono text-[0.5rem] tabular-nums text-ember/55">
-                {slot.index + 1}
+              <span
+                className={`font-mono text-[0.5rem] tabular-nums ${
+                  isFutureEmpty ? "text-neural/70" : "text-ember/55"
+                }`}
+              >
+                {isFutureEmpty ? futureEmptyLabel(slot) : slot.index + 1}
               </span>
             )}
           </span>
         </HoverTooltip>
-      ))}
+        );
+      })}
     </div>
   );
 }

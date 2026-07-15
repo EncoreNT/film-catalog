@@ -21,6 +21,7 @@ export interface EditableSlot {
   storyOrder: number;
   titleHint?: string | null;
   yearHint?: number | null;
+  isAnnounced?: boolean;
 }
 
 interface FranchiseSlotsEditorProps {
@@ -39,6 +40,7 @@ export function createEmptySlot(order?: number): EditableSlot {
     storyOrder: order ?? 0,
     titleHint: null,
     yearHint: null,
+    isAnnounced: false,
   };
 }
 
@@ -48,6 +50,7 @@ export function slotsToPayload(slots: EditableSlot[]): FranchiseSlotInput[] {
     storyOrder: slot.storyOrder,
     titleHint: trimInputOptional(slot.titleHint),
     yearHint: slot.yearHint ?? null,
+    isAnnounced: slot.isAnnounced ?? false,
   }));
 }
 
@@ -57,6 +60,7 @@ export function slotsFromFranchise(
     storyOrder: number;
     titleHint: string | null;
     yearHint: number | null;
+    isAnnounced: boolean;
     movie: MovieWithTracks | null;
   }[],
 ): EditableSlot[] {
@@ -69,6 +73,7 @@ export function slotsFromFranchise(
     storyOrder: slot.storyOrder,
     titleHint: slot.titleHint,
     yearHint: slot.yearHint,
+    isAnnounced: slot.isAnnounced,
   }));
 }
 
@@ -132,6 +137,20 @@ export function FranchiseSlotsEditor({
     );
   };
 
+  const updateAnnounced = (key: string, isAnnounced: boolean) => {
+    onChange(
+      slots.map((slot) =>
+        slot.key === key
+          ? {
+              ...slot,
+              isAnnounced,
+              yearHint: isAnnounced ? null : slot.yearHint,
+            }
+          : slot,
+      ),
+    );
+  };
+
   const updateHintField = (
     key: string,
     field: "titleHint" | "yearHint",
@@ -148,6 +167,10 @@ export function FranchiseSlotsEditor({
                     ? parseInt(value, 10)
                     : null
                   : value || null,
+              isAnnounced:
+                field === "yearHint" && value
+                  ? false
+                  : (slot.isAnnounced ?? false),
             }
           : slot,
       ),
@@ -206,6 +229,7 @@ export function FranchiseSlotsEditor({
                 onHintChange={(field, value) =>
                   updateHintField(slot.key, field, value)
                 }
+                onAnnouncedChange={(value) => updateAnnounced(slot.key, value)}
               />
             ))}
             <AddSlotButton onAdd={addEmptySlot} />

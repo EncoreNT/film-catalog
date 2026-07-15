@@ -1,6 +1,11 @@
 "use client";
 
-import { Film, Link2 } from "lucide-react";
+import { CalendarClock, Film } from "lucide-react";
+import {
+  franchiseSlotAriaLabel,
+  franchiseSlotFutureFooter,
+  FRANCHISE_SLOT_MISSING_FOOTER,
+} from "@/lib/franchises/franchise-slot-copy";
 import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
 import {
   tierLaserTopClass,
@@ -11,38 +16,45 @@ interface FranchisePlaceholderProps {
   slotIndex: number;
   titleHint?: string | null;
   yearHint?: number | null;
-  /** When provided, the card becomes a button that opens the movie picker. */
+  /** Announced release without a known calendar year. */
+  isAnnounced?: boolean;
+  /** Unreleased slot — no link affordance. */
+  isFuture?: boolean;
+  /** When provided and not future, the card opens the movie picker. */
   onPick?: () => void;
 }
 
 /**
- * Empty franchise slot — a framed poster waiting to be filled, not a broken
- * image. Speaks the same poster language as MovieCard (LaserCardFrame +
- * aspect-[2/3] + tier-laser-top + inset glow) but in the warm ember "missing"
- * tone (see globals.css .glow-card-ember / .tier-laser-top-ember), so empty
- * slots read as a distinct, gentle state rather than a dashed placeholder.
+ * Empty franchise slot — framed poster waiting to be filled.
+ * - **missing** (ember): can link a catalog film now.
+ * - **future** (neural): release year not reached; edit year in franchise editor if wrong.
  */
 export function FranchisePlaceholder({
   slotIndex,
   titleHint,
   yearHint,
+  isAnnounced = false,
+  isFuture = false,
   onPick,
 }: FranchisePlaceholderProps) {
   const label = titleHint ?? `Фильм ${slotIndex + 1}`;
-  const interactive = onPick != null;
+  const interactive = !isFuture && onPick != null;
 
   const inner = (
-    <div className="glow-poster-ember-rest relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] bg-bg-base">
-      {/* Empty-screen ember glow — an unlit projector, not a missing image */}
+    <div
+      className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] bg-bg-base ${
+        isFuture ? "glow-poster-future-rest" : "glow-poster-ember-rest"
+      }`}
+    >
       <div
         className="pointer-events-none absolute inset-0 opacity-70"
         aria-hidden
         style={{
-          background:
-            "radial-gradient(ellipse 75% 55% at 50% 38%, var(--ember-glow) 0%, transparent 70%)",
+          background: isFuture
+            ? "radial-gradient(ellipse 75% 55% at 50% 38%, rgba(139,92,246,0.14) 0%, transparent 70%)"
+            : "radial-gradient(ellipse 75% 55% at 50% 38%, var(--ember-glow) 0%, transparent 70%)",
         }}
       />
-      {/* Film-strip perforations on both sides — the empty-cell frame */}
       <div
         className="film-perfs-y pointer-events-none absolute inset-y-0 left-0 w-3 opacity-25"
         aria-hidden
@@ -51,25 +63,45 @@ export function FranchisePlaceholder({
         className="film-perfs-y pointer-events-none absolute inset-y-0 right-0 w-3 opacity-25"
         aria-hidden
       />
-      <div className={tierLaserTopClass("ember")} aria-hidden />
+      <div
+        className={
+          isFuture
+            ? "pointer-events-none absolute inset-x-[12%] top-0 z-[4] h-[1.5px] bg-gradient-to-r from-transparent via-neural/50 to-transparent opacity-60"
+            : tierLaserTopClass("ember")
+        }
+        aria-hidden
+      />
       <div
         className="pointer-events-none absolute inset-0 z-[3]"
         aria-hidden
         style={{ background: TIER_BOTTOM_SCRIM.placeholder }}
       />
 
-      {/* Center glyph + hint */}
       <div className="relative flex h-full flex-col items-center justify-center gap-3 px-5 py-6 text-center">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ember/25 bg-bg-deep/40 text-ember/60">
-          <Film className="h-5 w-5" aria-hidden />
+        <span
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-bg-deep/40 ${
+            isFuture
+              ? "border-neural/30 text-neural/70"
+              : "border-ember/25 text-ember/60"
+          }`}
+        >
+          {isFuture ? (
+            <CalendarClock className="h-5 w-5" aria-hidden />
+          ) : (
+            <Film className="h-5 w-5" aria-hidden />
+          )}
         </span>
-        {titleHint ? (
+        {titleHint || yearHint ? (
           <>
             <p className="font-display text-base font-semibold leading-tight text-text">
-              {titleHint}
+              {titleHint ?? label}
             </p>
             {yearHint ? (
-              <p className="font-mono-tech text-xs text-ember-bright/80">
+              <p
+                className={`font-mono-tech text-xs ${
+                  isFuture ? "text-neural-bright/85" : "text-ember-bright/80"
+                }`}
+              >
                 {yearHint}
               </p>
             ) : null}
@@ -81,31 +113,27 @@ export function FranchisePlaceholder({
         )}
       </div>
 
-      {/* Bottom status — a line/glow caption, not a filled box */}
       <div className="absolute inset-x-0 bottom-0 z-10 p-2.5">
         <div className="flex items-center gap-2 font-mono-tech text-[0.55rem] uppercase tracking-[0.14em]">
-          <span className="h-px flex-1 bg-ember/30" aria-hidden />
-          <span className="text-ember-bright/80">пока не в архиве</span>
-          <span className="h-px flex-1 bg-ember/30" aria-hidden />
+          <span
+            className={`h-px flex-1 ${isFuture ? "bg-neural/25" : "bg-ember/30"}`}
+            aria-hidden
+          />
+          <span className={isFuture ? "text-neural/80" : "text-ember-bright/80"}>
+            {isFuture ? franchiseSlotFutureFooter(yearHint, isAnnounced) : FRANCHISE_SLOT_MISSING_FOOTER}
+          </span>
+          <span
+            className={`h-px flex-1 ${isFuture ? "bg-neural/25" : "bg-ember/30"}`}
+            aria-hidden
+          />
         </div>
       </div>
-
-      {/* Hover affordance — "привязать фильм" — only when interactive */}
-      {interactive ? (
-        <span
-          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-bg-deep/80 opacity-0 transition-opacity duration-200 group-hover/laser:opacity-100"
-          aria-hidden
-        >
-          <span className="font-mono-tech inline-flex items-center gap-1.5 rounded-full border border-accent/45 bg-bg-deep/90 px-3 py-1.5 text-[0.6rem] text-accent">
-            <Link2 className="h-3 w-3" />
-            привязать фильм
-          </span>
-        </span>
-      ) : null}
     </div>
   );
 
-  const articleClass = `group relative rounded-[var(--radius)] glow-card-ember transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+  const articleClass = `group relative rounded-[var(--radius)] ${
+    isFuture ? "glow-card-future" : "glow-card-ember"
+  } transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
     interactive ? "hover:z-10 hover:-translate-y-1 hover:scale-[1.03]" : ""
   }`;
 
@@ -129,7 +157,10 @@ export function FranchisePlaceholder({
   }
 
   return (
-    <article className={articleClass} aria-label={`Пока не в архиве: ${label}`}>
+    <article
+      className={articleClass}
+      aria-label={franchiseSlotAriaLabel(isFuture, titleHint ?? label, yearHint)}
+    >
       <LaserCardFrame tier={null}>{inner}</LaserCardFrame>
     </article>
   );

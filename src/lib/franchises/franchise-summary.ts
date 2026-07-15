@@ -23,6 +23,11 @@ import {
   type ReleaseTier,
 } from "@/lib/media/spec-tags";
 
+import {
+  FRANCHISE_SLOT_FUTURE_ARIA,
+  FRANCHISE_SLOT_MISSING_ARIA,
+} from "@/lib/franchises/franchise-slot-copy";
+
 function primaryRelease(movie: MovieWithTracks | null) {
   if (!movie) return null;
   return pickPrimaryRelease(movie.releases);
@@ -60,6 +65,10 @@ export interface FranchiseSlotSummary {
   /** Hint when the slot is empty. */
   titleHint: string | null;
   yearHint: number | null;
+  /** Empty slot marked as announced release without a known year. */
+  isAnnounced: boolean;
+  /** True when effective year (film or hint) is after the current calendar year. */
+  isFuture: boolean;
   /** Catalog slug — filled slots only. */
   slug: string | null;
   rating: number | null;
@@ -75,7 +84,11 @@ export interface FranchiseSlotSummary {
 
 /** Compact quality summary for aria labels and tooltips. */
 export function slotQualityLabel(slot: FranchiseSlotSummary): string {
-  if (!slot.filled) return "фильм не добавлен";
+  if (!slot.filled) {
+    return slot.isFuture
+      ? FRANCHISE_SLOT_FUTURE_ARIA
+      : FRANCHISE_SLOT_MISSING_ARIA;
+  }
   const parts: string[] = [];
   if (slot.resolution) parts.push(slot.resolution);
   if (slot.dynamicRange) parts.push(slot.dynamicRange);
@@ -140,12 +153,18 @@ export interface FranchiseSummary {
   tier: ReleaseTier;
 }
 
-/** True when the slot's year (film or hint) is after the current calendar year. */
+/** True when the slot is a future release: year after now, or empty + announced TBA. */
 export function isFutureFranchiseSlot(
-  slot: Pick<FranchiseSlotSummary, "year">,
+  slot: {
+    year: number | null;
+    filled?: boolean;
+    isAnnounced?: boolean;
+  },
   currentYear: number,
 ): boolean {
-  return slot.year != null && slot.year > currentYear;
+  if (slot.year != null && slot.year > currentYear) return true;
+  if (slot.filled !== true && slot.isAnnounced) return true;
+  return false;
 }
 
 /**
@@ -156,7 +175,17 @@ export function computeFranchiseCollectionTier(
   slots: FranchiseSlotSummary[],
   currentYear = new Date().getFullYear(),
 ): ReleaseTier {
-  const relevant = slots.filter((s) => !isFutureFranchiseSlot(s, currentYear));
+  const relevant = slots.filter(
+    (s) =>
+      !isFutureFranchiseSlot(
+        {
+          year: s.year,
+          filled: s.filled,
+          isAnnounced: s.isAnnounced ?? false,
+        },
+        currentYear,
+      ),
+  );
   if (relevant.length === 0) return null;
 
   const filled = relevant.filter((s) => s.filled).length;
@@ -210,12 +239,21 @@ export function computeFranchiseSummary(
       release?.durationSeconds != null
         ? formatDuration(release.durationSeconds)
         : null;
+    const slotYearValue = slotYear(slot);
     return {
       index,
       filled,
       title: slotTitle(slot),
-      year: slotYear(slot),
+      year: slotYearValue,
       tier: slotTier(movie),
+      isFuture: isFutureFranchiseSlot(
+        {
+          year: slotYearValue,
+          filled,
+          isAnnounced: slot.isAnnounced,
+        },
+        new Date().getFullYear(),
+      ),
       fourK,
       hdr,
       atmos,
@@ -225,6 +263,7 @@ export function computeFranchiseSummary(
       audioFull: slotAudioFull(movie),
       titleHint: slot.titleHint ?? null,
       yearHint: slot.yearHint ?? null,
+      isAnnounced: slot.isAnnounced,
       slug: movie?.slug ?? null,
       rating: movie?.rating ?? null,
       durationLabel,

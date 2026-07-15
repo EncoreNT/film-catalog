@@ -1,4 +1,8 @@
-import { Calendar, Clock, Film, Star } from "lucide-react";
+import { Calendar, CalendarClock, Clock, Film, Star } from "lucide-react";
+import {
+  FRANCHISE_SLOT_FUTURE_HEADLINE,
+  FRANCHISE_SLOT_MISSING_HEADLINE,
+} from "@/lib/franchises/franchise-slot-copy";
 import type {
   FranchiseSlotSummary,
   SlotTier,
@@ -101,7 +105,42 @@ export function FranchiseSlotTooltip({ slot }: FranchiseSlotTooltipProps) {
 
   if (!slot.filled) {
     const hintTitle = slot.titleHint?.trim() || null;
-    const hintYear = slot.yearHint ?? null;
+    const hintYear = slot.yearHint ?? slot.year ?? null;
+
+    if (slot.isFuture) {
+      return (
+        <div className="relative w-[min(18rem,calc(100vw-2rem))]">
+          <div className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-mono-tech text-[0.6rem] uppercase tracking-[0.18em] text-faint">
+                  {position}
+                </p>
+                <p className="font-display mt-1.5 text-base font-semibold text-text">
+                  {FRANCHISE_SLOT_FUTURE_HEADLINE}
+                </p>
+              </div>
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-neural/35 bg-neural/[0.08] text-neural/80">
+                <CalendarClock className="h-3.5 w-3.5" aria-hidden />
+              </span>
+            </div>
+            {hintTitle || hintYear ? (
+              <div className="rounded-md border border-neural/30 bg-neural/[0.06] px-3 py-2">
+                {hintTitle ? (
+                  <p className="text-sm text-text">{hintTitle}</p>
+                ) : null}
+                {hintYear ? (
+                  <p className="font-mono-tech mt-0.5 text-xs text-neural-bright/90">
+                    {hintYear}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="relative w-[min(18rem,calc(100vw-2rem))]">
         <div className="space-y-3 p-4">
@@ -111,7 +150,7 @@ export function FranchiseSlotTooltip({ slot }: FranchiseSlotTooltipProps) {
                 {position}
               </p>
               <p className="font-display mt-1.5 text-base font-semibold text-text">
-                Не добавлен
+                {FRANCHISE_SLOT_MISSING_HEADLINE}
               </p>
             </div>
             <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-ember/30 bg-ember/[0.08] text-ember/70">
@@ -120,11 +159,8 @@ export function FranchiseSlotTooltip({ slot }: FranchiseSlotTooltipProps) {
           </div>
           {hintTitle || hintYear ? (
             <div className="rounded-md border border-ember/25 bg-ember/[0.06] px-3 py-2">
-              <p className="font-mono-tech text-[0.55rem] uppercase tracking-[0.18em] text-ember/80">
-                ожидается
-              </p>
               {hintTitle ? (
-                <p className="mt-1 text-sm text-text">{hintTitle}</p>
+                <p className="text-sm text-text">{hintTitle}</p>
               ) : null}
               {hintYear ? (
                 <p className="font-mono-tech mt-0.5 text-xs text-muted">

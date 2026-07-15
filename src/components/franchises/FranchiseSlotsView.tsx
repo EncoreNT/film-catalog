@@ -10,6 +10,7 @@ import { useFranchiseSpotlightHover } from "@/components/franchises/FranchiseSpo
 import { MoviePickerDialog } from "@/components/franchises/MoviePickerDialog";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { slotTier } from "@/lib/franchises/franchise-summary";
+import { isFutureFranchiseSlotState } from "@/lib/franchises/franchise-slot-future";
 import { slotTierToSpotlight } from "@/lib/media/tier-presentation";
 import { apiFetch } from "@/lib/api/client";
 
@@ -33,8 +34,10 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
       copy.sort((a, b) => a.storyOrder - b.storyOrder);
     } else {
       copy.sort((a, b) => {
-        const yearA = a.movie?.year ?? a.yearHint ?? 9999;
-        const yearB = b.movie?.year ?? b.yearHint ?? 9999;
+        const yearA =
+          a.movie?.year ?? a.yearHint ?? (a.isAnnounced ? 9999 : 9998);
+        const yearB =
+          b.movie?.year ?? b.yearHint ?? (b.isAnnounced ? 9999 : 9998);
         return yearA - yearB;
       });
     }
@@ -69,6 +72,7 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
         storyOrder: slot.storyOrder,
         titleHint: slot.titleHint,
         yearHint: slot.yearHint,
+        isAnnounced: slot.isAnnounced,
       }));
 
       await apiFetch(
@@ -121,6 +125,13 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
           {sorted.map((slot, index) => {
             const rank = storyRank.get(slot.id) ?? index + 1;
             const year = slot.movie?.year ?? slot.yearHint ?? null;
+            const isFuture = isFutureFranchiseSlotState({
+              year,
+              filled: slot.movieId != null,
+              isAnnounced: slot.isAnnounced,
+            });
+            const yearLabel =
+              year != null ? String(year) : slot.isAnnounced ? "···" : "—";
             return (
               <div
                 key={slot.id}
@@ -136,8 +147,12 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
                     {String(rank).padStart(2, "0")}
                   </span>
                   <span className="h-px flex-1 bg-border" aria-hidden />
-                  <span className="font-mono-tech shrink-0 text-[0.7rem] tabular-nums text-muted">
-                    {year ?? "—"}
+                  <span
+                    className={`font-mono-tech shrink-0 text-[0.7rem] tabular-nums ${
+                      slot.isAnnounced && year == null ? "text-neural/70" : "text-muted"
+                    }`}
+                  >
+                    {yearLabel}
                   </span>
                 </div>
                 {slot.movie ? (
@@ -158,7 +173,11 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
                     slotIndex={index}
                     titleHint={slot.titleHint}
                     yearHint={slot.yearHint}
-                    onPick={() => setPickerSlotId(slot.id)}
+                    isAnnounced={slot.isAnnounced}
+                    isFuture={isFuture}
+                    onPick={
+                      isFuture ? undefined : () => setPickerSlotId(slot.id)
+                    }
                   />
                 )}
               </div>

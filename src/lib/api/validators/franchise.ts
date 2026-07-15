@@ -5,6 +5,7 @@ export const franchiseSlotInputSchema = z.object({
   storyOrder: z.number().int(),
   titleHint: z.string().nullable().optional(),
   yearHint: z.number().int().min(1900).max(2100).nullable().optional(),
+  isAnnounced: z.boolean().optional(),
 });
 
 export const franchisePlacementSchema = z.discriminatedUnion("kind", [

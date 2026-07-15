@@ -133,6 +133,7 @@ type SlotOpts = {
   movie?: MovieWithTracks | null;
   titleHint?: string | null;
   yearHint?: number | null;
+  isAnnounced?: boolean;
 };
 
 function makeSlot(opts: SlotOpts): FranchiseWithSlots["slots"][number] {
@@ -143,6 +144,7 @@ function makeSlot(opts: SlotOpts): FranchiseWithSlots["slots"][number] {
     storyOrder: opts.storyOrder,
     titleHint: opts.titleHint ?? null,
     yearHint: opts.yearHint ?? null,
+    isAnnounced: opts.isAnnounced ?? false,
     createdAt: new Date(),
     movie: opts.movie ?? null,
   } as unknown as FranchiseWithSlots["slots"][number];
@@ -440,6 +442,33 @@ describe("computeFranchiseSummary", () => {
 
     expect(s.tier).toBe("ruby");
     expect(s.missing).toBe(1);
+    expect(s.slots[2]?.isFuture).toBe(true);
+    expect(s.slots[0]?.isFuture).toBe(false);
+  });
+
+  it("marks empty slots with future yearHint as isFuture", () => {
+    const s = computeFranchiseSummary(
+      makeFranchise([
+        makeSlot({ storyOrder: 0, yearHint: 2029, titleHint: "Аватар 4" }),
+      ]),
+    );
+    expect(s.slots[0]?.isFuture).toBe(true);
+    expect(slotQualityLabel(s.slots[0]!)).toBe("ещё не вышел");
+  });
+
+  it("marks announced TBA slots without year as isFuture", () => {
+    const s = computeFranchiseSummary(
+      makeFranchise([
+        makeSlot({
+          storyOrder: 0,
+          titleHint: "Джон Уик 5",
+          isAnnounced: true,
+        }),
+      ]),
+    );
+    expect(s.slots[0]?.isFuture).toBe(true);
+    expect(s.slots[0]?.isAnnounced).toBe(true);
+    expect(s.slots[0]?.year).toBeNull();
   });
 
   it("clears tier when every slot is filled but one film is standard", () => {
@@ -538,6 +567,22 @@ describe("computeFranchiseCollectionTier", () => {
         CURRENT_YEAR,
       ),
     ).toBe("ruby");
+
+    expect(
+      computeFranchiseCollectionTier(
+        [
+          rubySlot,
+          rubySlot,
+          {
+            filled: false,
+            tier: "missing",
+            year: null,
+            isAnnounced: true,
+          } as FranchiseSlotSummary,
+        ],
+        CURRENT_YEAR,
+      ),
+    ).toBe("ruby");
   });
 });
 
@@ -546,6 +591,15 @@ describe("isFutureFranchiseSlot", () => {
     expect(isFutureFranchiseSlot({ year: 2027 }, 2026)).toBe(true);
     expect(isFutureFranchiseSlot({ year: 2026 }, 2026)).toBe(false);
     expect(isFutureFranchiseSlot({ year: null }, 2026)).toBe(false);
+  });
+
+  it("treats empty announced slots without year as future", () => {
+    expect(
+      isFutureFranchiseSlot(
+        { year: null, filled: false, isAnnounced: true },
+        2026,
+      ),
+    ).toBe(true);
   });
 });
 

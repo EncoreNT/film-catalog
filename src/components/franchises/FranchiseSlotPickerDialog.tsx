@@ -5,6 +5,8 @@ import { Film, Library, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
 import { NativeDialog } from "@/components/primitives/NativeDialog";
 import { apiFetch } from "@/lib/api/client";
+import { isFutureFranchiseSlotState } from "@/lib/franchises/franchise-slot-future";
+import { franchiseSlotFutureFooter } from "@/lib/franchises/franchise-slot-copy";
 import type { MovieFranchiseMembership } from "@/lib/movies/movie-franchise-memberships";
 
 interface FranchiseSlotRow {
@@ -13,6 +15,7 @@ interface FranchiseSlotRow {
   movieId: number | null;
   titleHint: string | null;
   yearHint: number | null;
+  isAnnounced: boolean;
   movie: { id: number; title: string; year: number | null; slug: string } | null;
 }
 
@@ -265,6 +268,13 @@ function SlotRow({
   onFill: () => void;
 }) {
   const empty = slot.movieId == null;
+  const isFuture =
+    empty &&
+    isFutureFranchiseSlotState({
+      year: slot.yearHint,
+      filled: false,
+      isAnnounced: slot.isAnnounced,
+    });
   const fillBusy = placing?.kind === "fill" && placing.slotId === slot.id;
 
   return (
@@ -272,6 +282,8 @@ function SlotRow({
       className={`flex items-center gap-3 rounded-[var(--radius-sm)] border px-3 py-2.5 ${
         isOwn
           ? "border-accent/50 bg-accent/10"
+          : isFuture
+            ? "border-dashed border-neural/35 bg-neural/[0.06]"
           : empty
             ? "border-dashed border-border bg-bg-surface/40"
             : "border-border bg-bg-surface"
@@ -300,12 +312,16 @@ function SlotRow({
               {slot.titleHint ?? "пусто"}
             </span>
             <span className="font-mono-tech mt-0.5 block text-xs text-faint">
-              {slot.yearHint ? String(slot.yearHint) : "свободный слот"}
+              {slot.yearHint
+                ? String(slot.yearHint)
+                : slot.isAnnounced
+                  ? "ещё не вышел"
+                  : "свободный слот"}
             </span>
           </>
         )}
       </div>
-      {empty && !isOwn ? (
+      {empty && !isOwn && !isFuture ? (
         <Button
           type="button"
           variant="secondary"
@@ -316,6 +332,11 @@ function SlotRow({
         >
           Занять
         </Button>
+      ) : null}
+      {isFuture && empty ? (
+        <span className="font-mono-tech shrink-0 text-[0.58rem] text-neural/75">
+          {franchiseSlotFutureFooter(slot.yearHint, slot.isAnnounced)}
+        </span>
       ) : null}
       {slot.movie && !isOwn ? (
         <Film className="h-4 w-4 shrink-0 text-faint" aria-hidden />
