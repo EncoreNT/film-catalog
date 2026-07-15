@@ -67,20 +67,20 @@ const TIER_HOVER: Record<SlotTier, string> = {
  * slotHeadlineLabel), rendered only for filled slots. */
 const FRAME: Record<SlotTier, string> = {
   missing: "bg-black/25 ring-1 ring-inset ring-white/10",
-  standard: "bg-black/40 shadow-[inset_0_1px_1px_rgba(0,0,0,0.55)]",
-  gold: "bg-accent/[0.07] shadow-[inset_0_1px_1px_rgba(0,0,0,0.55)]",
-  ruby: "bg-crimson/[0.09] shadow-[inset_0_1px_1px_rgba(0,0,0,0.55)]",
+  standard: "bg-black/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.55)]",
+  gold: "bg-accent/[0.07] shadow-[inset_0_1px_0_rgba(0,0,0,0.55)]",
+  ruby: "bg-crimson/[0.09] shadow-[inset_0_1px_0_rgba(0,0,0,0.55)]",
 };
 
 const FRAME_HOVER: Record<SlotTier, string> = {
   missing:
     "group-hover/slot:ring-ember/55 group-hover/slot:shadow-[0_0_12px_var(--ember-glow)]",
   standard:
-    "group-hover/slot:shadow-[inset_0_1px_1px_rgba(0,0,0,0.55),0_0_14px_rgba(255,255,255,0.22)]",
+    "group-hover/slot:shadow-[inset_0_1px_0_rgba(0,0,0,0.55),0_0_14px_rgba(255,255,255,0.22)]",
   gold:
-    "group-hover/slot:shadow-[inset_0_1px_1px_rgba(0,0,0,0.55),0_0_16px_rgba(232,176,90,0.4)]",
+    "group-hover/slot:shadow-[inset_0_1px_0_rgba(0,0,0,0.55),0_0_16px_rgba(232,176,90,0.4)]",
   ruby:
-    "group-hover/slot:shadow-[inset_0_1px_1px_rgba(0,0,0,0.55),0_0_18px_rgba(154,27,52,0.6)]",
+    "group-hover/slot:shadow-[inset_0_1px_0_rgba(0,0,0,0.55),0_0_18px_rgba(154,27,52,0.6)]",
 };
 
 /* Slim quality-rail filled cells read by LIGHT, not fill: SLOT_TONE = the tier
@@ -223,7 +223,7 @@ export function FranchiseQualityReel({
       <div
         role="img"
         aria-label={ariaLabel}
-        className={`flex items-stretch gap-[2px] rounded-[6px] p-[3px] ring-1 ring-inset ring-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.01] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.5)] ${className}`}
+        className={`flex items-stretch gap-[2px] rounded-[6px] p-[3px] ring-1 ring-inset ring-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.01] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${className}`}
       >
         {slots.map((slot) => (
           <HoverTooltip
@@ -236,7 +236,7 @@ export function FranchiseQualityReel({
                 {slotHeadlineLabel(slot)}
                 <span
                   aria-hidden
-                  className={`pointer-events-none absolute inset-x-[3px] bottom-[1px] h-[2px] rounded-full ${UNDERLINE[slot.tier]}`}
+                  className={`pointer-events-none absolute inset-x-[3px] bottom-0 h-[2px] rounded-full ${UNDERLINE[slot.tier]}`}
                 />
               </>
             ) : (

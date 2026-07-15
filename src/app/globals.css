@@ -908,6 +908,16 @@ input[type="number"] {
 
 /* Poster frame rest/hover states */
 .glow-poster-rest  { box-shadow: inset 0 0 0 1px rgba(176,168,214,0.10); }
+/* Inset-only poster ring — for multi-band cards (franchise tiles) where outer
+   elevation lives on the article (.glow-card-*). Skips the outer 0 0 Npx bloom
+   on the inner shell so tier glow does not leak into grid gutters or kink at
+   internal seams (cover / meta band). */
+.glow-poster-inset       { box-shadow: inset 0 0 0 1px rgba(176,168,214,0.10); }
+.glow-poster-gold-inset  { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.12); }
+.glow-poster-ruby-inset  { box-shadow: inset 0 0 0 1px rgba(154,27,52,0.18); }
+.group\/laser:hover .glow-poster-inset      { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.32); }
+.group\/laser:hover .glow-poster-gold-inset  { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.30); }
+.group\/laser:hover .glow-poster-ruby-inset  { box-shadow: inset 0 0 0 1px rgba(224,62,98,0.46); }
 .glow-poster-hover { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.32), 0 0 36px rgba(232,176,90,0.55); }
 .glow-poster-elite-rest  { box-shadow: inset 0 0 0 1px rgba(232,176,90,0.20); }
 .glow-poster-elite-hover{ box-shadow: inset 0 0 0 1px rgba(232,176,90,0.45), 0 0 56px rgba(232,176,90,0.55), 0 0 32px rgba(139,92,246,0.55); }

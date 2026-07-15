@@ -57,40 +57,56 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
     rating != null ? `. Оценка ${rating} из 10` : ""
   }`;
 
+  const cardGlow =
+    tier === "ruby"
+      ? "glow-card-ruby"
+      : tier === "gold"
+        ? "glow-card-gold"
+        : "glow-card-rest";
+
   return (
     <article
-      className="group relative rounded-[var(--radius)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:z-10 hover:-translate-y-1 hover:scale-[1.02]"
-      style={{
-        animation: `movieCardIn 0.45s var(--ease) ${index * 45}ms both`,
-      }}
+      className={`group relative rounded-[var(--radius)] ${cardGlow} transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:z-10 hover:-translate-y-1 hover:scale-[1.02] [backface-visibility:hidden] [transform:translateZ(0)]`}
     >
       <Link
         href={`/franchises/${franchise.slug}`}
         className="focus-ring block"
         aria-label={ariaLabel}
+        style={{
+          animation: `movieCardIn 0.45s var(--ease) ${index * 45}ms both`,
+        }}
       >
         <LaserCardFrame tier={tier}>
+          {/* Single elevated shell clips rounded corners; cover + meta share one
+              opaque bg so scale/hover compositing never leaves a 1px wedge in
+              the bottom radius. Meta overlaps cover via ::before bleed. */}
           <div
-            className={`relative overflow-hidden rounded-[var(--radius)] bg-bg-base transition-shadow duration-500 ${
+            className={`relative flex flex-col overflow-hidden rounded-[var(--radius)] bg-bg-elevated transition-shadow duration-500 ${
               tier === "ruby"
-                ? "glow-poster-ruby-rest"
+                ? "glow-poster-ruby-inset"
                 : tier === "gold"
-                  ? "glow-poster-gold-rest"
-                  : "glow-poster-rest"
+                  ? "glow-poster-gold-inset"
+                  : "glow-poster-inset"
             }`}
           >
-            <div className="relative aspect-[16/9] overflow-hidden">
+            {/* Cover zoom uses a bottom-anchored scale layer so the image grows
+                upward into the frame, not away from the meta-band seam. */}
+            <div className="relative aspect-[16/9] w-full shrink-0 overflow-hidden bg-bg-base after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-px after:z-[4] after:h-[3px] after:bg-bg-elevated after:content-['']">
               {coverUrl ? (
-                <ApiCoverImage
-                  src={coverUrl}
-                  alt={`Обложка: ${franchise.name}`}
-                  fill
-                  sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, (max-width:1536px) 33vw, 25vw"
-                  className="object-cover transition-transform duration-700 group-hover/laser:scale-[1.05]"
+                <div
+                  className="absolute inset-0 origin-bottom transition-transform duration-700 group-hover/laser:scale-[1.05] [backface-visibility:hidden]"
                   style={{ transitionTimingFunction: "var(--ease)" }}
-                  loading={index < 4 ? "eager" : "lazy"}
-                  fetchPriority={index === 0 ? "high" : undefined}
-                />
+                >
+                  <ApiCoverImage
+                    src={coverUrl}
+                    alt={`Обложка: ${franchise.name}`}
+                    fill
+                    sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, (max-width:1536px) 33vw, 25vw"
+                    className="object-cover"
+                    loading={index < 4 ? "eager" : "lazy"}
+                    fetchPriority={index === 0 ? "high" : undefined}
+                  />
+                </div>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                   <div
@@ -170,24 +186,26 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
               </div>
             </div>
 
-            <div className="space-y-2.5 bg-bg-elevated/50 px-4 py-3">
-              {summary.total > 0 ? (
-                <FranchiseQualityReel slots={summary.slots} variant="slim" />
-              ) : (
-                <div className="h-5" aria-hidden />
-              )}
-              <div className="flex items-center gap-3 font-mono-tech text-[0.65rem] tabular-nums text-muted">
-                {era ? (
-                  <span className="text-text/80">{era}</span>
+            <div className="relative shrink-0 px-4 py-3 before:pointer-events-none before:absolute before:inset-x-0 before:-top-[3px] before:z-[1] before:h-[3px] before:bg-bg-elevated before:content-['']">
+              <div className="relative space-y-2.5">
+                {summary.total > 0 ? (
+                  <FranchiseQualityReel slots={summary.slots} variant="slim" />
                 ) : (
-                  <span className="text-faint">годы неизвестны</span>
+                  <div className="h-5" aria-hidden />
                 )}
-                {runtime ? (
-                  <span className="ml-auto flex items-center gap-3">
-                    <span className="h-3 w-px bg-border" aria-hidden />
-                    <span>{runtime}</span>
-                  </span>
-                ) : null}
+                <div className="flex items-center gap-3 font-mono-tech text-[0.65rem] tabular-nums text-muted">
+                  {era ? (
+                    <span className="text-text/80">{era}</span>
+                  ) : (
+                    <span className="text-faint">годы неизвестны</span>
+                  )}
+                  {runtime ? (
+                    <span className="ml-auto flex items-center gap-3">
+                      <span className="h-3 w-px bg-border" aria-hidden />
+                      <span>{runtime}</span>
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
