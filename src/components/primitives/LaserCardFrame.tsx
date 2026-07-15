@@ -26,6 +26,7 @@ export function LaserCardFrame({
   const goldHeadId = `laser-head-${uid}`;
   const emberId = `laser-ember-${uid}`;
   const rubyHeadId = `laser-ruby-${uid}`;
+  const standardHeadId = `laser-standard-${uid}`;
   const glowId = `laser-glow-${uid}`;
 
   const strokeId =
@@ -33,7 +34,7 @@ export function LaserCardFrame({
       ? rubyHeadId
       : tier === "gold"
         ? emberId
-        : goldHeadId;
+        : standardHeadId;
 
   return (
     <div className={`group/laser relative rounded-[var(--radius)] ${className}`}>
@@ -70,6 +71,19 @@ export function LaserCardFrame({
               <stop offset="40%" stopColor="var(--crimson)" />
               <stop offset="55%" stopColor="#f6e2e6" />
               <stop offset="70%" stopColor="var(--crimson-bright)" />
+              <stop offset="100%" stopColor="transparent" />
+            </linearGradient>
+            <linearGradient
+              id={standardHeadId}
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="0%"
+            >
+              <stop offset="0%" stopColor="transparent" />
+              <stop offset="40%" stopColor="#c8d4e8" />
+              <stop offset="55%" stopColor="#f4f6fb" />
+              <stop offset="70%" stopColor="#dee4f0" />
               <stop offset="100%" stopColor="transparent" />
             </linearGradient>
             <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
