@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { Film, Plus, X } from "lucide-react";
 import type { EditableSlot } from "@/components/franchises/FranchiseSlotsEditor";
+import { UnderlineLines } from "@/components/primitives/Field";
+import { MAX_YEAR, MIN_YEAR, clampYear } from "@/components/primitives/YearInput";
 import { trimOnInputBlur } from "@/lib/shared/text-trim";
 
 interface FranchiseSlotCardProps {
@@ -31,7 +33,7 @@ export function FranchiseSlotCard({
 
   return (
     <article
-      className="group relative flex gap-3 rounded-[var(--radius-sm)] border border-border bg-bg-surface/10 p-2.5 transition-colors duration-200 hover:border-border-strong hover:bg-bg-surface/15"
+      className="group relative flex gap-3 rounded-[var(--radius-sm)] border border-border/50 bg-bg-surface/[0.04] p-2.5 transition-colors duration-200 hover:border-border hover:bg-bg-surface/15"
       style={{
         animation: `movieCardIn 0.4s var(--ease) ${Math.min(index, 8) * 35}ms both`,
       }}
@@ -130,29 +132,55 @@ export function FranchiseSlotCard({
             ) : null}
           </button>
         ) : (
-          <div className="grid grid-cols-[1fr_4rem] gap-2">
-            <input
-              value={slot.titleHint ?? ""}
-              onChange={(e) => onHintChange("titleHint", e.target.value)}
-              onBlur={(e) =>
-                trimOnInputBlur(e, (ev) =>
-                  onHintChange("titleHint", ev.target.value),
-                )
-              }
-              onClick={(e) => e.stopPropagation()}
-              placeholder="название (необязательно)"
-              aria-label={`Фильм ${index + 1}: название`}
-              className="focus-ring min-h-8 w-full border-0 border-b border-border bg-transparent px-1 py-1 text-xs text-text placeholder:text-muted/50 transition-colors focus:border-accent focus:shadow-[0_1px_6px_-2px_rgba(232,176,90,0.4)]"
-            />
-            <input
-              type="number"
-              value={slot.yearHint ?? ""}
-              onChange={(e) => onHintChange("yearHint", e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              placeholder="год"
-              aria-label={`Фильм ${index + 1}: год`}
-              className="focus-ring font-mono-tech min-h-8 w-full border-0 border-b border-border bg-transparent px-1 py-1 text-xs text-text placeholder:text-muted/50 transition-colors focus:border-accent focus:shadow-[0_1px_6px_-2px_rgba(232,176,90,0.4)]"
-            />
+          <div className="grid grid-cols-[1fr_5.5rem] gap-3">
+            {/* Title hint — reuses the Field underline laser (rest hairline +
+                gold gradient scale-in on focus) so the slot's title reads the
+                same as the franchise name field above. */}
+            <div className="relative">
+              <input
+                value={slot.titleHint ?? ""}
+                onChange={(e) => onHintChange("titleHint", e.target.value)}
+                onBlur={(e) =>
+                  trimOnInputBlur(e, (ev) =>
+                    onHintChange("titleHint", ev.target.value),
+                  )
+                }
+                onClick={(e) => e.stopPropagation()}
+                placeholder="название (необязательно)"
+                aria-label={`Фильм ${index + 1}: название`}
+                className="peer min-h-9 w-full border-0 bg-transparent px-1 py-1 text-xs text-text outline-none placeholder:text-muted/50"
+              />
+              <UnderlineLines />
+            </div>
+            {/* Year hint — same laser underline, digits-only, clamped to the
+                project's release-year range on blur so junk like 121 or
+                103032 can't be stored. Compact (no decade picker) to fit the
+                slot row. */}
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={slot.yearHint ?? ""}
+                onChange={(e) =>
+                  onHintChange(
+                    "yearHint",
+                    e.target.value.replace(/\D/g, "").slice(0, 4),
+                  )
+                }
+                onBlur={() => {
+                  const n =
+                    slot.yearHint == null ? null : Number(slot.yearHint);
+                  if (n != null && (n < MIN_YEAR || n > MAX_YEAR)) {
+                    onHintChange("yearHint", String(clampYear(n)));
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="год"
+                aria-label={`Фильм ${index + 1}: год`}
+                className="peer font-mono-tech min-h-9 w-full border-0 bg-transparent px-1 py-1 text-center text-xs tabular-nums text-text outline-none placeholder:text-muted/50"
+              />
+              <UnderlineLines />
+            </div>
           </div>
         )}
 

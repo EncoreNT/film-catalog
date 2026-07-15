@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { Clapperboard, Pencil } from "lucide-react";
+import { Clapperboard, Star } from "lucide-react";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import { BackLink } from "@/components/primitives/BackLink";
 import { FranchiseCompletionMeter } from "@/components/franchises/FranchiseCompletionMeter";
-import { QualityGauge } from "@/components/primitives/QualityGauge";
-import { ARCHIVE_QUALITY_METRIC_DEFS } from "@/lib/catalog/archive-quality-metrics";
+import { FranchiseQualityReel } from "@/components/franchises/FranchiseQualityReel";
 import { pluralRu } from "@/lib/shared/russian-plural";
-import type { ArchiveMetrics } from "@/lib/catalog/archive-metrics";
+import { formatArchiveTotalDuration } from "@/lib/shared/format";
+import type { FranchiseSummary } from "@/lib/franchises/franchise-summary";
 
 interface FranchiseDetailHeroProps {
   franchise: {
@@ -15,119 +15,203 @@ interface FranchiseDetailHeroProps {
     description: string | null;
   };
   coverUrl: string | null;
-  filled: number;
-  total: number;
-  metrics: ArchiveMetrics;
+  summary: FranchiseSummary;
 }
 
+function eraLabel(start: number | null, end: number | null): string | null {
+  if (start == null && end == null) return null;
+  if (start == null) return `${end}`;
+  if (end == null) return `${start}`;
+  if (start === end) return `${start}`;
+  return `${start}-${end}`;
+}
+
+function MetaLine({ summary }: { summary: FranchiseSummary }) {
+  const era = eraLabel(summary.yearStart, summary.yearEnd);
+  const runtime = formatArchiveTotalDuration(summary.totalRuntimeSeconds);
+  const rating =
+    summary.averageRating != null ? summary.averageRating.toFixed(1) : null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono-tech text-[0.65rem] tabular-nums text-muted">
+      {era ? (
+        <span className="text-text/80">{era}</span>
+      ) : (
+        <span className="text-faint">годы неизвестны</span>
+      )}
+      {runtime ? (
+        <span className="flex items-center gap-3">
+          <span className="h-2.5 w-px bg-border" aria-hidden />
+          {runtime}
+        </span>
+      ) : null}
+      {rating ? (
+        <span className="flex items-center gap-3">
+          <span className="h-2.5 w-px bg-border" aria-hidden />
+          <span className="inline-flex items-center gap-1 text-accent-bright">
+            {rating}
+            <Star className="h-2.5 w-2.5 fill-accent text-accent" aria-hidden />
+          </span>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Pinned masthead — editorial split from the "Bond OK" composition.
+ *
+ * Cover stays true 16:9. Height is budgeted so the film-card row below still
+ * fits on screen (`clamp` vs viewport); width follows aspect, and the left
+ * column is `auto` (sized to the still) — never a full-bleed 16:9 that eats
+ * half the viewport, and never a tiny still floating in a wide empty column.
+ */
 export function FranchiseDetailHero({
   franchise,
   coverUrl,
-  filled,
-  total,
-  metrics,
+  summary,
 }: FranchiseDetailHeroProps) {
+  const tier = summary.tier;
+  const tierGlow =
+    tier === "ruby"
+      ? "glow-poster-ruby-rest"
+      : tier === "gold"
+        ? "glow-poster-gold-rest"
+        : "glow-poster-rest";
+  const filmCount = `${summary.total} ${pluralRu(
+    summary.total,
+    "фильм",
+    "фильма",
+    "фильмов",
+  )}`;
+  const era = eraLabel(summary.yearStart, summary.yearEnd);
+
   return (
-    <section className="relative left-1/2 -translate-x-1/2 -mt-8 sm:-mt-12 w-screen overflow-hidden border-b border-border bg-bg-elevated">
-      <div className="relative w-full aspect-[16/9] min-h-[300px] max-h-[680px]">
-        {coverUrl ? (
-          <ApiCoverImage
-            src={coverUrl}
-            alt={`Обложка: ${franchise.name}`}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            loading="eager"
-            fetchPriority="high"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-accent-soft to-transparent">
-            <Clapperboard className="h-16 w-16 text-accent/30" aria-hidden />
-          </div>
-        )}
-        <div
-          className="pointer-events-none absolute inset-0 bg-bg-deep/30"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg-deep via-bg-deep/85 to-transparent"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-bg-deep/80 to-transparent"
-          aria-hidden
-        />
+    <section className="flex flex-col gap-2.5">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <BackLink href="/franchises">К списку франшиз</BackLink>
+        <Link
+          href={`/franchises/${franchise.slug}/edit`}
+          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-full border border-border-strong bg-bg-surface px-3 py-1 text-xs text-muted transition-all duration-300 hover:border-accent/50 hover:bg-accent/10 hover:text-accent"
+          title="Редактировать франшизу"
+        >
+          <span className="font-mono-tech">редактировать</span>
+        </Link>
+      </div>
 
-        <div className="absolute inset-x-0 top-0">
-          <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 sm:px-8 pt-6">
-            <BackLink
-              href="/franchises"
-              className="focus-ring inline-flex items-center gap-2 rounded-[var(--radius)] bg-bg-deep/50 px-3 py-1.5 text-sm text-text/90 backdrop-blur-sm transition-colors hover:bg-bg-deep/70 hover:text-accent"
-            >
-              К списку франшиз
-            </BackLink>
-            <Link
-              href={`/franchises/${franchise.slug}/edit`}
-              className="focus-ring inline-flex items-center gap-2 rounded-[var(--radius)] border border-white/15 bg-bg-deep/50 px-3.5 py-1.5 text-sm font-medium text-text backdrop-blur-sm transition-all duration-200 hover:border-accent/50 hover:text-accent"
-            >
-              <Pencil className="h-4 w-4" aria-hidden />
-              Редактировать
-            </Link>
-          </div>
-        </div>
-
-        <div className="absolute inset-x-0 bottom-0">
-          <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 pb-8 sm:pb-10 pt-6">
-            <div className="max-w-3xl space-y-4">
-              <div>
-                <p className="font-mono-tech text-accent">
-                  {total}{" "}
-                  {pluralRu(total, "фильм", "фильма", "фильмов")}
-                </p>
-                <h1 className="font-display mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-                  {franchise.name}
-                </h1>
-                {franchise.description ? (
-                  <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-relaxed text-text/80">
-                    {franchise.description}
-                  </p>
-                ) : null}
-              </div>
-
-              {total > 0 ? (
-                <div className="space-y-3 border-t border-white/10 pt-4">
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono-tech shrink-0 text-[0.6rem] uppercase tracking-wider text-text/70">
-                      собрано
-                    </span>
-                    <FranchiseCompletionMeter
-                      filled={filled}
-                      total={total}
-                      variant="inline"
-                      className="min-w-0 flex-1"
+      {/* auto | 1fr — left column hugs the still, title takes the rest */}
+      <div className="grid grid-cols-1 items-center gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-7">
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="group relative w-full lg:w-fit lg:max-w-full">
+            <div className="poster-frame w-full lg:w-fit lg:max-w-full">
+              {/*
+                Height budget (desktop): ~240–288px → width follows 16:9
+                (~427–512px). Mobile: full-width 16:9 from the column.
+              */}
+              <div
+                className={`poster-frame-inner relative aspect-[16/9] w-full overflow-hidden bg-bg-base lg:h-[clamp(15rem,28dvh,18rem)] lg:w-auto lg:max-w-full ${tierGlow}`}
+              >
+                {coverUrl ? (
+                  <ApiCoverImage
+                    src={coverUrl}
+                    alt={`Обложка: ${franchise.name}`}
+                    fill
+                    sizes="(max-width:1024px) 100vw, 30rem"
+                    className="object-cover object-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
+                    loading="eager"
+                    fetchPriority="high"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
+                    <div
+                      className="absolute inset-0 opacity-60"
+                      aria-hidden
+                      style={{
+                        background:
+                          "radial-gradient(ellipse 80% 60% at 50% 30%, var(--accent-soft) 0%, transparent 70%)",
+                      }}
+                    />
+                    <Clapperboard
+                      className="relative h-10 w-10 text-accent/45"
+                      aria-hidden
                     />
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {ARCHIVE_QUALITY_METRIC_DEFS.map((def) => {
-                      const Icon = def.icon;
-                      return (
-                        <QualityGauge
-                          key={def.key}
-                          count={metrics[def.key]}
-                          total={total}
-                          label={def.label}
-                          icon={<Icon className="h-3.5 w-3.5" />}
-                          elite={def.elite}
-                          interactive={false}
-                          size="sm"
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
+                )}
+
+                {tier ? (
+                  <div
+                    className={`pointer-events-none absolute inset-0 z-[2] opacity-[0.12] mix-blend-overlay transition-opacity duration-500 group-hover:opacity-40 ${
+                      tier === "ruby" ? "holo-ruby" : "holo-gold"
+                    }`}
+                    aria-hidden
+                  />
+                ) : null}
+
+                {tier ? (
+                  <div
+                    className={`tier-laser-top ${
+                      tier === "ruby"
+                        ? "tier-laser-top-ruby"
+                        : "tier-laser-top-gold"
+                    }`}
+                    aria-hidden
+                  />
+                ) : null}
+
+                <div
+                  className="pointer-events-none absolute inset-0 z-[3]"
+                  aria-hidden
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(7,6,10,0.45) 0%, transparent 50%)",
+                  }}
+                />
+              </div>
             </div>
           </div>
+
+          {summary.total > 0 ? (
+            <FranchiseQualityReel
+              slots={summary.slots}
+              variant="slim"
+              className="w-full"
+            />
+          ) : null}
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-center gap-3 lg:border-l lg:border-border lg:pl-7">
+          <div className="space-y-1.5">
+            <p className="font-mono-tech text-[0.65rem] uppercase tracking-[0.16em] text-accent/80">
+              {filmCount}
+              {era ? <span className="text-faint"> · {era}</span> : null}
+            </p>
+            <h1 className="font-display text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl lg:text-[2.75rem]">
+              {franchise.name}
+            </h1>
+          </div>
+
+          {franchise.description ? (
+            <p className="line-clamp-2 max-w-md text-sm leading-relaxed text-muted">
+              {franchise.description}
+            </p>
+          ) : null}
+
+          {summary.total > 0 ? (
+            <div className="space-y-2.5 border-t border-border pt-3">
+              <div className="flex items-center gap-3">
+                <span className="font-mono-tech shrink-0 text-[0.55rem] uppercase tracking-[0.16em] text-faint">
+                  собрано
+                </span>
+                <FranchiseCompletionMeter
+                  filled={summary.filled}
+                  total={summary.total}
+                  variant="inline"
+                  className="min-w-0 flex-1"
+                />
+              </div>
+              <MetaLine summary={summary} />
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

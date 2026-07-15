@@ -4,9 +4,9 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "rea
 import { ChevronDown, Minus, Plus, X } from "lucide-react";
 import { InfoHint } from "./InfoHint";
 
-const MIN_YEAR = 1888;
+export const MIN_YEAR = 1888;
 /** Latest accepted release year (allow upcoming releases). */
-const MAX_YEAR = new Date().getFullYear() + 1;
+export const MAX_YEAR = new Date().getFullYear() + 1;
 
 interface YearInputProps {
   /** Stored year (source of truth). */
@@ -16,7 +16,7 @@ interface YearInputProps {
   hint?: ReactNode;
 }
 
-function clampYear(n: number): number {
+export function clampYear(n: number): number {
   return Math.min(MAX_YEAR, Math.max(MIN_YEAR, n));
 }
 

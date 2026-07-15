@@ -1,4 +1,7 @@
+"use client";
+
 import { Film, Link2 } from "lucide-react";
+import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
 
 interface FranchisePlaceholderProps {
   slotIndex: number;
@@ -8,6 +11,13 @@ interface FranchisePlaceholderProps {
   onPick?: () => void;
 }
 
+/**
+ * Empty franchise slot — a framed poster waiting to be filled, not a broken
+ * image. Speaks the same poster language as MovieCard (LaserCardFrame +
+ * aspect-[2/3] + tier-laser-top + inset glow) but in the warm ember "missing"
+ * tone (see globals.css .glow-card-ember / .tier-laser-top-ember), so empty
+ * slots read as a distinct, gentle state rather than a dashed placeholder.
+ */
 export function FranchisePlaceholder({
   slotIndex,
   titleHint,
@@ -17,19 +27,9 @@ export function FranchisePlaceholder({
   const label = titleHint ?? `Фильм ${slotIndex + 1}`;
   const interactive = onPick != null;
 
-  const content = (
-    <>
-      {/* Film-strip perforations on both sides — the "empty cell" frame */}
-      <div
-        className="film-perfs-y pointer-events-none absolute inset-y-0 left-0 w-3 opacity-30"
-        aria-hidden
-      />
-      <div
-        className="film-perfs-y pointer-events-none absolute inset-y-0 right-0 w-3 opacity-30"
-        aria-hidden
-      />
-
-      {/* Soft projector glow — an empty screen waiting to be lit, not a broken image */}
+  const inner = (
+    <div className="glow-poster-ember-rest relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] bg-bg-base">
+      {/* Empty-screen ember glow — an unlit projector, not a missing image */}
       <div
         className="pointer-events-none absolute inset-0 opacity-70"
         aria-hidden
@@ -38,76 +38,101 @@ export function FranchisePlaceholder({
             "radial-gradient(ellipse 75% 55% at 50% 38%, var(--ember-glow) 0%, transparent 70%)",
         }}
       />
+      {/* Film-strip perforations on both sides — the empty-cell frame */}
+      <div
+        className="film-perfs-y pointer-events-none absolute inset-y-0 left-0 w-3 opacity-25"
+        aria-hidden
+      />
+      <div
+        className="film-perfs-y pointer-events-none absolute inset-y-0 right-0 w-3 opacity-25"
+        aria-hidden
+      />
+      {/* Flat ember laser line at the top edge — the "missing" tier signal,
+          mirrors MovieCard's tier-laser-top but in ember. */}
+      <div className="tier-laser-top tier-laser-top-ember" aria-hidden />
+      {/* Bottom legibility scrim for the caption */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[3]"
+        aria-hidden
+        style={{
+          background:
+            "linear-gradient(to top, rgba(7,6,10,0.96) 0%, rgba(7,6,10,0.7) 30%, transparent 60%)",
+        }}
+      />
 
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-2.5 px-5 py-6 text-center">
+      {/* Center glyph + hint */}
+      <div className="relative flex h-full flex-col items-center justify-center gap-3 px-5 py-6 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ember/25 bg-bg-deep/40 text-ember/60">
+          <Film className="h-5 w-5" aria-hidden />
+        </span>
         {titleHint ? (
           <>
             <p className="font-display text-base font-semibold leading-tight text-text">
               {titleHint}
             </p>
             {yearHint ? (
-              <p className="font-mono-tech text-xs text-accent/80">{yearHint}</p>
+              <p className="font-mono-tech text-xs text-ember-bright/80">
+                {yearHint}
+              </p>
             ) : null}
           </>
         ) : (
-          <>
-            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-ember/25 bg-bg-deep/40 text-ember/60">
-              <Film className="h-5 w-5" aria-hidden />
-            </span>
-            <p className="font-display text-sm font-semibold leading-tight text-muted">
-              {label}
-            </p>
-          </>
+          <p className="font-display text-sm font-semibold leading-tight text-muted">
+            {label}
+          </p>
         )}
       </div>
 
-      <div className="relative border-t border-ember/20 bg-ember/5 px-3 py-2.5 text-center">
-        <p className="font-mono-tech text-[0.65rem] text-ember/80">
-          пока не в архиве
-        </p>
+      {/* Bottom status — a line/glow caption, not a filled box */}
+      <div className="absolute inset-x-0 bottom-0 z-10 p-2.5">
+        <div className="flex items-center gap-2 font-mono-tech text-[0.55rem] uppercase tracking-[0.14em]">
+          <span className="h-px flex-1 bg-ember/30" aria-hidden />
+          <span className="text-ember-bright/80">пока не в архиве</span>
+          <span className="h-px flex-1 bg-ember/30" aria-hidden />
+        </div>
       </div>
 
       {/* Hover affordance — "привязать фильм" — only when interactive */}
       {interactive ? (
         <span
-          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-bg-deep/75 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-bg-deep/80 opacity-0 transition-opacity duration-200 group-hover/laser:opacity-100"
           aria-hidden
         >
-          <span className="font-mono-tech inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-bg-deep/80 px-3 py-1.5 text-[0.65rem] text-accent">
+          <span className="font-mono-tech inline-flex items-center gap-1.5 rounded-full border border-accent/45 bg-bg-deep/90 px-3 py-1.5 text-[0.6rem] text-accent">
             <Link2 className="h-3 w-3" />
             привязать фильм
           </span>
         </span>
       ) : null}
-    </>
+    </div>
   );
 
-  const className = `group relative flex aspect-[2/3] flex-col overflow-hidden rounded-[var(--radius)] border-2 border-dashed border-ember/40 bg-bg-surface/30 transition-all duration-200 ${
-    interactive
-      ? "cursor-pointer hover:border-ember/70 hover:shadow-[0_0_24px_var(--ember-glow)]"
-      : ""
+  const articleClass = `group relative rounded-[var(--radius)] glow-card-ember transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+    interactive ? "hover:z-10 hover:-translate-y-1 hover:scale-[1.03]" : ""
   }`;
 
   if (interactive) {
     return (
-      <button
-        type="button"
-        onClick={onPick}
-        aria-label={
-          titleHint
-            ? `Привязать фильм к слоту «${titleHint}»`
-            : `Привязать фильм к слоту ${slotIndex + 1}`
-        }
-        className={`${className} focus-ring`}
-      >
-        {content}
-      </button>
+      <article className={articleClass}>
+        <button
+          type="button"
+          onClick={onPick}
+          aria-label={
+            titleHint
+              ? `Привязать фильм к слоту «${titleHint}»`
+              : `Привязать фильм к слоту ${slotIndex + 1}`
+          }
+          className="focus-ring block w-full text-left"
+        >
+          <LaserCardFrame tier={null}>{inner}</LaserCardFrame>
+        </button>
+      </article>
     );
   }
 
   return (
-    <article className={className} aria-label={`Пока не в архиве: ${label}`}>
-      {content}
+    <article className={articleClass} aria-label={`Пока не в архиве: ${label}`}>
+      <LaserCardFrame tier={null}>{inner}</LaserCardFrame>
     </article>
   );
 }

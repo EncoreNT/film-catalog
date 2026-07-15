@@ -21,8 +21,14 @@ interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
  *   variant. The rest line sits at the input's bottom edge; the focus line is a
  *   2px gold gradient that scales in from the left on peer-focus, mirroring the
  *   release-tab / reel-underline language. rgba() literals (not var()) for the
- *   glow — Tailwind v4 renders arbitrary box-shadow with var() unreliably. */
-function UnderlineLines({ error }: { error?: string }) {
+ *   glow — Tailwind v4 renders arbitrary box-shadow with var() unreliably.
+ *
+ *   The rest line uses a 35%-alpha lavender hairline (stronger than the 10%-alpha
+ *   --border-hairline and the 20%-alpha --border-strong) so the field is clearly
+ *   locatable over the grid background without focus; the boxy focus-ring outline
+ *   is suppressed on the underline variant so the laser line is the sole, clean
+ *   focus cue instead of a competing yellow rectangle. */
+export function UnderlineLines({ error }: { error?: string }) {
   const focusLine = error
     ? "from-danger via-danger to-transparent shadow-[0_0_8px_rgba(248,113,113,0.45)]"
     : "from-accent-bright via-accent to-transparent shadow-[0_0_8px_rgba(232,176,90,0.45)]";
@@ -30,7 +36,9 @@ function UnderlineLines({ error }: { error?: string }) {
     <>
       <span
         aria-hidden
-        className={`pointer-events-none absolute inset-x-0 bottom-0 h-px ${error ? "bg-danger/60" : "bg-border"}`}
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-px transition-colors duration-200 ${
+          error ? "bg-danger/60" : "bg-[rgba(176,168,214,0.35)] peer-hover:bg-accent/55"
+        }`}
       />
       <span
         aria-hidden
@@ -73,7 +81,7 @@ export function Field({
           <div className="relative">
             <input
               id={fieldId}
-              className={`focus-ring peer min-h-11 w-full border-0 bg-transparent px-0 py-2 text-sm text-text placeholder:text-muted/50 ${className}`}
+              className={`peer min-h-11 w-full border-0 bg-transparent px-0 py-2 text-sm text-text placeholder:text-muted/50 outline-none ${className}`}
               aria-invalid={!!error}
               aria-describedby={error ? `${fieldId}-error` : undefined}
               required={required}
@@ -142,7 +150,7 @@ export function TextAreaField({
         <div className="relative">
           <textarea
             id={fieldId}
-            className={`focus-ring peer min-h-28 w-full resize-y border-0 bg-transparent px-0 py-2 text-sm text-text placeholder:text-muted/50 ${className}`}
+            className={`peer min-h-28 w-full resize-y border-0 bg-transparent px-0 py-2 text-sm text-text placeholder:text-muted/50 outline-none ${className}`}
             aria-invalid={!!error}
             onChange={onChange}
             onBlur={(e) => trimOnTextareaBlur(e, onChange, onBlur)}

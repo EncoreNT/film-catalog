@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpDown } from "lucide-react";
 import { SegmentedControl } from "@/components/primitives/SegmentedControl";
 import { useRouter } from "next/navigation";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
@@ -38,6 +37,16 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
     return copy;
   }, [slots, sortMode]);
 
+  // Stable story-order rank per slot — the chronology badge always shows the
+  // slot's place in the franchise's world, regardless of the active sort.
+  const storyRank = useMemo(() => {
+    const map = new Map<number, number>();
+    [...slots]
+      .sort((a, b) => a.storyOrder - b.storyOrder)
+      .forEach((s, i) => map.set(s.id, i + 1));
+    return map;
+  }, [slots]);
+
   const pickerSlotIndex = pickerSlotId
     ? sorted.findIndex((s) => s.id === pickerSlotId)
     : -1;
@@ -51,7 +60,6 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
     if (pickerSlotId == null) return;
     setSaving(true);
     try {
-      // Rebuild the full slot set with the chosen movie linked to this slot.
       const payload = sorted.map((slot) => ({
         movieId: slot.id === pickerSlotId ? movie.id : slot.movieId,
         storyOrder: slot.storyOrder,
@@ -78,9 +86,15 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
   };
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-mono-tech text-muted">фильмы франшизы</h2>
+    <section className="flex min-h-0 flex-col gap-4 lg:flex-1">
+      {/* Pinned section header — does not scroll. Sits on the page background
+          (no opaque bar needed) because only the grid below scrolls, so
+          nothing rides under it. Aligned to the cover via the same gutter
+          the grid uses. */}
+      <div className="flex shrink-0 flex-wrap items-end justify-between gap-3 py-1">
+        <h2 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+          Фильмы франшизы
+        </h2>
         <SegmentedControl
           value={sortMode}
           onChange={setSortMode}
@@ -94,34 +108,55 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
         />
       </div>
 
-      <div className="film-perfs mb-2 h-3 w-full opacity-40" aria-hidden />
+      {/* Only the list scrolls. The wrapper extends into main's horizontal
+          padding (-mx) and pads content back (px) so the grid left-edge
+          aligns with the hero cover, and card box-shadows paint into the
+          gutter instead of being clipped by overflow-y. */}
+      <div className="-mx-6 min-h-0 flex-1 px-6 pt-1 lg:-mx-10 lg:overflow-y-auto lg:px-10 lg:pb-10 xl:-mx-14 xl:px-14 2xl:-mx-20 2xl:px-20 3xl:-mx-24 3xl:px-24">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {sorted.map((slot, index) => {
+            const rank = storyRank.get(slot.id) ?? index + 1;
+            const year = slot.movie?.year ?? slot.yearHint ?? null;
+            return (
+              <div
+                key={slot.id}
+                className="flex flex-col gap-2"
+                style={{
+                  animation: `movieCardIn 0.45s var(--ease) ${
+                    Math.min(index, 10) * 45
+                  }ms both`,
+                }}
+              >
+                <div className="flex items-center gap-2 px-0.5">
+                  <span className="font-mono-tech shrink-0 text-[0.7rem] tabular-nums text-faint">
+                    {String(rank).padStart(2, "0")}
+                  </span>
+                  <span className="h-px flex-1 bg-border" aria-hidden />
+                  <span className="font-mono-tech shrink-0 text-[0.7rem] tabular-nums text-muted">
+                    {year ?? "—"}
+                  </span>
+                </div>
+                {slot.movie ? (
+                  <MovieCard movie={slot.movie as MovieWithTracks} index={index} />
+                ) : (
+                  <FranchisePlaceholder
+                    slotIndex={index}
+                    titleHint={slot.titleHint}
+                    yearHint={slot.yearHint}
+                    onPick={() => setPickerSlotId(slot.id)}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-        {sorted.map((slot, index) =>
-          slot.movie ? (
-            <MovieCard
-              key={slot.id}
-              movie={slot.movie as MovieWithTracks}
-              index={index}
-            />
-          ) : (
-            <FranchisePlaceholder
-              key={slot.id}
-              slotIndex={index}
-              titleHint={slot.titleHint}
-              yearHint={slot.yearHint}
-              onPick={() => setPickerSlotId(slot.id)}
-            />
-          ),
-        )}
+        {sorted.length === 0 ? (
+          <p className="text-center text-sm text-muted">
+            Фильмы ещё не добавлены.
+          </p>
+        ) : null}
       </div>
-
-      {sorted.length === 0 ? (
-        <p className="text-center text-sm text-muted">
-          Фильмы ещё не добавлены.{" "}
-          <ArrowUpDown className="inline h-3.5 w-3.5" aria-hidden />
-        </p>
-      ) : null}
 
       <MoviePickerDialog
         open={pickerSlotId != null}

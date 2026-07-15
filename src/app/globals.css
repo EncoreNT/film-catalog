@@ -840,6 +840,21 @@ input[type="number"] {
     0 16px 52px rgba(122, 20, 40, 0.42),
     0 4px 16px rgba(0, 0, 0, 0.5);
 }
+/* Ember = "missing" placeholder slot — warm, low-saturation ember tone
+   (not gold, not ruby) so empty slots read as a distinct, gentle state
+   rather than a broken card. Softer than gold. */
+.glow-card-ember {
+  box-shadow:
+    0 12px 36px rgba(200, 112, 56, 0.22),
+    0 6px 18px rgba(160, 88, 40, 0.14),
+    0 2px 10px rgba(0, 0, 0, 0.45);
+}
+.group:hover .glow-card-ember {
+  box-shadow:
+    0 22px 64px rgba(224, 138, 78, 0.38),
+    0 12px 38px rgba(200, 112, 56, 0.24),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+}
 
 /* Ruby = 4K + HDR + Atmos 7.1 — deep crimson brilliance, brighter and
    more saturated than gold. Inset ring is subtle — the laser-top line
@@ -848,6 +863,10 @@ input[type="number"] {
 .glow-bezel-ruby       { box-shadow: 0 0 26px rgba(154,27,52,0.40), 0 0 16px rgba(122,20,40,0.26); }
 .group\/laser:hover .glow-poster-ruby-rest { box-shadow: inset 0 0 0 1px rgba(224,62,98,0.46), 0 0 64px rgba(154,27,52,0.64), 0 0 34px rgba(122,20,40,0.40); }
 .group\/laser:hover .glow-bezel-ruby       { box-shadow: 0 0 48px rgba(154,27,52,0.62), 0 0 30px rgba(122,20,40,0.42); }
+
+/* Ember poster rest — the empty-slot inset ring, gentler than gold. */
+.glow-poster-ember-rest { box-shadow: inset 0 0 0 1px rgba(200,112,56,0.18), 0 0 16px rgba(200,112,56,0.20); }
+.group\/laser:hover .glow-poster-ember-rest { box-shadow: inset 0 0 0 1px rgba(224,138,78,0.40), 0 0 44px rgba(200,112,56,0.40), 0 0 22px rgba(160,88,40,0.26); }
 
 /* ── Flat laser-line tier accents (top edge) ──
    Replaces the old heavy inset ring as the primary tier signal.
@@ -890,6 +909,20 @@ input[type="number"] {
 .group\/laser:hover .tier-laser-top-ruby {
   opacity: 1;
   box-shadow: 0 0 14px rgba(154, 27, 52, 0.75), 0 0 6px rgba(224, 62, 98, 0.55);
+}
+
+/* Ember laser-top line — the "missing slot" tier signal. */
+.tier-laser-top-ember {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(200, 112, 56, 0.55) 28%,
+    rgba(224, 138, 78, 0.85) 50%,
+    rgba(200, 112, 56, 0.55) 72%,
+    transparent 100%);
+}
+.group\/laser:hover .tier-laser-top-ember {
+  opacity: 0.9;
+  box-shadow: 0 0 12px rgba(224, 138, 78, 0.55), 0 0 5px rgba(200, 112, 56, 0.45);
 }
 
 /* Ruby gradient border — deep crimson metal */

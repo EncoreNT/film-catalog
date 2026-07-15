@@ -160,7 +160,7 @@ export function FranchiseSlotsEditor({
     : -1;
 
   return (
-    <MachinedCard bodyClassName="space-y-5">
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <CardSectionHeader label="хронология мира" title="Фильмы франшизы" />
         <p className="font-mono-tech text-xs text-muted tabular-nums">
@@ -192,7 +192,6 @@ export function FranchiseSlotsEditor({
         </div>
       ) : (
         <>
-          <div className="film-perfs h-2 w-full opacity-40" aria-hidden />
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {slots.map((slot, index) => (
               <FranchiseSlotCard

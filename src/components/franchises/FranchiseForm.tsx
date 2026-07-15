@@ -147,7 +147,7 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
   return (
     <div className="space-y-6">
-      <MachinedCard bodyClassName="space-y-5">
+      <MachinedCard variant="calm" bodyClassName="space-y-5">
         <CardSectionHeader label="основное" title="Параметры франшизы" />
         <div className="flex flex-col gap-6 sm:flex-row">
           {mode === "edit" && franchise ? (

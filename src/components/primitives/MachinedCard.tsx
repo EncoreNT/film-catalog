@@ -4,6 +4,12 @@ interface MachinedCardProps {
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** "machined" — double-bezel nested shell (release/track editors).
+   *  "calm" — single hairline + top gold laser slit, no nested bezel.
+   *  Use "calm" where the surrounding context already speaks the line/glow
+   *  language (franchise forms) so the section stops reading as a boxed-in
+   *  double frame. */
+  variant?: "machined" | "calm";
 }
 
 /* Double-bezel "machined glass" card — the same nested-shell language as the
@@ -14,12 +20,31 @@ interface MachinedCardProps {
 
    The core deliberately has no overflow-hidden so nested dropdowns (Select)
    can escape the card. The frame is the static gradient-hairline (not the
-   animated cinematic shimmer) — calm enough for a working form. */
+   animated cinematic shimmer) — calm enough for a working form.
+
+   variant="calm" drops the multicolored outer hairline + inner inset line
+   (the "double border") in favor of one hairline and a top-edge gold laser
+   slit — the same line-language as the modal crown and empty-reel bay. */
 export function MachinedCard({
   children,
   className,
   bodyClassName,
+  variant = "machined",
 }: MachinedCardProps) {
+  if (variant === "calm") {
+    return (
+      <div
+        className={`relative rounded-[16px] border border-border bg-bg-elevated/25 px-5 py-5 sm:px-6 sm:py-6 ${bodyClassName ?? ""} ${className ?? ""}`}
+      >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent sm:inset-x-6"
+        />
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`gradient-hairline relative rounded-[16px] border border-border-strong bg-bg-elevated/50 p-1.5 ${className ?? ""}`}
