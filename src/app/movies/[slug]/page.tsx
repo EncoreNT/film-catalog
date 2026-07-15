@@ -7,6 +7,7 @@ import { MovieDetailHeader } from "@/components/movies/MovieDetailHeader";
 import { MovieFranchises } from "@/components/movies/MovieFranchises";
 import { MovieRatingWatchedSection } from "@/components/movies/MovieRatingWatchedSection";
 import { EmptyReleasesCard } from "@/components/movies/EmptyReleasesCard";
+import { SpotlightTarget } from "@/components/layout/SpotlightTarget";
 import { loadMovieDetailPage } from "@/lib/movies/load-movie-detail-page";
 
 interface PageProps {
@@ -64,7 +65,9 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
           collapses to a single column. */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)] xl:gap-12 2xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)] 2xl:gap-16">
         <div className="detail-reveal detail-reveal--2 space-y-5 lg:sticky lg:top-4 lg:self-start">
-          <MovieCoverHero coverUrl={coverUrl} title={movie.title} />
+          <SpotlightTarget side="left">
+            <MovieCoverHero coverUrl={coverUrl} title={movie.title} />
+          </SpotlightTarget>
 
           {movie.description ? (
             <p className="text-sm leading-relaxed text-muted 2xl:text-[0.95rem]">
@@ -81,7 +84,10 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
           />
         </div>
 
-        <div className="detail-reveal detail-reveal--3 min-w-0">
+        <SpotlightTarget
+          side="right"
+          className="detail-reveal detail-reveal--3 min-w-0"
+        >
           {releaseViews.length > 0 ? (
             <MovieReleasePanel
               movieId={movie.id}
@@ -94,7 +100,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
           ) : (
             <EmptyReleasesCard movieSlug={movie.slug} />
           )}
-        </div>
+        </SpotlightTarget>
       </div>
     </div>
   );

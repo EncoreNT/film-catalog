@@ -82,6 +82,16 @@
   --spotlight-glow: rgba(120, 150, 220, 0.10);
   --spotlight-tint: rgba(139, 92, 246, 0.05);
   --spotlight-pool: rgba(150, 170, 230, 0.06);
+
+  /* Aim — conic bearing + lit-pool anchors (updated by SpotlightAimProvider). */
+  --spotlight-left-bearing: 124deg;
+  --spotlight-right-bearing: 238deg;
+  --spotlight-pool-left-x: 50%;
+  --spotlight-pool-left-y: -6%;
+  --spotlight-pool-right-x: 50%;
+  --spotlight-pool-right-y: -4%;
+  --spotlight-pool-size-left: 95%;
+  --spotlight-pool-size-right: 175%;
 }
 
 /* Smoothly interpolate spotlight colors when the tier changes. Registered
@@ -111,6 +121,16 @@
   syntax: "<color>";
   inherits: true;
   initial-value: rgba(150, 170, 230, 0.06);
+}
+@property --spotlight-left-bearing {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 124deg;
+}
+@property --spotlight-right-bearing {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 238deg;
 }
 
 :root {
@@ -771,6 +791,7 @@ input[type="number"] {
   inset: 0;
   overflow: visible;
   pointer-events: none;
+  isolation: isolate;
 }
 
 .spotlight-rig {
@@ -780,6 +801,127 @@ input[type="number"] {
   pointer-events: none;
 }
 
+/* Soft corner falloff — radial only, no linear cuts (those read as hard edges when aimed). */
+.spotlight-rig--left .spotlight-beam {
+  -webkit-mask-image: radial-gradient(
+    ellipse 155% 145% at 0% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.62) 36%,
+    rgba(0, 0, 0, 0.22) 56%,
+    transparent 76%
+  );
+  mask-image: radial-gradient(
+    ellipse 155% 145% at 0% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.62) 36%,
+    rgba(0, 0, 0, 0.22) 56%,
+    transparent 76%
+  );
+}
+
+.spotlight-rig--right .spotlight-beam {
+  -webkit-mask-image: radial-gradient(
+    ellipse 175% 155% at 100% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 58%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 175% 155% at 100% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 58%,
+    transparent 78%
+  );
+}
+
+/* Tech grid + micro-grid — lit pools follow aim targets. */
+.spotlight-lit-mask {
+  -webkit-mask-image:
+    radial-gradient(
+      ellipse var(--spotlight-pool-size-left) 88% at var(--spotlight-pool-left-x) var(--spotlight-pool-left-y),
+      #000 0%,
+      rgba(0, 0, 0, 0.42) 52%,
+      transparent 88%
+    ),
+    radial-gradient(
+      ellipse var(--spotlight-pool-size-right) 100% at var(--spotlight-pool-right-x) var(--spotlight-pool-right-y),
+      #000 0%,
+      rgba(0, 0, 0, 0.48) 55%,
+      transparent 92%
+    );
+  mask-image:
+    radial-gradient(
+      ellipse var(--spotlight-pool-size-left) 88% at var(--spotlight-pool-left-x) var(--spotlight-pool-left-y),
+      #000 0%,
+      rgba(0, 0, 0, 0.42) 52%,
+      transparent 88%
+    ),
+    radial-gradient(
+      ellipse var(--spotlight-pool-size-right) 100% at var(--spotlight-pool-right-x) var(--spotlight-pool-right-y),
+      #000 0%,
+      rgba(0, 0, 0, 0.48) 55%,
+      transparent 92%
+    );
+}
+
+/* Extra diffuse wash at the aim point — lite mode steers beams + this layer. */
+.spotlight-focus-pool {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 52% 44% at var(--spotlight-focus-x, 50%) var(--spotlight-focus-y, 38%),
+    var(--spotlight-core) 0%,
+    var(--spotlight-mid) 22%,
+    var(--spotlight-glow) 42%,
+    transparent 72%
+  );
+  filter: blur(22px);
+  transform: translateZ(0);
+  transition: opacity 320ms var(--ease);
+}
+
+html[data-spotlight-focus="lite"] .spotlight-focus-pool {
+  opacity: 0.72;
+}
+
+html[data-spotlight-focus="lite"] {
+  transition:
+    --spotlight-core 280ms var(--ease),
+    --spotlight-mid 280ms var(--ease),
+    --spotlight-glow 280ms var(--ease),
+    --spotlight-tint 280ms var(--ease),
+    --spotlight-pool 280ms var(--ease);
+}
+
+html[data-spotlight-focus="active"] .spotlight-focus-pool {
+  opacity: 0.55;
+}
+
+html[data-spotlight-focus="active"] .spotlight-beam--core {
+  opacity: 0.52;
+}
+
+html[data-spotlight-focus="active"] .spotlight-beam--spread {
+  opacity: 0.34;
+}
+
+html[data-spotlight-focus="active"] .spotlight-beam--dust {
+  opacity: 0.26;
+}
+
+html[data-spotlight-focus="active"] .stage-overlap-dampen {
+  opacity: 0.4;
+}
+
+html[data-spotlight-focus="active"] {
+  --spotlight-pool-size-left: 120%;
+  --spotlight-pool-size-right: 210%;
+}
+
 .spotlight-beam {
   position: absolute;
   width: 220%;
@@ -787,36 +929,22 @@ input[type="number"] {
   pointer-events: none;
 }
 
-/* Left corner — narrow beam, steeper angle, lands on poster column */
+/* Left corner — bearing steered via --spotlight-left-bearing (no rig transform). */
 .spotlight-rig--left .spotlight-beam--core {
   top: 0;
   left: 0;
   background: conic-gradient(
     from 0deg at 0% 0%,
     transparent 0deg,
-    transparent 110deg,
-    var(--spotlight-mid) 118deg,
-    var(--spotlight-core) 124deg,
-    var(--spotlight-mid) 130deg,
-    transparent 138deg,
+    transparent calc(var(--spotlight-left-bearing) - 20deg),
+    var(--spotlight-mid) calc(var(--spotlight-left-bearing) - 10deg),
+    var(--spotlight-core) var(--spotlight-left-bearing),
+    var(--spotlight-mid) calc(var(--spotlight-left-bearing) + 10deg),
+    transparent calc(var(--spotlight-left-bearing) + 20deg),
     transparent 360deg
   );
-  filter: blur(22px);
-  opacity: 0.68;
-  -webkit-mask-image: linear-gradient(
-    118deg,
-    #000 0%,
-    #000 46%,
-    rgba(0, 0, 0, 0.42) 68%,
-    transparent 90%
-  );
-  mask-image: linear-gradient(
-    118deg,
-    #000 0%,
-    #000 46%,
-    rgba(0, 0, 0, 0.42) 68%,
-    transparent 90%
-  );
+  filter: blur(26px);
+  opacity: 0.62;
 }
 
 .spotlight-rig--left .spotlight-beam--spread {
@@ -825,27 +953,15 @@ input[type="number"] {
   background: conic-gradient(
     from 0deg at 0% 0%,
     transparent 0deg,
-    transparent 104deg,
-    var(--spotlight-mid) 114deg,
-    var(--spotlight-glow) 124deg,
-    var(--spotlight-mid) 134deg,
-    transparent 144deg,
+    transparent calc(var(--spotlight-left-bearing) - 28deg),
+    var(--spotlight-mid) calc(var(--spotlight-left-bearing) - 14deg),
+    var(--spotlight-glow) var(--spotlight-left-bearing),
+    var(--spotlight-mid) calc(var(--spotlight-left-bearing) + 14deg),
+    transparent calc(var(--spotlight-left-bearing) + 28deg),
     transparent 360deg
   );
-  filter: blur(58px);
-  opacity: 0.38;
-  -webkit-mask-image: linear-gradient(
-    118deg,
-    #000 0%,
-    rgba(0, 0, 0, 0.72) 52%,
-    transparent 86%
-  );
-  mask-image: linear-gradient(
-    118deg,
-    #000 0%,
-    rgba(0, 0, 0, 0.72) 52%,
-    transparent 86%
-  );
+  filter: blur(68px);
+  opacity: 0.34;
 }
 
 .spotlight-rig--left .spotlight-beam--dust {
@@ -854,17 +970,15 @@ input[type="number"] {
   background: conic-gradient(
     from 0deg at 0% 0%,
     transparent 0deg,
-    transparent 98deg,
-    var(--spotlight-glow) 112deg,
-    var(--spotlight-mid) 124deg,
-    var(--spotlight-glow) 136deg,
-    transparent 152deg,
+    transparent calc(var(--spotlight-left-bearing) - 38deg),
+    var(--spotlight-glow) calc(var(--spotlight-left-bearing) - 16deg),
+    var(--spotlight-mid) var(--spotlight-left-bearing),
+    var(--spotlight-glow) calc(var(--spotlight-left-bearing) + 16deg),
+    transparent calc(var(--spotlight-left-bearing) + 38deg),
     transparent 360deg
   );
-  filter: blur(92px);
-  opacity: 0.22;
-  -webkit-mask-image: linear-gradient(118deg, #000 0%, transparent 82%);
-  mask-image: linear-gradient(118deg, #000 0%, transparent 82%);
+  filter: blur(108px);
+  opacity: 0.2;
 }
 
 /* Right corner — wider, longer rig; axis favors release panel */
@@ -880,29 +994,15 @@ input[type="number"] {
   background: conic-gradient(
     from 0deg at 100% 0%,
     transparent 0deg,
-    transparent 214deg,
-    var(--spotlight-mid) 224deg,
-    var(--spotlight-core) 238deg,
-    var(--spotlight-mid) 252deg,
-    transparent 262deg,
+    transparent calc(var(--spotlight-right-bearing) - 20deg),
+    var(--spotlight-mid) calc(var(--spotlight-right-bearing) - 10deg),
+    var(--spotlight-core) var(--spotlight-right-bearing),
+    var(--spotlight-mid) calc(var(--spotlight-right-bearing) + 10deg),
+    transparent calc(var(--spotlight-right-bearing) + 20deg),
     transparent 360deg
   );
-  filter: blur(28px);
-  opacity: 0.78;
-  -webkit-mask-image: linear-gradient(
-    242deg,
-    #000 0%,
-    #000 58%,
-    rgba(0, 0, 0, 0.5) 80%,
-    transparent 98%
-  );
-  mask-image: linear-gradient(
-    242deg,
-    #000 0%,
-    #000 58%,
-    rgba(0, 0, 0, 0.5) 80%,
-    transparent 98%
-  );
+  filter: blur(32px);
+  opacity: 0.68;
 }
 
 .spotlight-rig--right .spotlight-beam--spread {
@@ -912,27 +1012,15 @@ input[type="number"] {
   background: conic-gradient(
     from 0deg at 100% 0%,
     transparent 0deg,
-    transparent 198deg,
-    var(--spotlight-mid) 214deg,
-    var(--spotlight-glow) 238deg,
-    var(--spotlight-mid) 258deg,
-    transparent 272deg,
+    transparent calc(var(--spotlight-right-bearing) - 30deg),
+    var(--spotlight-mid) calc(var(--spotlight-right-bearing) - 15deg),
+    var(--spotlight-glow) var(--spotlight-right-bearing),
+    var(--spotlight-mid) calc(var(--spotlight-right-bearing) + 15deg),
+    transparent calc(var(--spotlight-right-bearing) + 30deg),
     transparent 360deg
   );
-  filter: blur(78px);
-  opacity: 0.52;
-  -webkit-mask-image: linear-gradient(
-    242deg,
-    #000 0%,
-    rgba(0, 0, 0, 0.82) 64%,
-    transparent 96%
-  );
-  mask-image: linear-gradient(
-    242deg,
-    #000 0%,
-    rgba(0, 0, 0, 0.82) 64%,
-    transparent 96%
-  );
+  filter: blur(88px);
+  opacity: 0.46;
 }
 
 .spotlight-rig--right .spotlight-beam--dust {
@@ -942,17 +1030,15 @@ input[type="number"] {
   background: conic-gradient(
     from 0deg at 100% 0%,
     transparent 0deg,
-    transparent 188deg,
-    var(--spotlight-glow) 218deg,
-    var(--spotlight-mid) 238deg,
-    var(--spotlight-glow) 258deg,
-    transparent 278deg,
+    transparent calc(var(--spotlight-right-bearing) - 42deg),
+    var(--spotlight-glow) calc(var(--spotlight-right-bearing) - 18deg),
+    var(--spotlight-mid) var(--spotlight-right-bearing),
+    var(--spotlight-glow) calc(var(--spotlight-right-bearing) + 18deg),
+    transparent calc(var(--spotlight-right-bearing) + 42deg),
     transparent 360deg
   );
-  filter: blur(118px);
-  opacity: 0.3;
-  -webkit-mask-image: linear-gradient(242deg, #000 0%, transparent 92%);
-  mask-image: linear-gradient(242deg, #000 0%, transparent 92%);
+  filter: blur(128px);
+  opacity: 0.26;
 }
 
 /* Off-center overlap — beams cross left of midline, not in panel center */

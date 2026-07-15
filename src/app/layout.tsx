@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Manrope, JetBrains_Mono } from "next/font/google";
 import { GrainOverlay } from "@/components/layout/GrainOverlay";
 import { AmbientBackground } from "@/components/layout/AmbientBackground";
+import { SpotlightAimProvider } from "@/components/layout/SpotlightAimProvider";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import "./globals.css";
 
@@ -46,14 +47,16 @@ export default function RootLayout({
       className={`${fraunces.variable} ${manrope.variable} ${jetbrains.variable} h-full overflow-x-hidden`}
     >
       <body className="relative min-h-dvh antialiased">
-        <AmbientBackground />
-        <GrainOverlay />
+        <SpotlightAimProvider>
+          <AmbientBackground />
+          <GrainOverlay />
 
-        <SiteHeader />
+          <SiteHeader />
 
-        <main className="container-wide relative z-10 px-6 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10 xl:px-14 2xl:px-20 3xl:px-24">
-          {children}
-        </main>
+          <main className="container-wide relative z-10 px-6 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10 xl:px-14 2xl:px-20 3xl:px-24">
+            {children}
+          </main>
+        </SpotlightAimProvider>
       </body>
     </html>
   );

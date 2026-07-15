@@ -23,7 +23,7 @@ interface FranchiseSlotsViewProps {
 
 export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewProps) {
   const router = useRouter();
-  const { setHoverTier } = useFranchiseSpotlightHover();
+  const { setHoverTier, setHoverElement } = useFranchiseSpotlightHover();
   const [sortMode, setSortMode] = useState<SortMode>("story");
   const [pickerSlotId, setPickerSlotId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -157,14 +157,18 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
                 </div>
                 {slot.movie ? (
                   <div
-                    onMouseEnter={() =>
+                    onMouseEnter={(event) => {
+                      setHoverElement(event.currentTarget);
                       setHoverTier(
                         slotTierToSpotlight(
                           slotTier(slot.movie as MovieWithTracks),
                         ),
-                      )
-                    }
-                    onMouseLeave={() => setHoverTier(null)}
+                      );
+                    }}
+                    onMouseLeave={() => {
+                      setHoverElement(null);
+                      setHoverTier(null);
+                    }}
                   >
                     <MovieCard movie={slot.movie as MovieWithTracks} index={index} />
                   </div>

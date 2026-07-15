@@ -2,15 +2,19 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
+import { useSpotlightHoverTarget } from "@/components/layout/SpotlightAimProvider";
 import type { SpotlightTier as SpotlightTierValue } from "@/lib/media/tier-presentation";
 
 const FranchiseSpotlightContext = createContext<{
   setHoverTier: (tier: SpotlightTierValue | null) => void;
+  setHoverElement: (element: HTMLElement | null) => void;
 } | null>(null);
 
 export function useFranchiseSpotlightHover() {
@@ -21,7 +25,7 @@ export function useFranchiseSpotlightHover() {
   return ctx;
 }
 
-/** Baseline franchise spotlight with optional per-card hover override. */
+/** Baseline franchise tier + lightweight card hover (instant bearing, no mask churn). */
 export function FranchiseSpotlightProvider({
   baseline,
   children,
@@ -29,10 +33,22 @@ export function FranchiseSpotlightProvider({
   baseline: SpotlightTierValue;
   children: ReactNode;
 }) {
+  const setHoverTarget = useSpotlightHoverTarget();
   const [hoverTier, setHoverTier] = useState<SpotlightTierValue | null>(null);
 
+  const setHoverElement = useCallback(
+    (element: HTMLElement | null) => {
+      setHoverTarget(element, "lite");
+    },
+    [setHoverTarget],
+  );
+
+  useEffect(() => () => setHoverTarget(null), [setHoverTarget]);
+
   return (
-    <FranchiseSpotlightContext.Provider value={{ setHoverTier }}>
+    <FranchiseSpotlightContext.Provider
+      value={{ setHoverTier, setHoverElement }}
+    >
       <SpotlightTier tier={hoverTier ?? baseline} />
       {children}
     </FranchiseSpotlightContext.Provider>
