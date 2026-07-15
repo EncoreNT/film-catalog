@@ -7,6 +7,7 @@ import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
+import { SpotlightTier } from "@/components/layout/SpotlightTier";
 
 type TabTier = "ruby" | "gold" | "none";
 
@@ -147,8 +148,14 @@ export function MovieReleasePanel({
     );
   }
 
+  // Spotlight follows the ACTIVE release tab, live: switching tabs recolors the
+  // whole ambient (cone + glow) via the <SpotlightTier/> signal. Untiered
+  // releases read as "standard" (cool white).
+  const activeTier = activeRelease.tier ?? "standard";
+
   return (
     <section className="surface-card overflow-hidden">
+      <SpotlightTier tier={activeTier} />
       <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/50 sm:flex-row sm:items-stretch sm:justify-between">
         {showTabs ? (
           <div

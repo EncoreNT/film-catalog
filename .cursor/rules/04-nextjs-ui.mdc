@@ -87,6 +87,20 @@ Atmos≥7.1 на лучшем рус. дубляже) > Gold (4K+HDR+surround≥
 красит таб релиза и card-framing; crimson — только Ruby. Resolution-accent на
 плашке отдельный: 4K gold+halo / 1080p muted / 720p+ neutral.
 
+**Ambient spotlight (прожектор)** — `AmbientBackground` (root layout, `fixed`) рисует
+объёмный конус проектора (`.spotlight-cone` + `.spotlight-core` + `.spotlight-source`,
+radial `mask` → мягкие края, не прямоугольник). Цвет конуса + glow-hotspots + тонкого
+грида берётся из `--spotlight-*` токенов, которые переключаются `data-spotlight` на
+`<html>`. Клиент-компонент `SpotlightTier` ставит `document.documentElement.dataset.spotlight`
+в `useEffect` и сбрасывает в `general` на unmount; root layout держит baseline `general`,
+тир-страницы монтируют свой `SpotlightTier` сверху. Тиры: movie page →
+`movieSpotlightTier(movie.releases)` (ruby > gold > standard), franchise page → лучший
+тир заполненных слотов, остальные → `general`. Палитры в `globals.css`:
+`general` (cool coal moonlight — НЕ тир-цвет, idle projection room), `gold`, `ruby`
+(насыщенный crimson, не pink), `standard` (белый). `--spotlight-*` зарегистрированы
+через `@property` + transition 700ms на `:root` → smooth crossfade где поддерживается,
+snap где нет (тир меняется только при навигации, snap тоже ок). Детали: ADR-0005.
+
 Эффекты: `gradient-border-cinematic` / `gradient-hairline`, `sheen-layer`,
 `holo-foil/-gold/-ruby`, `lens-flare`, `laser-trace[-cyan]`, `neural-pulse`.
 Glow-тени — **явные классы** (`.glow-accent-{8..48}`, `.glow-neural-*`,

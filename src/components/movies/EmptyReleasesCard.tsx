@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SpotlightTier } from "@/components/layout/SpotlightTier";
 
 interface EmptyReleasesCardProps {
   movieSlug: string;
@@ -7,6 +8,9 @@ interface EmptyReleasesCardProps {
 export function EmptyReleasesCard({ movieSlug }: EmptyReleasesCardProps) {
   return (
     <section className="surface-card p-5">
+      {/* No releases → no quality tier, so the page reads as the neutral
+          "standard" (cool white) spotlight rather than the general idle glow. */}
+      <SpotlightTier tier="standard" />
       <p className="text-sm text-muted">У фильма пока нет релизов.</p>
       <Link
         href={`/movies/${movieSlug}/releases/new`}

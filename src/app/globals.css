@@ -69,6 +69,87 @@
   --radius-sm: 10px;
   --radius-pill: 999px;
   --container-max: 2400px;
+
+  /* ── Spotlight (volumetric projector cone) ──
+     The ambient light over the whole app. Colors swap per page tier via a
+     `data-spotlight` attribute on <html> (set by <SpotlightTier/>). Registered
+     as <color> (see @property blocks below) so the crossfade between tiers
+     interpolates smoothly instead of snapping. Default = "general": a cool
+     coal moonlight, deliberately distinct from any tier so non-tiered pages
+     read as the idle projection room rather than a random gold/white wash. */
+  --spotlight-core: rgba(186, 198, 255, 0.22);
+  --spotlight-mid: rgba(139, 154, 246, 0.12);
+  --spotlight-glow: rgba(120, 150, 220, 0.10);
+  --spotlight-tint: rgba(139, 92, 246, 0.05);
+  --spotlight-pool: rgba(150, 170, 230, 0.06);
+}
+
+/* Smoothly interpolate spotlight colors when the tier changes. Registered
+   custom properties inherit down to the AmbientBackground layers and animate
+   in <color> space, so gradients using them crossfade instead of snapping. */
+@property --spotlight-core {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(186, 198, 255, 0.22);
+}
+@property --spotlight-mid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(139, 154, 246, 0.12);
+}
+@property --spotlight-glow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(120, 150, 220, 0.10);
+}
+@property --spotlight-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(139, 92, 246, 0.05);
+}
+@property --spotlight-pool {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(150, 170, 230, 0.06);
+}
+
+:root {
+  transition:
+    --spotlight-core 700ms var(--ease),
+    --spotlight-mid 700ms var(--ease),
+    --spotlight-glow 700ms var(--ease),
+    --spotlight-tint 700ms var(--ease),
+    --spotlight-pool 700ms var(--ease);
+}
+
+/* Gold tier — the warm cinematic projector beam (classic Кинозал). */
+html[data-spotlight="gold"] {
+  --spotlight-core: rgba(255, 224, 150, 0.52);
+  --spotlight-mid: rgba(232, 176, 90, 0.26);
+  --spotlight-glow: rgba(232, 176, 90, 0.20);
+  --spotlight-tint: rgba(232, 176, 90, 0.10);
+  --spotlight-pool: rgba(232, 176, 90, 0.16);
+}
+
+/* Ruby tier — deep jewel-red glow for the top release tier. Tuned to a
+   saturated garnet/crimson (the --crimson family) so the cone reads as ruby
+   red, not pink: the hot core stays a bright saturated red rather than a
+   white-pink, which would wash out against the cool coal base. */
+html[data-spotlight="ruby"] {
+  --spotlight-core: rgba(232, 76, 96, 0.55);
+  --spotlight-mid: rgba(196, 40, 66, 0.34);
+  --spotlight-glow: rgba(176, 30, 52, 0.26);
+  --spotlight-tint: rgba(176, 30, 52, 0.12);
+  --spotlight-pool: rgba(176, 30, 52, 0.18);
+}
+
+/* Standard tier — crisp cool white/silver for catalogued-but-non-premium. */
+html[data-spotlight="standard"] {
+  --spotlight-core: rgba(255, 255, 255, 0.40);
+  --spotlight-mid: rgba(222, 228, 240, 0.18);
+  --spotlight-glow: rgba(200, 212, 232, 0.16);
+  --spotlight-tint: rgba(210, 218, 236, 0.08);
+  --spotlight-pool: rgba(210, 218, 236, 0.12);
 }
 
 @theme inline {
@@ -664,15 +745,64 @@ input[type="number"] {
   animation: flare-drift 11s ease-in-out infinite;
 }
 
-/* God-ray / projector beam — soft diagonal light shaft from top */
-.projector-beam {
+/* ── Volumetric projector cone ──
+   A real light shaft: narrow at the lens (top center), widening as it travels
+   down, with a hot core, a diffuse body and a soft source flare. Built from
+   layered linear gradients carved into a cone silhouette by a radial mask, so
+   the edges feather instead of reading as a hard tilted rectangle. Colors
+   come from the --spotlight-* tokens, so the whole cone recolors per tier.
+   Static (no animation) — the big blurred layers paint once; the drifting glow
+   hotspots carry the motion. */
+.spotlight-cone {
   background: linear-gradient(
-    180deg,
-    rgba(232, 176, 90, 0.16) 0%,
-    rgba(232, 176, 90, 0.05) 40%,
+    to bottom,
+    var(--spotlight-mid) 0%,
+    transparent 72%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 58% 92% at 50% 6%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 46%,
     transparent 80%
   );
-  filter: blur(8px);
+  mask-image: radial-gradient(
+    ellipse 58% 92% at 50% 6%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 46%,
+    transparent 80%
+  );
+  filter: blur(26px);
+}
+
+.spotlight-core {
+  background: linear-gradient(
+    to bottom,
+    var(--spotlight-core) 0%,
+    transparent 60%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 26% 96% at 50% 4%,
+    #000 0%,
+    rgba(0, 0, 0, 0.5) 50%,
+    transparent 82%
+  );
+  mask-image: radial-gradient(
+    ellipse 26% 96% at 50% 4%,
+    #000 0%,
+    rgba(0, 0, 0, 0.5) 50%,
+    transparent 82%
+  );
+  filter: blur(10px);
+}
+
+.spotlight-source {
+  background: radial-gradient(
+    ellipse 60% 70% at 50% 0%,
+    var(--spotlight-core) 0%,
+    var(--spotlight-mid) 38%,
+    transparent 72%
+  );
+  filter: blur(22px);
 }
 
 /* Glass frame — neurox-tier: blur + inner refraction + top edge highlight */
