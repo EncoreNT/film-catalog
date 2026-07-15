@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFranchiseSummary, slotQualityLabel, slotTier, type FranchiseSlotSummary } from "@/lib/franchises/franchise-summary";
+import { computeFranchiseSummary, computeFranchiseCollectionTier, isFutureFranchiseSlot, slotQualityLabel, slotTier, type FranchiseSlotSummary } from "@/lib/franchises/franchise-summary";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
 import type { MovieWithTracks } from "@/lib/movies/movie-include";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
@@ -389,6 +389,167 @@ describe("computeFranchiseSummary", () => {
     expect(s.tier).toBe("gold");
   });
 
+  it("clears tier when collection is incomplete even if owned films are ruby", () => {
+    const s = computeFranchiseSummary(
+      makeFranchise([
+        makeSlot({
+          storyOrder: 0,
+          movieId: 1,
+          movie: makeMovie({
+            id: 1,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            atmos: true,
+          }),
+        }),
+        makeSlot({ storyOrder: 1, yearHint: 2024 }),
+      ]),
+    );
+    expect(s.tier).toBeNull();
+    expect(s.slots[0]?.tier).toBe("ruby");
+  });
+
+  it("ignores future slots when computing franchise tier", () => {
+    const s = computeFranchiseSummary(
+      makeFranchise([
+        makeSlot({
+          storyOrder: 0,
+          movieId: 1,
+          movie: makeMovie({
+            id: 1,
+            year: 2024,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            atmos: true,
+          }),
+        }),
+        makeSlot({
+          storyOrder: 1,
+          movieId: 2,
+          movie: makeMovie({
+            id: 2,
+            year: 2025,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            atmos: true,
+          }),
+        }),
+        makeSlot({ storyOrder: 2, yearHint: 2028 }),
+      ]),
+    );
+
+    expect(s.tier).toBe("ruby");
+    expect(s.missing).toBe(1);
+  });
+
+  it("clears tier when every slot is filled but one film is standard", () => {
+    const s = computeFranchiseSummary(
+      makeFranchise([
+        makeSlot({
+          storyOrder: 0,
+          movieId: 1,
+          movie: makeMovie({
+            id: 1,
+            resolutionLabel: "4K",
+            hdr: "HDR10",
+            atmos: true,
+          }),
+        }),
+        makeSlot({
+          storyOrder: 1,
+          movieId: 2,
+          movie: makeMovie({
+            id: 2,
+            resolutionLabel: "1080p",
+            hdr: "SDR",
+            audioTracks: [stereoDubTrack()],
+          }),
+        }),
+      ]),
+    );
+    expect(s.tier).toBeNull();
+  });
+});
+
+describe("computeFranchiseCollectionTier", () => {
+  const CURRENT_YEAR = 2026;
+  const rubySlot = { filled: true, tier: "ruby", year: 2024 } as FranchiseSlotSummary;
+  const goldSlot = { filled: true, tier: "gold", year: 2024 } as FranchiseSlotSummary;
+  const standardSlot = {
+    filled: true,
+    tier: "standard",
+    year: 2024,
+  } as FranchiseSlotSummary;
+  const futureEmptySlot = {
+    filled: false,
+    tier: "missing",
+    year: 2028,
+  } as FranchiseSlotSummary;
+
+  it("requires a full collection among non-future slots", () => {
+    expect(
+      computeFranchiseCollectionTier(
+        [rubySlot, { filled: false, tier: "missing", year: 2024 } as FranchiseSlotSummary],
+        CURRENT_YEAR,
+      ),
+    ).toBeNull();
+  });
+
+  it("returns ruby only when every relevant slot is ruby", () => {
+    expect(
+      computeFranchiseCollectionTier([rubySlot, rubySlot], CURRENT_YEAR),
+    ).toBe("ruby");
+  });
+
+  it("returns gold for an all-gold or ruby+gold full collection", () => {
+    expect(
+      computeFranchiseCollectionTier([goldSlot, goldSlot], CURRENT_YEAR),
+    ).toBe("gold");
+    expect(
+      computeFranchiseCollectionTier([rubySlot, goldSlot], CURRENT_YEAR),
+    ).toBe("gold");
+  });
+
+  it("nulls tier when any owned film is standard", () => {
+    expect(
+      computeFranchiseCollectionTier([rubySlot, standardSlot], CURRENT_YEAR),
+    ).toBeNull();
+  });
+
+  it("ignores future slots for completeness and quality", () => {
+    expect(
+      computeFranchiseCollectionTier(
+        [rubySlot, rubySlot, futureEmptySlot],
+        CURRENT_YEAR,
+      ),
+    ).toBe("ruby");
+
+    expect(
+      computeFranchiseCollectionTier(
+        [
+          rubySlot,
+          {
+            filled: true,
+            tier: "standard",
+            year: 2028,
+          } as FranchiseSlotSummary,
+          futureEmptySlot,
+        ],
+        CURRENT_YEAR,
+      ),
+    ).toBe("ruby");
+  });
+});
+
+describe("isFutureFranchiseSlot", () => {
+  it("treats year greater than current as future", () => {
+    expect(isFutureFranchiseSlot({ year: 2027 }, 2026)).toBe(true);
+    expect(isFutureFranchiseSlot({ year: 2026 }, 2026)).toBe(false);
+    expect(isFutureFranchiseSlot({ year: null }, 2026)).toBe(false);
+  });
+});
+
+describe("computeFranchiseSummary reel and ratings", () => {
   it("uses the default audio track for the reel, not a secondary DTS:X", () => {
     const movie = makeMovie({
       id: 1,

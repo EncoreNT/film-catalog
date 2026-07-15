@@ -1,7 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { MovieStatus } from "@/generated/prisma/client";
 import { catalogWhere, eliteTierWhere, mergeMovieWhere } from "@/lib/catalog/archive-metrics";
-import { archiveEliteTierWhere } from "@/lib/media/quality-predicates";
+import {
+  archiveEliteTierWhere,
+  archiveGoldTierWhere,
+} from "@/lib/media/quality-predicates";
+
+describe("archive gold tier semantics", () => {
+  it("requires 4K and non-SDR HDR on the same release", () => {
+    expect(archiveGoldTierWhere).toEqual({
+      releases: {
+        some: {
+          videoTrack: {
+            resolutionLabel: "4K",
+            hdr: { notIn: ["SDR"] },
+          },
+        },
+      },
+    });
+  });
+});
 
 describe("archive elite tier semantics", () => {
   it("requires 4K, non-SDR HDR, and Russian Atmos each on some release", () => {

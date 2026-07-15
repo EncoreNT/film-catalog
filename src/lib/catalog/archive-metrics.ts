@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getCatalogFacets } from "@/lib/catalog/catalog-facets";
 import {
   archiveEliteTierWhere,
+  archiveGoldTierWhere,
   russianAtmosAudioWhere,
 } from "@/lib/media/quality-predicates";
 import {
@@ -13,7 +14,7 @@ import {
 } from "@/lib/movies/movie-release-sort";
 
 export interface ArchiveMetrics {
-  fourK: number;
+  gold: number;
   hdr10: number;
   russianAtmos: number;
   elite: number;
@@ -50,13 +51,9 @@ export async function countArchiveMetrics(
     ? mergeMovieWhere(catalogWhere, extraWhere)
     : catalogWhere;
 
-  const [fourK, hdr10, russianAtmos, elite] = await Promise.all([
+  const [gold, hdr10, russianAtmos, elite] = await Promise.all([
     prisma.movie.count({
-      where: mergeMovieWhere(scopedWhere, {
-        releases: {
-          some: { videoTrack: { resolutionLabel: "4K" } },
-        },
-      }),
+      where: mergeMovieWhere(scopedWhere, archiveGoldTierWhere),
     }),
     prisma.movie.count({
       where: mergeMovieWhere(scopedWhere, {
@@ -73,7 +70,7 @@ export async function countArchiveMetrics(
     }),
   ]);
 
-  return { fourK, hdr10, russianAtmos, elite };
+  return { gold, hdr10, russianAtmos, elite };
 }
 
 export async function getArchiveMetrics(): Promise<ArchiveMetrics> {

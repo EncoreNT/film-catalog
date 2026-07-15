@@ -70,6 +70,21 @@ export const russianAtmosAudioWhere = {
 } satisfies Prisma.MovieWhereInput;
 
 /**
+ * Archive dashboard «gold»: at least one release with 4K and non-SDR HDR on the
+ * same file — matches the catalog quick-filter `resolution=4K&hdr=HDR_ANY`.
+ */
+export const archiveGoldTierWhere = {
+  releases: {
+    some: {
+      videoTrack: {
+        resolutionLabel: "4K",
+        hdr: { notIn: ["SDR"] },
+      },
+    },
+  },
+} satisfies Prisma.MovieWhereInput;
+
+/**
  * Archive dashboard «elite»: movie has 4K, non-SDR HDR, and Russian Atmos
  * each on **at least one release** (specs may be split across releases).
  *

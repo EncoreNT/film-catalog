@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
 import { MovieCard } from "@/components/movies/MovieCard";
 import { FranchisePlaceholder } from "@/components/franchises/FranchisePlaceholder";
+import { useFranchiseSpotlightHover } from "@/components/franchises/FranchiseSpotlightProvider";
 import { MoviePickerDialog } from "@/components/franchises/MoviePickerDialog";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
+import { slotTier } from "@/lib/franchises/franchise-summary";
+import { slotTierToSpotlight } from "@/lib/media/tier-presentation";
 import { apiFetch } from "@/lib/api/client";
 
 type SortMode = "story" | "year";
@@ -19,6 +22,7 @@ interface FranchiseSlotsViewProps {
 
 export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewProps) {
   const router = useRouter();
+  const { setHoverTier } = useFranchiseSpotlightHover();
   const [sortMode, setSortMode] = useState<SortMode>("story");
   const [pickerSlotId, setPickerSlotId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -137,7 +141,18 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
                   </span>
                 </div>
                 {slot.movie ? (
-                  <MovieCard movie={slot.movie as MovieWithTracks} index={index} />
+                  <div
+                    onMouseEnter={() =>
+                      setHoverTier(
+                        slotTierToSpotlight(
+                          slotTier(slot.movie as MovieWithTracks),
+                        ),
+                      )
+                    }
+                    onMouseLeave={() => setHoverTier(null)}
+                  >
+                    <MovieCard movie={slot.movie as MovieWithTracks} index={index} />
+                  </div>
                 ) : (
                   <FranchisePlaceholder
                     slotIndex={index}

@@ -131,11 +131,42 @@ export interface FranchiseSummary {
   ratedCount: number;
   premium: { fourK: number; hdr: number; atmos: number };
   /**
-   * Franchise-level tier, the same ruby / gold language as a single release.
-   * "ruby" when every owned film is ruby, "gold" when every owned film is
-   * gold or ruby, otherwise null. Drives the card's laser perimeter + holo.
+   * Franchise-level tier — only for a **complete** collection among films that
+   * have already been released (year ≤ current calendar year). Future slots
+   * are ignored. Ruby when every relevant film is ruby; gold when every
+   * relevant film is gold or ruby. Any standard film or a missing non-future
+   * slot clears the tier.
    */
   tier: ReleaseTier;
+}
+
+/** True when the slot's year (film or hint) is after the current calendar year. */
+export function isFutureFranchiseSlot(
+  slot: Pick<FranchiseSlotSummary, "year">,
+  currentYear: number,
+): boolean {
+  return slot.year != null && slot.year > currentYear;
+}
+
+/**
+ * Collection-wide franchise tier among released slots only. Future films/slots
+ * do not affect fill completeness or quality checks.
+ */
+export function computeFranchiseCollectionTier(
+  slots: FranchiseSlotSummary[],
+  currentYear = new Date().getFullYear(),
+): ReleaseTier {
+  const relevant = slots.filter((s) => !isFutureFranchiseSlot(s, currentYear));
+  if (relevant.length === 0) return null;
+
+  const filled = relevant.filter((s) => s.filled).length;
+  if (filled === 0 || filled !== relevant.length) return null;
+
+  const owned = relevant.filter((s) => s.filled);
+  if (owned.some((s) => s.tier === "standard")) return null;
+  if (owned.every((s) => s.tier === "ruby")) return "ruby";
+  if (owned.every((s) => s.tier === "ruby" || s.tier === "gold")) return "gold";
+  return null;
 }
 
 function slotYear(slot: FranchiseWithSlots["slots"][number]): number | null {
@@ -251,15 +282,7 @@ export function computeFranchiseSummary(
     atmos: slots.filter((s) => s.atmos).length,
   };
 
-  const owned = slots.filter((s) => s.filled);
-  let franchiseTier: ReleaseTier = null;
-  if (owned.length > 0) {
-    if (owned.every((s) => s.tier === "ruby")) {
-      franchiseTier = "ruby";
-    } else if (owned.every((s) => s.tier === "ruby" || s.tier === "gold")) {
-      franchiseTier = "gold";
-    }
-  }
+  const franchiseTier = computeFranchiseCollectionTier(slots);
 
   return {
     total,

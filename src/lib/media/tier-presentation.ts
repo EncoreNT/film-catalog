@@ -98,6 +98,21 @@ export function releaseToTabTier(
   return "none";
 }
 
+/** Maps franchise collection tier to ambient spotlight baseline. */
+export function releaseTierToSpotlight(tier: ReleaseTier): SpotlightTier {
+  if (tier === "ruby") return "ruby";
+  if (tier === "gold") return "gold";
+  return "general";
+}
+
+/** Maps a franchise slot / film tier to ambient spotlight on hover. */
+export function slotTierToSpotlight(tier: SlotTier): SpotlightTier {
+  if (tier === "ruby") return "ruby";
+  if (tier === "gold") return "gold";
+  if (tier === "standard") return "standard";
+  return "general";
+}
+
 /** Best spotlight among a collection of slot/release tiers (ruby > gold > standard > general). */
 export function resolveSpotlightTier(
   tiers: Array<ReleaseTier | SlotTier | null | undefined>,

@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { franchiseCoverUrlFromFranchise } from "@/lib/covers/franchise-cover-url";
 import { computeFranchiseSummary } from "@/lib/franchises/franchise-summary";
-import { resolveSpotlightTier } from "@/lib/media/tier-presentation";
+import { releaseTierToSpotlight } from "@/lib/media/tier-presentation";
 import { FranchiseDetailHero } from "@/components/franchises/FranchiseDetailHero";
 import { FranchiseSlotsView } from "@/components/franchises/FranchiseSlotsView";
-import { SpotlightTier } from "@/components/layout/SpotlightTier";
+import { FranchiseSpotlightProvider } from "@/components/franchises/FranchiseSpotlightProvider";
 import {
   generateFranchiseMetadata,
   loadFranchiseBySlug,
@@ -37,27 +37,24 @@ export default async function FranchisePage({ params }: PageProps) {
 
   const summary = computeFranchiseSummary(franchise);
   const coverUrl = franchiseCoverUrlFromFranchise(franchise);
-
-  const spotlightTier = resolveSpotlightTier(summary.slots.map((s) => s.tier));
+  const spotlightBaseline = releaseTierToSpotlight(summary.tier);
 
   return (
-    <div className="flex flex-col gap-5 lg:-mb-10 lg:h-[calc(100dvh-6.25rem)] lg:gap-4">
-      <SpotlightTier tier={spotlightTier} />
+    <FranchiseSpotlightProvider baseline={spotlightBaseline}>
+      <div className="flex flex-col gap-5 lg:-mb-10 lg:h-[calc(100dvh-6.25rem)] lg:gap-4">
+        <div className="shrink-0">
+          <FranchiseDetailHero
+            franchise={franchise}
+            coverUrl={coverUrl}
+            summary={summary}
+          />
+        </div>
 
-      <div className="shrink-0">
-        <FranchiseDetailHero
-          franchise={franchise}
-          coverUrl={coverUrl}
-          summary={summary}
+        <FranchiseSlotsView
+          franchiseId={franchise.id}
+          slots={franchise.slots}
         />
       </div>
-
-      {/* Slots view owns its pinned header + scrolling grid (only the list
-          scrolls; the sort row stays put). It fills the remaining height. */}
-      <FranchiseSlotsView
-        franchiseId={franchise.id}
-        slots={franchise.slots}
-      />
-    </div>
+    </FranchiseSpotlightProvider>
   );
 }

@@ -16,6 +16,8 @@ import { ArrowDownUp, ChevronRight, Clock, HardDrive, Loader2, Plus, ScanSearch 
 import { motion, AnimatePresence, MotionConfig, useScroll, useMotionValueEvent } from "motion/react";
 import type { ArchiveMetrics, ArchiveTotals } from "@/lib/catalog/archive-metrics";
 import { ARCHIVE_QUALITY_METRIC_DEFS } from "@/lib/catalog/archive-quality-metrics";
+import { resolveCatalogSpotlightTier } from "@/lib/catalog/catalog-spotlight";
+import { SpotlightTier } from "@/components/layout/SpotlightTier";
 import {
   formatArchiveTotalDuration,
   formatArchiveTotalSize,
@@ -222,7 +224,7 @@ export function MovieCatalog({
   catalogCount = 0,
   draftCount = 0,
   excludedCount = 0,
-  archiveMetrics = { fourK: 0, hdr10: 0, russianAtmos: 0, elite: 0 },
+  archiveMetrics = { gold: 0, hdr10: 0, russianAtmos: 0, elite: 0 },
   archiveTotals = { durationSeconds: 0, fileSizeBytes: 0 },
 }: MovieCatalogProps) {
   const router = useRouter();
@@ -372,6 +374,8 @@ export function MovieCatalog({
     premiumAudio: activePremiumAudio,
   };
 
+  const catalogSpotlight = resolveCatalogSpotlightTier(filterParams, isCatalog);
+
   const pages = Math.max(1, Math.ceil(total / limit));
   // В режиме more показываем накопленные страницы + текущую; в режиме page —
   // только текущую. Дедуп по id на случай нестабильной сортировки между страницами.
@@ -430,6 +434,7 @@ export function MovieCatalog({
 
   return (
     <MotionConfig reducedMotion="user">
+      <SpotlightTier tier={catalogSpotlight} />
       {isPending ? <div className="catalog-loading-bar" aria-hidden /> : null}
       {/* Archive console - compact integrated top. The page-level "Каталог /
           Личный архив" labels were dropped on purpose: the SiteHeader already

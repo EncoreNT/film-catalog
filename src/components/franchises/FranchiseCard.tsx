@@ -31,9 +31,9 @@ function eraLabel(start: number | null, end: number | null): string | null {
  * count and rating live on the cover so the hierarchy reads at a glance.
  * Below sits a compact meta band: a slim tier film-strip (the per-slot
  * quality reel collapsed to ruby / gold / standard notches) and one muted
- * line of years / runtime. The franchise-level tier (every owned film is
- * ruby, or every owned film is gold+) drives the LaserCardFrame treatment:
- * ruby → crimson laser perimeter + holo-ruby, gold → warm-gold laser + holo,
+ * line of years / runtime. The franchise-level tier (full collection, every
+ * film ruby → ruby; full collection, every film gold+ → gold) drives the
+ * LaserCardFrame treatment: ruby → crimson laser perimeter + holo-ruby, gold → warm-gold laser + holo,
  * matching the movie-card and release-tab tier language.
  */
 export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   releaseToTabTier,
+  releaseTierToSpotlight,
   resolveSpotlightTier,
+  slotTierToSpotlight,
   slotToTileTone,
   tierCardGlow,
   tierChipTone,
@@ -35,6 +37,16 @@ describe("tier-presentation", () => {
     expect(resolveSpotlightTier(["standard", "ruby", "gold"])).toBe("ruby");
     expect(resolveSpotlightTier(["standard", "missing"])).toBe("standard");
     expect(resolveSpotlightTier([null, "missing"])).toBe("general");
+  });
+
+  it("maps release and slot tiers to spotlight", () => {
+    expect(releaseTierToSpotlight("ruby")).toBe("ruby");
+    expect(releaseTierToSpotlight("gold")).toBe("gold");
+    expect(releaseTierToSpotlight(null)).toBe("general");
+    expect(slotTierToSpotlight("ruby")).toBe("ruby");
+    expect(slotTierToSpotlight("gold")).toBe("gold");
+    expect(slotTierToSpotlight("standard")).toBe("standard");
+    expect(slotTierToSpotlight("missing")).toBe("general");
   });
 
   it("maps release tier to tab tier", () => {

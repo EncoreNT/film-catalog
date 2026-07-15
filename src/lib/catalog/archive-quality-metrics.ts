@@ -31,16 +31,21 @@ export const CLEAR_QUALITY_FILTERS: Record<string, null> = {
 
 export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   {
-    key: "fourK",
-    label: "4K",
-    shortLabel: "4K",
-    caption: "разрешение Ultra HD",
+    key: "gold",
+    label: "4K + любой HDR",
+    stackedLabel: ["4K", "HDR"],
+    caption: "Gold tier · Ultra HD с расширенным динамическим диапазоном",
     icon: MonitorPlay,
-    isActive: ({ resolution }, isCatalog) => isCatalog && resolution === "4K",
-    toggleFilter: (active) => ({
-      ...CLEAR_QUALITY_FILTERS,
-      resolution: active ? null : "4K",
-    }),
+    isActive: ({ resolution, hdr }, isCatalog) =>
+      isCatalog && resolution === "4K" && hdr === "HDR_ANY",
+    toggleFilter: (active) =>
+      active
+        ? CLEAR_QUALITY_FILTERS
+        : {
+            ...CLEAR_QUALITY_FILTERS,
+            resolution: "4K",
+            hdr: "HDR_ANY",
+          },
   },
   {
     key: "hdr10",
