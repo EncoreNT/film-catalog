@@ -82,7 +82,7 @@ function PlaqueShell({
         className={`glow-hotspot pointer-events-none absolute -inset-4 -z-10 ${ACCENT_HOTSPOT[accent]}`}
         aria-hidden
       />
-      <div className="gradient-border-cinematic relative h-full rounded-[16px] border border-border-strong bg-bg-elevated/50 p-1.5 transition-[border-color,box-shadow] duration-500 group-hover/laser:border-accent/30">
+      <div className="gradient-border-cinematic relative h-full rounded-[16px] border border-border-strong bg-bg-elevated/72 p-1.5 transition-[border-color,box-shadow] duration-500 group-hover/laser:border-accent/30">
         <div className="spec-plaque-core relative h-full overflow-hidden rounded-[calc(16px-0.375rem)] px-3.5 py-3 sm:px-4 sm:py-3.5">
           {holo ? (
             <div

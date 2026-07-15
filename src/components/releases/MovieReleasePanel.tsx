@@ -105,7 +105,7 @@ export function MovieReleasePanel({
 
   if (!activeRelease) {
     return (
-      <section className="surface-card p-5">
+      <section className="surface-release-panel p-5">
         <p className="text-sm text-muted">У фильма пока нет релизов.</p>
       </section>
     );
@@ -117,9 +117,9 @@ export function MovieReleasePanel({
   const activeTier = activeRelease.tier ?? "standard";
 
   return (
-    <section className="surface-card overflow-hidden">
+    <section className="surface-release-panel overflow-hidden">
       <SpotlightTier tier={activeTier} />
-      <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/50 sm:flex-row sm:items-stretch sm:justify-between">
+      <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/85 sm:flex-row sm:items-stretch sm:justify-between">
         {showTabs ? (
           <div
             className="flex flex-wrap gap-0 px-1 pt-1"

@@ -290,6 +290,18 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* Release panel — denser fill so corner spotlights don't wash out specs */
+.surface-release-panel {
+  background: rgba(20, 18, 28, 0.88);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  backdrop-filter: blur(18px) saturate(115%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.28);
+}
+
 .surface-elevated {
   background: var(--bg-elevated);
   border: 1px solid var(--border-hairline);
@@ -745,64 +757,243 @@ input[type="number"] {
   animation: flare-drift 11s ease-in-out infinite;
 }
 
-/* ── Volumetric projector cone ──
-   A real light shaft: narrow at the lens (top center), widening as it travels
-   down, with a hot core, a diffuse body and a soft source flare. Built from
-   layered linear gradients carved into a cone silhouette by a radial mask, so
-   the edges feather instead of reading as a hard tilted rectangle. Colors
-   come from the --spotlight-* tokens, so the whole cone recolors per tier.
-   Static (no animation) — the big blurred layers paint once; the drifting glow
-   hotspots carry the motion. */
-.spotlight-cone {
-  background: linear-gradient(
-    to bottom,
-    var(--spotlight-mid) 0%,
-    transparent 72%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 58% 92% at 50% 6%,
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 46%,
-    transparent 80%
-  );
-  mask-image: radial-gradient(
-    ellipse 58% 92% at 50% 6%,
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 46%,
-    transparent 80%
-  );
-  filter: blur(26px);
+/* Near-black unlit stage floor */
+.stage-floor {
+  background: #040306;
 }
 
-.spotlight-core {
-  background: linear-gradient(
-    to bottom,
-    var(--spotlight-core) 0%,
-    transparent 60%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 26% 96% at 50% 4%,
-    #000 0%,
-    rgba(0, 0, 0, 0.5) 50%,
-    transparent 82%
-  );
-  mask-image: radial-gradient(
-    ellipse 26% 96% at 50% 4%,
-    #000 0%,
-    rgba(0, 0, 0, 0.5) 50%,
-    transparent 82%
-  );
-  filter: blur(10px);
+/* ── Stage lighting — dual spots from viewport top corners ──
+   Rigs are fixed to the screen (not content). Conic fans at 0% 0% /
+   100% 0%, wide wedges, long reach. Vignette darkens only edges — never
+   the upper corners where fixtures sit. Colors from --spotlight-* tokens. */
+.spotlight-stage {
+  position: fixed;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
 }
 
-.spotlight-source {
-  background: radial-gradient(
-    ellipse 60% 70% at 50% 0%,
-    var(--spotlight-core) 0%,
-    var(--spotlight-mid) 38%,
-    transparent 72%
+.spotlight-rig {
+  position: fixed;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.spotlight-beam {
+  position: absolute;
+  width: 220%;
+  height: 220%;
+  pointer-events: none;
+}
+
+/* Left corner — narrow beam, steeper angle, lands on poster column */
+.spotlight-rig--left .spotlight-beam--core {
+  top: 0;
+  left: 0;
+  background: conic-gradient(
+    from 0deg at 0% 0%,
+    transparent 0deg,
+    transparent 110deg,
+    var(--spotlight-mid) 118deg,
+    var(--spotlight-core) 124deg,
+    var(--spotlight-mid) 130deg,
+    transparent 138deg,
+    transparent 360deg
   );
   filter: blur(22px);
+  opacity: 0.68;
+  -webkit-mask-image: linear-gradient(
+    118deg,
+    #000 0%,
+    #000 46%,
+    rgba(0, 0, 0, 0.42) 68%,
+    transparent 90%
+  );
+  mask-image: linear-gradient(
+    118deg,
+    #000 0%,
+    #000 46%,
+    rgba(0, 0, 0, 0.42) 68%,
+    transparent 90%
+  );
+}
+
+.spotlight-rig--left .spotlight-beam--spread {
+  top: 0;
+  left: 0;
+  background: conic-gradient(
+    from 0deg at 0% 0%,
+    transparent 0deg,
+    transparent 104deg,
+    var(--spotlight-mid) 114deg,
+    var(--spotlight-glow) 124deg,
+    var(--spotlight-mid) 134deg,
+    transparent 144deg,
+    transparent 360deg
+  );
+  filter: blur(58px);
+  opacity: 0.38;
+  -webkit-mask-image: linear-gradient(
+    118deg,
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 52%,
+    transparent 86%
+  );
+  mask-image: linear-gradient(
+    118deg,
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 52%,
+    transparent 86%
+  );
+}
+
+.spotlight-rig--left .spotlight-beam--dust {
+  top: 0;
+  left: 0;
+  background: conic-gradient(
+    from 0deg at 0% 0%,
+    transparent 0deg,
+    transparent 98deg,
+    var(--spotlight-glow) 112deg,
+    var(--spotlight-mid) 124deg,
+    var(--spotlight-glow) 136deg,
+    transparent 152deg,
+    transparent 360deg
+  );
+  filter: blur(92px);
+  opacity: 0.22;
+  -webkit-mask-image: linear-gradient(118deg, #000 0%, transparent 82%);
+  mask-image: linear-gradient(118deg, #000 0%, transparent 82%);
+}
+
+/* Right corner — wider, longer rig; axis favors release panel */
+.spotlight-rig--right .spotlight-beam {
+  width: 280%;
+  height: 280%;
+}
+
+.spotlight-rig--right .spotlight-beam--core {
+  top: 0;
+  right: 0;
+  left: auto;
+  background: conic-gradient(
+    from 0deg at 100% 0%,
+    transparent 0deg,
+    transparent 214deg,
+    var(--spotlight-mid) 224deg,
+    var(--spotlight-core) 238deg,
+    var(--spotlight-mid) 252deg,
+    transparent 262deg,
+    transparent 360deg
+  );
+  filter: blur(28px);
+  opacity: 0.78;
+  -webkit-mask-image: linear-gradient(
+    242deg,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.5) 80%,
+    transparent 98%
+  );
+  mask-image: linear-gradient(
+    242deg,
+    #000 0%,
+    #000 58%,
+    rgba(0, 0, 0, 0.5) 80%,
+    transparent 98%
+  );
+}
+
+.spotlight-rig--right .spotlight-beam--spread {
+  top: 0;
+  right: 0;
+  left: auto;
+  background: conic-gradient(
+    from 0deg at 100% 0%,
+    transparent 0deg,
+    transparent 198deg,
+    var(--spotlight-mid) 214deg,
+    var(--spotlight-glow) 238deg,
+    var(--spotlight-mid) 258deg,
+    transparent 272deg,
+    transparent 360deg
+  );
+  filter: blur(78px);
+  opacity: 0.52;
+  -webkit-mask-image: linear-gradient(
+    242deg,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 64%,
+    transparent 96%
+  );
+  mask-image: linear-gradient(
+    242deg,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 64%,
+    transparent 96%
+  );
+}
+
+.spotlight-rig--right .spotlight-beam--dust {
+  top: 0;
+  right: 0;
+  left: auto;
+  background: conic-gradient(
+    from 0deg at 100% 0%,
+    transparent 0deg,
+    transparent 188deg,
+    var(--spotlight-glow) 218deg,
+    var(--spotlight-mid) 238deg,
+    var(--spotlight-glow) 258deg,
+    transparent 278deg,
+    transparent 360deg
+  );
+  filter: blur(118px);
+  opacity: 0.3;
+  -webkit-mask-image: linear-gradient(242deg, #000 0%, transparent 92%);
+  mask-image: linear-gradient(242deg, #000 0%, transparent 92%);
+}
+
+/* Off-center overlap — beams cross left of midline, not in panel center */
+.stage-overlap-dampen {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 34% 28% at 36% 24%,
+      rgba(4, 3, 7, 0.46) 0%,
+      rgba(4, 3, 7, 0.22) 42%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 28% 22% at 58% 28%,
+      rgba(4, 3, 7, 0.18) 0%,
+      transparent 68%
+    );
+}
+
+/* Edge-only darkness — upper corners stay lit (fixtures visible) */
+.stage-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 42%,
+      rgba(2, 1, 4, 0.35) 72%,
+      rgba(1, 1, 3, 0.82) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgba(2, 1, 4, 0.68) 0%,
+      transparent 10%,
+      transparent 90%,
+      rgba(2, 1, 4, 0.68) 100%
+    );
 }
 
 /* Glass frame — neurox-tier: blur + inner refraction + top edge highlight */
@@ -844,10 +1035,10 @@ input[type="number"] {
   opacity: 0;
 }
 
-/* Ambient glow hotspots — concentrated, not diffuse, like neurox nebulas */
+/* Ambient glow hotspots — soft pools for accent nebulas */
 .glow-hotspot {
   border-radius: 999px;
-  filter: blur(70px);
+  filter: blur(72px);
   pointer-events: none;
 }
 

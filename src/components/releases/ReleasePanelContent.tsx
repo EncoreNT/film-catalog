@@ -136,7 +136,7 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
         <section className="pt-0">
           <h2 className="font-mono-tech mb-4 text-muted">видео</h2>
           {release.video.hasData ? (
-            <div className="relative overflow-hidden rounded-[var(--radius)] border border-border/60 bg-bg-elevated/30 p-4 sm:p-5">
+            <div className="relative overflow-hidden rounded-[var(--radius)] border border-border/60 bg-bg-elevated/75 p-4 sm:p-5">
               {/* Calibration scan sweep — a slow cyan probe travelling the
                  signal readout. Decorative; hidden under reduced motion. */}
               <div
