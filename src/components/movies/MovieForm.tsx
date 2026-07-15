@@ -133,87 +133,110 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="pb-28">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] lg:items-start lg:gap-8">
-        <MachinedCard variant="calm" bodyClassName="space-y-5">
-          <CardSectionHeader label="карточка" title="Параметры фильма" />
+  const paramsCard = (
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
+      <CardSectionHeader label="основное" title="Карточка" />
+      <div className="flex flex-col gap-5">
+        <CoverUpload
+          layout="stacked"
+          movieId={movie.id}
+          hasCover={!!movie.coverPath}
+          coverVersion={movie.updatedAt}
+          onUploaded={() => router.refresh()}
+        />
+        <Field
+          label="Название"
+          variant="underline"
+          value={title}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            markDirty();
+          }}
+          required
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <YearInput
+            value={year}
+            onChange={(y) => {
+              setYear(y);
+              markDirty();
+            }}
+            hint="Год выхода, 1888 — текущий+1."
+          />
+          <DatePicker
+            label="Дата просмотра"
+            value={watchedAt}
+            onChange={(d) => {
+              setWatchedAt(d);
+              markDirty();
+            }}
+          />
+        </div>
+      </div>
+    </MachinedCard>
+  );
 
-          <div className="grid gap-6 sm:grid-cols-[112px_minmax(0,1fr)] sm:items-start">
-            <CoverUpload
-              movieId={movie.id}
-              hasCover={!!movie.coverPath}
-              coverVersion={movie.updatedAt}
-              onUploaded={() => router.refresh()}
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex h-full min-h-0 flex-col pb-28 lg:pb-0"
+    >
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3 lg:gap-8">
+        <div className="flex flex-col gap-6 lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+          {paramsCard}
+        </div>
+
+        <div className="flex h-full min-h-0 flex-col overflow-hidden lg:col-span-2">
+          <MachinedCard
+            variant="calm"
+            className="flex h-full min-h-0 flex-col"
+            bodyClassName="flex min-h-0 flex-1 flex-col gap-4"
+          >
+            <CardSectionHeader
+              label="контекст"
+              title="Жанры и сюжет"
+              className="shrink-0"
             />
-            <div className="min-w-0 space-y-4">
-              <Field
-                label="Название"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
+            <div className="scroll-subtle min-h-0 flex-1 space-y-6 overflow-y-auto pr-1">
+              <GenrePicker
+                value={genres}
+                onChange={(g) => {
+                  setGenres(g);
                   markDirty();
                 }}
-                required
               />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <YearInput
-                  value={year}
-                  onChange={(y) => {
-                    setYear(y);
-                    markDirty();
-                  }}
-                  hint="Год выхода, 1888 — текущий+1."
+              <TextAreaField
+                label="Описание"
+                variant="underline"
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  markDirty();
+                }}
+                hint="Краткое описание сюжета — на твоё усмотрение."
+                rows={6}
+              />
+              <div className="space-y-4 border-t border-border pt-6">
+                <CardSectionHeader
+                  label="связи"
+                  title="Франшизы"
+                  trailing={
+                    <InfoHint
+                      label="Франшизы"
+                      text="Привяжите фильм к одной или нескольким франшизам и выберите слот. Новую франшизу можно создать прямо отсюда."
+                    />
+                  }
                 />
-                <DatePicker
-                  label="Дата просмотра"
-                  value={watchedAt}
-                  onChange={(d) => {
-                    setWatchedAt(d);
-                    markDirty();
-                  }}
+                <MovieFranchisePicker
+                  embedded
+                  movieId={movie.id}
+                  movieTitle={movie.title}
+                  initialMemberships={franchiseMemberships ?? []}
                 />
               </div>
             </div>
-          </div>
-
-          <GenrePicker
-            value={genres}
-            onChange={(g) => {
-              setGenres(g);
-              markDirty();
-            }}
-          />
-
-          <TextAreaField
-            label="Описание"
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              markDirty();
-            }}
-            hint="Краткое описание сюжета — на твоё усмотрение."
-          />
-        </MachinedCard>
-
-        <MachinedCard variant="calm" bodyClassName="space-y-4 lg:sticky lg:top-24">
-          <CardSectionHeader
-            label="связи"
-            title="Франшизы"
-            trailing={
-              <InfoHint
-                label="Франшизы"
-                text="Привяжите фильм к одной или нескольким франшизам и выберите слот. Новую франшизу можно создать прямо отсюда."
-              />
-            }
-          />
-          <MovieFranchisePicker
-            embedded
-            movieId={movie.id}
-            movieTitle={movie.title}
-            initialMemberships={franchiseMemberships ?? []}
-          />
-        </MachinedCard>
+          </MachinedCard>
+        </div>
       </div>
 
       <FormActionBar

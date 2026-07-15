@@ -15,6 +15,8 @@ interface CoverUploadProps {
   label?: string;
   /** Kept for API symmetry; not rendered here. */
   hint?: ReactNode;
+  /** Full-width cover for stacked movie edit sidebar. */
+  layout?: "inline" | "stacked";
 }
 
 export function CoverUpload({
@@ -25,7 +27,10 @@ export function CoverUpload({
   onUrlChange,
   onUploaded,
   label = "Обложка",
+  layout = "inline",
 }: CoverUploadProps) {
+  const stacked = layout === "stacked";
+
   return (
     <ImageCoverUpload
       entityId={movieId}
@@ -34,8 +39,10 @@ export function CoverUpload({
       buildStoredUrl={movieCoverUrl}
       uploadPath={(id) => `/api/movies/${id}/cover`}
       aspectClass="aspect-[2/3]"
-      thumbnailClassName="relative h-28 w-[5.25rem] shrink-0"
-      thumbnailSizes="84px"
+      thumbnailClassName={
+        stacked ? "relative aspect-[2/3] w-full max-w-[12rem]" : "relative h-28 w-[5.25rem] shrink-0"
+      }
+      thumbnailSizes={stacked ? "192px" : "84px"}
       dialogAspectClass="aspect-[2/3]"
       dialogMaxWidth="max-w-[12rem]"
       dialogSizes="192px"

@@ -22,6 +22,7 @@ import {
 } from "@/lib/media/spec-tags";
 import { formatAudioLabel, translationShort } from "@/lib/media/audio-labels";
 import {
+  movieExternalStorageNames,
   movieHasExternalStorage,
   movieHasFile,
   pickPrimaryRelease,
@@ -35,6 +36,7 @@ import {
   type TierChipTone,
 } from "@/lib/media/tier-presentation";
 import { CoverPlaceholderBackdrop } from "@/components/shared/CoverPlaceholderBackdrop";
+import { ExternalStorageMark } from "@/components/shared/ExternalStorageMark";
 import { TierCoverOverlay } from "@/components/shared/TierCoverOverlay";
 import {
   TooltipListHeader,
@@ -206,6 +208,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const genres = orderedMovieGenres(movie).slice(0, 2);
   const releaseCount = movie.releases.length;
   const hasExternal = movieHasExternalStorage(movie.releases);
+  const externalStorageNames = movieExternalStorageNames(movie.releases);
   const hasFile = movieHasFile(movie.releases);
   const releaseCountLabel = `${releaseCount} ${pluralRu(
     releaseCount,
@@ -362,13 +365,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                   <span className="text-faint">Без жанра</span>
                 )}
                 {hasExternal ? (
-                  <span
-                    className="shrink-0 text-accent/80"
-                    title="Есть релиз на внешнем диске"
-                    aria-label="Есть релиз на внешнем диске"
-                  >
-                    ▣
-                  </span>
+                  <ExternalStorageMark storageNames={externalStorageNames} />
                 ) : null}
                 {!hasFile ? (
                   <span

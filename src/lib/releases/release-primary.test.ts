@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { pickPrimaryRelease, rankRelease, sortReleasesByQuality } from "@/lib/releases/release-primary";
+import {
+  movieExternalStorageNames,
+  pickPrimaryRelease,
+  rankRelease,
+  sortReleasesByQuality,
+} from "@/lib/releases/release-primary";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 function release(
@@ -8,17 +13,17 @@ function release(
   return {
     id: partial.id,
     movieId: 1,
-    externalStorageId: null,
-    filePath: null,
-    fileSize: null,
-    fileMtime: null,
-    fileHash: null,
+    externalStorageId: partial.externalStorageId ?? null,
+    filePath: partial.filePath ?? null,
+    fileSize: partial.fileSize ?? null,
+    fileMtime: partial.fileMtime ?? null,
+    fileHash: partial.fileHash ?? null,
     releaseType: partial.releaseType ?? null,
     version: "theatrical",
     durationSeconds: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    externalStorage: null,
+    externalStorage: partial.externalStorage ?? null,
     videoTrack: partial.videoTrack ?? null,
     audioTracks: partial.audioTracks ?? [],
     subtitleTracks: partial.subtitleTracks ?? [],
@@ -137,5 +142,42 @@ describe("pickPrimaryRelease", () => {
       },
     });
     expect(sortReleasesByQuality([hd, fourK]).map((r) => r.id)).toEqual([1, 2]);
+  });
+});
+
+describe("movieExternalStorageNames", () => {
+  const storage = (id: number, name: string) => ({
+    id,
+    name,
+    path: null,
+    createdAt: new Date(),
+  });
+
+  it("returns unique sorted names from external releases", () => {
+    const releases = [
+      release({
+        id: 1,
+        externalStorageId: 2,
+        externalStorage: storage(2, "WD 8TB"),
+      }),
+      release({
+        id: 2,
+        externalStorageId: 1,
+        externalStorage: storage(1, "Seagate 4TB"),
+      }),
+      release({
+        id: 3,
+        externalStorageId: 1,
+        externalStorage: storage(1, "Seagate 4TB"),
+      }),
+    ];
+    expect(movieExternalStorageNames(releases)).toEqual([
+      "Seagate 4TB",
+      "WD 8TB",
+    ]);
+  });
+
+  it("returns empty list when no external releases", () => {
+    expect(movieExternalStorageNames([release({ id: 1 })])).toEqual([]);
   });
 });

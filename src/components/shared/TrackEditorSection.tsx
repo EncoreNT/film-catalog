@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Star, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/primitives/Button";
+import { Checkbox } from "@/components/primitives/Checkbox";
 import { Field } from "@/components/primitives/Field";
 import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { Select } from "@/components/primitives/Select";
@@ -51,6 +52,8 @@ interface TrackEditorSectionProps {
   videoColumnsOnXl?: boolean;
   /** Tabs for video / audio / subtitles instead of a long vertical stack. */
   tabbed?: boolean;
+  /** default — stacked page; panel — flex column with scrollable tab body (release editor). */
+  layout?: "default" | "panel";
 }
 
 export function TrackEditorSection({
@@ -75,6 +78,7 @@ export function TrackEditorSection({
   splitColumns = false,
   videoColumnsOnXl = false,
   tabbed = false,
+  layout = "default",
 }: TrackEditorSectionProps) {
   const showVideo = sections.includes("video");
   const showAudio = sections.includes("audio");
@@ -341,17 +345,14 @@ export function TrackEditorSection({
                   </button>
                 </div>
               ) : (
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
-                  <input
-                    type="checkbox"
-                    checked={track.isDefault}
-                    onChange={(e) =>
-                      onUpdateAudio(index, { isDefault: e.target.checked })
-                    }
-                    className="h-4 w-4 accent-accent"
-                  />
-                  основная дорожка
-                </label>
+                <Checkbox
+                  checked={track.isDefault}
+                  onChange={(e) =>
+                    onUpdateAudio(index, { isDefault: e.target.checked })
+                  }
+                >
+                  <span className="font-mono-tech">основная дорожка</span>
+                </Checkbox>
               )}
             </div>
           );
@@ -435,41 +436,32 @@ export function TrackEditorSection({
               ) : null}
             </div>
             {mainTrackStyle === "star" ? (
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
-                <input
-                  type="checkbox"
+              <Checkbox
+                checked={track.isDefault}
+                onChange={(e) =>
+                  onUpdateSubtitle(index, { isDefault: e.target.checked })
+                }
+              >
+                <span className="font-mono-tech">основные</span>
+              </Checkbox>
+            ) : (
+              <div className="flex flex-wrap gap-5">
+                <Checkbox
                   checked={track.isDefault}
                   onChange={(e) =>
                     onUpdateSubtitle(index, { isDefault: e.target.checked })
                   }
-                  className="h-4 w-4 accent-accent"
-                />
-                основные
-              </label>
-            ) : (
-              <div className="flex gap-5">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
-                  <input
-                    type="checkbox"
-                    checked={track.isDefault}
-                    onChange={(e) =>
-                      onUpdateSubtitle(index, { isDefault: e.target.checked })
-                    }
-                    className="h-4 w-4 accent-accent"
-                  />
-                  основные
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
-                  <input
-                    type="checkbox"
-                    checked={track.forced}
-                    onChange={(e) =>
-                      onUpdateSubtitle(index, { forced: e.target.checked })
-                    }
-                    className="h-4 w-4 accent-accent"
-                  />
-                  forced
-                </label>
+                >
+                  <span className="font-mono-tech">основные</span>
+                </Checkbox>
+                <Checkbox
+                  checked={track.forced}
+                  onChange={(e) =>
+                    onUpdateSubtitle(index, { forced: e.target.checked })
+                  }
+                >
+                  <span className="font-mono-tech">forced</span>
+                </Checkbox>
               </div>
             )}
           </div>
@@ -526,13 +518,24 @@ export function TrackEditorSection({
     : (tabItems[0]?.id ?? "video");
 
   if (tabbed && tabItems.length > 0) {
+    const isPanel = layout === "panel";
     return (
-      <MachinedCard>
+      <MachinedCard
+        variant={isPanel ? "calm" : "machined"}
+        className={isPanel ? "flex h-full min-h-0 flex-col" : undefined}
+        bodyClassName={
+          isPanel ? "flex min-h-0 flex-1 flex-col gap-4" : undefined
+        }
+      >
         {showSectionTitle ? (
-          <CardSectionHeader label="содержимое" title="Дорожки" />
+          <CardSectionHeader
+            label="содержимое"
+            title="Дорожки"
+            className={isPanel ? "shrink-0" : undefined}
+          />
         ) : null}
         <div
-          className={`${showSectionTitle ? "mt-5" : ""} flex gap-1 border-b border-border`}
+          className={`${showSectionTitle && !isPanel ? "mt-5" : ""} flex shrink-0 gap-1 border-b border-border`}
           role="tablist"
           aria-label="Дорожки"
         >
@@ -568,7 +571,11 @@ export function TrackEditorSection({
           role="tabpanel"
           id={`track-panel-${resolvedTab}`}
           aria-labelledby={`track-tab-${resolvedTab}`}
-          className="pt-5 sm:pt-6"
+          className={
+            isPanel
+              ? "scroll-subtle min-h-0 flex-1 overflow-y-auto pt-5 pr-1 sm:pt-6"
+              : "pt-5 sm:pt-6"
+          }
         >
           {resolvedTab === "video" ? videoSection : null}
           {resolvedTab === "audio" ? audioSection : null}

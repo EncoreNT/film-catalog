@@ -36,6 +36,7 @@ export default async function EditMoviePage({ params }: PageProps) {
       backLabel="Назад к фильму"
       eyebrow="редактирование"
       title={movie.title}
+      fillViewport
     >
       <MovieEditor movie={movie} franchiseMemberships={franchiseMemberships} />
     </EntityEditLayout>

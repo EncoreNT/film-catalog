@@ -5,6 +5,12 @@ function queryFrom(params: Record<string, string>) {
   return parseListQuery(new URLSearchParams(params));
 }
 
+describe("parseListQuery", () => {
+  it("defaults catalog page size to 70", () => {
+    expect(queryFrom({}).limit).toBe(70);
+  });
+});
+
 describe("buildMovieWhere", () => {
   it("merges watched status with date range", () => {
     const where = buildMovieWhere(

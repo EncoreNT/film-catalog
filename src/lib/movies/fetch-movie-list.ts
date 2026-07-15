@@ -3,6 +3,7 @@ import { movieInclude } from "@/lib/movies/movie-include";
 import {
   buildMovieListWhere,
   buildMovieOrder,
+  DEFAULT_MOVIE_LIST_LIMIT,
   parseListQuery,
 } from "@/lib/movies/movie-query";
 import {
@@ -16,7 +17,7 @@ export async function fetchMovieList(
 ) {
   const where = await buildMovieListWhere(query);
   const page = query.page ?? 1;
-  const limit = query.limit ?? 48;
+  const limit = query.limit ?? DEFAULT_MOVIE_LIST_LIMIT;
   const skip = (page - 1) * limit;
 
   if (isReleaseAggregateSort(query.sort)) {

@@ -8,12 +8,15 @@ import { prisma } from "@/lib/db/prisma";
 
 export type { MovieWithTracks } from "@/lib/movies/movie-include";
 
+/** Default page size for movie catalog and /api/movies list. */
+export const DEFAULT_MOVIE_LIST_LIMIT = 70;
+
 export function parseListQuery(searchParams: URLSearchParams) {
   const raw = Object.fromEntries(searchParams.entries());
   return movieListQuerySchema.parse({
     ...raw,
     page: raw.page ?? "1",
-    limit: raw.limit ?? "48",
+    limit: raw.limit ?? String(DEFAULT_MOVIE_LIST_LIMIT),
     sort: raw.sort ?? "title",
     order: raw.order ?? "asc",
     status: raw.status ?? "CATALOG",

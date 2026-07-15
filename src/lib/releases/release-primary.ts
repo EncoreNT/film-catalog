@@ -1,6 +1,9 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { isPremiumRussianAtmosTrack } from "@/lib/media/quality-predicates";
-import { releaseHasExternalStorage } from "@/lib/releases/release-storage";
+import {
+  externalStorageNameFromRelease,
+  releaseHasExternalStorage,
+} from "@/lib/releases/release-storage";
 
 const RESOLUTION_RANK: Record<string, number> = {
   "4K": 100,
@@ -91,4 +94,16 @@ export function movieHasExternalStorage(
   releases: Pick<ReleaseWithTracks, "externalStorage" | "externalStorageId">[],
 ): boolean {
   return releases.some((r) => releaseHasExternalStorage(r));
+}
+
+/** Unique external volume names across movie releases (sorted). */
+export function movieExternalStorageNames(
+  releases: Pick<ReleaseWithTracks, "externalStorage" | "externalStorageId">[],
+): string[] {
+  const names = new Set<string>();
+  for (const release of releases) {
+    const name = externalStorageNameFromRelease(release);
+    if (name) names.add(name);
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, "ru"));
 }

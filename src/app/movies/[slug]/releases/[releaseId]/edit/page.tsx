@@ -43,6 +43,7 @@ export default async function EditReleasePage({ params }: PageProps) {
       movie={movie}
       eyebrow="редактирование релиза"
       releaseLabel={releaseLabel}
+      fillViewport
     >
       <ReleaseEditor
         mode="edit"

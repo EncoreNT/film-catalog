@@ -33,7 +33,7 @@ export default async function NewReleasePage({ params }: PageProps) {
   if (!movie) notFound();
 
   return (
-    <ReleaseEditPageLayout movie={movie} eyebrow="новый релиз">
+    <ReleaseEditPageLayout movie={movie} eyebrow="новый релиз" fillViewport>
       <ReleaseEditor
         mode="create"
         movieId={movie.id}

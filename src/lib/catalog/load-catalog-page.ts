@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { parseListQuery } from "@/lib/movies/movie-query";
+import { parseListQuery, DEFAULT_MOVIE_LIST_LIMIT } from "@/lib/movies/movie-query";
 import { fetchMovieList } from "@/lib/movies/fetch-movie-list";
 import {
   getArchiveMetrics,
@@ -46,7 +46,7 @@ export async function loadCatalogPage(
 
   const query = parseListQuery(params);
   const page = query.page ?? 1;
-  const limit = query.limit ?? 48;
+  const limit = query.limit ?? DEFAULT_MOVIE_LIST_LIMIT;
 
   const statuses = (query.status ?? "CATALOG")
     .split(",")

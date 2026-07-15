@@ -320,178 +320,190 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
   const releaseLabel =
     mode === "edit" && release ? releaseTabLabel(release) : "новый релиз";
 
-  return (
-    <form onSubmit={handleSubmit} className="pb-28">
-      <MachinedCard className="mb-6" bodyClassName="space-y-5">
-        <CardSectionHeader label="источник" title={releaseLabel} />
+  const sourceCard = (
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
+      <CardSectionHeader label="источник" title={releaseLabel} />
 
-        <StoragePicker
-          compact
-          storageKind={form.storageKind}
-          onStorageKindChange={(value) => {
-            form.setStorageKind(value);
-            markDirty();
-          }}
-          externalStorages={form.externalStorages}
-          selectedStorageId={form.selectedStorageId}
-          onSelectedStorageIdChange={(value) => {
-            form.setSelectedStorageId(value);
-            markDirty();
-          }}
-          onCreateExternalStorage={async (name) => {
-            await form.createExternalStorage(name);
-            markDirty();
-          }}
-        />
+      <StoragePicker
+        compact
+        storageKind={form.storageKind}
+        onStorageKindChange={(value) => {
+          form.setStorageKind(value);
+          markDirty();
+        }}
+        externalStorages={form.externalStorages}
+        selectedStorageId={form.selectedStorageId}
+        onSelectedStorageIdChange={(value) => {
+          form.setSelectedStorageId(value);
+          markDirty();
+        }}
+        onCreateExternalStorage={async (name) => {
+          await form.createExternalStorage(name);
+          markDirty();
+        }}
+      />
 
-        <Field
-          label="Путь к файлу"
-          placeholder="/Volumes/Seagate/Movies/film.mkv"
-          hint="Абсолютный путь к видеофайлу."
-        >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-            <input
-              id="путь-к-файлу"
-              className={`focus-ring min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${
-                form.fileFillError ? "border-danger/50" : "border-border"
-              }`}
-              value={form.filePath}
-              onChange={(e) => {
-                form.setFilePath(e.target.value);
+      <Field
+        label="Путь к файлу"
+        placeholder="/Volumes/Seagate/Movies/film.mkv"
+        hint="Абсолютный путь к видеофайлу."
+      >
+        <div className="flex flex-col gap-2">
+          <input
+            id="путь-к-файлу"
+            className={`focus-ring min-h-11 min-w-0 w-full rounded-[var(--radius)] border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${
+              form.fileFillError ? "border-danger/50" : "border-border"
+            }`}
+            value={form.filePath}
+            onChange={(e) => {
+              form.setFilePath(e.target.value);
+              form.setPendingFileMeta(null);
+              form.setFileFillMessage(null);
+              form.setFileFillError(null);
+              markDirty();
+            }}
+            onBlur={(e) =>
+              trimOnInputBlur(e, (ev) => {
+                form.setFilePath(ev.target.value);
                 form.setPendingFileMeta(null);
                 form.setFileFillMessage(null);
                 form.setFileFillError(null);
-                markDirty();
-              }}
-              onBlur={(e) =>
-                trimOnInputBlur(e, (ev) => {
-                  form.setFilePath(ev.target.value);
-                  form.setPendingFileMeta(null);
-                  form.setFileFillMessage(null);
-                  form.setFileFillError(null);
-                })
-              }
-              aria-invalid={!!form.fileFillError}
-              aria-describedby={
-                form.fileFillError ? "file-path-fill-feedback" : undefined
-              }
-              placeholder="/Volumes/Seagate/Movies/film.mkv"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              loading={form.fillingFromFile}
-              onClick={handleFillFromFile}
-              disabled={!form.filePath.trim() || form.fillingFromFile}
-              className="shrink-0 sm:mt-0"
+              })
+            }
+            aria-invalid={!!form.fileFillError}
+            aria-describedby={
+              form.fileFillError ? "file-path-fill-feedback" : undefined
+            }
+            placeholder="/Volumes/Seagate/Movies/film.mkv"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            loading={form.fillingFromFile}
+            onClick={handleFillFromFile}
+            disabled={!form.filePath.trim() || form.fillingFromFile}
+            className="w-full"
+          >
+            <ScanSearch className="h-4 w-4" aria-hidden />
+            Заполнить из файла
+          </Button>
+        </div>
+        <div id="file-path-fill-feedback" className="pt-1">
+          {form.fileFillError ? (
+            <p
+              className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+              role="alert"
             >
-              <ScanSearch className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">Заполнить из файла</span>
-              <span className="sm:hidden">Из файла</span>
-            </Button>
-          </div>
-          <div id="file-path-fill-feedback" className="pt-1">
-            {form.fileFillError ? (
-              <p
-                className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
-                role="alert"
-              >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                <span>{form.fileFillError}</span>
-              </p>
-            ) : form.fileFillMessage ? (
-              <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
-                <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                <span>{form.fileFillMessage}</span>
-              </p>
-            ) : form.pendingFileMeta ? (
-              <p className="text-xs text-accent">
-                Метаданные файла готовы к сохранению
-              </p>
-            ) : form.filePath.trim() ? (
-              <p className="text-xs text-faint">
-                файл не проверялся — путь сохранится как указано
-              </p>
-            ) : (
-              <p className="text-xs text-faint">
-                не указан — будет сброшен при сохранении
-              </p>
-            )}
-          </div>
-        </Field>
-      </MachinedCard>
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <span>{form.fileFillError}</span>
+            </p>
+          ) : form.fileFillMessage ? (
+            <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+              <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <span>{form.fileFillMessage}</span>
+            </p>
+          ) : form.pendingFileMeta ? (
+            <p className="text-xs text-accent">
+              Метаданные файла готовы к сохранению
+            </p>
+          ) : form.filePath.trim() ? (
+            <p className="text-xs text-faint">
+              файл не проверялся — путь сохранится как указано
+            </p>
+          ) : (
+            <p className="text-xs text-faint">
+              не указан — будет сброшен при сохранении
+            </p>
+          )}
+        </div>
+      </Field>
+    </MachinedCard>
+  );
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] lg:items-start lg:gap-8">
-        <TrackEditorSection
-          tabbed
-          variant="balanced"
-          videoColumnsOnXl
-          audioGridCols="adaptive"
-          video={form.video}
-          onVideoChange={patchVideo}
-          audioRows={form.audioRows}
-          onUpdateAudio={patchAudio}
-          onAddAudio={() => {
-            form.addAudioRow();
-            markDirty();
-          }}
-          onRemoveAudio={(index) => {
-            form.removeAudioRow(index);
-            markDirty();
-          }}
-          onSetMainAudio={(index) => {
-            form.setMainAudioTrack(index);
-            markDirty();
-          }}
-          subtitleRows={form.subtitleRows}
-          onUpdateSubtitle={patchSubtitle}
-          onAddSubtitle={() => {
-            form.addSubtitleRow();
-            markDirty();
-          }}
-          onRemoveSubtitle={(index) => {
-            form.removeSubtitleRow(index);
-            markDirty();
-          }}
-          mainTrackStyle="star"
-          minAudioRows={0}
-        />
+  const detailsCard = (
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
+      <CardSectionHeader label="детали релиза" title="Параметры" />
 
-        <aside className="lg:sticky lg:top-24">
-          <MachinedCard bodyClassName="space-y-5">
-            <CardSectionHeader label="детали релиза" title="Параметры" />
+      <DurationInput
+        valueSeconds={form.durationSeconds}
+        onChange={(s) => {
+          form.setDurationSeconds(s);
+          markDirty();
+        }}
+        hint="Из ffprobe при сканировании."
+      />
 
-            <DurationInput
-              valueSeconds={form.durationSeconds}
-              onChange={(s) => {
-                form.setDurationSeconds(s);
-                markDirty();
-              }}
-              hint="Из ffprobe при сканировании."
-            />
+      <Select
+        label="Тип релиза"
+        value={form.releaseType}
+        onChange={(v) => {
+          form.setReleaseType(v);
+          markDirty();
+        }}
+        options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
+        hint="BDRemux, BDRip, WEB-DL…"
+      />
+      <Select
+        label="Версия"
+        value={form.version}
+        onChange={(v) => {
+          form.setVersion(v);
+          markDirty();
+        }}
+        options={MOVIE_VERSIONS}
+        hint="Театральная, режиссёрская…"
+      />
+    </MachinedCard>
+  );
 
-            <Select
-              label="Тип релиза"
-              value={form.releaseType}
-              onChange={(v) => {
-                form.setReleaseType(v);
-                markDirty();
-              }}
-              options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
-              hint="BDRemux, BDRip, WEB-DL…"
-            />
-            <Select
-              label="Версия"
-              value={form.version}
-              onChange={(v) => {
-                form.setVersion(v);
-                markDirty();
-              }}
-              options={MOVIE_VERSIONS}
-              hint="Театральная, режиссёрская…"
-            />
-          </MachinedCard>
-        </aside>
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex h-full min-h-0 flex-col pb-28 lg:pb-0"
+    >
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3 lg:gap-8">
+        <div className="flex flex-col gap-6 lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+          {sourceCard}
+          {detailsCard}
+        </div>
+
+        <div className="flex h-full min-h-0 flex-col overflow-hidden lg:col-span-2">
+          <TrackEditorSection
+            tabbed
+            layout="panel"
+            variant="balanced"
+            videoColumnsOnXl
+            audioGridCols="adaptive"
+            video={form.video}
+            onVideoChange={patchVideo}
+            audioRows={form.audioRows}
+            onUpdateAudio={patchAudio}
+            onAddAudio={() => {
+              form.addAudioRow();
+              markDirty();
+            }}
+            onRemoveAudio={(index) => {
+              form.removeAudioRow(index);
+              markDirty();
+            }}
+            onSetMainAudio={(index) => {
+              form.setMainAudioTrack(index);
+              markDirty();
+            }}
+            subtitleRows={form.subtitleRows}
+            onUpdateSubtitle={patchSubtitle}
+            onAddSubtitle={() => {
+              form.addSubtitleRow();
+              markDirty();
+            }}
+            onRemoveSubtitle={(index) => {
+              form.removeSubtitleRow(index);
+              markDirty();
+            }}
+            mainTrackStyle="star"
+            minAudioRows={0}
+          />
+        </div>
       </div>
 
       <FormActionBar
