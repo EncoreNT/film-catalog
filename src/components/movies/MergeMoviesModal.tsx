@@ -14,6 +14,7 @@ import { Button } from "@/components/primitives/Button";
 import { Radio } from "@/components/primitives/Radio";
 import { Select } from "@/components/primitives/Select";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
+import { apiFetch } from "@/lib/api/client";
 
 type FieldChoice = "canonical" | "other";
 
@@ -313,19 +314,19 @@ export function MergeMoviesModal({
     }
 
     try {
-      const res = await fetch(`/api/movies/${canonical.id}/merge`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          otherId: other.id,
-          choices:
-            Object.keys(payloadChoices).length > 0 ? payloadChoices : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Не удалось объединить");
-      }
+      await apiFetch(
+        `/api/movies/${canonical.id}/merge`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            otherId: other.id,
+            choices:
+              Object.keys(payloadChoices).length > 0 ? payloadChoices : undefined,
+          }),
+        },
+        "Не удалось объединить",
+      );
       onMerged({ canonicalSlug: canonical.slug });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");

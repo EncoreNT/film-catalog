@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/api/client";
 
 interface PaginatedListResponse<T> {
   items: T[];
@@ -27,8 +28,11 @@ export function useDebouncedApiSearch<T>({
     async (q: string) => {
       setLoading(true);
       try {
-        const res = await fetch(buildUrl(q));
-        const data = (await res.json()) as PaginatedListResponse<T>;
+        const data = await apiFetch<PaginatedListResponse<T>>(
+          buildUrl(q),
+          undefined,
+          "Ошибка поиска",
+        );
         setResults(data.items ?? []);
       } catch {
         setResults([]);

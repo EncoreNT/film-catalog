@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Film, Library, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
+import { NativeDialog } from "@/components/primitives/NativeDialog";
+import { apiFetch } from "@/lib/api/client";
 import type { MovieFranchiseMembership } from "@/lib/movies/movie-franchise-memberships";
 
 interface FranchiseSlotRow {
@@ -31,6 +33,9 @@ interface FranchiseSlotPickerDialogProps {
   onPlaced: (memberships: MovieFranchiseMembership[]) => void;
 }
 
+const DIALOG_CLASS =
+  "fixed inset-0 m-auto flex max-h-[88dvh] w-[min(100%-2rem,560px)] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm open:animate-in";
+
 export function FranchiseSlotPickerDialog(props: FranchiseSlotPickerDialogProps) {
   if (!props.open) return null;
   return (
@@ -42,6 +47,7 @@ export function FranchiseSlotPickerDialog(props: FranchiseSlotPickerDialogProps)
 }
 
 function FranchiseSlotPickerDialogContent({
+  open,
   onClose,
   onPlaced,
   movieId,
@@ -50,24 +56,11 @@ function FranchiseSlotPickerDialogContent({
   franchiseName,
   mode,
   currentSlotId,
-}: Omit<FranchiseSlotPickerDialogProps, "open">) {
+}: FranchiseSlotPickerDialogProps) {
   const [slots, setSlots] = useState<FranchiseSlotRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState<Target | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (!dialog.open) dialog.showModal();
-    const onCancel = (e: Event) => {
-      e.preventDefault();
-      if (!placing) onClose();
-    };
-    dialog.addEventListener("cancel", onCancel);
-    return () => dialog.removeEventListener("cancel", onCancel);
-  }, [onClose, placing]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,11 +68,20 @@ function FranchiseSlotPickerDialogContent({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/franchises/${franchiseId}/slots`);
-        const data = (await res.json()) as FranchiseSlotRow[];
+        const data = await apiFetch<FranchiseSlotRow[]>(
+          `/api/franchises/${franchiseId}/slots`,
+          undefined,
+          "Не удалось загрузить слоты франшизы",
+        );
         if (!cancelled) setSlots(data);
-      } catch {
-        if (!cancelled) setError("Не удалось загрузить слоты франшизы");
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Не удалось загрузить слоты франшизы",
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -89,7 +91,6 @@ function FranchiseSlotPickerDialogContent({
     };
   }, [franchiseId]);
 
-  // Index of the movie's current slot in the displayed list (-1 when adding).
   const currentIdx =
     slots && currentSlotId != null
       ? slots.findIndex((s) => s.id === currentSlotId)
@@ -103,21 +104,16 @@ function FranchiseSlotPickerDialogContent({
         mode === "move"
           ? `/api/movies/${movieId}/franchises/${franchiseId}`
           : `/api/movies/${movieId}/franchises`;
-      const res = await fetch(url, {
-        method: mode === "move" ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ franchiseId, target }),
-      });
-      const data = (await res.json()) as
-        | MovieFranchiseMembership[]
-        | { error?: string };
-      if (!res.ok) {
-        throw new Error(
-          (data as { error?: string }).error ??
-            "Не удалось разместить фильм",
-        );
-      }
-      onPlaced(data as MovieFranchiseMembership[]);
+      const data = await apiFetch<MovieFranchiseMembership[]>(
+        url,
+        {
+          method: mode === "move" ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ franchiseId, target }),
+        },
+        "Не удалось разместить фильм",
+      );
+      onPlaced(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -125,9 +121,6 @@ function FranchiseSlotPickerDialogContent({
     }
   };
 
-  // An insertion point right after slot i is a no-op (or would error) when the
-  // movie already sits at i or i+1 — i.e. the points immediately around the
-  // movie's current slot. Disable those in move mode only.
   const pointAfterDisabled = (i: number) =>
     currentIdx >= 0 && (i === currentIdx || i === currentIdx - 1);
 
@@ -137,11 +130,13 @@ function FranchiseSlotPickerDialogContent({
       : "Добавить фильм во франшизу";
 
   return (
-    <dialog
-      ref={dialogRef}
-      className="fixed inset-0 z-[120] m-auto flex max-h-[88dvh] w-[min(100%-2rem,560px)] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm open:animate-in"
+    <NativeDialog
+      open={open}
       onClose={onClose}
-      aria-label={`${title}: ${franchiseName}`}
+      preventCancel={placing != null}
+      zIndex={120}
+      ariaLabel={`${title}: ${franchiseName}`}
+      className={DIALOG_CLASS}
     >
       <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0">
@@ -197,9 +192,7 @@ function FranchiseSlotPickerDialogContent({
                 placing.kind === "before" &&
                 placing.slotId === slots[0].id
               }
-              onClick={() =>
-                place({ kind: "before", slotId: slots[0].id })
-              }
+              onClick={() => place({ kind: "before", slotId: slots[0].id })}
             />
             {slots.map((slot, i) => {
               const isOwn = slot.id === currentSlotId;
@@ -254,7 +247,7 @@ function FranchiseSlotPickerDialogContent({
           </div>
         ) : null}
       </div>
-    </dialog>
+    </NativeDialog>
   );
 }
 

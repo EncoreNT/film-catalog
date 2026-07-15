@@ -28,6 +28,19 @@ import {
   sortReleasesByQuality,
 } from "@/lib/releases/release-primary";
 import { pluralRu } from "@/lib/shared/russian-plural";
+import {
+  tierCardGlow,
+  tierChipTone,
+  tierPosterGlow,
+  type TierChipTone,
+} from "@/lib/media/tier-presentation";
+import { CoverPlaceholderBackdrop } from "@/components/shared/CoverPlaceholderBackdrop";
+import { TierCoverOverlay } from "@/components/shared/TierCoverOverlay";
+import {
+  TooltipListHeader,
+  TooltipListItem,
+  TooltipListPanel,
+} from "@/components/primitives/TooltipListParts";
 
 interface MovieCardProps {
   movie: MovieWithTracks;
@@ -40,9 +53,7 @@ function shortHdrLabel(label: string): string {
   return label; // HDR10, HDR10+, HLG
 }
 
-type ChipTone = "default" | "gold" | "ruby";
-
-const CHIP_TONE: Record<ChipTone, { base: string; hover: string }> = {
+const CHIP_TONE: Record<TierChipTone, { base: string; hover: string }> = {
   default: {
     base: "border-border-strong text-text/85",
     hover: "hover:border-text/40",
@@ -72,7 +83,7 @@ function SpecChip({
   title,
 }: {
   children: ReactNode;
-  tone?: ChipTone;
+  tone?: TierChipTone;
   icon?: ReactNode;
   interactive?: boolean;
   className?: string;
@@ -116,10 +127,8 @@ function AudioTracksPopover({ release }: { release: ReleaseWithTracks }) {
   }
 
   return (
-    <div className="w-[min(20rem,calc(100vw-2rem))] p-2">
-      <p className="font-mono-tech px-2 pb-1.5 pt-1 text-[0.6rem] uppercase tracking-wider text-faint">
-        Аудиодорожки · {tracks.length}
-      </p>
+    <TooltipListPanel widthClass="w-[min(20rem,calc(100vw-2rem))]">
+      <TooltipListHeader label="аудиодорожки" count={tracks.length} />
       <ul className="space-y-0.5">
         {tracks.map((track) => {
           const label = formatAudioLabel(track) ?? "Аудио";
@@ -132,45 +141,42 @@ function AudioTracksPopover({ release }: { release: ReleaseWithTracks }) {
           const bitrate = formatBitrateKbps(track.bitrate);
           const isMain = track.isDefault;
           return (
-            <li
-              key={track.id}
-              className={`flex items-center justify-between gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 ${
-                isMain ? "bg-accent/8 ring-1 ring-inset ring-accent/15" : ""
-              }`}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                {isMain ? (
-                  <Star
-                    className="h-3.5 w-3.5 shrink-0 fill-accent text-accent"
-                    aria-hidden
-                  />
-                ) : (
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-border-strong"
-                    aria-hidden
-                  />
-                )}
-                <span className="min-w-0">
-                  <span className="block truncate text-sm text-text">
-                    {label}
-                  </span>
-                  <span className="font-mono-tech mt-0.5 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[0.6rem] text-faint">
-                    {channels ? <span>{channels}</span> : null}
-                    {lang ? <span>{lang}</span> : null}
-                    {translation ? <span>{translation}</span> : null}
+            <TooltipListItem key={track.id} highlighted={isMain}>
+              <span className="flex items-center justify-between gap-2.5">
+                <span className="flex min-w-0 items-center gap-2">
+                  {isMain ? (
+                    <Star
+                      className="h-3.5 w-3.5 shrink-0 fill-accent text-accent"
+                      aria-hidden
+                    />
+                  ) : (
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-border-strong"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm text-text">
+                      {label}
+                    </span>
+                    <span className="font-mono-tech mt-0.5 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[0.6rem] text-faint">
+                      {channels ? <span>{channels}</span> : null}
+                      {lang ? <span>{lang}</span> : null}
+                      {translation ? <span>{translation}</span> : null}
+                    </span>
                   </span>
                 </span>
+                {bitrate ? (
+                  <span className="font-mono-tech shrink-0 text-[0.6rem] tabular-nums text-faint">
+                    {bitrate}
+                  </span>
+                ) : null}
               </span>
-              {bitrate ? (
-                <span className="font-mono-tech shrink-0 text-[0.6rem] tabular-nums text-faint">
-                  {bitrate}
-                </span>
-              ) : null}
-            </li>
+            </TooltipListItem>
           );
         })}
       </ul>
-    </div>
+    </TooltipListPanel>
   );
 }
 
@@ -182,8 +188,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const tier = primary ? releaseTier(primary) : null;
   const tech = primary ? catalogCardTech(primary) : null;
   const tierRibbon = catalogTierRibbon(tier);
-  const chipTone: ChipTone =
-    tier === "ruby" ? "ruby" : tier === "gold" ? "gold" : "default";
+  const chipTone = tierChipTone(tier);
 
   const hdrChip =
     premiumHdr != null
@@ -209,13 +214,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
     "релизов",
   )}`;
 
-  // Tier-aware card glow.
-  const cardGlow =
-    tier === "ruby"
-      ? "glow-card-ruby"
-      : tier === "gold"
-        ? "glow-card-gold"
-        : "glow-card-rest";
+  const cardGlow = tierCardGlow(tier);
 
   return (
     <article
@@ -224,13 +223,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
       <Link href={`/movies/${movie.slug}`} className="focus-ring block">
         <LaserCardFrame tier={tier}>
           <div
-            className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] bg-bg-base transition-shadow duration-500 ${
-              tier === "ruby"
-                ? "glow-poster-ruby-rest"
-                : tier === "gold"
-                  ? "glow-poster-gold-rest"
-                  : "glow-poster-rest"
-            }`}
+            className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius)] bg-bg-base transition-shadow duration-500 ${tierPosterGlow(tier)}`}
           >
             {coverUrl ? (
               <ApiCoverImage
@@ -245,22 +238,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                <div
-                  className="absolute inset-0 opacity-60"
-                  aria-hidden
-                  style={{
-                    background:
-                      "radial-gradient(ellipse 80% 60% at 50% 30%, var(--accent-soft) 0%, transparent 70%)",
-                  }}
-                />
-                <div
-                  className="absolute inset-0 opacity-40"
-                  aria-hidden
-                  style={{
-                    background:
-                      "radial-gradient(ellipse 60% 50% at 50% 100%, var(--neural-soft) 0%, transparent 70%)",
-                  }}
-                />
+                <CoverPlaceholderBackdrop />
                 <p className="font-display relative text-lg font-bold leading-tight text-text sm:text-xl">
                   {movie.title}
                 </p>
@@ -272,38 +250,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               </div>
             )}
 
-            {tier ? (
-              <div
-                className={`${
-                  tier === "ruby" ? "holo-ruby" : "holo-gold"
-                } pointer-events-none absolute inset-0 z-[2] opacity-[0.14] mix-blend-overlay transition-opacity duration-500 group-hover/laser:opacity-60`}
-                aria-hidden
-              />
-            ) : null}
-
-            {/* Flat laser-line tier accent at the top edge — replaces the
-                old heavy inset ring. Transparent at rest, brightens on
-                hover. No volumetric glass — purely flat gradient. */}
-            {tier ? (
-              <div
-                className={`tier-laser-top ${
-                  tier === "ruby"
-                    ? "tier-laser-top-ruby"
-                    : "tier-laser-top-gold"
-                }`}
-                aria-hidden
-              />
-            ) : null}
-
-            {/* Bottom legibility scrim for overlaid title + tech + meta */}
-            <div
-              className="pointer-events-none absolute inset-0 z-[3]"
-              aria-hidden
-              style={{
-                background:
-                  "linear-gradient(to top, rgba(7,6,10,0.97) 0%, rgba(7,6,10,0.9) 20%, rgba(7,6,10,0.5) 40%, transparent 60%)",
-              }}
-            />
+            <TierCoverOverlay tier={tier} />
 
             {/* Top row — tier ribbon (left) + rating/releases (right).
                 Ribbon: 4K | HDR (gold) or 4K | HDR | ATMOS (ruby).

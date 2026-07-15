@@ -2,40 +2,35 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { StorageKind, StorageOption } from "@/lib/shared/storage-types";
+import {
+  initialSelectedStorageId,
+  initialStorageKind,
+  insertStorageOption,
+  resolveExternalStorageId,
+} from "@/lib/shared/storage-picker-state";
 import { validateStorageSelection } from "@/lib/shared/storage-validation";
+import { apiFetch } from "@/lib/api/client";
 
 interface InitialExternalStorage {
   id: number;
   name: string;
 }
 
-function initialKind(
-  storage: InitialExternalStorage | null | undefined,
-): StorageKind {
-  return storage ? "external" : "local";
-}
-
-function initialSelectedId(
-  storage: InitialExternalStorage | null | undefined,
-): string {
-  return storage ? String(storage.id) : "";
-}
-
 export function useStoragePicker(
   initialExternalStorage?: InitialExternalStorage | null,
 ) {
   const [storageKind, setStorageKindState] = useState<StorageKind>(() =>
-    initialKind(initialExternalStorage),
+    initialStorageKind(initialExternalStorage),
   );
   const [storages, setStorages] = useState<StorageOption[]>([]);
   const [selectedStorageId, setSelectedStorageId] = useState(() =>
-    initialSelectedId(initialExternalStorage),
+    initialSelectedStorageId(initialExternalStorage),
   );
 
   useEffect(() => {
-    fetch("/api/storages")
-      .then((r) => r.json())
-      .then((d) => setStorages(d.storages ?? []));
+    void apiFetch<{ storages?: StorageOption[] }>("/api/storages").then(
+      (d) => setStorages(d.storages ?? []),
+    );
   }, []);
 
   const setStorageKind = useCallback((kind: StorageKind) => {
@@ -46,20 +41,16 @@ export function useStoragePicker(
   }, []);
 
   const createExternalStorage = useCallback(async (name: string) => {
-    const res = await fetch("/api/storages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() }),
-    });
-    const created = (await res.json()) as StorageOption & { error?: string };
-    if (!res.ok) {
-      throw new Error(created.error ?? "Не удалось создать внешний диск");
-    }
-    setStorages((prev) =>
-      [...prev.filter((s) => s.id !== created.id), created].sort((a, b) =>
-        a.name.localeCompare(b.name, "ru"),
-      ),
+    const created = await apiFetch<StorageOption>(
+      "/api/storages",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      },
+      "Не удалось создать внешний диск",
     );
+    setStorages((prev) => insertStorageOption(prev, created));
     setSelectedStorageId(String(created.id));
     setStorageKindState("external");
   }, []);
@@ -67,12 +58,8 @@ export function useStoragePicker(
   const validateStorage = (): string | null =>
     validateStorageSelection(storageKind, selectedStorageId);
 
-  /** null = local disk; number = external drive id. */
-  const resolveExternalStorageId = async (): Promise<number | null> => {
-    if (storageKind === "local") return null;
-    if (selectedStorageId) return parseInt(selectedStorageId, 10);
-    return null;
-  };
+  const resolveExternalStorageIdForSubmit = async (): Promise<number | null> =>
+    resolveExternalStorageId(storageKind, selectedStorageId);
 
   return {
     storageKind,
@@ -82,6 +69,6 @@ export function useStoragePicker(
     externalStorages: storages,
     createExternalStorage,
     validateStorage,
-    resolveExternalStorageId,
+    resolveExternalStorageId: resolveExternalStorageIdForSubmit,
   };
 }

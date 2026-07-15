@@ -2,8 +2,20 @@
 
 import { Monitor, Contrast, AudioLines, Film } from "lucide-react";
 import type { ReactNode } from "react";
-import type { FranchiseSlotSummary, SlotTier } from "@/lib/franchises/franchise-summary";
+import type { FranchiseSlotSummary } from "@/lib/franchises/franchise-summary";
 import { slotQualityLabel } from "@/lib/franchises/franchise-summary";
+import {
+  SLOT_TIER_CELL,
+  SLOT_TIER_FRAME,
+  SLOT_TIER_FRAME_HOVER,
+  SLOT_TIER_HOVER,
+  SLOT_TIER_LABEL_TONE,
+  SLOT_TIER_SIGNAL,
+  SLOT_TIER_UNDERLINE,
+  SLOT_TILE_BY_TONE,
+  slotToTileTone,
+  type SlotTileTone,
+} from "@/lib/media/tier-presentation";
 import { FranchiseSlotTooltip } from "@/components/franchises/FranchiseSlotTooltip";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 
@@ -37,94 +49,10 @@ interface FranchiseQualityReelProps {
  * label-free and compact.
  */
 
-const TIER_CELL: Record<SlotTier, string> = {
-  missing: "border border-dashed border-ember/40 bg-ember/[0.06]",
-  standard:
-    "border border-white/12 bg-gradient-to-b from-white/[0.10] to-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
-  gold: "border border-accent/45 bg-accent/[0.12] shadow-[0_0_12px_var(--accent-glow)]",
-  ruby:
-    "border border-crimson/45 bg-crimson/[0.14] shadow-[0_0_12px_rgba(154,27,52,0.35)]",
-};
-
-const TIER_SIGNAL: Record<SlotTier, string> = {
-  missing: "",
-  standard: "bg-white/30",
-  gold: "bg-accent-bright shadow-[0_0_6px_var(--accent-glow)]",
-  ruby: "bg-crimson-bright shadow-[0_0_6px_rgba(154,27,52,0.5)]",
-};
-
-const TIER_HOVER: Record<SlotTier, string> = {
-  missing: "group-hover/slot:border-ember/70 group-hover/slot:bg-ember/10",
-  standard:
-    "group-hover/slot:border-white/20 group-hover/slot:from-white/[0.16]",
-  gold: "group-hover/slot:shadow-[0_0_16px_var(--accent-glow)]",
-  ruby: "group-hover/slot:shadow-[0_0_16px_rgba(154,27,52,0.5)]",
-};
-
-/* Slim quality-rail cells: FRAME = the recessed tier-tinted cell that sits in
- * the shared celluloid tray; the tier inside is read by a glowing tier-tinted
- * resolution label + a centered tier underline (see SLOT_TONE / UNDERLINE /
- * slotHeadlineLabel), rendered only for filled slots. */
-const FRAME: Record<SlotTier, string> = {
-  missing: "bg-black/25 ring-1 ring-inset ring-white/10",
-  standard: "bg-black/40 shadow-[inset_0_1px_0_rgba(0,0,0,0.55)]",
-  gold: "bg-accent/[0.07] shadow-[inset_0_1px_0_rgba(0,0,0,0.55)]",
-  ruby: "bg-crimson/[0.09] shadow-[inset_0_1px_0_rgba(0,0,0,0.55)]",
-};
-
-const FRAME_HOVER: Record<SlotTier, string> = {
-  missing:
-    "group-hover/slot:ring-ember/55 group-hover/slot:shadow-[0_0_12px_var(--ember-glow)]",
-  standard:
-    "group-hover/slot:shadow-[inset_0_1px_0_rgba(0,0,0,0.55),0_0_14px_rgba(255,255,255,0.22)]",
-  gold:
-    "group-hover/slot:shadow-[inset_0_1px_0_rgba(0,0,0,0.55),0_0_16px_rgba(232,176,90,0.4)]",
-  ruby:
-    "group-hover/slot:shadow-[inset_0_1px_0_rgba(0,0,0,0.55),0_0_18px_rgba(154,27,52,0.6)]",
-};
-
-/* Slim quality-rail filled cells read by LIGHT, not fill: SLOT_TONE = the tier
- * color + glow applied to the slot's resolution label (and the film-glyph
- * fallback), so the strip is a row of distinct etched quality tags, not the
- * same glyph repeated; UNDERLINE = a centered tier laser tick at the cell's
- * bottom edge (transparent at both ends, bright in the middle) so adjacent
- * filled cells fade into the gap instead of restarting a hard edge. */
-const SLOT_TONE: Record<SlotTier, string> = {
-  missing: "",
-  standard: "text-white/85 drop-shadow-[0_0_4px_rgba(255,255,255,0.55)]",
-  gold: "text-accent-bright drop-shadow-[0_0_4px_rgba(232,176,90,0.65)]",
-  ruby: "text-crimson-bright drop-shadow-[0_0_4px_rgba(224,62,98,0.7)]",
-};
-
-const UNDERLINE: Record<SlotTier, string> = {
-  missing: "",
-  standard:
-    "bg-gradient-to-r from-transparent via-white/85 to-transparent shadow-[0_0_6px_rgba(255,255,255,0.3)]",
-  gold:
-    "bg-gradient-to-r from-transparent via-accent-bright to-transparent shadow-[0_0_6px_rgba(232,176,90,0.4)]",
-  ruby:
-    "bg-gradient-to-r from-transparent via-crimson-bright to-transparent shadow-[0_0_6px_rgba(224,62,98,0.45)]",
-};
-
 const TILE_BASE =
   "flex items-center justify-center gap-1 rounded-[3px] border px-1 py-[2px] font-mono text-[0.5rem] uppercase tracking-[0.05em] leading-none tabular-nums";
 
-const TILE_NORMAL =
-  "border-border-strong bg-bg-deep/85 text-text shadow-[0_1px_0_rgba(255,240,220,0.04)]";
-
-const TILE_GOLD =
-  "border-accent/45 bg-bg-deep/75 text-accent-bright shadow-[0_0_6px_rgba(232,176,90,0.18)]";
-
-const TILE_RUBY =
-  "border-crimson/45 bg-bg-deep/75 text-crimson-bright shadow-[0_0_6px_rgba(154,27,52,0.22)]";
-
-type TileTone = "normal" | "gold" | "ruby";
-
-const TILE_BY_TONE: Record<TileTone, string> = {
-  normal: TILE_NORMAL,
-  gold: TILE_GOLD,
-  ruby: TILE_RUBY,
-};
+const TILE_BY_TONE = SLOT_TILE_BY_TONE;
 
 function Tile({
   icon,
@@ -133,7 +61,7 @@ function Tile({
 }: {
   icon: ReactNode;
   value: string;
-  tone: TileTone;
+  tone: SlotTileTone;
 }) {
   return (
     <span className={`${TILE_BASE} ${TILE_BY_TONE[tone]}`}>
@@ -143,10 +71,8 @@ function Tile({
   );
 }
 
-function slotTileTone(slot: FranchiseSlotSummary): TileTone {
-  if (slot.tier === "ruby") return "ruby";
-  if (slot.tier === "gold") return "gold";
-  return "normal";
+function slotTileTone(slot: FranchiseSlotSummary): SlotTileTone {
+  return slotToTileTone(slot.tier);
 }
 
 /** Slim reel cell content: the slot's resolution etched as a short tier-tinted
@@ -156,7 +82,7 @@ function slotTileTone(slot: FranchiseSlotSummary): TileTone {
  *  is carried separately by the label's hue + the centered underline, so
  *  resolution reads as "what" and tier as "how premium". */
 function slotHeadlineLabel(slot: FranchiseSlotSummary) {
-  const tone = SLOT_TONE[slot.tier];
+  const tone = SLOT_TIER_LABEL_TONE[slot.tier];
   if (slot.resolution) {
     return (
       <span
@@ -229,14 +155,14 @@ export function FranchiseQualityReel({
           <HoverTooltip
             key={slot.index}
             content={<FranchiseSlotTooltip slot={slot} />}
-            className={`group/slot relative flex h-7 flex-1 min-w-0 items-center justify-center rounded-[3px] transition-all duration-200 ${FRAME[slot.tier]} ${FRAME_HOVER[slot.tier]}`}
+            className={`group/slot relative flex h-7 flex-1 min-w-0 items-center justify-center rounded-[3px] transition-all duration-200 ${SLOT_TIER_FRAME[slot.tier]} ${SLOT_TIER_FRAME_HOVER[slot.tier]}`}
           >
             {slot.filled ? (
               <>
                 {slotHeadlineLabel(slot)}
                 <span
                   aria-hidden
-                  className={`pointer-events-none absolute inset-x-[3px] bottom-0 h-[2px] rounded-full ${UNDERLINE[slot.tier]}`}
+                  className={`pointer-events-none absolute inset-x-[3px] bottom-0 h-[2px] rounded-full ${SLOT_TIER_UNDERLINE[slot.tier]}`}
                 />
               </>
             ) : (
@@ -260,12 +186,12 @@ export function FranchiseQualityReel({
         <HoverTooltip
           key={slot.index}
           content={<FranchiseSlotTooltip slot={slot} />}
-          className={`group/slot relative flex-1 min-w-0 overflow-hidden rounded-[5px] transition-all duration-200 ${TIER_CELL[slot.tier]} ${TIER_HOVER[slot.tier]}`}
+          className={`group/slot relative flex-1 min-w-0 overflow-hidden rounded-[5px] transition-all duration-200 ${SLOT_TIER_CELL[slot.tier]} ${SLOT_TIER_HOVER[slot.tier]}`}
         >
           {slot.tier !== "missing" ? (
             <span
               aria-hidden
-              className={`absolute inset-x-0 top-0 h-[3px] ${TIER_SIGNAL[slot.tier]}`}
+              className={`absolute inset-x-0 top-0 h-[3px] ${SLOT_TIER_SIGNAL[slot.tier]}`}
             />
           ) : null}
           <span className="flex h-full items-center justify-center px-[5px] pt-[7px] pb-1">

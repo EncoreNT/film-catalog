@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DetailMetaLine } from "@/components/primitives/DetailMetaLine";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 
@@ -55,15 +56,16 @@ export function MovieReleasePageHeader({
         <h1 className="font-display mt-1.5 text-2xl font-bold tracking-tight sm:mt-2 sm:text-3xl">
           {movie.title}
         </h1>
-        <div className="font-mono-tech mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-          {movie.year ? <span>{movie.year}</span> : null}
-          {releaseLabel ? (
-            <>
-              {movie.year ? <span aria-hidden>·</span> : null}
-              <span>{releaseLabel}</span>
-            </>
-          ) : null}
-        </div>
+        <DetailMetaLine
+          className="mt-2 text-sm"
+          items={[
+            { key: "year", node: movie.year ? <span>{movie.year}</span> : null },
+            {
+              key: "release",
+              node: releaseLabel ? <span>{releaseLabel}</span> : null,
+            },
+          ]}
+        />
       </div>
     </header>
   );

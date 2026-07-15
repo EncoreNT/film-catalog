@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { franchiseCoverUrlFromFranchise } from "@/lib/covers/franchise-cover-url";
 import { computeFranchiseSummary } from "@/lib/franchises/franchise-summary";
+import { resolveSpotlightTier } from "@/lib/media/tier-presentation";
 import { FranchiseDetailHero } from "@/components/franchises/FranchiseDetailHero";
 import { FranchiseSlotsView } from "@/components/franchises/FranchiseSlotsView";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
@@ -37,13 +38,7 @@ export default async function FranchisePage({ params }: PageProps) {
   const summary = computeFranchiseSummary(franchise);
   const coverUrl = franchiseCoverUrlFromFranchise(franchise);
 
-  // Spotlight = best tier among the franchise's filled slots (ruby > gold >
-  // standard), so a franchise page reads like its strongest film.
-  const spotlightTier = summary.slots.some((s) => s.tier === "ruby")
-    ? "ruby"
-    : summary.slots.some((s) => s.tier === "gold")
-      ? "gold"
-      : "standard";
+  const spotlightTier = resolveSpotlightTier(summary.slots.map((s) => s.tier));
 
   return (
     <div className="flex flex-col gap-5 lg:-mb-10 lg:h-[calc(100dvh-6.25rem)] lg:gap-4">

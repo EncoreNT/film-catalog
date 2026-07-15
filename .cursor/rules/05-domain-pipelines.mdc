@@ -97,6 +97,14 @@ Shared audio/HDR predicates: premium Russian Atmos filter, archive elite tier, f
 
 Browser-side fetch helpers (`apiFetch`, `approveMovie`, `uploadCover`) — thin wrappers over REST routes.
 
+## media/tier-presentation.ts
+
+Единый маппинг tier → CSS-классы (card glow, poster glow, tab styles, spotlight, slot reel). UI: `shared/TierCoverOverlay`, `shared/CoverPlaceholderBackdrop`.
+
+## ui/floating-position.ts
+
+Pure helpers для позиционирования floating UI (`HoverTooltip`, `InfoHint`): flip, clamp, dialog portal target.
+
 ## db/prisma.ts
 
 BetterSqlite3 adapter, DATABASE_URL default `file:./data/catalog.db`. Import from `@/lib/db/prisma`, types from `@/generated/prisma/client`.

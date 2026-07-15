@@ -448,17 +448,17 @@ Transition: `{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }` (тот же `--ease`)
 | `Field` | Текстовый инпут + label + hint |
 | `Select` | Dropdown + label + hint, `preserveOrder`, `disabled` |
 | `MultiSelect` | Множественный выбор |
-| `Checkbox` / `Radio` | Controls |
+| `Radio` | Controls |
+| `EditEntityLink` | Pill-ссылка «редактировать» на detail-страницах |
+| `DetailMetaLine` | Мета-строка (год · длительность · рейтинг) |
+| `TooltipListPanel` / `TooltipListHeader` / `TooltipListItem` | Оболочка списков в hover-tooltip |
 | `SegmentedControl` | Сегментированный переключатель (storage, version) |
 | `Chip` / `TagPill` | Бейджи/теги |
 | `Modal` / `NativeDialog` / `ConfirmDialog` | Диалоги (`confirm-in` entrance) |
 | `FormActionBar` | Sticky-низ формы (save/cancel/delete + dirty/error) |
-| `FormError` | Блок ошибки |
 | `Field`-смежные: `DurationInput`, `MeasureInput` (`BitrateInput`,`SizeInput`), `YearInput`, `HdrInput`, `DatePicker` | Специализированные инпуты |
 | `InfoHint` / `HoverTooltip` | Тултипы («?») |
 | `StarRating` | Рейтинг звёздами |
-| `QualityGauge` | Гейдж качества |
-| `PremiumBadge` | Премиум-бейдж |
 | `CoverUpload` / `ImageCoverUpload` | Upload обложек (фильм 2:3) |
 | `ApiCoverImage` | `<img>` на API URL с cache-bust `?v=updatedAt` |
 | `BackLink` | Назад со стрелкой |
@@ -476,8 +476,8 @@ Transition: `{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }` (тот же `--ease`)
 | `GrainOverlay` | Плёночное зерно |
 | `SiteHeader` | Шапка (Каталог / Франшизы / Скан) |
 | `ErrorScene` | Переиспользуемый error UI (`error-scene-in`, `lamp-flicker`) |
-| `EntityEditLayout` | Лейаут edit-страниц |
-| `EditPageHeader` | Заголовок edit-страниц (обёртка над `PageHeader`) |
+| `EntityEditLayout` | Лейаут edit-страниц (movie/franchise) |
+| `SpotlightTier` | Клиент: переключает `data-spotlight` на `<html>` |
 
 ### 8.3 Доменные компоненты
 
@@ -489,7 +489,7 @@ Transition: `{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }` (тот же `--ease`)
 | `franchises/` | `FranchiseForm`, `FranchiseCard`, `FranchiseSlotsEditor`, cover upload, quality reel |
 | `scan/` | `ScanProgressModal`, `DraftQueueGrid` (NDJSON stream) |
 | `duplicates/` | `DuplicateGroupList` |
-| `shared/` | `StoragePicker`, `TrackEditorSection`, `SpecTag`, `SpecTag`-смежные |
+| `shared/` | `StoragePicker`, `TrackEditorSection`, `SpecTag`, `TierCoverOverlay`, `CoverPlaceholderBackdrop` |
 
 ### 8.4 Ключевые композиты
 

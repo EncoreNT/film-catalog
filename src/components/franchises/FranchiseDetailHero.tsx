@@ -1,12 +1,14 @@
-import Link from "next/link";
 import { Clapperboard, Star } from "lucide-react";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import { BackLink } from "@/components/primitives/BackLink";
+import { EditEntityLink } from "@/components/primitives/EditEntityLink";
+import { DetailMetaLine } from "@/components/primitives/DetailMetaLine";
 import { FranchiseCompletionMeter } from "@/components/franchises/FranchiseCompletionMeter";
 import { FranchiseQualityReel } from "@/components/franchises/FranchiseQualityReel";
 import { pluralRu } from "@/lib/shared/russian-plural";
 import { formatArchiveTotalDuration } from "@/lib/shared/format";
 import type { FranchiseSummary } from "@/lib/franchises/franchise-summary";
+import { tierPosterGlow } from "@/lib/media/tier-presentation";
 
 interface FranchiseDetailHeroProps {
   franchise: {
@@ -33,28 +35,30 @@ function MetaLine({ summary }: { summary: FranchiseSummary }) {
     summary.averageRating != null ? summary.averageRating.toFixed(1) : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono-tech text-[0.65rem] tabular-nums text-muted">
-      {era ? (
-        <span className="text-text/80">{era}</span>
-      ) : (
-        <span className="text-faint">годы неизвестны</span>
-      )}
-      {runtime ? (
-        <span className="flex items-center gap-3">
-          <span className="h-2.5 w-px bg-border" aria-hidden />
-          {runtime}
-        </span>
-      ) : null}
-      {rating ? (
-        <span className="flex items-center gap-3">
-          <span className="h-2.5 w-px bg-border" aria-hidden />
-          <span className="inline-flex items-center gap-1 text-accent-bright">
-            {rating}
-            <Star className="h-2.5 w-2.5 fill-accent text-accent" aria-hidden />
-          </span>
-        </span>
-      ) : null}
-    </div>
+    <DetailMetaLine
+      separator="pipe"
+      className="text-[0.65rem] tabular-nums"
+      items={[
+        {
+          key: "era",
+          node: era ? (
+            <span className="text-text/80">{era}</span>
+          ) : (
+            <span className="text-faint">годы неизвестны</span>
+          ),
+        },
+        { key: "runtime", node: runtime ? <span>{runtime}</span> : null },
+        {
+          key: "rating",
+          node: rating ? (
+            <span className="inline-flex items-center gap-1 text-accent-bright">
+              {rating}
+              <Star className="h-2.5 w-2.5 fill-accent text-accent" aria-hidden />
+            </span>
+          ) : null,
+        },
+      ]}
+    />
   );
 }
 
@@ -72,12 +76,7 @@ export function FranchiseDetailHero({
   summary,
 }: FranchiseDetailHeroProps) {
   const tier = summary.tier;
-  const tierGlow =
-    tier === "ruby"
-      ? "glow-poster-ruby-rest"
-      : tier === "gold"
-        ? "glow-poster-gold-rest"
-        : "glow-poster-rest";
+  const tierGlow = tierPosterGlow(tier);
   const filmCount = `${summary.total} ${pluralRu(
     summary.total,
     "фильм",
@@ -90,13 +89,11 @@ export function FranchiseDetailHero({
     <section className="flex flex-col gap-2.5">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <BackLink href="/franchises">К списку франшиз</BackLink>
-        <Link
+        <EditEntityLink
           href={`/franchises/${franchise.slug}/edit`}
-          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-full border border-border-strong bg-bg-surface px-3 py-1 text-xs text-muted transition-all duration-300 hover:border-accent/50 hover:bg-accent/10 hover:text-accent"
           title="Редактировать франшизу"
-        >
-          <span className="font-mono-tech">редактировать</span>
-        </Link>
+          showIcon={false}
+        />
       </div>
 
       {/* auto | 1fr — left column hugs the still, title takes the rest */}

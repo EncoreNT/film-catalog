@@ -6,10 +6,10 @@ import { ChevronDown, Library, Loader2, Plus, Search, X } from "lucide-react";
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { FranchiseSlotPickerDialog } from "@/components/franchises/FranchiseSlotPickerDialog";
 import type { MovieFranchiseMembership } from "@/lib/movies/movie-franchise-memberships";
-import {
-  searchTextEquals,
-} from "@/lib/shared/search-text";
+import { searchTextEquals } from "@/lib/shared/search-text";
 import { trimInput } from "@/lib/shared/text-trim";
+import { apiFetch } from "@/lib/api/client";
+import { useDebouncedApiSearch } from "@/hooks/useDebouncedApiSearch";
 
 interface MovieFranchisePickerProps {
   movieId: number;
@@ -42,9 +42,6 @@ export function MovieFranchisePicker({
 }: MovieFranchisePickerProps) {
   const [memberships, setMemberships] = useState(initialMemberships);
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<FranchiseLite[]>([]);
-  const [searching, setSearching] = useState(false);
   const [creatingName, setCreatingName] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [slotDialog, setSlotDialog] = useState<SlotDialogState | null>(null);
@@ -52,41 +49,39 @@ export function MovieFranchisePicker({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const buildUrl = useCallback(
+    (q: string) =>
+      `/api/franchises?lite=1&limit=${SEARCH_LIMIT}${q ? `&q=${encodeURIComponent(q)}` : ""}`,
+    [],
+  );
+
+  const {
+    query,
+    setQuery,
+    results,
+    loading: searching,
+    onQueryChange,
+    runSearch,
+  } = useDebouncedApiSearch<FranchiseLite>({
+    buildUrl,
+    enabled: open,
+    debounceMs: 220,
+  });
 
   const busy = creatingName != null || removingId != null;
   const joinedIds = new Set(memberships.map((m) => m.franchiseId));
 
-  const runSearch = useCallback(async (q: string) => {
-    setSearching(true);
-    try {
-      const res = await fetch(
-        `/api/franchises?lite=1&limit=${SEARCH_LIMIT}${q ? `&q=${encodeURIComponent(q)}` : ""}`,
-      );
-      const data = (await res.json()) as { items?: FranchiseLite[] };
-      setResults(data.items ?? []);
-    } catch {
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
-
   const openDropdown = useCallback(() => {
     setOpen(true);
-    void runSearch("");
     setTimeout(() => inputRef.current?.focus(), 40);
-  }, [runSearch]);
+  }, []);
 
   const closeDropdown = useCallback(() => {
     setOpen(false);
     setQuery("");
-    setResults([]);
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
-  }, []);
+    void runSearch("");
+  }, [runSearch, setQuery]);
 
   useEffect(() => {
     if (!open) return;
@@ -106,18 +101,6 @@ export function MovieFranchisePicker({
     };
   }, [open, closeDropdown]);
 
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
-
-  const onQueryChange = (value: string) => {
-    setQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      void runSearch(value.trim());
-    }, 220);
-  };
-
   const pickFranchise = (franchise: FranchiseLite) => {
     setSlotDialog({
       mode: "add",
@@ -131,20 +114,16 @@ export function MovieFranchisePicker({
     setCreatingName(name);
     setError(null);
     try {
-      const res = await fetch(`/api/movies/${movieId}/franchises`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      const data = (await res.json()) as
-        | MovieFranchiseMembership[]
-        | { error?: string };
-      if (!res.ok) {
-        throw new Error(
-          (data as { error?: string }).error ?? "Не удалось создать франшизу",
-        );
-      }
-      setMemberships(data as MovieFranchiseMembership[]);
+      const data = await apiFetch<MovieFranchiseMembership[]>(
+        `/api/movies/${movieId}/franchises`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        },
+        "Не удалось создать франшизу",
+      );
+      setMemberships(data);
       closeDropdown();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
@@ -157,19 +136,12 @@ export function MovieFranchisePicker({
     setRemovingId(franchiseId);
     setError(null);
     try {
-      const res = await fetch(
+      const data = await apiFetch<MovieFranchiseMembership[]>(
         `/api/movies/${movieId}/franchises/${franchiseId}`,
         { method: "DELETE" },
+        "Не удалось удалить",
       );
-      const data = (await res.json()) as
-        | MovieFranchiseMembership[]
-        | { error?: string };
-      if (!res.ok) {
-        throw new Error(
-          (data as { error?: string }).error ?? "Не удалось удалить",
-        );
-      }
-      setMemberships(data as MovieFranchiseMembership[]);
+      setMemberships(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {

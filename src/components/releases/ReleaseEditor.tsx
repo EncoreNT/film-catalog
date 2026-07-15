@@ -39,6 +39,7 @@ import {
   probeFilePath,
 } from "@/hooks/useProbeFile";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
+import { apiFetch } from "@/lib/api/client";
 
 interface ReleaseEditorBaseProps {
   movieId: number;
@@ -244,33 +245,29 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
       const payload = await buildPayload();
 
       if (mode === "edit" && release) {
-        const res = await fetch(
+        await apiFetch(
           `/api/movies/${movieId}/releases/${release.id}`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           },
+          "Ошибка сохранения релиза",
         );
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error ?? "Ошибка сохранения релиза");
-        }
         setIsDirty(false);
         form.setPendingFileMeta(null);
         form.setFileFillMessage(null);
         router.refresh();
       } else {
-        const res = await fetch(`/api/movies/${movieId}/releases`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, skipProbe: true }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error ?? "Не удалось создать релиз");
-        }
-        const created = (await res.json()) as ReleaseWithTracks;
+        const created = await apiFetch<ReleaseWithTracks>(
+          `/api/movies/${movieId}/releases`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...payload, skipProbe: true }),
+          },
+          "Не удалось создать релиз",
+        );
         router.push(`/movies/${movieSlug}/releases/${created.id}/edit`);
       }
     } catch (err) {
@@ -285,14 +282,11 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     setActionLoading(true);
     setError(null);
     try {
-      const res = await fetch(
+      await apiFetch(
         `/api/movies/${movieId}/releases/${release.id}`,
         { method: "DELETE" },
+        "Не удалось удалить релиз",
       );
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Не удалось удалить релиз");
-      }
       setConfirmDelete(false);
       router.push(`/movies/${movieSlug}`);
     } catch (err) {

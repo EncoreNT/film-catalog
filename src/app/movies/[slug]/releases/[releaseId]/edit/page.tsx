@@ -2,9 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import { releaseInclude } from "@/lib/movies/movie-include";
-import { BackLink } from "@/components/primitives/BackLink";
 import { ReleaseEditor } from "@/components/releases/ReleaseEditor";
-import { MovieReleasePageHeader } from "@/components/releases/MovieReleasePageHeader";
+import { ReleaseEditPageLayout } from "@/components/releases/ReleaseEditPageLayout";
 import {
   generateMovieMetadata,
   loadMovieStubBySlug,
@@ -40,17 +39,11 @@ export default async function EditReleasePage({ params }: PageProps) {
   const releaseLabel = releaseTabLabel(release as ReleaseWithTracks);
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <BackLink href={`/movies/${movie.slug}`}>Назад к фильму</BackLink>
-      </div>
-
-      <MovieReleasePageHeader
-        movie={movie}
-        eyebrow="редактирование релиза"
-        releaseLabel={releaseLabel}
-      />
-
+    <ReleaseEditPageLayout
+      movie={movie}
+      eyebrow="редактирование релиза"
+      releaseLabel={releaseLabel}
+    >
       <ReleaseEditor
         mode="edit"
         movieId={movie.id}
@@ -58,6 +51,6 @@ export default async function EditReleasePage({ params }: PageProps) {
         movieTitle={movie.title}
         release={release as ReleaseWithTracks}
       />
-    </div>
+    </ReleaseEditPageLayout>
   );
 }

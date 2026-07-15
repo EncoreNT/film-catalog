@@ -29,13 +29,14 @@ export default async function Page({ params, searchParams }: PageProps) {
 ## Иерархия компонентов
 
 ```
-primitives/     — переиспользуемые UI-кирпичи (Button, Field, Modal, Select, Chip, …)
-Movie*          — каталог, карточка, форма, рейтинг, approve
-Franchise*      — карточка, форма, слоты, cover upload, quality reel
+primitives/     — переиспользуемые UI-кирпичи (Button, Field, Modal, MachinedCard, LaserCardFrame, EditEntityLink, …)
+Movie*          — каталог, карточка, форма, рейтинг, approve, MovieDetailHeader
+Franchise*      — карточка, форма, слоты, cover upload, quality reel, FranchiseDetailHero
 FilterBar       — фильтры каталога (client, URL searchParams)
 SpecTag         — бейджи кодека/HDR/разрешения
-TrackEditorSection — аудио/субтитры в форме
-AmbientBackground, GrainOverlay — декор layout
+TierCoverOverlay — holo + tier-laser + bottom scrim для обложек
+AmbientBackground, SpotlightTier, GrainOverlay — декор layout
+EntityEditLayout, ReleaseEditPageLayout — оболочки edit-страниц
 ```
 
 Client hooks: `hooks/useStoragePicker.ts`, `hooks/useTrackEditor.ts`.

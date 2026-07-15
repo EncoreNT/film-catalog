@@ -6,6 +6,7 @@ import {
   catalogTierRibbon,
   premiumHdrView,
   releaseTier,
+  releaseQuickSpecHints,
   secondaryTags,
 } from "@/lib/media/spec-tags";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
@@ -564,6 +565,58 @@ describe("catalogTierRibbon", () => {
 
   it("null tier → null ribbon", () => {
     expect(catalogTierRibbon(null)).toBeNull();
+  });
+});
+
+describe("releaseQuickSpecHints", () => {
+  it("returns 4K, HDR and Atmos for a premium release", () => {
+    expect(
+      releaseQuickSpecHints(
+        release({
+          id: 1,
+          videoTrack: video("HDR10"),
+          audioTracks: [audio()],
+        }),
+      ),
+    ).toEqual(["4K", "HDR", "Atmos"]);
+  });
+
+  it("omits Atmos when the main track is not Atmos", () => {
+    expect(
+      releaseQuickSpecHints(
+        release({
+          id: 2,
+          videoTrack: video("HDR10"),
+          audioTracks: [
+            audio({
+              codec: "ac3",
+              profile: null,
+              channels: 6,
+              channelLayout: "5.1",
+            }),
+          ],
+        }),
+      ),
+    ).toEqual(["4K", "HDR"]);
+  });
+
+  it("returns empty hints for SDR 1080p stereo", () => {
+    expect(
+      releaseQuickSpecHints(
+        release({
+          id: 3,
+          videoTrack: {
+            ...video("SDR"),
+            resolutionLabel: "1080p",
+            width: 1920,
+            height: 1080,
+          },
+          audioTracks: [
+            audio({ codec: "aac", profile: null, channels: 2, channelLayout: "2.0" }),
+          ],
+        }),
+      ),
+    ).toEqual([]);
   });
 });
 

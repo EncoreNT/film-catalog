@@ -23,6 +23,7 @@ export {
   bestRussianDubTrack,
   catalogTierRibbon,
   audioTrackChannelCount,
+  releaseQuickSpecHints,
   type PremiumHDR,
   type PremiumHdrView,
   type SpecTagKind,

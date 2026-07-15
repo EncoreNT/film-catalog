@@ -755,23 +755,21 @@ docs/adr/              архитектурные решения
 
 ## 14. Дизайн-система
 
-Визуальная идея — домашний кинозал, а не холодная административная панель.
+Визуальная идея — **Cinematic Tech** (домашний projection-room console, не холодная админка).
+Полный гайд: [`docs/design-system.md`](design-system.md). ADR: [`0004`](adr/0004-cinematic-tech-design-system.md), [`0005`](adr/0005-tier-driven-spotlight.md).
 
-- фон `warm coal`, базовый `#15110d`;
-- золотой акцент `#e8b05a`;
-- ember-оранжевый для пустых франшизных слотов;
-- приглушённый красный для ошибок и удаления;
-- радиус карточек 14 px;
-- Fraunces для display-заголовков;
-- Inter для основного UI и кириллицы;
-- JetBrains Mono для технических меток.
+- фон **cool coal** `#0b0a0f`, glass-поверхности с double-bezel;
+- золотой акцент `#e8b05a` (Gold tier, 4K, активные состояния);
+- crimson `#c43d5a` — **только Ruby tier**, не для ошибок;
+- tier-система Ruby > Gold > standard — card glow, laser perimeter, spotlight;
+- Fraunces (display) + Manrope (UI, cyrillic) + JetBrains Mono (tech labels);
+- радиус карточек 16 px (`--radius`).
 
-Переиспользуемые primitives: Button, Field, Modal, ConfirmDialog, Select, Chip,
-SegmentedControl, EmptyState, PageHeader, Pagination, QualityGauge, StarRating и
-FormActionBar.
+Переиспользуемые primitives: Button, Field, Modal/NativeDialog/ConfirmDialog, Select,
+MachinedCard, LaserCardFrame, EmptyState, PageHeader, EditEntityLink, StarRating,
+FormActionBar. Shared: TierCoverOverlay, SpecTag, TrackEditorSection.
 
-Фильмы всегда используют portrait 2:3, франшизы — landscape 16:9. Изображения
-кадрируются через `object-cover`.
+Фильмы — portrait 2:3, франшизы — landscape 16:9. `object-cover`.
 
 Интерфейс mobile-first, использует breakpoints `sm`, `md`, `lg`, `xl`, focus-ring,
 ARIA-атрибуты, `role="alert"` и reduced-motion. Некоторые hover-only действия

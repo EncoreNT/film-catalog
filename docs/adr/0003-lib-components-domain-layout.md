@@ -46,8 +46,8 @@ Accepted
 
 | Подкаталог | Содержимое |
 |------------|------------|
-| `primitives/` | Button, Field, ImageCoverUpload, EmptyState, BackLink, QualityGauge, … |
-| `layout/` | AmbientBackground, ErrorScene (+ ErrorSceneFrame), EditPageHeader |
+| `primitives/` | Button, Field, ImageCoverUpload, EmptyState, BackLink, MachinedCard, LaserCardFrame, EditEntityLink, … |
+| `layout/` | AmbientBackground, SpotlightTier, ErrorScene, EntityEditLayout |
 | `catalog/` | MovieCatalog, FilterBar, EmptyCatalog, CatalogSkeleton |
 | `movies/` | MovieCard, MovieForm, MovieDetailHeader, … |
 | `releases/` | ReleaseEditor, MovieReleasePanel, … |
@@ -102,4 +102,5 @@ Domain-only типы (`SpecTagKind`, `StorageKind`) живут в `lib/`, не �
 - Обновлены rules `01-architecture`, `02-data-model`, `03-api-routes`, `05-domain-pipelines` — пути `@/lib/<domain>/…`.
 - **Elite tier:** `archiveEliteTierWhere` в `media/quality-predicates.ts` — AND трёх `releases.some` (4K, non-SDR HDR, рус. Atmos на default track); метрика каталога в `catalog/archive-metrics.ts`. Franchise `slotTier()` — все три на **primary release** одного слота; одно слово, разная агрегация (см. комментарий в quality-predicates).
 - **Client layer:** `lib/api/client.ts` — browser fetch helpers (`apiFetch`, `approveMovie`, `uploadCover`); route handlers остаются server-only, UI не дублирует URL/ошибки.
+- **Tier presentation:** `lib/media/tier-presentation.ts` — единый маппинг tier → CSS-классы (card glow, poster glow, tab styles, spotlight); UI-компонент `shared/TierCoverOverlay`.
 - Performance: `fetchMultiReleaseMovieIds` через `release.groupBy`; `fetchMergeCandidatesForGroup` — один `findMany` вместо N+1.

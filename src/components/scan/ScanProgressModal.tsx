@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
+import { NativeDialog } from "@/components/primitives/NativeDialog";
 
 export interface ScanProgress {
   index: number;
@@ -26,17 +27,20 @@ export function ScanProgressModal({
   onCancel,
   onClose,
 }: ScanProgressModalProps) {
+  const open = scanning || cancelled;
   const total = progress?.total ?? 0;
   const index = progress?.index ?? 0;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/70 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Сканирование"
+    <NativeDialog
+      open={open}
+      onClose={onClose}
+      preventCancel={scanning}
+      zIndex={50}
+      ariaLabel="Сканирование"
+      className="fixed inset-0 m-auto w-[min(100%-2rem,28rem)] max-h-[90dvh] overflow-visible rounded-[var(--radius)] border-0 bg-transparent p-0 text-text backdrop:bg-bg-deep/70 backdrop:backdrop-blur-sm open:animate-in"
     >
-      <div className="surface-card w-full max-w-md space-y-5 p-6">
+      <div className="surface-card space-y-5 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-xl font-semibold">
@@ -94,6 +98,6 @@ export function ScanProgressModal({
           )}
         </div>
       </div>
-    </div>
+    </NativeDialog>
   );
 }

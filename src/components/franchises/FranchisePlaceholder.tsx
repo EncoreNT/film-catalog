@@ -2,6 +2,10 @@
 
 import { Film, Link2 } from "lucide-react";
 import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
+import {
+  tierLaserTopClass,
+  TIER_BOTTOM_SCRIM,
+} from "@/lib/media/tier-presentation";
 
 interface FranchisePlaceholderProps {
   slotIndex: number;
@@ -47,17 +51,11 @@ export function FranchisePlaceholder({
         className="film-perfs-y pointer-events-none absolute inset-y-0 right-0 w-3 opacity-25"
         aria-hidden
       />
-      {/* Flat ember laser line at the top edge — the "missing" tier signal,
-          mirrors MovieCard's tier-laser-top but in ember. */}
-      <div className="tier-laser-top tier-laser-top-ember" aria-hidden />
-      {/* Bottom legibility scrim for the caption */}
+      <div className={tierLaserTopClass("ember")} aria-hidden />
       <div
         className="pointer-events-none absolute inset-0 z-[3]"
         aria-hidden
-        style={{
-          background:
-            "linear-gradient(to top, rgba(7,6,10,0.96) 0%, rgba(7,6,10,0.7) 30%, transparent 60%)",
-        }}
+        style={{ background: TIER_BOTTOM_SCRIM.placeholder }}
       />
 
       {/* Center glyph + hint */}

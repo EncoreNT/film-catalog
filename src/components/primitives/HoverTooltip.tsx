@@ -9,6 +9,13 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import {
+  FLOATING_GAP,
+  FLOATING_VIEWPORT_PAD,
+  clampHorizontalCenter,
+  pickVerticalPlacement,
+  viewportRect,
+} from "@/lib/ui/floating-position";
 
 type TooltipPlacement = "top" | "bottom";
 
@@ -25,8 +32,6 @@ interface HoverTooltipProps {
   interactive?: boolean;
 }
 
-const GAP = 8;
-const VIEWPORT_PADDING = 12;
 /** Fallback height before the tooltip is measured in the DOM. */
 const ESTIMATED_HEIGHT = 220;
 /** Grace period before dismissing an interactive tooltip on anchor leave. */
@@ -85,30 +90,28 @@ export function HoverTooltip({
     const tooltipRect = tooltipRef.current?.getBoundingClientRect();
     const tooltipHeight = tooltipRect?.height ?? ESTIMATED_HEIGHT;
     const tooltipWidth = tooltipRect?.width ?? 320;
+    const container = viewportRect();
 
-    const spaceAbove = anchorRect.top - VIEWPORT_PADDING;
-    const spaceBelow =
-      window.innerHeight - anchorRect.bottom - VIEWPORT_PADDING;
+    const nextPlacement = pickVerticalPlacement(
+      anchorRect.top,
+      anchorRect.bottom,
+      tooltipHeight,
+      container,
+      FLOATING_GAP,
+      FLOATING_VIEWPORT_PAD,
+    );
 
-    let nextPlacement: TooltipPlacement = "top";
-    if (spaceAbove >= tooltipHeight + GAP) {
-      nextPlacement = "top";
-    } else if (spaceBelow >= tooltipHeight + GAP) {
-      nextPlacement = "bottom";
-    } else {
-      nextPlacement = spaceAbove >= spaceBelow ? "top" : "bottom";
-    }
-
-    const halfW = tooltipWidth / 2;
-    const x = Math.max(
-      VIEWPORT_PADDING + halfW,
-      Math.min(window.innerWidth - VIEWPORT_PADDING - halfW, anchorRect.left + anchorRect.width / 2),
+    const x = clampHorizontalCenter(
+      anchorRect.left + anchorRect.width / 2,
+      tooltipWidth,
+      container,
+      FLOATING_VIEWPORT_PAD,
     );
 
     const y =
       nextPlacement === "top"
-        ? anchorRect.top - GAP
-        : anchorRect.bottom + GAP;
+        ? anchorRect.top - FLOATING_GAP
+        : anchorRect.bottom + FLOATING_GAP;
 
     setPlacement(nextPlacement);
     setCoords({ x, y });

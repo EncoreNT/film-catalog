@@ -326,3 +326,15 @@ export function releaseTier(release: ReleaseWithTracks): ReleaseTier {
 
   return null;
 }
+
+/** Compact spec hints for tooltip lists (4K / HDR / Atmos). */
+export function releaseQuickSpecHints(release: ReleaseWithTracks): string[] {
+  const hints: string[] = [];
+  if (is4K(release)) hints.push("4K");
+  if (isAnyHDR(release)) hints.push("HDR");
+  const main = mainAudioTrack(release);
+  if (main && normalizeAudioProfile(main.profile) === "Atmos") {
+    hints.push("Atmos");
+  }
+  return hints;
+}

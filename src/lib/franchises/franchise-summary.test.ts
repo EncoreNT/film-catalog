@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFranchiseSummary, slotTier } from "@/lib/franchises/franchise-summary";
+import { computeFranchiseSummary, slotQualityLabel, slotTier, type FranchiseSlotSummary } from "@/lib/franchises/franchise-summary";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
 import type { MovieWithTracks } from "@/lib/movies/movie-include";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
@@ -162,6 +162,25 @@ function makeFranchise(
     slots,
   } as unknown as FranchiseWithSlots;
 }
+
+describe("slotQualityLabel", () => {
+  it("describes an empty slot", () => {
+    expect(
+      slotQualityLabel({ filled: false } as FranchiseSlotSummary),
+    ).toBe("фильм не добавлен");
+  });
+
+  it("joins resolution, HDR and audio for a filled slot", () => {
+    expect(
+      slotQualityLabel({
+        filled: true,
+        resolution: "4K",
+        dynamicRange: "HDR10",
+        audioFull: "TrueHD Atmos",
+      } as FranchiseSlotSummary),
+    ).toBe("4K · HDR10 · TrueHD Atmos");
+  });
+});
 
 describe("slotTier", () => {
   it("returns missing when no film is linked", () => {

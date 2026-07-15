@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import {
+  buildFilePathHeadUrl,
+  filePathExistsFromHead,
+  shouldCheckFilePath,
+} from "@/lib/movies/file-path-check";
 
 export interface FilePathCheckState {
   checking: boolean;
@@ -14,17 +19,14 @@ export function useFilePathCheck() {
   });
 
   const checkFilePath = useCallback(async (path: string) => {
-    if (!path.trim()) {
+    if (!shouldCheckFilePath(path)) {
       setState({ checking: false, exists: null });
       return;
     }
     setState({ checking: true, exists: null });
     try {
-      const res = await fetch(
-        `/api/movies?path=${encodeURIComponent(path)}`,
-        { method: "HEAD" },
-      );
-      setState({ checking: false, exists: res.ok });
+      const res = await fetch(buildFilePathHeadUrl(path), { method: "HEAD" });
+      setState({ checking: false, exists: filePathExistsFromHead(res.ok) });
     } catch {
       setState({ checking: false, exists: false });
     }

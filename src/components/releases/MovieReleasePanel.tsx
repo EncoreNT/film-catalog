@@ -8,48 +8,11 @@ import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
-
-type TabTier = "ruby" | "gold" | "none";
-
-type TierTabStyle = {
-  text: string;
-  inactiveText: string;
-  underline: string;
-  glow: string;
-  tag: string;
-};
-
-/* The release tab is colored and labeled by its Gold/Ruby tier. The tier is
-   a composite quality metric (4K + HDR + audio), not a resolution, so it
-   lives here on the tab, not on the resolution plaque. Ruby → crimson,
-   Gold → accent gold, untiered releases stay neutral. The tab is a flat label
-   read by LIGHT, not a filled block: the tier shows through the label's text
-   color + a glowing gradient underline + the storage icon. Active tabs burn
-   at full intensity with the underline; inactive tabs use a faded version of
-   the same tier color (still legible, clearly recessed) and no underline. */
-const TIER_TAB: Record<TabTier, TierTabStyle> = {
-  ruby: {
-    text: "text-crimson-bright",
-    inactiveText: "text-crimson/55 hover:text-crimson-bright",
-    underline: "bg-gradient-to-r from-transparent via-crimson to-crimson-bright",
-    glow: "shadow-[0_0_10px_var(--crimson-glow)]",
-    tag: "RUBY",
-  },
-  gold: {
-    text: "text-accent",
-    inactiveText: "text-accent/55 hover:text-accent",
-    underline: "bg-gradient-to-r from-transparent via-accent to-accent-bright",
-    glow: "shadow-[0_0_10px_var(--accent-glow)]",
-    tag: "GOLD",
-  },
-  none: {
-    text: "text-text",
-    inactiveText: "text-muted hover:text-text",
-    underline: "bg-gradient-to-r from-transparent via-muted to-text",
-    glow: "",
-    tag: "",
-  },
-};
+import {
+  releaseToTabTier,
+  tierTabStyles,
+  type TierTabStyle,
+} from "@/lib/media/tier-presentation";
 
 function releaseTabInner(
   release: ReleaseDetailView,
@@ -165,7 +128,7 @@ export function MovieReleasePanel({
           >
             {releases.map((release) => {
               const active = release.id === activeId;
-              const tierTab = TIER_TAB[release.tier ?? "none"];
+              const tierTab = tierTabStyles(releaseToTabTier(release.tier));
               return (
                 <button
                   key={release.id}
@@ -191,7 +154,7 @@ export function MovieReleasePanel({
           // or several. Static, non-interactive — there is nothing to switch.
           <div className="flex flex-wrap gap-0 px-1 pt-1">
             {releases.map((release) => {
-              const tierTab = TIER_TAB[release.tier ?? "none"];
+              const tierTab = tierTabStyles(releaseToTabTier(release.tier));
               return (
                 <div
                   key={release.id}

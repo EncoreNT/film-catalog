@@ -62,6 +62,8 @@ interface CardSectionHeaderProps {
   label: string;
   title: ReactNode;
   className?: string;
+  /** Optional affordance beside the title (InfoHint, badge, …). */
+  trailing?: ReactNode;
 }
 
 /* Small section header used inside MachinedCard: a mono-tech gold label
@@ -71,15 +73,19 @@ export function CardSectionHeader({
   label,
   title,
   className,
+  trailing,
 }: CardSectionHeaderProps) {
   return (
     <div className={className}>
       <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-accent/80">
         {label}
       </p>
-      <h2 className="font-display mt-1.5 text-xl font-semibold tracking-tight">
-        {title}
-      </h2>
+      <div className="mt-1.5 flex items-center gap-2">
+        <h2 className="font-display text-xl font-semibold tracking-tight">
+          {title}
+        </h2>
+        {trailing}
+      </div>
     </div>
   );
 }

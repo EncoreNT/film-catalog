@@ -8,6 +8,9 @@ import { computeFranchiseSummary } from "@/lib/franchises/franchise-summary";
 import { pluralRu } from "@/lib/shared/russian-plural";
 import { formatArchiveTotalDuration } from "@/lib/shared/format";
 import { FranchiseQualityReel } from "@/components/franchises/FranchiseQualityReel";
+import { CoverPlaceholderBackdrop } from "@/components/shared/CoverPlaceholderBackdrop";
+import { TierCoverOverlay } from "@/components/shared/TierCoverOverlay";
+import { tierCardGlow, tierPosterGlow } from "@/lib/media/tier-presentation";
 
 interface FranchiseCardProps {
   franchise: FranchiseWithSlots;
@@ -57,12 +60,7 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
     rating != null ? `. Оценка ${rating} из 10` : ""
   }`;
 
-  const cardGlow =
-    tier === "ruby"
-      ? "glow-card-ruby"
-      : tier === "gold"
-        ? "glow-card-gold"
-        : "glow-card-rest";
+  const cardGlow = tierCardGlow(tier);
 
   return (
     <article
@@ -81,13 +79,7 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
               opaque bg so scale/hover compositing never leaves a 1px wedge in
               the bottom radius. Meta overlaps cover via ::before bleed. */}
           <div
-            className={`relative flex flex-col overflow-hidden rounded-[var(--radius)] bg-bg-elevated transition-shadow duration-500 ${
-              tier === "ruby"
-                ? "glow-poster-ruby-inset"
-                : tier === "gold"
-                  ? "glow-poster-gold-inset"
-                  : "glow-poster-inset"
-            }`}
+            className={`relative flex flex-col overflow-hidden rounded-[var(--radius)] bg-bg-elevated transition-shadow duration-500 ${tierPosterGlow(tier, "inset")}`}
           >
             {/* Cover zoom uses a bottom-anchored scale layer so the image grows
                 upward into the frame, not away from the meta-band seam. */}
@@ -109,22 +101,7 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
                 </div>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
-                  <div
-                    className="absolute inset-0 opacity-60"
-                    aria-hidden
-                    style={{
-                      background:
-                        "radial-gradient(ellipse 80% 60% at 50% 30%, var(--accent-soft) 0%, transparent 70%)",
-                    }}
-                  />
-                  <div
-                    className="absolute inset-0 opacity-40"
-                    aria-hidden
-                    style={{
-                      background:
-                        "radial-gradient(ellipse 60% 50% at 50% 100%, var(--neural-soft) 0%, transparent 70%)",
-                    }}
-                  />
+                  <CoverPlaceholderBackdrop />
                   <Clapperboard
                     className="relative h-12 w-12 text-accent/45"
                     aria-hidden
@@ -132,32 +109,11 @@ export function FranchiseCard({ franchise, index = 0 }: FranchiseCardProps) {
                 </div>
               )}
 
-              {tier === "ruby" || tier === "gold" ? (
-                <>
-                  <div
-                    className={`pointer-events-none absolute inset-0 z-[2] opacity-[0.12] mix-blend-overlay transition-opacity duration-500 group-hover/laser:opacity-50 ${
-                      tier === "ruby" ? "holo-ruby" : "holo-gold"
-                    }`}
-                    aria-hidden
-                  />
-                  <div
-                    className={`tier-laser-top ${
-                      tier === "ruby"
-                        ? "tier-laser-top-ruby"
-                        : "tier-laser-top-gold"
-                    }`}
-                    aria-hidden
-                  />
-                </>
-              ) : null}
-
-              <div
-                className="pointer-events-none absolute inset-0 z-[3]"
-                aria-hidden
-                style={{
-                  background:
-                    "linear-gradient(to top, rgba(7,6,10,0.96) 0%, rgba(7,6,10,0.82) 22%, rgba(7,6,10,0.4) 45%, transparent 65%)",
-                }}
+              <TierCoverOverlay
+                tier={tier}
+                scrim="cardFranchise"
+                holoRestOpacity="opacity-[0.12]"
+                holoHoverOpacity="group-hover/laser:opacity-50"
               />
 
               {rating != null ? (

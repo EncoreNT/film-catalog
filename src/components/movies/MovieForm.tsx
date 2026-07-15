@@ -16,6 +16,7 @@ import { orderedMovieGenres } from "@/lib/movies/movie-genres";
 import { GenrePicker } from "@/components/movies/GenrePicker";
 import { YearInput } from "@/components/primitives/YearInput";
 import { CoverUpload } from "@/components/primitives/CoverUpload";
+import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { buildMovieUpdatePayload } from "@/lib/movies/build-movie-payload";
 import { apiFetch, approveMovie } from "@/lib/api/client";
 
@@ -135,8 +136,8 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
   return (
     <form onSubmit={handleSubmit} className="pb-28">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] lg:items-start lg:gap-8">
-        <div className="surface-card space-y-6 p-5 sm:p-6">
-          <h2 className="font-display text-xl font-semibold">Карточка фильма</h2>
+        <MachinedCard variant="calm" bodyClassName="space-y-5">
+          <CardSectionHeader label="карточка" title="Параметры фильма" />
 
           <div className="grid gap-6 sm:grid-cols-[112px_minmax(0,1fr)] sm:items-start">
             <CoverUpload
@@ -193,23 +194,26 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
             }}
             hint="Краткое описание сюжета — на твоё усмотрение."
           />
-        </div>
+        </MachinedCard>
 
-        <aside className="surface-card space-y-4 p-5 sm:p-6 lg:sticky lg:top-24">
-          <div className="flex items-center gap-2">
-            <h2 className="font-display text-xl font-semibold">Франшизы</h2>
-            <InfoHint
-              label="Франшизы"
-              text="Привяжите фильм к одной или нескольким франшизам и выберите слот. Новую франшизу можно создать прямо отсюда."
-            />
-          </div>
+        <MachinedCard variant="calm" bodyClassName="space-y-4 lg:sticky lg:top-24">
+          <CardSectionHeader
+            label="связи"
+            title="Франшизы"
+            trailing={
+              <InfoHint
+                label="Франшизы"
+                text="Привяжите фильм к одной или нескольким франшизам и выберите слот. Новую франшизу можно создать прямо отсюда."
+              />
+            }
+          />
           <MovieFranchisePicker
             embedded
             movieId={movie.id}
             movieTitle={movie.title}
             initialMemberships={franchiseMemberships ?? []}
           />
-        </aside>
+        </MachinedCard>
       </div>
 
       <FormActionBar

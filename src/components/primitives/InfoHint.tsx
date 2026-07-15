@@ -11,6 +11,14 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import {
+  FLOATING_GAP,
+  FLOATING_VIEWPORT_PAD,
+  clampBoxInContainer,
+  pickCardinalPlacement,
+  resolveDialogPortalTarget,
+  viewportRect,
+} from "@/lib/ui/floating-position";
 
 const emptySubscribe = () => () => {};
 const getMounted = () => true;
@@ -21,25 +29,9 @@ interface InfoHintProps {
   label?: string;
 }
 
-type Placement = "top" | "bottom" | "right" | "left";
-
 interface Coords {
   left: number;
   top: number;
-}
-
-const TOOLTIP_GAP = 8;
-const VIEWPORT_PAD = 8;
-
-interface Rect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-function viewportRect(): Rect {
-  return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
 }
 
 /**
@@ -68,8 +60,6 @@ export function InfoHint({ text, label }: InfoHintProps) {
   const showTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Portals only render on the client; useSyncExternalStore returns false
-  // during SSR and true on the client without a setState-in-effect.
   const mounted = useSyncExternalStore(emptySubscribe, getMounted, getServerSnapshot);
 
   const clearTimers = useCallback(() => {
@@ -86,12 +76,7 @@ export function InfoHint({ text, label }: InfoHintProps) {
   const show = useCallback(() => {
     clearTimers();
     showTimer.current = setTimeout(() => {
-      // Portal into the nearest open dialog so the tooltip shares its top
-      // layer; otherwise fall back to the document body.
-      const host = triggerRef.current?.closest("dialog");
-      const dialog =
-        host instanceof HTMLDialogElement && host.open ? host : null;
-      setPortalTarget(dialog ?? document.body);
+      setPortalTarget(resolveDialogPortalTarget(triggerRef.current));
       setOpen(true);
     }, 80);
   }, [clearTimers]);
@@ -109,25 +94,18 @@ export function InfoHint({ text, label }: InfoHintProps) {
     const tRect = trigger.getBoundingClientRect();
     const ttRect = tooltip.getBoundingClientRect();
 
-    // Clamp/flip against the dialog the tooltip was portalled into, or the
-    // viewport when there is no dialog.
     const container =
       portalTarget && portalTarget !== document.body
         ? portalTarget.getBoundingClientRect()
         : viewportRect();
 
-    const fitsAbove = tRect.top - TOOLTIP_GAP - ttRect.height > container.top + VIEWPORT_PAD;
-    const fitsBelow =
-      tRect.bottom + TOOLTIP_GAP + ttRect.height < container.bottom - VIEWPORT_PAD;
-    const fitsRight =
-      tRect.right + TOOLTIP_GAP + ttRect.width < container.right - VIEWPORT_PAD;
-    const fitsLeft = tRect.left - TOOLTIP_GAP - ttRect.width > container.left + VIEWPORT_PAD;
-
-    // Prefer above, then below, then right, then left.
-    let placement: Placement = "top";
-    if (!fitsAbove && fitsBelow) placement = "bottom";
-    else if (!fitsAbove && !fitsBelow && fitsRight) placement = "right";
-    else if (!fitsAbove && !fitsBelow && !fitsRight && fitsLeft) placement = "left";
+    const placement = pickCardinalPlacement(
+      tRect,
+      ttRect,
+      container,
+      FLOATING_GAP,
+      FLOATING_VIEWPORT_PAD,
+    );
 
     let left: number;
     let top: number;
@@ -135,35 +113,34 @@ export function InfoHint({ text, label }: InfoHintProps) {
     switch (placement) {
       case "top":
         left = tRect.left + tRect.width / 2 - ttRect.width / 2;
-        top = tRect.top - TOOLTIP_GAP - ttRect.height;
+        top = tRect.top - FLOATING_GAP - ttRect.height;
         break;
       case "bottom":
         left = tRect.left + tRect.width / 2 - ttRect.width / 2;
-        top = tRect.bottom + TOOLTIP_GAP;
+        top = tRect.bottom + FLOATING_GAP;
         break;
       case "right":
-        left = tRect.right + TOOLTIP_GAP;
+        left = tRect.right + FLOATING_GAP;
         top = tRect.top + tRect.height / 2 - ttRect.height / 2;
         break;
       case "left":
-        left = tRect.left - TOOLTIP_GAP - ttRect.width;
+        left = tRect.left - FLOATING_GAP - ttRect.width;
         top = tRect.top + tRect.height / 2 - ttRect.height / 2;
         break;
     }
 
-    const minX = container.left + VIEWPORT_PAD;
-    const maxX = container.right - VIEWPORT_PAD - ttRect.width;
-    const minY = container.top + VIEWPORT_PAD;
-    const maxY = container.bottom - VIEWPORT_PAD - ttRect.height;
+    const clamped = clampBoxInContainer(
+      left,
+      top,
+      ttRect.width,
+      ttRect.height,
+      container,
+      FLOATING_VIEWPORT_PAD,
+    );
 
-    left = Math.min(Math.max(left, minX), maxX);
-    top = Math.min(Math.max(top, minY), maxY);
-
-    setCoords({ left, top });
+    setCoords(clamped);
   }, [portalTarget]);
 
-  // (Re)measure whenever the tooltip becomes visible or the viewport/scroll
-  // changes. useLayoutEffect so the tooltip is placed before paint.
   useLayoutEffect(() => {
     if (!open) return;
     position();
