@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, Film } from "lucide-react";
+import { CalendarClock, Film, Plus } from "lucide-react";
 import {
   franchiseSlotAriaLabel,
   franchiseSlotFutureFooter,
@@ -77,55 +77,93 @@ export function FranchisePlaceholder({
         style={{ background: TIER_BOTTOM_SCRIM.placeholder }}
       />
 
-      <div className="relative flex h-full flex-col items-center justify-center gap-3 px-5 py-6 text-center">
-        <span
-          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-bg-deep/40 ${
-            isFuture
-              ? "border-neural/30 text-neural/70"
-              : "border-ember/25 text-ember/60"
-          }`}
-        >
-          {isFuture ? (
-            <CalendarClock className="h-5 w-5" aria-hidden />
-          ) : (
-            <Film className="h-5 w-5" aria-hidden />
-          )}
-        </span>
-        {titleHint || yearHint ? (
-          <>
-            <p className="font-display text-base font-semibold leading-tight text-text">
-              {titleHint ?? label}
-            </p>
-            {yearHint ? (
-              <p
-                className={`font-mono-tech text-xs ${
-                  isFuture ? "text-neural-bright/85" : "text-ember-bright/80"
-                }`}
-              >
-                {yearHint}
-              </p>
-            ) : null}
-          </>
+      <div className="relative flex h-full flex-col">
+        {interactive ? (
+          <div
+            className="flex min-h-0 flex-1 items-end justify-center px-4 pb-2 pt-8 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            aria-hidden
+          >
+            <span className="font-mono-tech inline-flex items-center gap-1.5 rounded-full border border-accent/35 bg-bg-deep/75 px-2.5 py-1 text-[0.5rem] uppercase tracking-[0.14em] text-accent-bright shadow-[0_0_14px_rgba(232,176,90,0.22)]">
+              <Plus className="h-3 w-3 shrink-0" />
+              привязать фильм
+            </span>
+          </div>
         ) : (
-          <p className="font-display text-sm font-semibold leading-tight text-muted">
-            {label}
-          </p>
+          <div className="min-h-0 flex-1" aria-hidden />
         )}
-      </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-10 p-2.5">
-        <div className="flex items-center gap-2 font-mono-tech text-[0.55rem] uppercase tracking-[0.14em]">
+        <div className="relative z-10 flex shrink-0 flex-col items-center gap-3 px-5 text-center">
           <span
-            className={`h-px flex-1 ${isFuture ? "bg-neural/25" : "bg-ember/30"}`}
-            aria-hidden
-          />
-          <span className={isFuture ? "text-neural/80" : "text-ember-bright/80"}>
-            {isFuture ? franchiseSlotFutureFooter(yearHint, isAnnounced) : FRANCHISE_SLOT_MISSING_FOOTER}
+            className={`relative flex h-11 w-11 items-center justify-center rounded-full border bg-bg-deep/40 ${
+              isFuture
+                ? "border-neural/30 text-neural/70"
+                : "border-ember/25 text-ember/60 group-hover:border-accent/40 group-hover:text-accent group-hover:shadow-[0_0_16px_rgba(232,176,90,0.22)]"
+            }`}
+          >
+            {isFuture ? (
+              <CalendarClock className="h-5 w-5" aria-hidden />
+            ) : (
+              <>
+                <Film
+                  className="h-5 w-5 transition-opacity duration-200 group-hover:opacity-0"
+                  aria-hidden
+                />
+                <Plus
+                  className="absolute h-5 w-5 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  aria-hidden
+                />
+              </>
+            )}
           </span>
-          <span
-            className={`h-px flex-1 ${isFuture ? "bg-neural/25" : "bg-ember/30"}`}
-            aria-hidden
-          />
+          {titleHint || yearHint ? (
+            <>
+              <p className="font-display text-base font-semibold leading-tight text-text">
+                {titleHint ?? label}
+              </p>
+              {yearHint ? (
+                <p
+                  className={`font-mono-tech text-xs ${
+                    isFuture ? "text-neural-bright/85" : "text-ember-bright/80"
+                  }`}
+                >
+                  {yearHint}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="font-display text-sm font-semibold leading-tight text-muted">
+              {label}
+            </p>
+          )}
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col justify-end p-2.5">
+          <div className="flex items-center gap-2 font-mono-tech text-[0.55rem] uppercase tracking-[0.14em]">
+            <span
+              className={`h-px flex-1 ${isFuture ? "bg-neural/25" : "bg-ember/30"}`}
+              aria-hidden
+            />
+            <span className={isFuture ? "text-neural/80" : "text-ember-bright/80"}>
+              {isFuture ? (
+                franchiseSlotFutureFooter(yearHint, isAnnounced)
+              ) : interactive ? (
+                <>
+                  <span className="group-hover:hidden">
+                    {FRANCHISE_SLOT_MISSING_FOOTER}
+                  </span>
+                  <span className="hidden text-accent-bright group-hover:inline">
+                    из каталога
+                  </span>
+                </>
+              ) : (
+                FRANCHISE_SLOT_MISSING_FOOTER
+              )}
+            </span>
+            <span
+              className={`h-px flex-1 ${isFuture ? "bg-neural/25" : "bg-ember/30"}`}
+              aria-hidden
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -148,7 +186,7 @@ export function FranchisePlaceholder({
               ? `Привязать фильм к слоту «${titleHint}»`
               : `Привязать фильм к слоту ${slotIndex + 1}`
           }
-          className="focus-ring block w-full text-left"
+          className="focus-ring block w-full cursor-pointer text-left"
         >
           <LaserCardFrame tier={null}>{inner}</LaserCardFrame>
         </button>
