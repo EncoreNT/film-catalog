@@ -27,6 +27,8 @@ export interface EditableSlot {
 interface FranchiseSlotsEditorProps {
   slots: EditableSlot[];
   onChange: (slots: EditableSlot[]) => void;
+  /** Panel: header pinned, slot grid scrolls (franchise edit page). */
+  layout?: "default" | "panel";
 }
 
 function reindexStoryOrder(slots: EditableSlot[]): EditableSlot[] {
@@ -80,6 +82,7 @@ export function slotsFromFranchise(
 export function FranchiseSlotsEditor({
   slots,
   onChange,
+  layout = "default",
 }: FranchiseSlotsEditorProps) {
   const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null);
   const [removeKey, setRemoveKey] = useState<string | null>(null);
@@ -181,62 +184,66 @@ export function FranchiseSlotsEditor({
   const pickerIndex = pickerOpenFor
     ? slots.findIndex((s) => s.key === pickerOpenFor)
     : -1;
+  const isPanel = layout === "panel";
+  const slotGridClass = isPanel
+    ? "grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3"
+    : "grid grid-cols-1 gap-2.5 sm:grid-cols-2";
 
-  return (
-    <MachinedCard variant="calm" bodyClassName="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <CardSectionHeader label="хронология мира" title="Фильмы франшизы" />
-        <p className="font-mono-tech text-xs text-muted tabular-nums">
-          {filledCount} / {slots.length} во франшизе
+  const header = (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <CardSectionHeader label="хронология мира" title="Фильмы франшизы" />
+      <p className="font-mono-tech text-xs text-muted tabular-nums">
+        {filledCount} / {slots.length} во франшизе
+      </p>
+    </div>
+  );
+
+  const emptyState = (
+    <div className="relative flex flex-col items-center gap-4 overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-surface/10 px-6 py-10 text-center">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-accent/55 to-transparent"
+      />
+      <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-accent shadow-[0_0_18px_rgba(232,176,90,0.25)]">
+        <Film className="h-5 w-5" aria-hidden />
+      </span>
+      <div className="space-y-1">
+        <p className="text-sm text-text">Франшиза пока пуста</p>
+        <p className="text-xs text-muted">
+          Добавьте фильмы и привяжите их из каталога
         </p>
       </div>
+      <Button type="button" variant="secondary" onClick={addEmptySlot}>
+        <Plus className="h-4 w-4" aria-hidden />
+        Добавить фильм
+      </Button>
+    </div>
+  );
 
-      {slots.length === 0 ? (
-        <div className="relative flex flex-col items-center gap-4 overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-surface/10 px-6 py-10 text-center">
-          {/* Top-edge gold laser slit — the drop zone reads as a calibrated
-              empty reel bay rather than a flat filled box. */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-accent/55 to-transparent"
-          />
-          <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-accent shadow-[0_0_18px_rgba(232,176,90,0.25)]">
-            <Film className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="space-y-1">
-            <p className="text-sm text-text">Франшиза пока пуста</p>
-            <p className="text-xs text-muted">
-              Добавьте фильмы и привяжите их из каталога
-            </p>
-          </div>
-          <Button type="button" variant="secondary" onClick={addEmptySlot}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Добавить фильм
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {slots.map((slot, index) => (
-              <FranchiseSlotCard
-                key={slot.key}
-                slot={slot}
-                index={index}
-                total={slots.length}
-                onPick={() => setPickerOpenFor(slot.key)}
-                onClear={() => clearMovie(slot.key)}
-                onMove={(dir) => moveSlot(index, dir)}
-                onRemove={() => setRemoveKey(slot.key)}
-                onHintChange={(field, value) =>
-                  updateHintField(slot.key, field, value)
-                }
-                onAnnouncedChange={(value) => updateAnnounced(slot.key, value)}
-              />
-            ))}
-            <AddSlotButton onAdd={addEmptySlot} />
-          </div>
-        </>
-      )}
+  const slotGrid = (
+    <div className={slotGridClass}>
+      {slots.map((slot, index) => (
+        <FranchiseSlotCard
+          key={slot.key}
+          slot={slot}
+          index={index}
+          total={slots.length}
+          onPick={() => setPickerOpenFor(slot.key)}
+          onClear={() => clearMovie(slot.key)}
+          onMove={(dir) => moveSlot(index, dir)}
+          onRemove={() => setRemoveKey(slot.key)}
+          onHintChange={(field, value) =>
+            updateHintField(slot.key, field, value)
+          }
+          onAnnouncedChange={(value) => updateAnnounced(slot.key, value)}
+        />
+      ))}
+      <AddSlotButton onAdd={addEmptySlot} />
+    </div>
+  );
 
+  const dialogs = (
+    <>
       <MoviePickerDialog
         open={pickerOpenFor != null}
         onClose={() => setPickerOpenFor(null)}
@@ -255,6 +262,32 @@ export function FranchiseSlotsEditor({
         onConfirm={() => removeKey && removeSlot(removeKey)}
         onClose={() => setRemoveKey(null)}
       />
+    </>
+  );
+
+  if (isPanel) {
+    return (
+      <MachinedCard
+        variant="calm"
+        className="flex min-h-0 flex-1 flex-col"
+        bodyClassName="flex min-h-0 flex-1 flex-col gap-4"
+      >
+        <div className="shrink-0">{header}</div>
+        <div className="scroll-subtle min-h-0 flex-1 overflow-y-auto pr-1">
+          {slots.length === 0 ? emptyState : slotGrid}
+        </div>
+        {dialogs}
+      </MachinedCard>
+    );
+  }
+
+  return (
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
+      {header}
+
+      {slots.length === 0 ? emptyState : slotGrid}
+
+      {dialogs}
     </MachinedCard>
   );
 }

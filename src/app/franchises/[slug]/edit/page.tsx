@@ -27,6 +27,7 @@ export default async function FranchiseEditPage({ params }: PageProps) {
       eyebrow="редактирование"
       title={franchise.name}
       titleClassName="font-display text-3xl font-bold sm:text-4xl"
+      fillViewport
     >
       <FranchiseForm mode="edit" franchise={franchise} />
     </EntityEditLayout>

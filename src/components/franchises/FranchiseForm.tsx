@@ -145,23 +145,47 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
     </>
   );
 
-  return (
-    <div className="space-y-6">
-      <MachinedCard variant="calm" bodyClassName="space-y-5">
-        <CardSectionHeader label="основное" title="Параметры франшизы" />
-        <div className="flex flex-col gap-6 sm:flex-row">
-          {mode === "edit" && franchise ? (
-            <FranchiseCoverUpload
-              franchiseId={franchise.id}
-              hasCover={!!franchise.coverPath}
-              coverVersion={franchise.updatedAt}
+  const paramsCard = (
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
+      <CardSectionHeader label="основное" title="Параметры франшизы" />
+      <div
+        className={
+          mode === "edit"
+            ? "flex flex-col gap-5"
+            : "flex flex-col gap-6 sm:flex-row"
+        }
+      >
+        {mode === "edit" && franchise ? (
+          <FranchiseCoverUpload
+            layout="stacked"
+            franchiseId={franchise.id}
+            hasCover={!!franchise.coverPath}
+            coverVersion={franchise.updatedAt}
+          />
+        ) : (
+          <FranchiseCoverUpload
+            onFileChange={setCoverFile}
+            onUrlChange={setCoverUrl}
+          />
+        )}
+        {mode === "edit" ? (
+          <>
+            <Field
+              label="Название"
+              required
+              variant="underline"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
-          ) : (
-            <FranchiseCoverUpload
-              onFileChange={setCoverFile}
-              onUrlChange={setCoverUrl}
+            <TextAreaField
+              label="Описание"
+              variant="underline"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={5}
             />
-          )}
+          </>
+        ) : (
           <div className="min-w-0 flex-1 space-y-5">
             <Field
               label="Название"
@@ -178,8 +202,41 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
               rows={3}
             />
           </div>
+        )}
+      </div>
+    </MachinedCard>
+  );
+
+  if (mode === "edit") {
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-4">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="lg:col-span-1 lg:min-h-0">{paramsCard}</div>
+          <div className="flex min-h-0 flex-col lg:col-span-2">
+            <FranchiseSlotsEditor
+              layout="panel"
+              slots={slots}
+              onChange={setSlots}
+            />
+          </div>
         </div>
-      </MachinedCard>
+
+        {error ? (
+          <p className="shrink-0 text-sm text-danger" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-border pt-4">
+          {editFooter}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {paramsCard}
 
       <FranchiseSlotsEditor slots={slots} onChange={setSlots} />
 
@@ -200,11 +257,7 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
           />
           {createFooter}
         </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-          {editFooter}
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
