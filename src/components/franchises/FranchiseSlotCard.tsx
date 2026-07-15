@@ -7,7 +7,7 @@ import { UnderlineLines } from "@/components/primitives/Field";
 import { NeuralSwitch } from "@/components/primitives/NeuralSwitch";
 import { MAX_YEAR, MIN_YEAR, clampYear } from "@/components/primitives/YearInput";
 import { trimOnInputBlur } from "@/lib/shared/text-trim";
-import { isFutureFranchiseSlotState } from "@/lib/franchises/franchise-slot-future";
+import { isFutureFranchiseSlotState, canMarkSlotUnreleased } from "@/lib/franchises/franchise-slot-future";
 import {
   FRANCHISE_SLOT_FUTURE_HEADLINE,
   franchiseSlotFutureFooter,
@@ -53,29 +53,43 @@ export function FranchiseSlotCard({
     });
   const canLink = !isFutureEmpty;
   const isUnreleased = slot.isAnnounced ?? false;
-  /** Only when year is empty — past/future year on the slot defines status itself. */
   const showUnreleasedSwitch =
-    !filled && (isUnreleased || slot.yearHint == null);
+    !filled && (isUnreleased || canMarkSlotUnreleased(slot.yearHint));
+  const hideYearField = isUnreleased;
+
+  const topLaserClass = filled
+    ? "via-accent/45"
+    : isFutureEmpty
+      ? "via-neural/50"
+      : "via-ember/40";
+  const shellBorderClass = filled
+    ? "border-border-strong hover:border-accent/35"
+    : isFutureEmpty
+      ? "border-border-neural"
+      : "border-border-strong";
+  const leftAccentClass = filled
+    ? "via-accent/50"
+    : isFutureEmpty
+      ? "via-neural/45"
+      : "via-ember/40";
 
   return (
     <article
-      className="group relative flex gap-3 rounded-[var(--radius-sm)] border border-border/50 bg-bg-surface/[0.04] p-2.5 transition-colors duration-200 hover:border-border hover:bg-bg-surface/15"
+      className={`group relative rounded-[var(--radius-sm)] border ${shellBorderClass} glow-card-rest bg-bg-elevated/55 p-1 transition-[border-color,box-shadow] duration-200`}
       style={{
         animation: `movieCardIn 0.4s var(--ease) ${Math.min(index, 8) * 35}ms both`,
       }}
     >
-      {/* Left accent line — gold when the slot is linked, ember when empty:
-          a quiet state signal in the line-language, no filled pill. */}
-      <span
-        aria-hidden
-        className={`pointer-events-none absolute inset-y-2 left-0 w-px bg-gradient-to-b from-transparent to-transparent ${
-          filled
-            ? "via-accent/45"
-            : isFutureEmpty
-              ? "via-neural/40"
-              : "via-ember/35"
-        }`}
-      />
+      <div className="spec-plaque-core relative flex gap-3 overflow-hidden rounded-[calc(var(--radius-sm)-3px)] px-2.5 py-2">
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-2.5 top-0 z-[1] h-px bg-gradient-to-r from-transparent ${topLaserClass} to-transparent`}
+        />
+        {/* Left accent line — gold when linked, neural when future, ember when empty. */}
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-y-2 left-0 z-[1] w-px bg-gradient-to-b from-transparent ${leftAccentClass} to-transparent`}
+        />
       {canLink ? (
       <button
         type="button"
@@ -87,8 +101,8 @@ export function FranchiseSlotCard({
         }
         className={`focus-ring group relative h-16 w-11 shrink-0 cursor-pointer overflow-hidden rounded-[var(--radius-sm)] border transition-all duration-200 ${
           filled
-            ? "border-border-strong hover:border-accent/60 hover:shadow-[0_0_18px_rgba(232,176,90,0.3)]"
-            : "border-dashed border-ember/40 bg-bg-surface/30 hover:border-ember/70"
+            ? "border-border-strong bg-bg-deep/40 hover:border-accent/60 hover:shadow-[0_0_18px_rgba(232,176,90,0.3)]"
+            : "border-dashed border-ember/50 bg-bg-deep/55 hover:border-ember/75"
         }`}
       >
         {filled ? (
@@ -114,7 +128,7 @@ export function FranchiseSlotCard({
       </button>
       ) : (
         <span
-          className="relative flex h-16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-neural/40 bg-neural/[0.06]"
+          className="relative flex h-16 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-neural/55 bg-bg-deep/55"
           title={FRANCHISE_SLOT_FUTURE_HEADLINE}
         >
           <CalendarClock className="h-5 w-5 text-neural/65" aria-hidden />
@@ -189,8 +203,8 @@ export function FranchiseSlotCard({
               <UnderlineLines />
             </div>
             <div
-              className={`relative ${isUnreleased ? "pointer-events-none invisible" : ""}`}
-              aria-hidden={isUnreleased}
+              className={`relative ${hideYearField ? "pointer-events-none invisible" : ""}`}
+              aria-hidden={hideYearField}
             >
               <input
                 type="text"
@@ -271,6 +285,7 @@ export function FranchiseSlotCard({
           </div>
         )}
       </div>
+      </div>
     </article>
   );
 }
@@ -285,12 +300,14 @@ export function AddSlotButton({ onAdd }: AddSlotButtonProps) {
       type="button"
       onClick={onAdd}
       aria-label="Добавить фильм"
-      className="focus-ring group flex min-h-[5.5rem] cursor-pointer items-center justify-center gap-2.5 rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-surface/10 px-4 text-faint transition-all duration-200 hover:border-accent/50 hover:bg-accent/5 hover:text-accent"
+      className="focus-ring group flex min-h-[5.5rem] cursor-pointer items-center justify-center gap-2.5 rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-elevated/40 p-1 text-faint transition-all duration-200 hover:border-accent/45 hover:text-accent"
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border-strong bg-bg-elevated transition-colors group-hover:border-accent/50 group-hover:bg-accent/10 group-hover:shadow-[0_0_14px_rgba(232,176,90,0.3)]">
-        <Plus className="h-4 w-4" aria-hidden />
+      <span className="flex h-full min-h-[4.75rem] w-full flex-col items-center justify-center gap-2.5 rounded-[calc(var(--radius-sm)-3px)] border border-dashed border-border bg-bg-elevated/80 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors group-hover:border-accent/35 group-hover:bg-bg-elevated">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border-strong bg-bg-deep transition-colors group-hover:border-accent/50 group-hover:bg-accent/10 group-hover:shadow-[0_0_14px_rgba(232,176,90,0.3)]">
+          <Plus className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="font-mono-tech text-xs">добавить фильм</span>
       </span>
-      <span className="font-mono-tech text-xs">добавить фильм</span>
     </button>
   );
 }

@@ -9,6 +9,8 @@ import { MoviePickerDialog } from "@/components/franchises/MoviePickerDialog";
 import { FranchiseSlotCard, AddSlotButton } from "@/components/franchises/FranchiseSlotCard";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import type { FranchiseSlotInput } from "@/lib/franchises/franchise-slots";
+import { currentCalendarYear } from "@/lib/franchises/franchise-slot-future";
+import { canMarkSlotUnreleased } from "@/lib/franchises/franchise-summary";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { trimInputOptional } from "@/lib/shared/text-trim";
 
@@ -143,13 +145,7 @@ export function FranchiseSlotsEditor({
   const updateAnnounced = (key: string, isAnnounced: boolean) => {
     onChange(
       slots.map((slot) =>
-        slot.key === key
-          ? {
-              ...slot,
-              isAnnounced,
-              yearHint: isAnnounced ? null : slot.yearHint,
-            }
-          : slot,
+        slot.key === key ? { ...slot, isAnnounced } : slot,
       ),
     );
   };
@@ -172,7 +168,9 @@ export function FranchiseSlotsEditor({
                   : value || null,
               isAnnounced:
                 field === "yearHint" && value
-                  ? false
+                  ? canMarkSlotUnreleased(parseInt(value, 10), currentCalendarYear())
+                    ? (slot.isAnnounced ?? false)
+                    : false
                   : (slot.isAnnounced ?? false),
             }
           : slot,
@@ -186,8 +184,8 @@ export function FranchiseSlotsEditor({
     : -1;
   const isPanel = layout === "panel";
   const slotGridClass = isPanel
-    ? "grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3"
-    : "grid grid-cols-1 gap-2.5 sm:grid-cols-2";
+    ? "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3"
+    : "grid grid-cols-1 gap-3 sm:grid-cols-2";
 
   const header = (
     <div className="flex flex-wrap items-end justify-between gap-3">
@@ -199,11 +197,12 @@ export function FranchiseSlotsEditor({
   );
 
   const emptyState = (
-    <div className="relative flex flex-col items-center gap-4 overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-surface/10 px-6 py-10 text-center">
+    <div className="relative flex flex-col items-center gap-4 overflow-hidden rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-bg-elevated/45 p-1 px-6 py-10 text-center">
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-accent/55 to-transparent"
+        className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-accent/55 to-transparent"
       />
+      <div className="flex w-full flex-col items-center gap-4 rounded-[calc(var(--radius-sm)-3px)] border border-dashed border-border bg-bg-elevated/80 px-6 py-9 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-accent shadow-[0_0_18px_rgba(232,176,90,0.25)]">
         <Film className="h-5 w-5" aria-hidden />
       </span>
@@ -217,6 +216,7 @@ export function FranchiseSlotsEditor({
         <Plus className="h-4 w-4" aria-hidden />
         Добавить фильм
       </Button>
+      </div>
     </div>
   );
 

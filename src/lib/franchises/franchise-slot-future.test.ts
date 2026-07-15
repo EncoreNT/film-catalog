@@ -28,6 +28,30 @@ describe("franchise-slot-future", () => {
     ).toBe(false);
   });
 
+  it("treats announced slots with the current year as future", () => {
+    expect(
+      isFutureFranchiseSlotState(
+        { year: 2026, filled: false, isAnnounced: true },
+        2026,
+      ),
+    ).toBe(true);
+    expect(
+      isFutureFranchiseSlotState(
+        { year: 2026, filled: false, isAnnounced: false },
+        2026,
+      ),
+    ).toBe(false);
+  });
+
+  it("ignores isAnnounced when year is in the past", () => {
+    expect(
+      isFutureFranchiseSlotState(
+        { year: 2014, filled: false, isAnnounced: true },
+        2026,
+      ),
+    ).toBe(false);
+  });
+
   it("ignores isAnnounced when the slot is filled", () => {
     expect(
       isFutureFranchiseSlotState(
@@ -53,5 +77,20 @@ describe("franchise-slot-future", () => {
         2026,
       ),
     ).toThrow(FUTURE_SLOT_LINK_ERROR);
+  });
+
+  it("blocks linking movies to announced slots with the current year", () => {
+    expect(() =>
+      assertFranchiseSlotLinkAllowed(
+        { yearHint: 2026, isAnnounced: true },
+        2026,
+      ),
+    ).toThrow(FUTURE_SLOT_LINK_ERROR);
+    expect(() =>
+      assertFranchiseSlotLinkAllowed(
+        { yearHint: 2026, isAnnounced: false },
+        2026,
+      ),
+    ).not.toThrow();
   });
 });

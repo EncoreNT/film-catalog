@@ -1,7 +1,8 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { franchiseSlotInputSchema } from "@/lib/api/validators";
 import type { z } from "zod";
-import { assertFranchiseSlotLinkAllowed } from "@/lib/franchises/franchise-slot-future";
+import { assertFranchiseSlotLinkAllowed, currentCalendarYear } from "@/lib/franchises/franchise-slot-future";
+import { canMarkSlotUnreleased } from "@/lib/franchises/franchise-summary";
 
 type Db = Prisma.TransactionClient;
 
@@ -33,7 +34,10 @@ export async function syncFranchiseSlots(
       titleHint: slot.titleHint ?? null,
       yearHint: slot.yearHint ?? null,
       isAnnounced:
-        slot.movieId != null ? false : (slot.isAnnounced ?? false),
+        slot.movieId != null
+          ? false
+          : (slot.isAnnounced ?? false) &&
+            canMarkSlotUnreleased(slot.yearHint ?? null, currentCalendarYear()),
     })),
   });
 }

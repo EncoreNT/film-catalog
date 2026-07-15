@@ -153,7 +153,7 @@ export interface FranchiseSummary {
   tier: ReleaseTier;
 }
 
-/** True when the slot is a future release: year after now, or empty + announced TBA. */
+/** True when the slot is a future release: year after now, or unreleased flag with no year / current year. */
 export function isFutureFranchiseSlot(
   slot: {
     year: number | null;
@@ -163,8 +163,16 @@ export function isFutureFranchiseSlot(
   currentYear: number,
 ): boolean {
   if (slot.year != null && slot.year > currentYear) return true;
-  if (slot.filled !== true && slot.isAnnounced) return true;
-  return false;
+  if (slot.filled === true || !slot.isAnnounced) return false;
+  return slot.year == null || slot.year === currentYear;
+}
+
+/** Empty slot may toggle «ещё не вышел» when year is empty or equals the calendar year. */
+export function canMarkSlotUnreleased(
+  year: number | null | undefined,
+  currentYear = new Date().getFullYear(),
+): boolean {
+  return year == null || year === currentYear;
 }
 
 /**

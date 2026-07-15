@@ -587,19 +587,45 @@ describe("computeFranchiseCollectionTier", () => {
 });
 
 describe("isFutureFranchiseSlot", () => {
+  const CURRENT = 2026;
+
   it("treats year greater than current as future", () => {
-    expect(isFutureFranchiseSlot({ year: 2027 }, 2026)).toBe(true);
-    expect(isFutureFranchiseSlot({ year: 2026 }, 2026)).toBe(false);
-    expect(isFutureFranchiseSlot({ year: null }, 2026)).toBe(false);
+    expect(isFutureFranchiseSlot({ year: 2027 }, CURRENT)).toBe(true);
+    expect(isFutureFranchiseSlot({ year: 2026 }, CURRENT)).toBe(false);
+    expect(isFutureFranchiseSlot({ year: null }, CURRENT)).toBe(false);
   });
 
   it("treats empty announced slots without year as future", () => {
     expect(
       isFutureFranchiseSlot(
         { year: null, filled: false, isAnnounced: true },
-        2026,
+        CURRENT,
       ),
     ).toBe(true);
+  });
+
+  it("treats announced slots with the current year as future", () => {
+    expect(
+      isFutureFranchiseSlot(
+        { year: 2026, filled: false, isAnnounced: true },
+        CURRENT,
+      ),
+    ).toBe(true);
+    expect(
+      isFutureFranchiseSlot(
+        { year: 2026, filled: false, isAnnounced: false },
+        CURRENT,
+      ),
+    ).toBe(false);
+  });
+
+  it("ignores announced flag when year is in the past", () => {
+    expect(
+      isFutureFranchiseSlot(
+        { year: 2014, filled: false, isAnnounced: true },
+        CURRENT,
+      ),
+    ).toBe(false);
   });
 });
 

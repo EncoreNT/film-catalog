@@ -1,4 +1,7 @@
-import { isFutureFranchiseSlot } from "@/lib/franchises/franchise-summary";
+import {
+  canMarkSlotUnreleased,
+  isFutureFranchiseSlot,
+} from "@/lib/franchises/franchise-summary";
 
 export const FUTURE_SLOT_LINK_ERROR =
   "Нельзя привязать фильм к слоту будущего релиза.";
@@ -13,7 +16,9 @@ export type FutureSlotInput = {
   isAnnounced?: boolean;
 };
 
-/** Slot is future when its year is after now, or empty and marked announced (TBA). */
+export { canMarkSlotUnreleased };
+
+/** Slot is future when its year is after now, or unreleased with no year / current year. */
 export function isFutureFranchiseSlotState(
   input: FutureSlotInput,
   currentYear = currentCalendarYear(),

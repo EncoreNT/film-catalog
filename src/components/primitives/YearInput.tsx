@@ -140,19 +140,20 @@ export function YearInput({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
-        <label htmlFor={fieldId} className="text-sm text-muted">
+        <label
+          htmlFor={fieldId}
+          className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-muted"
+        >
           {label}
         </label>
         {hint ? <InfoHint text={hint} label={label} /> : null}
       </div>
       <div className="relative" ref={containerRef}>
         <div
-          className={`relative flex min-h-11 items-center gap-1 rounded-[var(--radius)] border bg-bg-elevated px-1.5 py-1 transition-all duration-200 ${
+          className={`relative flex min-h-11 items-center gap-1 rounded-[var(--radius-sm)] border bg-bg-elevated/70 px-1.5 py-1 transition-[border-color,box-shadow] duration-200 before:pointer-events-none before:absolute before:inset-x-3 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent/45 before:to-transparent before:opacity-0 before:transition-opacity before:duration-200 focus-within:before:opacity-100 ${
             open
-              ? "border-accent/55 shadow-[0_0_16px_var(--accent-glow)]"
-              : hasValue
-                ? "border-accent/40 shadow-[0_0_16px_var(--accent-glow)] focus-within:border-accent/55 focus-within:shadow-[0_0_18px_var(--accent-glow)]"
-                : "border-border hover:border-border-strong focus-within:border-accent/50 focus-within:shadow-[0_0_14px_var(--accent-glow)]"
+              ? "border-accent/40 shadow-[0_0_12px_rgba(232,176,90,0.12)]"
+              : "border-border-strong hover:border-border-strong focus-within:border-accent/40 focus-within:shadow-[0_0_10px_rgba(232,176,90,0.1)]"
           } ${error ? "!border-danger/50" : ""}`}
           aria-label={label}
         >
@@ -180,7 +181,7 @@ export function YearInput({
             maxLength={4}
             aria-invalid={error != null}
             aria-describedby={error ? `${fieldId}-error` : undefined}
-            className="focus-ring font-mono-tech min-w-0 flex-1 cursor-text rounded-[var(--radius-sm)] border-0 bg-transparent px-1 py-1 text-center text-base font-semibold text-text outline-none placeholder:text-muted/60"
+            className="font-mono-tech min-w-0 flex-1 cursor-text rounded-[var(--radius-sm)] border-0 bg-transparent px-1 py-1 text-center text-base font-semibold tabular-nums text-text outline-none placeholder:text-muted/50 focus:outline-none focus-visible:outline-none"
           />
 
           <button
@@ -198,7 +199,7 @@ export function YearInput({
           <div
             role="listbox"
             aria-label={`${label} — десятилетия`}
-            className="surface-elevated absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-auto p-1 shadow-2xl"
+            className="surface-elevated absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-auto rounded-[var(--radius-sm)] border border-border-strong p-1 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
           >
             <div className="flex items-center justify-between px-2 pb-1 pt-2">
               <span className="font-mono-tech text-[0.6rem] text-faint">
@@ -228,9 +229,9 @@ export function YearInput({
                         setExpandedDecade(isExpanded ? null : decade.start)
                       }
                       aria-expanded={isExpanded}
-                      className={`flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm transition-colors ${
                         decadeActive
-                          ? "bg-accent/10 text-accent"
+                          ? "bg-accent/8 text-accent-bright"
                           : "text-text hover:bg-bg-surface-hover"
                       }`}
                     >
@@ -255,7 +256,7 @@ export function YearInput({
                                 onClick={() => selectYear(y)}
                                 className={`font-mono-tech flex h-8 w-full cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-xs tabular-nums transition-colors ${
                                   active
-                                    ? "bg-accent/15 text-accent shadow-[0_0_12px_var(--accent-glow)]"
+                                    ? "border border-accent/35 bg-accent/10 text-accent-bright"
                                     : "text-muted hover:bg-bg-surface-hover hover:text-text"
                                 }`}
                               >
