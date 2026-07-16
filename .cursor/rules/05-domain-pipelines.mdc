@@ -105,6 +105,14 @@ Browser-side fetch helpers (`apiFetch`, `approveMovie`, `uploadCover`) — thin 
 
 Pure helpers для позиционирования floating UI (`HoverTooltip`, `InfoHint`): flip, clamp, dialog portal target.
 
+## builds/
+
+- `build-validation.ts` — recipe zod + fresh ffprobe/mkvmerge inspection
+- `build-queue.ts` — enqueue, claim, heartbeat, cancel, retry, stale recovery
+- `build-runner.ts` — ffmpeg transcode + mkvmerge mux + register output
+- `build-capabilities.ts` — CLI tool availability
+- Worker: `scripts/release-build-worker.ts`; dev: `npm run dev` (web+worker)
+
 ## db/prisma.ts
 
 BetterSqlite3 adapter, DATABASE_URL default `file:./data/catalog.db`. Import from `@/lib/db/prisma`, types from `@/generated/prisma/client`.

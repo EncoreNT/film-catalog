@@ -56,6 +56,20 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | POST | `/api/storages` | Создать внешний диск |
 | GET | `/api/stats` | Archive metrics JSON |
 
+## Release builds
+
+| Method | Path | Назначение |
+|--------|------|------------|
+| POST | `/api/movies/[id]/builds/validate` | Проверка recipe + warnings |
+| POST | `/api/movies/[id]/builds` | Постановка в очередь (`acknowledgeWarnings`) |
+| GET | `/api/builds` | Список jobs (query: movieId, status, page) |
+| GET | `/api/builds/[id]` | Деталь job |
+| POST | `/api/builds/[id]/cancel` | Отмена |
+| POST | `/api/builds/[id]/retry` | Повтор FAILED/CANCELLED |
+| GET | `/api/builds/capabilities` | ffmpeg/ffprobe/mkvmerge availability |
+
+Клиент polling статуса; job не привязан к HTTP-соединению. Исполнение — отдельный worker.
+
 ## NDJSON scan stream
 
 Content-Type: `application/x-ndjson`. События (по строке):

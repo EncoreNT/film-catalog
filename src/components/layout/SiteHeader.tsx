@@ -7,6 +7,7 @@ import { Film } from "lucide-react";
 const NAV_ITEMS = [
   { href: "/", label: "Каталог" },
   { href: "/franchises", label: "Франшизы" },
+  { href: "/builds", label: "Сборки" },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

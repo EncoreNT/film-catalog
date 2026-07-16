@@ -5,11 +5,12 @@
 ## Требования
 
 - **Node.js** 20+
-- **FFmpeg** с `ffprobe` в PATH
+- **FFmpeg** с `ffprobe` и `ffmpeg` в PATH
+- **MKVToolNix** с `mkvmerge` в PATH (для сборки пользовательских релизов)
 
 ```bash
 # macOS
-brew install ffmpeg
+brew install ffmpeg mkvtoolnix
 ```
 
 ## Быстрый старт
@@ -19,6 +20,20 @@ npm install
 npm run db:migrate
 npm run dev
 ```
+
+`npm run dev` запускает **web + worker сборок** (очередь MKV-релизов). Только UI:
+
+```bash
+npm run dev:web
+```
+
+Worker отдельно:
+
+```bash
+npm run worker:builds
+```
+
+> **Node 24 + worker:** если worker падает с `ERR_PACKAGE_PATH_NOT_EXPORTED` / `unicorn-magic`, выполните `npm install` — в `package.json` есть override `npm-run-path@5.3.0` для совместимости `tsx` + `execa`.
 
 Откройте [http://localhost:3000](http://localhost:3000).
 
@@ -56,12 +71,23 @@ SCAN_ROOT="/path/to/your/movies"
 - Франшизы: слоты, quality reel, completion meter, привязка фильмов
 - Фильтры: жанр, разрешение, язык аудио, формат звука, оценка, просмотренность, сортировка по продолжительности
 - Загрузка обложек локально (фильмы 2:3, франшизы 16:9)
+- **Сборка релизов**: выбор дорожек из нескольких исходных Release, AC-3/E-AC3 transcode, фоновая очередь (`/builds`)
 - UI: дизайн-система **Cinematic Tech** — см. [`docs/design-system.md`](docs/design-system.md)
+
+### Сборка пользовательских MKV
+
+- Конструктор: `/movies/[slug]/builds/new` — video copy, выбор audio/subtitle, опциональный transcode
+- Очередь: `/builds` — статус, отмена, повтор
+- Результат регистрируется как **новый Release** того же фильма; исходники не изменяются
+- E-AC3/AC-3: пресеты битрейта, цель 2.0 или до 5.1 (7.1/Atmos downmix); Atmos в новой дорожке не сохраняется
+- Совпадение длительности ≠ гарантия синхронизации; для audio copy доступен ручной сдвиг (мс)
 
 ## Скрипты
 
 ```bash
-npm run dev          # dev-сервер
+npm run dev          # web + worker сборок
+npm run dev:web      # только Next.js
+npm run worker:builds # worker очереди сборок
 npm run build        # production build
 npm run test         # vitest
 npm run typecheck    # tsc --noEmit
