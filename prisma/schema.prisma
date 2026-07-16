@@ -245,6 +245,7 @@ model ReleaseBuildTrack {
   offsetMs          Int                        @default(0)
   isDefault         Boolean                    @default(false)
   forced            Boolean                    @default(false)
+  keepOriginal      Boolean                    @default(false)
   createdAt         DateTime                   @default(now())
 
   build         ReleaseBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)

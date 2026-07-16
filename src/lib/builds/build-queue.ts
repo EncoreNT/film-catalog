@@ -69,6 +69,7 @@ export async function enqueueBuild(
           offsetMs: track.offsetMs ?? 0,
           isDefault: track.isDefault ?? false,
           forced: track.forced ?? false,
+          keepOriginal: track.keepOriginal ?? false,
         })),
       },
     },

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyTrackPatch,
   createInitialBuildState,
   moveTrack,
+  normalizeExclusiveDefaults,
   serializeBuildRecipe,
 } from "@/lib/builds/build-recipe-state";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
@@ -74,5 +76,92 @@ describe("build-recipe-state", () => {
     const state = createInitialBuildState([sampleRelease()]);
     const moved = moveTrack(state.tracks, 0, 1);
     expect(moved[1]?.kind).toBe("video");
+  });
+
+  it("keeps at most one default audio and subtitle", () => {
+    const release = sampleRelease();
+    release.audioTracks.push({
+      ...release.audioTracks[0]!,
+      id: 3,
+      streamIndex: 2,
+      title: "EN",
+      isDefault: true,
+    });
+    release.subtitleTracks = [
+      {
+        id: 4,
+        releaseId: 10,
+        streamIndex: 3,
+        codec: "ass",
+        codecLabel: "ASS",
+        language: "rus",
+        title: "RU forced",
+        forced: true,
+        isDefault: true,
+      },
+      {
+        id: 5,
+        releaseId: 10,
+        streamIndex: 4,
+        codec: "ass",
+        codecLabel: "ASS",
+        language: "rus",
+        title: "RU full",
+        forced: false,
+        isDefault: true,
+      },
+    ];
+    const state = createInitialBuildState([release]);
+    const audioDefaults = state.tracks.filter((t) => t.kind === "audio" && t.isDefault);
+    const subDefaults = state.tracks.filter((t) => t.kind === "subtitle" && t.isDefault);
+    expect(audioDefaults).toHaveLength(1);
+    expect(subDefaults).toHaveLength(1);
+  });
+
+  it("applyTrackPatch clears other defaults of the same kind", () => {
+    const tracks = normalizeExclusiveDefaults([
+      {
+        key: "a1",
+        kind: "audio",
+        sourceReleaseId: 1,
+        sourceStreamIndex: 1,
+        label: "A1",
+        isDefault: true,
+      },
+      {
+        key: "a2",
+        kind: "audio",
+        sourceReleaseId: 1,
+        sourceStreamIndex: 2,
+        label: "A2",
+        isDefault: false,
+      },
+      {
+        key: "s1",
+        kind: "subtitle",
+        sourceReleaseId: 1,
+        sourceStreamIndex: 3,
+        label: "S1",
+        isDefault: true,
+      },
+      {
+        key: "s2",
+        kind: "subtitle",
+        sourceReleaseId: 1,
+        sourceStreamIndex: 4,
+        label: "S2",
+        isDefault: false,
+      },
+    ]);
+
+    const next = applyTrackPatch(tracks, 1, { isDefault: true });
+    expect(next[0]?.isDefault).toBe(false);
+    expect(next[1]?.isDefault).toBe(true);
+    expect(next[2]?.isDefault).toBe(true);
+    expect(next[3]?.isDefault).toBe(false);
+
+    const subs = applyTrackPatch(next, 3, { isDefault: true });
+    expect(subs[2]?.isDefault).toBe(false);
+    expect(subs[3]?.isDefault).toBe(true);
   });
 });

@@ -11,7 +11,10 @@ import {
   type InspectedReleaseFile,
 } from "@/lib/builds/build-inspect-runtime";
 import {
+  isAc3FamilyCodec,
+  isHigherThanAc3Codec,
   isValidBitrate,
+  idealTranscodeBitrate,
   type TranscodeCodec,
 } from "@/lib/builds/build-presets";
 import { normalizeOutputPath } from "@/lib/builds/build-inspection";
@@ -226,6 +229,32 @@ export async function validateBuildRecipe(
             message: `Битрейт ${track.transcodeBitrate} не поддерживается для ${codec}`,
             severity: "error",
           });
+        } else {
+          const label = trackLabel(track, info);
+          if (isAc3FamilyCodec(audio.codec)) {
+            warnings.push({
+              code: "transcode_pointless",
+              message: `«${label}»: уже AC-3 или E-AC3. Перекодирование не улучшит качество.`,
+              severity: "warning",
+            });
+          } else if (!isHigherThanAc3Codec(audio.codec)) {
+            warnings.push({
+              code: "transcode_low_value",
+              message: `«${label}»: источник слабее AC-3. Перекодирование в ${codec.toUpperCase()} не даст выигрыша.`,
+              severity: "warning",
+            });
+          }
+          if (
+            audio.bitrate &&
+            track.transcodeBitrate > audio.bitrate &&
+            track.transcodeBitrate > idealTranscodeBitrate(codec)
+          ) {
+            warnings.push({
+              code: "transcode_bitrate_upscale",
+              message: `«${label}»: битрейт ${track.transcodeBitrate} kbps выше источника (${audio.bitrate} kbps). Апскейл не имеет смысла.`,
+              severity: "warning",
+            });
+          }
         }
       }
       if (!info.mkv) {

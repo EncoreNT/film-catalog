@@ -27,5 +27,78 @@ export function channelTargetToLayout(target: ChannelTarget): string {
 }
 
 export function channelTargetLabel(target: ChannelTarget): string {
-  return target === "stereo" ? "2.0" : "до 5.1";
+  return target === "stereo" ? "2.0" : "5.1";
+}
+
+/** Эффективное число каналов: `channels` или bed из layout (7.1 → 8). */
+export function effectiveChannelCount(
+  channels: number | null | undefined,
+  channelLayout: string | null | undefined,
+): number {
+  if (channels != null && channels > 0) return channels;
+  if (channelLayout && channelLayout !== "other") {
+    const [wide, high] = channelLayout.split(".");
+    const w = Number(wide);
+    const h = Number(high);
+    if (Number.isFinite(w) && Number.isFinite(h)) return w + h;
+  }
+  return 0;
+}
+
+/** Кодеки семейства AC-3/E-AC3 — перекодировать в E-AC3 бессмысленно. */
+export const AC3_FAMILY_CODECS = new Set(["ac3", "eac3"]);
+
+/** Кодеки выше AC-3/E-AC3 (lossless и высокобитрейт- surround) — перекодирование в E-AC3 имеет смысл. */
+const HIGHER_THAN_AC3_PREFIXES = [
+  "dts",
+  "truehd",
+  "mlp",
+  "flac",
+  "alac",
+  "pcm",
+  "wavpack",
+  "s302m",
+];
+
+export function isAc3FamilyCodec(codec: string | null | undefined): boolean {
+  if (!codec) return false;
+  return AC3_FAMILY_CODECS.has(codec.toLowerCase());
+}
+
+export function isHigherThanAc3Codec(codec: string | null | undefined): boolean {
+  if (!codec) return false;
+  const c = codec.toLowerCase();
+  return HIGHER_THAN_AC3_PREFIXES.some((p) => c === p || c.startsWith(p));
+}
+
+/** Идеальный битрейт по умолчанию для кодека (без учёта источника). */
+export function idealTranscodeBitrate(codec: TranscodeCodec): number {
+  return codec === "ac3" ? 448 : 768;
+}
+
+/** Битрейт перекодирования по умолчанию: идеальный, но не выше битрейта источника
+ *  (без апскейла), округлённый вниз до ближайшего валидного пресета. */
+export function defaultTranscodeBitrate(
+  codec: TranscodeCodec,
+  sourceBitrateKbps: number | null | undefined,
+): number {
+  const presets = bitratePresetsForCodec(codec);
+  const ideal = idealTranscodeBitrate(codec);
+  if (sourceBitrateKbps == null || sourceBitrateKbps <= 0) return ideal;
+  const cap = Math.min(ideal, sourceBitrateKbps);
+  let chosen = presets[0]!;
+  for (const b of presets) {
+    if (b <= cap) chosen = b;
+  }
+  return chosen;
+}
+
+/** Целевая конфигурация каналов по умолчанию: 2.0 для моно/стерео, 5.1 для surround.
+ *  Учитывает channelLayout, если поле channels пустое (частый случай для TrueHD). */
+export function defaultChannelTarget(
+  channels: number | null | undefined,
+  channelLayout?: string | null,
+): ChannelTarget {
+  const effective = effectiveChannelCount(channels, channelLayout ?? null);
+  return effective <= 2 ? "stereo" : "up_to_51";
 }

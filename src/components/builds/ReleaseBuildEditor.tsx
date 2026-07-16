@@ -1,44 +1,35 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  AlertCircle,
-  ArrowDown,
-  ArrowUp,
-  Plus,
-  Trash2,
-  Wand2,
-} from "lucide-react";
+import { Wand2, Layers } from "lucide-react";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { Button } from "@/components/primitives/Button";
-import { Field } from "@/components/primitives/Field";
-import { Select } from "@/components/primitives/Select";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
-import { StoragePicker } from "@/components/shared/StoragePicker";
+import {
+  MachinedCard,
+  CardSectionHeader,
+} from "@/components/primitives/MachinedCard";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
+import { apiFetch } from "@/lib/api/client";
+import type { BuildCapabilities } from "@/lib/builds/build-capabilities";
 import {
-  AC3_BITRATES,
-  EAC3_BITRATES,
-  channelTargetLabel,
-} from "@/lib/builds/build-presets";
-import {
+  applyTrackPatch,
   createInitialBuildState,
-  moveTrack,
+  normalizeExclusiveDefaults,
   serializeBuildRecipe,
   type BuildRecipeFormState,
   type BuildRecipeTrackState,
 } from "@/lib/builds/build-recipe-state";
 import {
-  DEFAULT_MOVIE_VERSION,
-  MOVIE_VERSIONS,
-  RELEASE_TYPES,
-} from "@/lib/shared/dictionaries";
-import { releaseTabLabel } from "@/lib/media/spec-tags";
-import { apiFetch } from "@/lib/api/client";
-import { BuildWarningsPanel } from "@/components/builds/BuildWarningsPanel";
+  BuildSourceDecks,
+  sourceTrackKey,
+} from "@/components/builds/BuildSourceDecks";
+import { BuildReel } from "@/components/builds/BuildReel";
+import { BuildOutputPanel } from "@/components/builds/BuildOutputPanel";
+import { BuildCapabilitiesPanel } from "@/components/builds/BuildCapabilitiesPanel";
+import { sourceTrackLabel } from "@/lib/builds/build-display";
 
 interface ReleaseBuildEditorProps {
   movieId: number;
@@ -54,36 +45,54 @@ interface ValidationResult {
   error?: string;
 }
 
-function trackOptionsForRelease(release: ReleaseWithTracks) {
-  const options: {
-    kind: BuildRecipeTrackState["kind"];
-    streamIndex: number;
-    label: string;
-  }[] = [];
-  if (release.videoTrack) {
-    options.push({
+const DURATION_HINT_THRESHOLD = 1;
+
+function buildTrackFromSource(
+  releases: ReleaseWithTracks[],
+  releaseId: number,
+  kind: BuildRecipeTrackState["kind"],
+  streamIndex: number,
+): BuildRecipeTrackState | null {
+  const release = releases.find((r) => r.id === releaseId);
+  if (!release) return null;
+  if (kind === "video") {
+    if (!release.videoTrack || release.videoTrack.streamIndex !== streamIndex) return null;
+    return {
+      key: crypto.randomUUID(),
       kind: "video",
-      streamIndex: release.videoTrack.streamIndex,
-      label: `Видео ${release.videoTrack.resolutionLabel ?? ""}`.trim(),
-    });
+      sourceReleaseId: releaseId,
+      sourceStreamIndex: streamIndex,
+      label: sourceTrackLabel(release.videoTrack, "video"),
+    };
   }
-  for (const audio of release.audioTracks) {
-    options.push({
+  if (kind === "audio") {
+    const a = release.audioTracks.find((t) => t.streamIndex === streamIndex);
+    if (!a) return null;
+    return {
+      key: crypto.randomUUID(),
       kind: "audio",
-      streamIndex: audio.streamIndex,
-      label:
-        audio.title ||
-        `${audio.language ?? "?"} ${audio.codec ?? ""} ${audio.channelLayout ?? ""}`.trim(),
-    });
+      sourceReleaseId: releaseId,
+      sourceStreamIndex: streamIndex,
+      label: sourceTrackLabel(a, "audio"),
+      audioMode: "copy",
+      offsetMs: 0,
+      transcodeCodec: "eac3",
+      transcodeBitrate: 768,
+      channelTarget: "up_to_51",
+      isDefault: false,
+    };
   }
-  for (const sub of release.subtitleTracks) {
-    options.push({
-      kind: "subtitle",
-      streamIndex: sub.streamIndex,
-      label: sub.title || `${sub.language ?? "?"} ${sub.codecLabel ?? ""}`.trim(),
-    });
-  }
-  return options;
+  const s = release.subtitleTracks.find((t) => t.streamIndex === streamIndex);
+  if (!s) return null;
+  return {
+    key: crypto.randomUUID(),
+    kind: "subtitle",
+    sourceReleaseId: releaseId,
+    sourceStreamIndex: streamIndex,
+    label: sourceTrackLabel(s, "subtitle"),
+    forced: s.forced,
+    isDefault: s.isDefault,
+  };
 }
 
 export function ReleaseBuildEditor({
@@ -93,87 +102,184 @@ export function ReleaseBuildEditor({
   releases,
 }: ReleaseBuildEditorProps) {
   const router = useRouter();
-  const [state, setState] = useState(() => createInitialBuildState(releases));
+  const [state, setState] = useState<BuildRecipeFormState>(() =>
+    createInitialBuildState(releases),
+  );
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [ackWarnings, setAckWarnings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<BuildCapabilities | null>(null);
 
   const storage = useStoragePicker(
-    releases.find((r) => r.externalStorageId === state.externalStorageId)
-      ?.externalStorage ?? null,
+    releases.find((r) => r.id === state.externalStorageId)?.externalStorage ?? null,
   );
 
-  const releaseOptions = useMemo(
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<BuildCapabilities>("/api/builds/capabilities")
+      .then((cap) => {
+        if (!cancelled) setCapabilities(cap);
+      })
+      .catch(() => {
+        if (!cancelled) setCapabilities(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toolsOk =
+    capabilities != null &&
+    capabilities.ffmpeg.available &&
+    capabilities.ffprobe.available &&
+    capabilities.mkvmerge.available;
+
+  const inReel = useMemo(
     () =>
-      releases.map((release) => ({
-        id: release.id,
-        label: releaseTabLabel(release),
-        options: trackOptionsForRelease(release),
-      })),
-    [releases],
+      new Set(
+        state.tracks.map((t) =>
+          sourceTrackKey(t.sourceReleaseId, t.kind, t.sourceStreamIndex),
+        ),
+      ),
+    [state.tracks],
   );
 
-  const updateTrack = (index: number, patch: Partial<BuildRecipeTrackState>) => {
-    setState((current) => ({
-      ...current,
-      tracks: current.tracks.map((track, i) =>
-        i === index ? { ...track, ...patch } : track,
-      ),
-    }));
+  const activeVideoKey = useMemo(() => {
+    const v = state.tracks.find((t) => t.kind === "video");
+    return v ? sourceTrackKey(v.sourceReleaseId, "video", v.sourceStreamIndex) : null;
+  }, [state.tracks]);
+
+  // Client-side duration heuristic: flag an audio track when its source
+  // release duration differs from the video source release duration.
+  const durationMismatchKeys = useMemo(() => {
+    const video = state.tracks.find((t) => t.kind === "video");
+    if (!video) return new Set<string>();
+    const videoRelease = releases.find((r) => r.id === video.sourceReleaseId);
+    const videoDuration = videoRelease?.durationSeconds ?? null;
+    if (videoDuration == null) return new Set<string>();
+    const flags = new Set<string>();
+    for (const t of state.tracks) {
+      if (t.kind !== "audio") continue;
+      const audioRelease = releases.find((r) => r.id === t.sourceReleaseId);
+      const audioDuration = audioRelease?.durationSeconds ?? null;
+      if (audioDuration == null) continue;
+      if (Math.abs(audioDuration - videoDuration) > DURATION_HINT_THRESHOLD) {
+        flags.add(sourceTrackKey(t.sourceReleaseId, "audio", t.sourceStreamIndex));
+      }
+    }
+    return flags;
+  }, [state.tracks, releases]);
+
+  const resetValidation = useCallback(() => {
     setValidation(null);
     setAckWarnings(false);
-  };
+  }, []);
 
-  const removeTrack = (index: number) => {
+  const handlePick = useCallback(
+    (releaseId: number, kind: BuildRecipeTrackState["kind"], streamIndex: number) => {
+      setState((current) => {
+        const existingIndex = current.tracks.findIndex(
+          (t) =>
+            t.kind === kind &&
+            t.sourceReleaseId === releaseId &&
+            t.sourceStreamIndex === streamIndex,
+        );
+
+        if (kind === "video") {
+          // Видео — один слот: повторный клик по текущему источнику ничего не делает.
+          if (existingIndex >= 0) return current;
+          const track = buildTrackFromSource(releases, releaseId, kind, streamIndex);
+          if (!track) return current;
+          const withoutVideo = current.tracks.filter((t) => t.kind !== "video");
+          return { ...current, tracks: [track, ...withoutVideo] };
+        }
+
+        // Аудио и субтитры — переключатель: в сборке → убрать, нет → добавить.
+        if (existingIndex >= 0) {
+          return {
+            ...current,
+            tracks: current.tracks.filter((_, i) => i !== existingIndex),
+          };
+        }
+
+        const track = buildTrackFromSource(releases, releaseId, kind, streamIndex);
+        if (!track) return current;
+
+        const order: Record<BuildRecipeTrackState["kind"], number> = {
+          video: 0,
+          audio: 1,
+          subtitle: 2,
+        };
+        const next = [...current.tracks, track];
+        next.sort((a, b) => order[a.kind] - order[b.kind]);
+        return { ...current, tracks: normalizeExclusiveDefaults(next) };
+      });
+      resetValidation();
+    },
+    [releases, resetValidation],
+  );
+
+  const handleVideoReleaseChange = useCallback(
+    (releaseId: number) => {
+      setState((current) => {
+        const release = releases.find((r) => r.id === releaseId);
+        const video = release?.videoTrack;
+        if (!video) return current;
+        const track = buildTrackFromSource(releases, releaseId, "video", video.streamIndex);
+        if (!track) return current;
+        const withoutVideo = current.tracks.filter((t) => t.kind !== "video");
+        return { ...current, tracks: [track, ...withoutVideo] };
+      });
+      resetValidation();
+    },
+    [releases, resetValidation],
+  );
+
+  const handleTrackChange = useCallback(
+    (index: number, patch: Partial<BuildRecipeTrackState>) => {
+      setState((current) => ({
+        ...current,
+        tracks: applyTrackPatch(current.tracks, index, patch),
+      }));
+      resetValidation();
+    },
+    [resetValidation],
+  );
+
+  const handleTrackRemove = useCallback((index: number) => {
     setState((current) => ({
       ...current,
       tracks: current.tracks.filter((_, i) => i !== index),
     }));
-  };
+    resetValidation();
+  }, [resetValidation]);
 
-  const addTrackFromRelease = (releaseId: number, kind: "audio" | "subtitle") => {
-    const release = releases.find((r) => r.id === releaseId);
-    if (!release) return;
-    const options = trackOptionsForRelease(release).filter((o) => o.kind === kind);
-    const first = options[0];
-    if (!first) return;
-    setState((current) => ({
-      ...current,
-      tracks: [
-        ...current.tracks,
-        {
-          key: crypto.randomUUID(),
-          kind,
-          sourceReleaseId: releaseId,
-          sourceStreamIndex: first.streamIndex,
-          label: first.label,
-          audioMode: kind === "audio" ? "copy" : undefined,
-          offsetMs: 0,
-          transcodeCodec: "eac3",
-          transcodeBitrate: 768,
-          channelTarget: "up_to_51",
-        },
-      ],
-    }));
-  };
+  const handleReorder = useCallback((tracks: BuildRecipeTrackState[]) => {
+    setState((current) => ({ ...current, tracks }));
+    resetValidation();
+  }, [resetValidation]);
 
   const handleValidate = async () => {
     setLoading(true);
     setError(null);
     try {
-      const payload = serializeBuildRecipe(state);
-      const result = await apiFetch<ValidationResult>(
-        `/api/movies/${movieId}/builds/validate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-        "Ошибка проверки",
-      );
-      setValidation(result);
+      const externalStorageId = await storage.resolveExternalStorageId();
+      const payload = serializeBuildRecipe({ ...state, externalStorageId });
+      const res = await fetch(`/api/movies/${movieId}/builds/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await res.json().catch(() => null)) as ValidationResult | null;
+      if (!data) {
+        setError("Не удалось прочитать ответ проверки");
+        setValidation(null);
+        return;
+      }
+      setValidation(data);
       setAckWarnings(false);
+      if (!data.ok && data.error) setError(data.error);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
       setValidation(null);
@@ -186,21 +292,42 @@ export function ReleaseBuildEditor({
     setLoading(true);
     setError(null);
     try {
+      const externalStorageId = await storage.resolveExternalStorageId();
       const payload = {
-        ...serializeBuildRecipe(state),
+        ...serializeBuildRecipe({ ...state, externalStorageId }),
         acknowledgeWarnings:
           (validation?.warnings?.length ?? 0) > 0 ? ackWarnings : undefined,
       };
-      const created = await apiFetch<{ id: number }>(
-        `/api/movies/${movieId}/builds`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-        "Не удалось поставить сборку в очередь",
-      );
-      router.push(`/builds/${created.id}`);
+      const res = await fetch(`/api/movies/${movieId}/builds`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 201) {
+        const created = (await res.json().catch(() => null)) as { id?: number } | null;
+        if (created?.id) {
+          router.push(`/builds/${created.id}`);
+          return;
+        }
+        setError("Сборка поставлена, но ответ без id");
+        return;
+      }
+      // 400 carries structured validation errors — surface them in the panel.
+      const data = (await res.json().catch(() => null)) as
+        | (ValidationResult & { error?: string })
+        | null;
+      if (data) {
+        setValidation({
+          ok: false,
+          error: data.error,
+          errors: data.errors,
+          warnings: data.warnings ?? [],
+        });
+        setAckWarnings(false);
+        setError(data.error ?? "Не удалось поставить сборку в очередь");
+      } else {
+        setError("Не удалось поставить сборку в очередь");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -208,11 +335,15 @@ export function ReleaseBuildEditor({
     }
   };
 
+  const hasVideo = state.tracks.some((t) => t.kind === "video");
+  const pathFilled = state.outputPath.trim().length > 0;
+  const warningsCount = validation?.warnings?.length ?? 0;
   const canSubmit =
-    state.outputPath.trim().length > 0 &&
-    state.tracks.some((t) => t.kind === "video") &&
+    toolsOk &&
+    pathFilled &&
+    hasVideo &&
     validation?.ok === true &&
-    ((validation.warnings?.length ?? 0) === 0 || ackWarnings);
+    (warningsCount === 0 || ackWarnings);
 
   return (
     <form
@@ -220,271 +351,98 @@ export function ReleaseBuildEditor({
         e.preventDefault();
         void handleSubmit();
       }}
-      className="flex h-full min-h-0 flex-col gap-6 pb-28 lg:pb-0"
+      className="flex h-full min-h-0 flex-col gap-5 pb-28 lg:gap-6 lg:pb-0"
     >
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-        <div className="flex flex-col gap-6 lg:col-span-1">
-          <MachinedCard variant="calm" bodyClassName="space-y-5">
-            <CardSectionHeader label="результат" title="Выходной файл" />
-            <StoragePicker
-              compact
-              storageKind={storage.storageKind}
-              onStorageKindChange={storage.setStorageKind}
-              externalStorages={storage.externalStorages}
-              selectedStorageId={storage.selectedStorageId}
-              onSelectedStorageIdChange={storage.setSelectedStorageId}
-              onCreateExternalStorage={storage.createExternalStorage}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-y-auto lg:grid-cols-12 lg:gap-6 lg:overflow-hidden">
+        {/* Sources */}
+        <div className="lg:col-span-3 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+          <MachinedCard variant="calm" bodyClassName="space-y-4">
+            <CardSectionHeader
+              label="источники"
+              title={movieTitle}
+              trailing={
+                <span className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-muted">
+                  {releases.length} {pluralReleases(releases.length)}
+                </span>
+              }
             />
-            <Field label="Путь к MKV" hint="Абсолютный путь к новому файлу.">
-              <input
-                className="focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text"
-                value={state.outputPath}
-                onChange={(e) =>
-                  setState((s) => ({ ...s, outputPath: e.target.value }))
-                }
-                placeholder="/mnt/d/Movies/custom.mkv"
-              />
-            </Field>
-            <Select
-              label="Тип релиза"
-              value={state.outputReleaseType}
-              onChange={(v) => setState((s) => ({ ...s, outputReleaseType: v }))}
-              options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
+            <p className="font-mono-tech -mt-1 text-[11px] leading-relaxed text-muted">
+              Нажмите на дорожку, чтобы добавить или убрать её из сборки. Видео заменяется
+              другим релизом.
+            </p>
+            <BuildSourceDecks
+              releases={releases}
+              inReel={inReel}
+              activeVideoKey={activeVideoKey}
+              onPick={handlePick}
             />
-            <Select
-              label="Версия"
-              value={state.outputVersion}
-              onChange={(v) => setState((s) => ({ ...s, outputVersion: v }))}
-              options={MOVIE_VERSIONS}
-            />
-          </MachinedCard>
-
-          <MachinedCard variant="calm" bodyClassName="space-y-3">
-            <CardSectionHeader label="источники" title={movieTitle} />
-            {releaseOptions.map((release) => (
-              <div
-                key={release.id}
-                className="rounded-[var(--radius-sm)] border border-border bg-bg-elevated/60 p-3"
-              >
-                <p className="font-mono-tech text-[11px] text-muted">{release.label}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => addTrackFromRelease(release.id, "audio")}
-                  >
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                    Аудио
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => addTrackFromRelease(release.id, "subtitle")}
-                  >
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                    Субтитры
-                  </Button>
-                </div>
-              </div>
-            ))}
           </MachinedCard>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-4 lg:col-span-2 lg:overflow-y-auto lg:pr-1 scroll-subtle">
-          <MachinedCard variant="calm" bodyClassName="space-y-4">
-            <CardSectionHeader label="состав" title="Дорожки результата" />
-            {state.tracks.map((track, index) => (
-              <div
-                key={track.key}
-                className="rounded-[var(--radius)] border border-border-strong bg-bg-elevated/70 p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-mono-tech text-[11px] uppercase text-faint">
-                      {track.kind}
-                    </p>
-                    <p className="text-sm text-text">{track.label}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      className="focus-ring rounded p-1 text-muted hover:text-accent"
-                      onClick={() =>
-                        setState((s) => ({
-                          ...s,
-                          tracks: moveTrack(s.tracks, index, index - 1),
-                        }))
-                      }
-                      disabled={index === 0}
-                      aria-label="Выше"
-                    >
-                      <ArrowUp className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="focus-ring rounded p-1 text-muted hover:text-accent"
-                      onClick={() =>
-                        setState((s) => ({
-                          ...s,
-                          tracks: moveTrack(s.tracks, index, index + 1),
-                        }))
-                      }
-                      disabled={index === state.tracks.length - 1}
-                      aria-label="Ниже"
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </button>
-                    {track.kind !== "video" ? (
-                      <button
-                        type="button"
-                        className="focus-ring rounded p-1 text-muted hover:text-danger"
-                        onClick={() => removeTrack(index)}
-                        aria-label="Удалить"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <Select
-                    label="Источник"
-                    value={String(track.sourceReleaseId)}
-                    onChange={(v) => updateTrack(index, { sourceReleaseId: Number(v) })}
-                    options={releases.map((r) => ({
-                      value: String(r.id),
-                      label: releaseTabLabel(r),
-                    }))}
-                  />
-                  <Select
-                    label="Дорожка"
-                    value={String(track.sourceStreamIndex)}
-                    onChange={(v) => {
-                      const release = releases.find((r) => r.id === track.sourceReleaseId);
-                      if (!release) return;
-                      const option = trackOptionsForRelease(release).find(
-                        (o) =>
-                          o.kind === track.kind &&
-                          o.streamIndex === Number(v),
-                      );
-                      updateTrack(index, {
-                        sourceStreamIndex: Number(v),
-                        label: option?.label ?? track.label,
-                      });
-                    }}
-                    options={trackOptionsForRelease(
-                      releases.find((r) => r.id === track.sourceReleaseId) ?? releases[0]!,
-                    )
-                      .filter((o) => o.kind === track.kind)
-                      .map((o) => ({
-                        value: String(o.streamIndex),
-                        label: o.label,
-                      }))}
-                  />
-                </div>
-
-                {track.kind === "audio" ? (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <Select
-                      label="Режим"
-                      value={track.audioMode ?? "copy"}
-                      onChange={(v) =>
-                        updateTrack(index, {
-                          audioMode: v as "copy" | "transcode",
-                        })
-                      }
-                      options={[
-                        { value: "copy", label: "Копировать" },
-                        { value: "transcode", label: "Перекодировать" },
-                      ]}
-                    />
-                    {track.audioMode === "transcode" ? (
-                      <>
-                        <Select
-                          label="Кодек"
-                          value={track.transcodeCodec ?? "eac3"}
-                          onChange={(v) =>
-                            updateTrack(index, {
-                              transcodeCodec: v as "ac3" | "eac3",
-                              transcodeBitrate: undefined,
-                            })
-                          }
-                          options={[
-                            { value: "ac3", label: "AC-3" },
-                            { value: "eac3", label: "E-AC3" },
-                          ]}
-                        />
-                        <Select
-                          label="Битрейт"
-                          value={String(track.transcodeBitrate ?? 768)}
-                          onChange={(v) =>
-                            updateTrack(index, { transcodeBitrate: Number(v) })
-                          }
-                          options={(track.transcodeCodec === "ac3"
-                            ? AC3_BITRATES
-                            : EAC3_BITRATES
-                          ).map((b) => ({ value: String(b), label: `${b} kbps` }))}
-                        />
-                        <Select
-                          label="Каналы"
-                          value={track.channelTarget ?? "up_to_51"}
-                          onChange={(v) =>
-                            updateTrack(index, {
-                              channelTarget: v as "stereo" | "up_to_51",
-                            })
-                          }
-                          options={[
-                            { value: "stereo", label: channelTargetLabel("stereo") },
-                            {
-                              value: "up_to_51",
-                              label: channelTargetLabel("up_to_51"),
-                            },
-                          ]}
-                        />
-                      </>
-                    ) : (
-                      <Field label="Сдвиг, мс" hint="Ручная подстройка синхронизации.">
-                        <input
-                          type="number"
-                          className="focus-ring min-h-11 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm"
-                          value={track.offsetMs ?? 0}
-                          onChange={(e) =>
-                            updateTrack(index, { offsetMs: Number(e.target.value) })
-                          }
-                        />
-                      </Field>
-                    )}
-                    <label className="flex items-center gap-2 text-sm text-muted">
-                      <input
-                        type="checkbox"
-                        checked={track.isDefault ?? false}
-                        onChange={(e) =>
-                          updateTrack(index, { isDefault: e.target.checked })
-                        }
-                      />
-                      Дорожка по умолчанию
-                    </label>
-                  </div>
-                ) : null}
+        {/* Reel */}
+        <div className="lg:col-span-6 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] border border-neural/35 bg-neural/[0.08] text-neural-bright">
+                <Layers className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+              </span>
+              <div>
+                <p className="font-mono-tech text-[10px] uppercase tracking-[0.22em] text-muted">
+                  сборка
+                </p>
+                <p className="font-display text-lg font-semibold tracking-tight text-text">
+                  Дорожки результата
+                </p>
               </div>
-            ))}
-          </MachinedCard>
-
-          {validation ? (
-            <BuildWarningsPanel
+            </div>
+            <BuildReel
+              state={state}
+              releases={releases}
+              durationMismatchKeys={durationMismatchKeys}
               validation={validation}
               ackWarnings={ackWarnings}
               onAckChange={setAckWarnings}
+              onTrackChange={handleTrackChange}
+              onTrackRemove={handleTrackRemove}
+              onReorder={handleReorder}
+              onVideoReleaseChange={handleVideoReleaseChange}
             />
-          ) : null}
+          </div>
+        </div>
+
+        {/* Output + health */}
+        <div className="lg:col-span-3 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+          <MachinedCard variant="calm" bodyClassName="space-y-6">
+            <CardSectionHeader label="назначение" title="Выходной файл" />
+            <BuildOutputPanel
+              outputPath={state.outputPath}
+              outputReleaseType={state.outputReleaseType}
+              outputVersion={state.outputVersion}
+              storage={storage}
+              onOutputPathChange={(value) => {
+                setState((s) => ({ ...s, outputPath: value }));
+                resetValidation();
+              }}
+              onReleaseTypeChange={(value) => {
+                setState((s) => ({ ...s, outputReleaseType: value }));
+                resetValidation();
+              }}
+              onVersionChange={(value) => {
+                setState((s) => ({ ...s, outputVersion: value }));
+                resetValidation();
+              }}
+            />
+            <div className="border-t border-border/60 pt-4">
+              <BuildCapabilitiesPanel capabilities={capabilities} />
+            </div>
+          </MachinedCard>
         </div>
       </div>
 
       <FormActionBar isDirty saving={loading} error={error}>
         <Link
           href={`/movies/${movieSlug}`}
-          className="focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text"
+          className="focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-bg-elevated"
         >
           Отмена
         </Link>
@@ -494,13 +452,26 @@ export function ReleaseBuildEditor({
           loading={loading}
           onClick={() => void handleValidate()}
         >
-          <Wand2 className="h-4 w-4" aria-hidden />
+          <Wand2 className="h-4 w-4" strokeWidth={1.5} aria-hidden />
           Проверить
         </Button>
-        <Button type="submit" variant="primary" disabled={!canSubmit} loading={loading}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={!canSubmit}
+          loading={loading}
+        >
           Поставить в очередь
         </Button>
       </FormActionBar>
     </form>
   );
+}
+
+function pluralReleases(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "релиз";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "релиза";
+  return "релизов";
 }

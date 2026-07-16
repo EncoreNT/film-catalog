@@ -26,6 +26,7 @@ export const buildRecipeTrackSchema = z
     offsetMs: z.number().int().min(MIN_OFFSET_MS).max(MAX_OFFSET_MS).optional(),
     isDefault: z.boolean().optional(),
     forced: z.boolean().optional(),
+    keepOriginal: z.boolean().optional(),
     label: z.string().max(200).optional(),
   })
   .superRefine((track, ctx) => {

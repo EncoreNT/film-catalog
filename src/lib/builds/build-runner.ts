@@ -106,6 +106,40 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
     });
     fileIndex++;
 
+    const addAudioTrack = (
+      sortOrder: number,
+      filePath: string,
+      mkvTrackId: number,
+      isDefault: boolean,
+      offsetMs: number,
+    ) => {
+      let syncFileIndex = filePathToIndex.get(filePath);
+      if (syncFileIndex == null) {
+        syncFileIndex = fileIndex;
+        filePathToIndex.set(filePath, fileIndex);
+        inputFiles.push({
+          filePath,
+          videoTrackIds: [],
+          audioTrackIds: [mkvTrackId],
+          noChapters: true,
+          noAttachments: true,
+        });
+        fileIndex++;
+      } else {
+        const existing = inputFiles[syncFileIndex]!;
+        existing.audioTrackIds = [...(existing.audioTrackIds ?? []), mkvTrackId];
+      }
+      resolvedTracks.push({
+        sortOrder,
+        kind: "audio",
+        filePath,
+        mkvTrackId,
+        isDefault,
+        offsetMs,
+        syncFileIndex,
+      });
+    };
+
     for (const track of build.tracks.filter((t) => t.kind === "AUDIO")) {
       if (await isBuildCancelRequested(buildId)) {
         await finishBuild(buildId, "CANCELLED", {
@@ -124,8 +158,11 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       );
       if (audioOrdinal < 0) throw new Error(`Аудиопоток ${track.sourceStreamIndex} не найден`);
 
-      let audioFilePath = inspected.filePath;
-      let mkvTrackId: number;
+      const originalMkvId = resolveMkvTrackIdForStream(
+        inspected,
+        "audio",
+        track.sourceStreamIndex,
+      );
 
       if (track.audioMode === "TRANSCODE") {
         await updateBuildProgress(buildId, {
@@ -152,56 +189,44 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         );
 
         await runFfmpegWithProgress(buildId, args, signal, 10, 55);
-        audioFilePath = tempPath;
 
-        const tempInspected = await inspectReleaseFile(
-          releaseId,
-          tempPath,
-          signal,
-        );
+        const tempInspected = await inspectReleaseFile(releaseId, tempPath, signal);
         const tempMkvId = resolveMkvTrackIdForStream(
           tempInspected,
           "audio",
           tempInspected.probe.audio[0]?.streamIndex ?? 0,
         );
         if (tempMkvId == null) throw new Error("Не удалось прочитать перекодированное аудио");
-        mkvTrackId = tempMkvId;
+
+        // Перекодированная дорожка заменяет оригинал (keepOriginal=false) или
+        // добавляется рядом с ним (keepOriginal=true). В режиме замены оригинал
+        // в mux не попадает.
+        addAudioTrack(track.sortOrder, tempPath, tempMkvId, track.isDefault, 0);
+
+        if (track.keepOriginal) {
+          if (originalMkvId == null) {
+            throw new Error(`Оригинал аудио ${track.sourceStreamIndex} не сопоставлен`);
+          }
+          addAudioTrack(
+            track.sortOrder,
+            inspected.filePath,
+            originalMkvId,
+            false,
+            track.offsetMs,
+          );
+        }
       } else {
-        const id = resolveMkvTrackIdForStream(
-          inspected,
-          "audio",
-          track.sourceStreamIndex,
+        if (originalMkvId == null) {
+          throw new Error(`Аудио ${track.sourceStreamIndex} не сопоставлено`);
+        }
+        addAudioTrack(
+          track.sortOrder,
+          inspected.filePath,
+          originalMkvId,
+          track.isDefault,
+          track.offsetMs,
         );
-        if (id == null) throw new Error(`Аудио ${track.sourceStreamIndex} не сопоставлено`);
-        mkvTrackId = id;
       }
-
-      let syncFileIndex = filePathToIndex.get(audioFilePath);
-      if (syncFileIndex == null) {
-        syncFileIndex = fileIndex;
-        filePathToIndex.set(audioFilePath, fileIndex);
-        inputFiles.push({
-          filePath: audioFilePath,
-          videoTrackIds: [],
-          audioTrackIds: [mkvTrackId],
-          noChapters: true,
-          noAttachments: true,
-        });
-        fileIndex++;
-      } else {
-        const existing = inputFiles[syncFileIndex]!;
-        existing.audioTrackIds = [...(existing.audioTrackIds ?? []), mkvTrackId];
-      }
-
-      resolvedTracks.push({
-        sortOrder: track.sortOrder,
-        kind: "audio",
-        filePath: audioFilePath,
-        mkvTrackId,
-        isDefault: track.isDefault,
-        offsetMs: track.audioMode === "TRANSCODE" ? 0 : track.offsetMs,
-        syncFileIndex,
-      });
     }
 
     for (const track of build.tracks.filter((t) => t.kind === "SUBTITLE")) {
