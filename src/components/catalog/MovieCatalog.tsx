@@ -92,41 +92,72 @@ function RailStat({
   onClick,
 }: RailStatProps) {
   const isFilter = interactive;
+  const isRuby = elite;
 
   const frame = isFilter
     ? `group relative flex min-h-[3.75rem] items-center gap-2.5 overflow-hidden rounded-[var(--radius-sm)] border px-3.5 py-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
         active
-          ? elite
-            ? "border-accent/55 bg-accent/12 shadow-[0_0_24px_rgba(232,176,90,0.42),0_0_16px_rgba(139,92,246,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]"
+          ? isRuby
+            ? "border-crimson/55 bg-crimson/12 shadow-[0_0_24px_rgba(154,27,52,0.42),0_0_16px_rgba(154,27,52,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]"
             : "border-accent/50 bg-accent/10 shadow-[0_0_22px_rgba(232,176,90,0.40),inset_0_1px_0_rgba(255,255,255,0.08)]"
-          : "border-border-strong/45 bg-bg-surface/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-px hover:border-accent/45 hover:bg-bg-surface-hover/45 hover:shadow-[0_0_18px_rgba(232,176,90,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]"
+          : isRuby
+            ? "border-crimson/30 bg-crimson-soft shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_14px_rgba(154,27,52,0.08)] hover:-translate-y-px hover:border-crimson/50 hover:bg-crimson/14 hover:shadow-[0_0_20px_rgba(154,27,52,0.28),inset_0_1px_0_rgba(255,255,255,0.08)]"
+            : "border-border-strong/45 bg-bg-surface/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-px hover:border-accent/45 hover:bg-bg-surface-hover/45 hover:shadow-[0_0_18px_rgba(232,176,90,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]"
       }`
     : "relative flex min-h-[3.75rem] items-center gap-2.5 rounded-none px-3.5 py-2.5 text-left";
 
   const chip = isFilter
     ? `flex h-7 w-7 shrink-0 items-center justify-center rounded-[calc(var(--radius-sm)-4px)] border transition-colors duration-300 ${
         active
-          ? elite
-            ? "border-accent/60 bg-accent/25 text-accent-bright"
+          ? isRuby
+            ? "border-crimson/60 bg-crimson/25 text-crimson-bright"
             : "border-accent/55 bg-accent/22 text-accent-bright"
-          : "border-accent/40 bg-accent/10 text-accent group-hover:bg-accent/18"
+          : isRuby
+            ? "border-crimson/55 bg-crimson/18 text-crimson-bright group-hover:border-crimson/65 group-hover:bg-crimson/26"
+            : "border-accent/40 bg-accent/10 text-accent group-hover:bg-accent/18"
       }`
     : "flex h-6 w-6 shrink-0 items-center justify-center rounded-[calc(var(--radius-sm)-6px)] border border-border/55 bg-bg-surface/40 text-muted";
 
   const valueClass = isFilter
     ? `font-display whitespace-nowrap text-xl font-bold tabular-nums leading-none transition-colors sm:text-2xl ${
-        active ? "text-accent-bright" : "text-text"
+        active
+          ? isRuby
+            ? "text-crimson-bright"
+            : "text-accent-bright"
+          : "text-text"
       }`
     : "font-display whitespace-nowrap text-base font-bold tabular-nums leading-none text-text sm:text-lg";
 
-  const labelColor = active ? "text-accent" : isFilter ? "text-muted" : "text-muted";
+  const labelColor = active
+    ? isRuby
+      ? "text-crimson-bright"
+      : "text-accent"
+    : isFilter && isRuby
+      ? "text-crimson-bright"
+      : isFilter
+        ? "text-muted"
+        : "text-muted";
+  const labelTypography =
+    isFilter && isRuby
+      ? "font-mono-tech text-[0.55rem] font-semibold tracking-[0.12em]"
+      : "font-micro";
   const labelBlock = stackedLabel ? (
-    <span className={`font-micro flex min-h-[1.7rem] flex-col justify-center leading-[1.15] ${labelColor}`}>
+    <span className={`${labelTypography} flex min-h-[1.7rem] flex-col justify-center leading-[1.15] ${labelColor}`}>
       <span className="whitespace-nowrap">{stackedLabel[0]}</span>
-      <span className={`whitespace-nowrap ${active ? "text-accent/85" : "text-faint"}`}>{stackedLabel[1]}</span>
+      <span
+        className={`whitespace-nowrap ${
+          active
+            ? isRuby
+              ? "text-crimson-bright/90"
+              : "text-accent/85"
+            : "text-faint"
+        }`}
+      >
+        {stackedLabel[1]}
+      </span>
     </span>
   ) : (
-    <span className={`font-micro flex min-h-[1.7rem] items-center leading-none whitespace-nowrap ${labelColor}`}>
+    <span className={`${labelTypography} flex min-h-[1.7rem] items-center leading-none whitespace-nowrap ${labelColor}`}>
       {label}
     </span>
   );
@@ -135,7 +166,9 @@ function RailStat({
     <>
       {active ? (
         <span
-          className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-accent-bright/12 to-transparent [animation:scan-h_3.5s_var(--ease)_infinite] motion-reduce:hidden"
+          className={`pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent to-transparent [animation:scan-h_3.5s_var(--ease)_infinite] motion-reduce:hidden ${
+            isRuby ? "via-crimson-bright/12" : "via-accent-bright/12"
+          }`}
           aria-hidden
         />
       ) : null}
@@ -158,7 +191,13 @@ function RailStat({
       {isFilter ? (
         <ChevronRight
           className={`absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 shrink-0 transition-opacity duration-300 ${
-            active ? "text-accent-bright opacity-80" : "text-accent opacity-0 group-hover:opacity-80"
+            active
+              ? isRuby
+                ? "text-crimson-bright opacity-80"
+                : "text-accent-bright opacity-80"
+              : isRuby
+                ? "text-crimson-bright/70 opacity-0 group-hover:opacity-80"
+                : "text-accent opacity-0 group-hover:opacity-80"
           }`}
           aria-hidden
         />
@@ -224,7 +263,7 @@ export function MovieCatalog({
   catalogCount = 0,
   draftCount = 0,
   excludedCount = 0,
-  archiveMetrics = { gold: 0, hdr10: 0, russianAtmos: 0, elite: 0 },
+  archiveMetrics = { gold: 0, hdr10: 0, elite: 0 },
   archiveTotals = { durationSeconds: 0, fileSizeBytes: 0 },
 }: MovieCatalogProps) {
   const router = useRouter();
@@ -489,7 +528,7 @@ export function MovieCatalog({
             </div>
 
             {/* Row 2 - archive quality index rail (catalog view only).
-                Two registers split the rail without extra labels: the four
+                Two registers split the rail without extra labels: the three
                 quality filters render as floating machined key-caps (accent
                 chips, hover lift, drill-in chevron, scan-sweep on active),
                 while duration / size render as a recessed hairline readout
@@ -499,7 +538,7 @@ export function MovieCatalog({
               <>
                 <div className="h-px bg-border/60" aria-hidden />
                 <div className="flex flex-col p-2 md:flex-row md:items-stretch">
-                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4 md:flex-[4]">
+                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:flex-[3]">
                     {ARCHIVE_QUALITY_METRIC_DEFS.map((def) => {
                       const Icon = def.icon;
                       const active = def.isActive(filterParams, isCatalog);

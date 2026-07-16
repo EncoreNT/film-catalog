@@ -5,7 +5,6 @@ import { getCatalogFacets } from "@/lib/catalog/catalog-facets";
 import {
   archiveEliteTierWhere,
   archiveGoldTierWhere,
-  russianAtmosAudioWhere,
 } from "@/lib/media/quality-predicates";
 import {
   movieDurationSortKey,
@@ -16,7 +15,6 @@ import {
 export interface ArchiveMetrics {
   gold: number;
   hdr10: number;
-  russianAtmos: number;
   elite: number;
 }
 
@@ -42,8 +40,6 @@ export const eliteTierWhere = {
   ...archiveEliteTierWhere,
 } satisfies Prisma.MovieWhereInput;
 
-export { russianAtmosAudioWhere } from "@/lib/media/quality-predicates";
-
 export async function countArchiveMetrics(
   extraWhere?: Prisma.MovieWhereInput,
 ): Promise<ArchiveMetrics> {
@@ -51,7 +47,7 @@ export async function countArchiveMetrics(
     ? mergeMovieWhere(catalogWhere, extraWhere)
     : catalogWhere;
 
-  const [gold, hdr10, russianAtmos, elite] = await Promise.all([
+  const [gold, hdr10, elite] = await Promise.all([
     prisma.movie.count({
       where: mergeMovieWhere(scopedWhere, archiveGoldTierWhere),
     }),
@@ -63,14 +59,11 @@ export async function countArchiveMetrics(
       }),
     }),
     prisma.movie.count({
-      where: mergeMovieWhere(scopedWhere, russianAtmosAudioWhere),
-    }),
-    prisma.movie.count({
       where: mergeMovieWhere(scopedWhere, archiveEliteTierWhere),
     }),
   ]);
 
-  return { gold, hdr10, russianAtmos, elite };
+  return { gold, hdr10, elite };
 }
 
 export async function getArchiveMetrics(): Promise<ArchiveMetrics> {

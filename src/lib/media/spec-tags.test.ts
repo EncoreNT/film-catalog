@@ -559,8 +559,8 @@ describe("catalogTierRibbon", () => {
     expect(catalogTierRibbon("gold")).toBe("4K | HDR");
   });
 
-  it("ruby → 4K | HDR | ATMOS", () => {
-    expect(catalogTierRibbon("ruby")).toBe("4K | HDR | ATMOS");
+  it("ruby → 4K | HDR | РУС. ATMOS", () => {
+    expect(catalogTierRibbon("ruby")).toBe("4K | HDR | РУС. ATMOS");
   });
 
   it("null tier → null ribbon", () => {

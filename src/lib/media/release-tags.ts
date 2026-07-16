@@ -255,7 +255,7 @@ export type ReleaseTier = "ruby" | "gold" | null;
 
 /** Ribbon label for tier cards (top badge). */
 export function catalogTierRibbon(tier: ReleaseTier): string | null {
-  if (tier === "ruby") return "4K | HDR | ATMOS";
+  if (tier === "ruby") return "4K | HDR | РУС. ATMOS";
   if (tier === "gold") return "4K | HDR";
   return null;
 }

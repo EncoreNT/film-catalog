@@ -256,7 +256,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
             <TierCoverOverlay tier={tier} />
 
             {/* Top row — tier ribbon (left) + rating/releases (right).
-                Ribbon: 4K | HDR (gold) or 4K | HDR | ATMOS (ruby).
+                Ribbon: 4K | HDR (gold) or 4K | HDR | РУС. ATMOS (ruby).
                 Regular cards have no ribbon — that absence is the signal. */}
             <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2.5">
               {tierRibbon != null ? (

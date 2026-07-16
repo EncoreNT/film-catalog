@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
-import { MonitorPlay, Sparkles, Sun, Waves } from "lucide-react";
+import { Gem, MonitorPlay, Sun } from "lucide-react";
+import { catalogTierRibbon } from "@/lib/media/release-tags";
 import type { ArchiveMetrics } from "@/lib/catalog/archive-metrics";
 
 export interface ArchiveQualityFilterParams {
@@ -60,24 +61,11 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
     }),
   },
   {
-    key: "russianAtmos",
-    label: "рус. Atmos",
-    shortLabel: "рус. Atmos",
-    caption: "объёмный звук · главная дорожка",
-    icon: Waves,
-    isActive: ({ premiumAudio }, isCatalog) =>
-      isCatalog && premiumAudio === "true",
-    toggleFilter: (active) => ({
-      ...CLEAR_QUALITY_FILTERS,
-      premiumAudio: active ? null : "true",
-    }),
-  },
-  {
     key: "elite",
-    label: "4K + HDR + рус. Atmos",
-    shortLabel: "4K+HDR+Atmos",
+    label: catalogTierRibbon("ruby")!,
+    shortLabel: catalogTierRibbon("ruby")!,
     elite: true,
-    icon: Sparkles,
+    icon: Gem,
     isActive: ({ resolution, hdr, premiumAudio }, isCatalog) =>
       isCatalog &&
       resolution === "4K" &&
