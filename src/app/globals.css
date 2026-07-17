@@ -498,6 +498,76 @@ input[type="number"] {
   to { stroke-dashoffset: 1; }
 }
 
+/* Wide row cards (/builds queue) — horizontal scan instead of SVG perimeter trace.
+   SVG dash animation stretches on 100×36 viewBox and reads as random top/bottom ticks. */
+.laser-row-sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.laser-row-sweep::after {
+  content: "";
+  position: absolute;
+  top: -15%;
+  bottom: -15%;
+  left: 0;
+  width: 32%;
+  transform: translateX(-130%) skewX(-10deg);
+  opacity: 0;
+  filter: blur(0.5px);
+}
+.group\/laser:hover .laser-row-sweep::after,
+.group\/laser:focus-within .laser-row-sweep::after {
+  animation: laser-row-sweep 1.15s var(--ease) forwards;
+}
+@keyframes laser-row-sweep {
+  0% {
+    transform: translateX(-130%) skewX(-10deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateX(340%) skewX(-10deg);
+    opacity: 0;
+  }
+}
+.laser-row-sweep-ruby::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(154, 27, 52, 0.14) 28%,
+    rgba(224, 62, 98, 0.28) 50%,
+    rgba(154, 27, 52, 0.14) 72%,
+    transparent 100%
+  );
+}
+.laser-row-sweep-gold::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(232, 176, 90, 0.12) 28%,
+    rgba(248, 220, 150, 0.22) 50%,
+    rgba(232, 176, 90, 0.12) 72%,
+    transparent 100%
+  );
+}
+.laser-row-sweep-standard::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 212, 232, 0.08) 30%,
+    rgba(244, 246, 251, 0.16) 50%,
+    rgba(200, 212, 232, 0.08) 70%,
+    transparent 100%
+  );
+}
+
 /* Subtle idle scan — projector calibration line */
 .laser-scan-line {
   animation: laser-scan-sweep 6s ease-in-out infinite;
@@ -1525,6 +1595,10 @@ html[data-spotlight-focus="active"] {
     animation: none;
     stroke-dasharray: none;
     stroke-dashoffset: 0;
+  }
+  .laser-row-sweep::after {
+    animation: none;
+    opacity: 0;
   }
   .laser-scan-line {
     animation: none;

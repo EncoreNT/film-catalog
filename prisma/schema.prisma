@@ -13,6 +13,30 @@ enum MovieStatus {
   EXCLUDED
 }
 
+enum ReleaseBuildStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum ReleaseBuildTrackKind {
+  VIDEO
+  AUDIO
+  SUBTITLE
+}
+
+enum ReleaseBuildAudioMode {
+  COPY
+  TRANSCODE
+}
+
+enum ReleaseBuildChannelTarget {
+  STEREO
+  UP_TO_51
+}
+
 /** Named external drive; null externalStorageId on Release means local disk. */
 model ExternalStorage {
   id        Int      @id @default(autoincrement())
@@ -21,6 +45,7 @@ model ExternalStorage {
   createdAt DateTime @default(now())
 
   releases Release[]
+  builds   ReleaseBuild[]
 }
 
 model Movie {
@@ -40,6 +65,7 @@ model Movie {
   movieGenres MovieGenre[]
   slots       FranchiseSlot[]
   releases    Release[]
+  builds      ReleaseBuild[]
 
   @@index([status])
   @@index([matchKey])
@@ -66,6 +92,9 @@ model Release {
   videoTrack     VideoTrack?
   audioTracks    AudioTrack[]
   subtitleTracks SubtitleTrack[]
+  buildSources   ReleaseBuildSource[]
+  buildTracks    ReleaseBuildTrack[]
+  outputBuilds   ReleaseBuild[]       @relation("BuildOutputRelease")
 
   @@index([movieId])
   @@index([fileHash])
@@ -149,6 +178,88 @@ model SubtitleTrack {
 model Setting {
   key   String @id
   value String
+}
+
+model ReleaseBuild {
+  id                   Int                @id @default(autoincrement())
+  movieId              Int
+  status               ReleaseBuildStatus @default(QUEUED)
+  phase                String?
+  progressPercent      Float?
+  progressMessage      String?
+  progressSpeed        Float?
+  progressOutTimeMs    Int?
+  progressDurationMs   Int?
+  progressStepIndex    Int?
+  progressStepTotal    Int?
+  errorMessage         String?
+  cancelRequested      Boolean            @default(false)
+  heartbeatAt          DateTime?
+  startedAt            DateTime?
+  finishedAt           DateTime?
+  outputPath           String
+  outputReleaseType    String?
+  outputVersion        String             @default("theatrical")
+  outputReleaseId      Int?
+  externalStorageId    Int?
+  acknowledgedWarnings String?
+  queueOrder           Int                @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  movie           Movie              @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  outputRelease   Release?           @relation("BuildOutputRelease", fields: [outputReleaseId], references: [id], onDelete: SetNull)
+  externalStorage ExternalStorage?   @relation(fields: [externalStorageId], references: [id], onDelete: SetNull)
+  sources         ReleaseBuildSource[]
+  tracks          ReleaseBuildTrack[]
+
+  @@index([movieId])
+  @@index([status])
+  @@index([status, queueOrder])
+  @@index([outputPath])
+  @@index([createdAt])
+}
+
+model ReleaseBuildSource {
+  id              Int      @id @default(autoincrement())
+  buildId         Int
+  releaseId       Int?
+  filePath        String
+  durationSeconds Float?
+  role            String
+  createdAt       DateTime @default(now())
+
+  build   ReleaseBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  release Release?     @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+
+  @@index([buildId])
+  @@index([releaseId])
+}
+
+model ReleaseBuildTrack {
+  id                Int                        @id @default(autoincrement())
+  buildId           Int
+  sortOrder         Int
+  kind              ReleaseBuildTrackKind
+  sourceReleaseId   Int?
+  sourceStreamIndex Int
+  sourceFilePath    String
+  sourceTrackLabel  String?
+  audioMode         ReleaseBuildAudioMode?
+  transcodeCodec    String?
+  transcodeBitrate  Int?
+  channelTarget     ReleaseBuildChannelTarget?
+  offsetMs          Int                        @default(0)
+  isDefault         Boolean                    @default(false)
+  forced            Boolean                    @default(false)
+  keepOriginal      Boolean                    @default(false)
+  createdAt         DateTime                   @default(now())
+
+  build         ReleaseBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  sourceRelease Release?     @relation(fields: [sourceReleaseId], references: [id], onDelete: SetNull)
+
+  @@index([buildId, sortOrder])
+  @@index([sourceReleaseId])
 }
 
 model Franchise {

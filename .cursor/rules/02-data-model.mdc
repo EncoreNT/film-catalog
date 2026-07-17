@@ -29,7 +29,7 @@ ADR: `docs/adr/0002-external-storage-only.md`.
 - `coverPath` — относительный путь `covers/<id>.ext`
 - `rating` (1–10), `watchedAt`
 
-Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot)
+Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot), `builds[]` (ReleaseBuild)
 
 ### Release (файл / релиз)
 
@@ -38,7 +38,17 @@ Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot)
 - `externalStorageId` → `ExternalStorage` (null = локальный диск)
 - `movieId` → Movie
 
-Relations: `videoTrack` (1:1), `audioTracks[]`, `subtitleTracks[]`
+Relations: `videoTrack` (1:1), `audioTracks[]`, `subtitleTracks[]`, `buildSources[]`, `buildTracks[]`, `outputBuilds[]`
+
+### ReleaseBuild (очередь сборки MKV)
+
+ADR: `docs/adr/0006-durable-release-build-worker.md`.
+
+- `status`: QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED
+- `outputPath`, `outputReleaseId` → новый Release после успеха
+- `tracks[]` — ordered recipe (VIDEO/AUDIO/SUBTITLE, copy/transcode, offsetMs)
+- `sources[]` — snapshot исходных Release/filePath
+- Worker: `scripts/release-build-worker.ts`, concurrency 1, SQLite queue
 
 ### VideoTrack (1:1 с Release)
 

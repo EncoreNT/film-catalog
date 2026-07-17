@@ -88,6 +88,9 @@ film-catalog/
 | `/franchises/[slug]` | `app/franchises/[slug]/page.tsx` | Деталь: слоты, quality reel, completion |
 | `/franchises/[slug]/edit` | `app/franchises/[slug]/edit/page.tsx` | Редактор франшизы и слотов |
 | `/scan` | `app/scan/page.tsx` | Скан папки, прогресс NDJSON stream |
+| `/movies/[slug]/builds/new` | `app/movies/[slug]/builds/new/page.tsx` | Конструктор пользовательского MKV |
+| `/builds` | `app/builds/page.tsx` | Очередь сборок |
+| `/builds/[id]` | `app/builds/[id]/page.tsx` | Деталь job |
 
 ## Ключевые include-объекты Prisma
 
@@ -114,6 +117,19 @@ film-catalog/
                 create DRAFT или update/move
          → NDJSON stream: start | file | summary | error
 ```
+
+## Поток: сборка релиза
+
+```
+/movies/[slug]/builds/new → POST validate → POST /api/movies/[id]/builds
+         → ReleaseBuild QUEUED (SQLite)
+scripts/release-build-worker.ts → claimNextBuild → runBuildJob
+         → ffmpeg (AC-3/E-AC3 transcode) + mkvmerge (MKV mux, stream copy video)
+         → atomic rename → probe → createReleaseWithTracks (новый Release)
+/builds UI polling статуса
+```
+
+ADR: `docs/adr/0006-durable-release-build-worker.md`. Домен: `lib/builds/*`.
 
 ## Поток: каталог и фильтры
 

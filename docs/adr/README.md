@@ -53,5 +53,6 @@ docs/adr/0002-franchise-slots-model.md
 | [0003](0003-lib-components-domain-layout.md) | Domain layout for `lib/` and `components/` | Accepted |
 | [0004](0004-cinematic-tech-design-system.md) | Cinematic Tech design system | Accepted |
 | [0005](0005-tier-driven-spotlight.md) | Tier-driven ambient spotlight | Accepted |
+| [0006](0006-durable-release-build-worker.md) | Durable release build worker | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

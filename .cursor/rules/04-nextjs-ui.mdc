@@ -141,6 +141,17 @@ Root layout (`app/layout.tsx`): Каталог `/`, Франшизы `/franchise
 - `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`
 - `ErrorScene` — переиспользуемый error UI
 
+## Тексты интерфейса
+
+- Русский UI, английский код. Без длинного тире (—) в пользовательских строках.
+- **Не использовать слово «рецепт»** в labels, заголовках, подсказках и ошибках.
+  В домене сборок MKV это звучит как кулинарный жаргон. Вместо него:
+  | Контекст | Формулировка |
+  |----------|--------------|
+  | Секция дорожек сборки | **состав**, «Состав MKV», «дорожки» |
+  | Описание задачи | **конфигурация сборки**, **задание на сборку** |
+  | В коде / API / типах | `BuildRecipe`, `buildRecipeSchema` — ок, это не UI |
+
 ## Стилизация
 
 Tailwind v4 (`@import "tailwindcss"`, `@theme inline`). Не добавлять legacy `@tailwind base/components/utilities`. Prefer existing tokens over hardcoded hex.

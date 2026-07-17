@@ -9,6 +9,7 @@ import {
   Plus,
   ScanSearch,
   Trash2,
+  Wand2,
 } from "lucide-react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
@@ -140,6 +141,11 @@ export function ReleasePanelActions({
               icon={<ScanSearch className="h-3.5 w-3.5 shrink-0" aria-hidden />}
               disabled={!activeRelease.filePath || loading}
               onClick={() => setConfirmKind("probe")}
+            />
+            <ReleaseActionsMenuItem
+              label="Собрать релиз"
+              href={`/movies/${movieSlug}/builds/new`}
+              icon={<Wand2 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
             />
             <ReleaseActionsMenuItem
               label="Добавить"

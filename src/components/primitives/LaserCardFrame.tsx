@@ -1,26 +1,37 @@
 import { useId, type ReactNode } from "react";
 import type { ReleaseTier } from "@/lib/media/spec-tags";
+import { tierLaserTopClass } from "@/lib/media/tier-presentation";
+
+type LaserShape = "portrait" | "landscape";
 
 interface LaserCardFrameProps {
   children: ReactNode;
   tier?: ReleaseTier;
   className?: string;
+  /** Portrait for movie posters; landscape for horizontal build rows. */
+  shape?: LaserShape;
 }
 
+const LASER_SHAPE: Record<
+  LaserShape,
+  { viewBox: string; width: number; height: number; rx: number }
+> = {
+  portrait: { viewBox: "0 0 100 150", width: 98.4, height: 148.4, rx: 5 },
+  landscape: { viewBox: "0 0 100 36", width: 98.4, height: 34.4, rx: 5 },
+};
+
 /**
- * Hi-tech card shell with a laser perimeter that animates on hover
- * (SVG trace + sheen). Corner edges follow --radius so cards share the
- * rounded shape language of the rest of the UI. Rest state avoids any
- * floating outer border (-inset-px rings leak a straight segment past the
- * rounded corners = the "sticks" artifact), so the tier signal at rest
- * comes from the poster's inset ring + the article's tier-colored outer
- * glow (see MovieCard). Only the hover-only SVG laser trace + sheen live
- * here, clipped to the rounded shape via overflow-hidden.
+ * Hi-tech card shell with tier animations on hover.
+ *
+ * Portrait (posters): SVG perimeter laser trace + sheen.
+ * Landscape (build rows): tier-laser-top at rest + horizontal scan sweep on hover —
+ * SVG perimeter dash animation stretches on wide cards and reads as broken ticks.
  */
 export function LaserCardFrame({
   children,
   tier = null,
   className = "",
+  shape = "portrait",
 }: LaserCardFrameProps) {
   const uid = useId().replace(/:/g, "");
   const goldHeadId = `laser-head-${uid}`;
@@ -28,6 +39,7 @@ export function LaserCardFrame({
   const rubyHeadId = `laser-ruby-${uid}`;
   const standardHeadId = `laser-standard-${uid}`;
   const glowId = `laser-glow-${uid}`;
+  const frame = LASER_SHAPE[shape];
 
   const strokeId =
     tier === "ruby"
@@ -36,13 +48,43 @@ export function LaserCardFrame({
         ? emberId
         : standardHeadId;
 
+  if (shape === "landscape") {
+    const laserTopTone =
+      tier === "ruby" || tier === "gold" ? tierLaserTopClass(tier) : null;
+    const sweepTone =
+      tier === "ruby"
+        ? "laser-row-sweep-ruby"
+        : tier === "gold"
+          ? "laser-row-sweep-gold"
+          : "laser-row-sweep-standard";
+
+    return (
+      <div className={`group/laser relative rounded-[var(--radius)] ${className}`}>
+        {laserTopTone ? (
+          <span className={`tier-laser-top ${laserTopTone}`} aria-hidden />
+        ) : null}
+
+        <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden rounded-[var(--radius)]">
+          <span className={`laser-row-sweep motion-reduce:hidden ${sweepTone}`} aria-hidden />
+        </div>
+
+        <div
+          className="sheen-layer pointer-events-none absolute inset-0 z-[25] overflow-hidden rounded-[var(--radius)]"
+          aria-hidden
+        />
+
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className={`group/laser relative rounded-[var(--radius)] ${className}`}>
       {/* Laser trace — SVG only on hover (no rest-state artifact) */}
       <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden rounded-[var(--radius)]">
         <svg
           className="absolute inset-0 h-full w-full"
-          viewBox="0 0 100 150"
+          viewBox={frame.viewBox}
           preserveAspectRatio="none"
           aria-hidden
         >
@@ -97,10 +139,10 @@ export function LaserCardFrame({
           <rect
             x="0.8"
             y="0.8"
-            width="98.4"
-            height="148.4"
-            rx="5"
-            ry="5"
+            width={frame.width}
+            height={frame.height}
+            rx={frame.rx}
+            ry={frame.rx}
             fill="none"
             stroke={`url(#${strokeId})`}
             strokeWidth="0.8"
@@ -113,10 +155,10 @@ export function LaserCardFrame({
             <rect
               x="0.8"
               y="0.8"
-              width="98.4"
-              height="148.4"
-              rx="5"
-              ry="5"
+              width={frame.width}
+              height={frame.height}
+              rx={frame.rx}
+              ry={frame.rx}
               fill="none"
               stroke={`url(#${goldHeadId})`}
               strokeWidth="0.4"

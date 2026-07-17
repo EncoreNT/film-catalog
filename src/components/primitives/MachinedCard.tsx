@@ -62,6 +62,8 @@ interface CardSectionHeaderProps {
   label: string;
   title: ReactNode;
   className?: string;
+  /** Optional affordance beside the mono label (InfoHint, …). */
+  labelTrailing?: ReactNode;
   /** Optional affordance beside the title (InfoHint, badge, …). */
   trailing?: ReactNode;
 }
@@ -73,13 +75,17 @@ export function CardSectionHeader({
   label,
   title,
   className,
+  labelTrailing,
   trailing,
 }: CardSectionHeaderProps) {
   return (
     <div className={className}>
-      <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-accent/80">
-        {label}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-accent/80">
+          {label}
+        </p>
+        {labelTrailing}
+      </div>
       <div className="mt-1.5 flex items-center gap-2">
         <h2 className="font-display text-xl font-semibold tracking-tight">
           {title}
