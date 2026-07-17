@@ -11,13 +11,11 @@ import {
 
 export function ReleaseExportProgressStrip({
   job,
-  polling,
   loading,
   onOpen,
   onCancel,
 }: {
   job: SerializedExport;
-  polling: boolean;
   loading: boolean;
   onOpen: () => void;
   onCancel: () => void;
@@ -66,7 +64,6 @@ export function ReleaseExportProgressStrip({
                   <span className="truncate text-muted">
                     {job.progressMessage ?? "Копирование…"}
                     {speed ? ` · ${speed}` : ""}
-                    {polling ? " · …" : ""}
                   </span>
                   <span className="shrink-0 tabular-nums text-accent">{progress}%</span>
                 </div>

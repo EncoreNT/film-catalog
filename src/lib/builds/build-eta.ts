@@ -4,8 +4,11 @@ import { parseFfmpegSpeed } from "@/lib/builds/build-ffmpeg";
 const DEFAULT_TRANSCODE_SPEED = 1;
 const PREPARE_ETA_SECONDS = 30;
 const FINALIZE_ETA_SECONDS = 45;
-const MUX_ETA_SECONDS = 120;
-const MUX_ETA_PER_HOUR = 90;
+/** Fallback mux budget before mkvmerge reports progress (stream-copy remux). */
+const MUX_ETA_SECONDS = 45;
+const MUX_ETA_PER_HOUR = 30;
+/** Use wall-clock mux speed once mkvmerge percent is at least this high. */
+const MUX_OBSERVED_MIN_PROGRESS = 0.04;
 
 export interface BuildEtaSnapshot {
   progressSpeed: number | null;
@@ -25,7 +28,9 @@ export type BuildEtaInput = Pick<
   | "sources"
   | "tracks"
   | "startedAt"
+  | "updatedAt"
   | "queueOrder"
+  | "requiresTranscode"
 > &
   BuildEtaSnapshot;
 
@@ -62,12 +67,30 @@ export function countTranscodeTracks(
 
 export { parseFfmpegSpeed };
 
+export function estimateMuxBudgetSeconds(
+  durationSeconds: number | null | undefined,
+): number {
+  if (durationSeconds != null && durationSeconds > 0) {
+    return Math.max(
+      MUX_ETA_SECONDS,
+      Math.round((durationSeconds / 3600) * MUX_ETA_PER_HOUR),
+    );
+  }
+  return MUX_ETA_SECONDS;
+}
+
 export function estimateMuxRemainingSeconds(
   progressPercent: number | null | undefined,
+  durationSeconds?: number | null,
+  message?: string | null,
 ): number {
-  if (progressPercent == null) return MUX_ETA_SECONDS;
-  const muxProgress = clamp01((progressPercent - 60) / 30);
-  return Math.max(5, (1 - muxProgress) * MUX_ETA_SECONDS);
+  const budget = estimateMuxBudgetSeconds(durationSeconds);
+  const muxSub = extractMuxPercentFromMessage(message);
+  const effectiveOverall =
+    muxSub != null ? 60 + (muxSub / 100) * 30 : progressPercent;
+  if (effectiveOverall == null) return budget;
+  const muxProgress = clamp01((effectiveOverall - 60) / 30);
+  return Math.max(5, (1 - muxProgress) * budget);
 }
 
 export function estimateTranscodeTrackSeconds(
@@ -86,10 +109,7 @@ export function estimateRecipeDurationSeconds(
   const transcodeCount = countTranscodeTracks(build);
   const transcodeSeconds =
     transcodeCount * estimateTranscodeTrackSeconds(durationSeconds);
-  const muxSeconds = Math.max(
-    MUX_ETA_SECONDS,
-    Math.round((durationSeconds / 3600) * MUX_ETA_PER_HOUR),
-  );
+  const muxSeconds = estimateMuxBudgetSeconds(durationSeconds);
 
   return Math.round(PREPARE_ETA_SECONDS + transcodeSeconds + muxSeconds + FINALIZE_ETA_SECONDS);
 }
@@ -104,11 +124,11 @@ export function estimateRunningRemainingSeconds(
   const durationSeconds = buildVideoDurationSeconds(build);
 
   if (phase === "transcode") {
-    return estimateTranscodeRemainingSeconds(build, durationSeconds);
+    return estimateTranscodeRemainingSeconds(build, durationSeconds, now);
   }
 
   if (phase === "mux") {
-    return Math.round(estimateMuxRemainingSeconds(build.progressPercent) + FINALIZE_ETA_SECONDS);
+    return estimateMuxPhaseRemainingSeconds(build, durationSeconds, now);
   }
 
   if (phase === "finalize" || phase === "register") {
@@ -121,7 +141,7 @@ export function estimateRunningRemainingSeconds(
     return Math.round(
       PREPARE_ETA_SECONDS +
         transcodeCount * estimateTranscodeTrackSeconds(duration) +
-        MUX_ETA_SECONDS +
+        estimateMuxBudgetSeconds(duration) +
         FINALIZE_ETA_SECONDS,
     );
   }
@@ -142,6 +162,7 @@ export function estimateRunningRemainingSeconds(
 function estimateTranscodeRemainingSeconds(
   build: BuildEtaInput,
   durationSeconds: number | null,
+  now = Date.now(),
 ): number | null {
   const durationMs =
     build.progressDurationMs ??
@@ -155,7 +176,16 @@ function estimateTranscodeRemainingSeconds(
     parseFfmpegSpeed(extractSpeedFromMessage(build.progressMessage)) ??
     DEFAULT_TRANSCODE_SPEED;
 
-  const outTimeMs = Math.max(0, build.progressOutTimeMs ?? 0);
+  const tickMs = build.updatedAt
+    ? Math.min(
+        15_000,
+        Math.max(0, now - Date.parse(build.updatedAt)),
+      )
+    : 0;
+  const outTimeMs = Math.min(
+    durationMs,
+    Math.max(0, (build.progressOutTimeMs ?? 0) + tickMs * speed),
+  );
   const currentRemainingSec = Math.max(
     0,
     (durationMs - outTimeMs) / 1000 / Math.max(speed, 0.05),
@@ -165,13 +195,118 @@ function estimateTranscodeRemainingSeconds(
   const stepIndex = build.progressStepIndex ?? 0;
   const remainingTracks = Math.max(0, stepTotal - stepIndex - 1);
   const trackDurationSec = durationMs / 1000;
+  const muxBudget = estimateMuxBudgetSeconds(trackDurationSec);
 
   return Math.round(
     currentRemainingSec +
       remainingTracks * estimateTranscodeTrackSeconds(trackDurationSec, speed) +
-      MUX_ETA_SECONDS +
+      muxBudget +
       FINALIZE_ETA_SECONDS,
   );
+}
+
+function estimateMuxPhaseRemainingSeconds(
+  build: BuildEtaInput,
+  durationSeconds: number | null,
+  now: number,
+): number {
+  const staticBudget = estimateMuxBudgetSeconds(durationSeconds);
+  const muxSub = extractMuxPercentFromMessage(build.progressMessage);
+  const muxStartedMs = resolveMuxPhaseStartedMs(build);
+
+  // mkvmerge reports sub-percent in progressMessage; until the first line
+  // arrives we only know phase=mux and decay the static mux budget by wall clock.
+  if (muxSub == null && (build.progressPercent == null || build.progressPercent <= 60)) {
+    const muxElapsedSec = resolveMuxElapsedSeconds(build, now);
+    return Math.max(
+      FINALIZE_ETA_SECONDS,
+      staticBudget + FINALIZE_ETA_SECONDS - muxElapsedSec,
+    );
+  }
+
+  const progressNow = resolveMuxProgressNow(build, muxSub, now, muxStartedMs);
+
+  // Self-calibrate from observed mkvmerge speed: elapsed / progress × (1 − progress).
+  if (
+    muxStartedMs != null &&
+    progressNow >= MUX_OBSERVED_MIN_PROGRESS
+  ) {
+    const elapsedNowSec = Math.max(0.5, (now - muxStartedMs) / 1000);
+    const totalMuxSec = elapsedNowSec / progressNow;
+    const maxTotalMuxSec = Math.max(staticBudget * 4, staticBudget + 120);
+    if (totalMuxSec <= maxTotalMuxSec) {
+      const remainingMuxSec = Math.max(0, totalMuxSec - elapsedNowSec);
+      return Math.max(FINALIZE_ETA_SECONDS, remainingMuxSec + FINALIZE_ETA_SECONDS);
+    }
+  }
+
+  const muxRemainingSec = (1 - progressNow) * staticBudget;
+  return Math.max(FINALIZE_ETA_SECONDS, muxRemainingSec + FINALIZE_ETA_SECONDS);
+}
+
+function resolveMuxProgressNow(
+  build: BuildEtaInput,
+  muxSub: number | null,
+  now: number,
+  muxStartedMs: number | null,
+): number {
+  if (muxSub != null) {
+    if (muxStartedMs != null && build.updatedAt) {
+      const elapsedAtUpdateSec = Math.max(
+        0.5,
+        (Date.parse(build.updatedAt) - muxStartedMs) / 1000,
+      );
+      const elapsedNowSec = Math.max(0.5, (now - muxStartedMs) / 1000);
+      const progressAtUpdate = muxSub / 100;
+      return clamp01(progressAtUpdate * (elapsedNowSec / elapsedAtUpdateSec));
+    }
+    return clamp01(muxSub / 100);
+  }
+
+  const rawProgress = clamp01(((build.progressPercent ?? 60) - 60) / 30);
+  if (muxStartedMs == null || !build.updatedAt || rawProgress <= 0) {
+    return rawProgress;
+  }
+
+  const elapsedAtUpdateSec = Math.max(
+    0.5,
+    (Date.parse(build.updatedAt) - muxStartedMs) / 1000,
+  );
+  const elapsedNowSec = Math.max(0.5, (now - muxStartedMs) / 1000);
+  return clamp01(rawProgress * (elapsedNowSec / elapsedAtUpdateSec));
+}
+
+/** Runner stores wall-clock epoch ms in progressOutTimeMs when mux starts. */
+function resolveMuxPhaseStartedMs(build: BuildEtaInput): number | null {
+  if (build.phase !== "mux") return null;
+  const ms = build.progressOutTimeMs;
+  if (ms == null || ms <= 0) return null;
+  // ffmpeg out_time during transcode is media position (≪ 1 day in ms).
+  if (ms <= 86_400_000) return null;
+  return ms;
+}
+
+function resolveMuxElapsedSeconds(build: BuildEtaInput, now: number): number {
+  const muxStartedMs = resolveMuxPhaseStartedMs(build);
+  if (muxStartedMs != null) {
+    return Math.max(0, (now - muxStartedMs) / 1000);
+  }
+
+  if (build.updatedAt) {
+    return Math.min(120, Math.max(0, (now - Date.parse(build.updatedAt)) / 1000));
+  }
+
+  return 0;
+}
+
+function extractMuxPercentFromMessage(
+  message: string | null | undefined,
+): number | null {
+  if (!message) return null;
+  const match = message.match(/Сборка MKV\s+(\d+)%/i);
+  if (!match) return null;
+  const pct = Number(match[1]);
+  return Number.isFinite(pct) ? pct : null;
 }
 
 function extractSpeedFromMessage(message: string | null | undefined): string | null {
@@ -181,13 +316,20 @@ function extractSpeedFromMessage(message: string | null | undefined): string | n
 }
 
 export function estimateQueuedWaitSeconds(
-  build: Pick<SerializedBuild, "status" | "queueOrder" | "id">,
+  build: Pick<
+    SerializedBuild,
+    "status" | "queueOrder" | "id" | "requiresTranscode"
+  >,
   allItems: SerializedBuild[],
   now = Date.now(),
 ): number | null {
   if (build.status !== "QUEUED") return null;
 
-  const sorted = [...allItems].sort((a, b) => {
+  const laneItems = allItems.filter(
+    (item) => item.requiresTranscode === build.requiresTranscode,
+  );
+
+  const sorted = [...laneItems].sort((a, b) => {
     if (a.status === "RUNNING" && b.status !== "RUNNING") return -1;
     if (b.status === "RUNNING" && a.status !== "RUNNING") return 1;
     if (a.status === "QUEUED" && b.status === "QUEUED") {
@@ -217,14 +359,21 @@ export function estimateQueuedWaitSeconds(
 export function formatBuildEtaSeconds(seconds: number | null | undefined): string | null {
   if (seconds == null || !Number.isFinite(seconds)) return null;
 
-  const total = Math.max(0, Math.round(seconds));
+  const total = Math.max(0, Math.floor(seconds));
   if (total < 45) return "меньше минуты";
 
   const hours = Math.floor(total / 3600);
-  const minutes = Math.ceil((total % 3600) / 60);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+
+  if (hours <= 0 && total < 600) {
+    if (minutes <= 0) return `~${secs} с`;
+    if (secs > 0) return `~${minutes} мин ${secs} с`;
+    return minutes === 1 ? "~1 мин" : `~${minutes} мин`;
+  }
 
   if (hours <= 0) {
-    return `~${Math.max(1, minutes)} мин`;
+    return minutes === 1 ? "~1 мин" : `~${minutes} мин`;
   }
 
   if (minutes <= 0) {

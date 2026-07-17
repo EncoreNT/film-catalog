@@ -13,6 +13,8 @@ export const MIN_OFFSET_MS = -60_000;
 
 export const BUILD_HEARTBEAT_INTERVAL_MS = 5_000;
 export const BUILD_STALE_LEASE_MS = 30_000;
+/** Max concurrent build jobs that include ffmpeg audio transcode. Copy-only builds are unlimited. */
+export const BUILD_TRANSCODE_MAX_CONCURRENCY = 2;
 
 export function bitratePresetsForCodec(codec: TranscodeCodec): readonly number[] {
   return codec === "ac3" ? AC3_BITRATES : EAC3_BITRATES;

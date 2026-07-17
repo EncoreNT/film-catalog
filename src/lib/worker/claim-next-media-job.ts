@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/db/prisma";
-import { recoverStaleBuilds } from "@/lib/builds/build-queue";
+import {
+  countRunningTranscodeBuilds,
+  recoverStaleBuilds,
+} from "@/lib/builds/build-queue";
+import { BUILD_TRANSCODE_MAX_CONCURRENCY } from "@/lib/builds/build-presets";
 import { recoverStaleExports } from "@/lib/releases/export-queue";
 
 export type MediaJob =
-  | { kind: "build"; id: number }
+  | { kind: "build"; id: number; requiresTranscode: boolean }
   | { kind: "export"; id: number };
 
 export async function recoverStaleMediaJobs() {
@@ -50,43 +54,78 @@ async function claimExportById(
   return updated.count > 0 ? exportId : null;
 }
 
+async function claimNextQueuedBuild(
+  workerId: string,
+  requiresTranscode: boolean,
+): Promise<number | null> {
+  const candidate = await prisma.releaseBuild.findFirst({
+    where: {
+      status: "QUEUED",
+      cancelRequested: false,
+      requiresTranscode,
+    },
+    orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  if (!candidate) return null;
+  return claimBuildById(candidate.id, workerId);
+}
+
+async function claimNextQueuedExport(workerId: string): Promise<number | null> {
+  const candidate = await prisma.releaseExport.findFirst({
+    where: { status: "QUEUED", cancelRequested: false },
+    orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  if (!candidate) return null;
+  return claimExportById(candidate.id, workerId);
+}
+
+/**
+ * Claims every build/export slot available right now:
+ * - copy-only builds: all queued (independent of transcode)
+ * - transcode builds: up to BUILD_TRANSCODE_MAX_CONCURRENCY total RUNNING
+ * - exports: all queued (copy-only)
+ */
+export async function claimAvailableMediaJobs(
+  workerId: string,
+  options?: { includeBuilds?: boolean },
+): Promise<MediaJob[]> {
+  const includeBuilds = options?.includeBuilds ?? true;
+  await recoverStaleMediaJobs();
+
+  const jobs: MediaJob[] = [];
+
+  if (includeBuilds) {
+    let transcodeRunning = await countRunningTranscodeBuilds();
+    while (transcodeRunning < BUILD_TRANSCODE_MAX_CONCURRENCY) {
+      const id = await claimNextQueuedBuild(workerId, true);
+      if (id == null) break;
+      jobs.push({ kind: "build", id, requiresTranscode: true });
+      transcodeRunning += 1;
+    }
+
+    while (true) {
+      const id = await claimNextQueuedBuild(workerId, false);
+      if (id == null) break;
+      jobs.push({ kind: "build", id, requiresTranscode: false });
+    }
+  }
+
+  while (true) {
+    const id = await claimNextQueuedExport(workerId);
+    if (id == null) break;
+    jobs.push({ kind: "export", id });
+  }
+
+  return jobs;
+}
+
+/** Single-job claim (legacy). Prefer claimAvailableMediaJobs for parallel worker. */
 export async function claimNextMediaJob(
   workerId: string,
   options?: { includeBuilds?: boolean },
 ): Promise<MediaJob | null> {
-  const includeBuilds = options?.includeBuilds ?? true;
-  await recoverStaleMediaJobs();
-
-  const [nextBuild, nextExport] = await Promise.all([
-    includeBuilds
-      ? prisma.releaseBuild.findFirst({
-          where: { status: "QUEUED", cancelRequested: false },
-          orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
-          select: { id: true, createdAt: true },
-        })
-      : Promise.resolve(null),
-    prisma.releaseExport.findFirst({
-      where: { status: "QUEUED", cancelRequested: false },
-      orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
-      select: { id: true, createdAt: true },
-    }),
-  ]);
-
-  if (!nextBuild && !nextExport) return null;
-
-  const pickExport =
-    nextExport != null &&
-    (nextBuild == null || nextExport.createdAt <= nextBuild.createdAt);
-
-  if (pickExport) {
-    const id = await claimExportById(nextExport.id, workerId);
-    return id != null ? { kind: "export", id } : null;
-  }
-
-  if (nextBuild) {
-    const id = await claimBuildById(nextBuild.id, workerId);
-    return id != null ? { kind: "build", id } : null;
-  }
-
-  return null;
+  const jobs = await claimAvailableMediaJobs(workerId, options);
+  return jobs[0] ?? null;
 }

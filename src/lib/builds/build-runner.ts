@@ -16,29 +16,24 @@ import {
 } from "@/lib/builds/build-ffmpeg";
 import {
   buildMkvmergeArgs,
+  buildMkvmergeOutputPlan,
   parseMkvmergeProgress,
   tempTranscodedAudioPath,
   type MkvMergeInputFile,
+  type MkvResolvedTrack,
 } from "@/lib/builds/build-mkvmerge";
+import { buildPartPath } from "@/lib/builds/build-inspection";
+import { inspectReleaseFile } from "@/lib/builds/build-inspect-runtime";
 import {
-  buildPartPath,
-  ffprobeOrdinalAmongType,
-} from "@/lib/builds/build-inspection";
-import {
-  inspectReleaseFile,
-  resolveMkvTrackIdForStream,
-} from "@/lib/builds/build-inspect-runtime";
+  resolveFfmpegAudioOrdinal,
+  resolveInspectedMkvTrackId,
+} from "@/lib/builds/build-track-inspect";
 import type { ChannelTarget, TranscodeCodec } from "@/lib/builds/build-presets";
 import { buildInclude } from "@/lib/builds/build-queue";
 
-interface ResolvedTrack {
-  sortOrder: number;
-  kind: "video" | "audio" | "subtitle";
+interface ResolvedTrack extends MkvResolvedTrack {
   filePath: string;
-  mkvTrackId: number;
-  isDefault: boolean;
   offsetMs: number;
-  syncFileIndex: number;
 }
 
 interface FfmpegProgressContext {
@@ -121,7 +116,7 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
     );
     let transcodeStepIndex = 0;
 
-    const videoMkvId = resolveMkvTrackIdForStream(
+    const videoMkvId = resolveInspectedMkvTrackId(
       videoInspected,
       "video",
       videoTrack.sourceStreamIndex,
@@ -191,14 +186,9 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       const releaseId = track.sourceReleaseId;
       if (!releaseId) throw new Error("Аудио без источника");
       const inspected = inspectedCache.get(releaseId)!;
-      const audioOrdinal = ffprobeOrdinalAmongType(
-        inspected.ffprobeStreams,
-        track.sourceStreamIndex,
-        "audio",
-      );
-      if (audioOrdinal < 0) throw new Error(`Аудиопоток ${track.sourceStreamIndex} не найден`);
+      const audioOrdinal = resolveFfmpegAudioOrdinal(inspected, track.sourceStreamIndex);
 
-      const originalMkvId = resolveMkvTrackIdForStream(
+      const originalMkvId = resolveInspectedMkvTrackId(
         inspected,
         "audio",
         track.sourceStreamIndex,
@@ -243,7 +233,7 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         transcodeStepIndex += 1;
 
         const tempInspected = await inspectReleaseFile(releaseId, tempPath, signal);
-        const tempMkvId = resolveMkvTrackIdForStream(
+        const tempMkvId = resolveInspectedMkvTrackId(
           tempInspected,
           "audio",
           tempInspected.probe.audio[0]?.streamIndex ?? 0,
@@ -282,7 +272,7 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       const releaseId = track.sourceReleaseId;
       if (!releaseId) throw new Error("Субтитры без источника");
       const inspected = inspectedCache.get(releaseId)!;
-      const mkvId = resolveMkvTrackIdForStream(
+      const mkvId = resolveInspectedMkvTrackId(
         inspected,
         "subtitle",
         track.sourceStreamIndex,
@@ -331,15 +321,23 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       progressPercent: 60,
       progressMessage: "Сборка MKV",
       progressSpeed: null,
-      progressOutTimeMs: null,
+      // Wall-clock mux start for client ETA decay (not ffmpeg out_time).
+      progressOutTimeMs: Date.now(),
       progressDurationMs: null,
       progressStepIndex: null,
       progressStepTotal: null,
     });
 
+    const muxPlan = buildMkvmergeOutputPlan(resolvedTracks);
+    for (const [fileIndex, flags] of muxPlan.defaultFlagsByFileIndex) {
+      const input = inputFiles[fileIndex];
+      if (input) input.defaultTrackFlags = flags;
+    }
+
     const muxArgs = buildMkvmergeArgs({
       outputPath: partPath,
       inputs: inputFiles,
+      trackOrder: muxPlan.trackOrder,
     });
 
     await runMkvmergeWithProgress(buildId, muxArgs, signal);

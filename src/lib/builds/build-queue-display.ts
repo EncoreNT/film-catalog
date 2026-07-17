@@ -279,7 +279,8 @@ export function buildTimeCaption(build: SerializedBuild, now = Date.now()): stri
     }
     case "QUEUED": {
       const rel = formatBuildRelativeTime(build.createdAt, now);
-      return rel ? `добавлена ${rel}` : "в очереди";
+      const lane = build.requiresTranscode ? "перекодирование" : "копирование";
+      return rel ? `${lane} · добавлена ${rel}` : `${lane} · в очереди`;
     }
     case "FAILED":
     case "SUCCEEDED":
@@ -297,7 +298,11 @@ export function queuedPosition(
   allItems: SerializedBuild[],
 ): number | null {
   if (build.status !== "QUEUED") return null;
-  const queued = sortBuildsForQueue(allItems).filter((b) => b.status === "QUEUED");
+  const queued = sortBuildsForQueue(allItems).filter(
+    (b) =>
+      b.status === "QUEUED" &&
+      b.requiresTranscode === build.requiresTranscode,
+  );
   const index = queued.findIndex((b) => b.id === build.id);
   return index >= 0 ? index + 1 : null;
 }

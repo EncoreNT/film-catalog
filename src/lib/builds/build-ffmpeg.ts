@@ -100,9 +100,11 @@ export function parseFfmpegProgressLine(line: string): {
   if (eq < 0) return null;
   const key = trimmed.slice(0, eq);
   const value = trimmed.slice(eq + 1);
-  if (key === "out_time_ms") {
-    const outTimeMs = Number(value);
-    return Number.isFinite(outTimeMs) ? { outTimeMs } : null;
+  if (key === "out_time_ms" || key === "out_time_us") {
+    const raw = Number(value);
+    if (!Number.isFinite(raw)) return null;
+    // FFmpeg reports out_time_ms in microseconds despite the suffix.
+    return { outTimeMs: raw / 1000 };
   }
   if (key === "speed") return { speed: value };
   return null;

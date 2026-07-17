@@ -6,6 +6,7 @@ import {
 } from "@/lib/shared/dictionaries";
 import { sanitizeFilename, joinRuntimePath } from "@/lib/shared/display-path";
 import type { BuildRecipeTrackState } from "@/lib/builds/build-recipe-state";
+import { findTrackByStreamIndex } from "@/lib/builds/build-track-source";
 
 export interface BuildFilenameMetadataInput {
   movieTitle: string;
@@ -75,9 +76,9 @@ export function buildRecipeFilenameTokens(
 
     if (track.sourceReleaseId !== videoReleaseId) {
       const release = releases.find((r) => r.id === track.sourceReleaseId);
-      const audio = release?.audioTracks.find(
-        (a) => a.streamIndex === track.sourceStreamIndex,
-      );
+      const audio = release
+        ? findTrackByStreamIndex(release.audioTracks, track.sourceStreamIndex) ?? null
+        : null;
       const lang = audio?.language?.trim().toLowerCase();
       if (lang && lang !== "und") {
         tokens.push(lang);

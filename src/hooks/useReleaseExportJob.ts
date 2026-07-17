@@ -15,7 +15,6 @@ export function useReleaseExportJob({
   onSucceeded?: (job: SerializedExport) => void;
 }) {
   const [exportJob, setExportJob] = useState<SerializedExport | null>(null);
-  const [polling, setPolling] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const refreshExportJob = useCallback(async (jobId: number) => {
@@ -63,16 +62,15 @@ export function useReleaseExportJob({
   useEffect(() => {
     if (!exportJob || isExportTerminal(exportJob.status)) return;
     const timer = setInterval(() => {
-      setPolling(true);
       void refreshExportJob(exportJob.id)
         .then((next) => {
           setExportJob(next);
           if (next.status === "SUCCEEDED") {
             onSucceeded?.(next);
+            setExportJob(null);
           }
         })
-        .catch(() => undefined)
-        .finally(() => setPolling(false));
+        .catch(() => undefined);
     }, 3000);
     return () => clearInterval(timer);
   }, [exportJob, onSucceeded, refreshExportJob]);
@@ -100,7 +98,6 @@ export function useReleaseExportJob({
     exportJob,
     setExportJob,
     exportActive,
-    polling,
     loading,
     setLoading,
     refreshExportJob,

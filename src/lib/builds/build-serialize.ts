@@ -83,6 +83,7 @@ export function serializeBuild(build: BuildWithRelations) {
     startedAt: build.startedAt?.toISOString() ?? null,
     finishedAt: build.finishedAt?.toISOString() ?? null,
     queueOrder: build.queueOrder,
+    requiresTranscode: build.requiresTranscode,
     createdAt: build.createdAt.toISOString(),
     updatedAt: build.updatedAt.toISOString(),
   };

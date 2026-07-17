@@ -29,9 +29,10 @@ import {
 import { BuildReel } from "@/components/builds/BuildReel";
 import { BuildOutputPanel } from "@/components/builds/BuildOutputPanel";
 import { BuildCapabilitiesPanel } from "@/components/builds/BuildCapabilitiesPanel";
-import { sourceTrackLabel } from "@/lib/builds/build-display";
 import { estimateBuildOutputSizeFromRecipe } from "@/lib/builds/build-output-size";
 import { suggestBuildOutputPath } from "@/lib/builds/build-filename";
+import { buildRecipeTrackFromCatalogPick } from "@/lib/builds/build-track-source";
+import type { BuildTrackMappingPreviewRow } from "@/lib/builds/build-mapping-preview";
 import { pickPrimaryRelease } from "@/lib/releases/release-primary";
 
 function buildSuggestInput(
@@ -68,6 +69,7 @@ interface ValidationResult {
   warnings: { code: string; message: string; severity: string }[];
   errors?: { code: string; message: string; severity: string }[];
   error?: string;
+  mappingPreview?: BuildTrackMappingPreviewRow[];
 }
 
 const DURATION_HINT_THRESHOLD = 1;
@@ -80,44 +82,7 @@ function buildTrackFromSource(
 ): BuildRecipeTrackState | null {
   const release = releases.find((r) => r.id === releaseId);
   if (!release) return null;
-  if (kind === "video") {
-    if (!release.videoTrack || release.videoTrack.streamIndex !== streamIndex) return null;
-    return {
-      key: crypto.randomUUID(),
-      kind: "video",
-      sourceReleaseId: releaseId,
-      sourceStreamIndex: streamIndex,
-      label: sourceTrackLabel(release.videoTrack, "video"),
-    };
-  }
-  if (kind === "audio") {
-    const a = release.audioTracks.find((t) => t.streamIndex === streamIndex);
-    if (!a) return null;
-    return {
-      key: crypto.randomUUID(),
-      kind: "audio",
-      sourceReleaseId: releaseId,
-      sourceStreamIndex: streamIndex,
-      label: sourceTrackLabel(a, "audio"),
-      audioMode: "copy",
-      offsetMs: 0,
-      transcodeCodec: "eac3",
-      transcodeBitrate: 768,
-      channelTarget: "up_to_51",
-      isDefault: false,
-    };
-  }
-  const s = release.subtitleTracks.find((t) => t.streamIndex === streamIndex);
-  if (!s) return null;
-  return {
-    key: crypto.randomUUID(),
-    kind: "subtitle",
-    sourceReleaseId: releaseId,
-    sourceStreamIndex: streamIndex,
-    label: sourceTrackLabel(s, "subtitle"),
-    forced: s.forced,
-    isDefault: s.isDefault,
-  };
+  return buildRecipeTrackFromCatalogPick(release, kind, streamIndex);
 }
 
 export function ReleaseBuildEditor({

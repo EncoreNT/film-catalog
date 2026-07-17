@@ -2,7 +2,7 @@ import { access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
-import { assertDirectoryWritable } from "@/lib/db/settings";
+import { assertDirectoryWritable, resolveSavedExportTargetDir } from "@/lib/db/settings";
 import { isTvReadyRelease } from "@/lib/media/tv-ready";
 import {
   displayFilePath,
@@ -22,6 +22,8 @@ export interface ExportDryRunResult {
   targetPathDisplay: string;
   collision: boolean;
   suggestedFilename: string;
+  savedTargetDir: string | null;
+  savedTargetDirDisplay: string | null;
 }
 
 function basenameFromRelease(release: ReleaseWithTracks): string | null {
@@ -109,17 +111,24 @@ export async function exportReleaseDryRun(
     filename?.trim() || suggestExportFilename(release, movie),
   );
 
-  if (!targetDir?.trim()) {
+  const saved = await resolveSavedExportTargetDir();
+  const savedTargetDir = saved?.runtime ?? null;
+  const savedTargetDirDisplay = saved?.display ?? null;
+  const effectiveTargetDir = targetDir?.trim() || savedTargetDir || "";
+
+  if (!effectiveTargetDir) {
     return {
       ok: true,
       targetPath: "",
       targetPathDisplay: "",
       collision: false,
       suggestedFilename: chosenFilename,
+      savedTargetDir,
+      savedTargetDirDisplay,
     };
   }
 
-  const runtimeDir = await resolveTargetDir(targetDir);
+  const runtimeDir = await resolveTargetDir(effectiveTargetDir);
   const collision = await resolveExportCollisionAsync(
     runtimeDir,
     chosenFilename,
@@ -135,6 +144,8 @@ export async function exportReleaseDryRun(
     targetPathDisplay: displayFilePath(targetPath),
     collision: collision.exists,
     suggestedFilename: finalFilename,
+    savedTargetDir,
+    savedTargetDirDisplay,
   };
 }
 

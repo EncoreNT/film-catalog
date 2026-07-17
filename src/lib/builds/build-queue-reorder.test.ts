@@ -43,6 +43,7 @@ function stubQueued(id: number, queueOrder: number): SerializedBuild {
     startedAt: null,
     finishedAt: null,
     queueOrder,
+    requiresTranscode: false,
     createdAt: "2026-07-17T10:00:00.000Z",
     updatedAt: "2026-07-17T10:00:00.000Z",
   };

@@ -6,10 +6,15 @@ import {
   durationDeltaWarnings,
   fileIsReadable,
   inspectReleaseFile,
-  resolveMkvTrackIdForStream,
   type BuildWarning,
   type InspectedReleaseFile,
 } from "@/lib/builds/build-inspect-runtime";
+import {
+  resolveInspectedAudioTrack,
+  resolveInspectedGlobalStreamIndex,
+  resolveInspectedMkvTrackId,
+  resolveInspectedSubtitleTrack,
+} from "@/lib/builds/build-track-inspect";
 import {
   isAc3FamilyCodec,
   isHigherThanAc3Codec,
@@ -18,6 +23,11 @@ import {
   type TranscodeCodec,
 } from "@/lib/builds/build-presets";
 import { normalizeOutputPath } from "@/lib/builds/build-inspection";
+import {
+  buildRecipeMappingPreview,
+  mappingPreviewValidationErrors,
+  type BuildTrackMappingPreviewRow,
+} from "@/lib/builds/build-mapping-preview";
 
 export type BuildRecipe = z.infer<typeof buildRecipeSchema>;
 
@@ -27,6 +37,7 @@ export interface ValidatedBuildRecipe {
   inspected: Map<number, InspectedReleaseFile>;
   videoSourceReleaseId: number;
   videoDurationSeconds: number | null;
+  mappingPreview: BuildTrackMappingPreviewRow[];
 }
 
 function trackLabel(
@@ -36,13 +47,15 @@ function trackLabel(
   if (track.label?.trim()) return track.label.trim();
   if (track.kind === "video") return "видео";
   if (track.kind === "audio") {
-    const audio = inspected.probe.audio.find(
-      (a) => a.streamIndex === track.sourceStreamIndex,
+    const audio = resolveInspectedAudioTrack(
+      inspected,
+      track.sourceStreamIndex,
     );
     return audio?.title || audio?.language || `audio #${track.sourceStreamIndex}`;
   }
-  const sub = inspected.probe.subtitles.find(
-    (s) => s.streamIndex === track.sourceStreamIndex,
+  const sub = resolveInspectedSubtitleTrack(
+    inspected,
+    track.sourceStreamIndex,
   );
   return sub?.title || sub?.language || `sub #${track.sourceStreamIndex}`;
 }
@@ -191,7 +204,11 @@ export async function validateBuildRecipe(
       severity: "error",
     });
   } else if (
-    videoInspected.probe.video.streamIndex !== videoTrack.sourceStreamIndex
+    resolveInspectedGlobalStreamIndex(
+      videoInspected,
+      "video",
+      videoTrack.sourceStreamIndex,
+    ) == null
   ) {
     errors.push({
       code: "video_stream_missing",
@@ -203,9 +220,7 @@ export async function validateBuildRecipe(
   for (const track of recipe.tracks) {
     const info = inspected.get(track.sourceReleaseId)!;
     if (track.kind === "audio") {
-      const audio = info.probe.audio.find(
-        (a) => a.streamIndex === track.sourceStreamIndex,
-      );
+      const audio = resolveInspectedAudioTrack(info, track.sourceStreamIndex);
       if (!audio) {
         errors.push({
           code: "audio_stream_missing",
@@ -264,7 +279,7 @@ export async function validateBuildRecipe(
           severity: "warning",
         });
       } else {
-        const mkvId = resolveMkvTrackIdForStream(
+        const mkvId = resolveInspectedMkvTrackId(
           info,
           "audio",
           track.sourceStreamIndex,
@@ -286,18 +301,55 @@ export async function validateBuildRecipe(
       );
     }
     if (track.kind === "subtitle") {
-      const sub = info.probe.subtitles.find(
-        (s) => s.streamIndex === track.sourceStreamIndex,
-      );
+      const sub = resolveInspectedSubtitleTrack(info, track.sourceStreamIndex);
       if (!sub) {
         errors.push({
           code: "subtitle_stream_missing",
           message: `Субтитр ${track.sourceStreamIndex} не найден`,
           severity: "error",
         });
+        continue;
+      }
+      if (info.mkv) {
+        const mkvId = resolveInspectedMkvTrackId(
+          info,
+          "subtitle",
+          track.sourceStreamIndex,
+        );
+        if (mkvId == null) {
+          errors.push({
+            code: "mkv_subtitle_track_missing",
+            message: `Субтитр ${track.sourceStreamIndex} не сопоставлен с mkvmerge`,
+            severity: "error",
+          });
+        }
       }
     }
   }
+
+  if (videoInspected.mkv) {
+    const videoMkvId = resolveInspectedMkvTrackId(
+      videoInspected,
+      "video",
+      videoTrack.sourceStreamIndex,
+    );
+    if (videoMkvId == null) {
+      errors.push({
+        code: "mkv_video_track_missing",
+        message: `Видеодорожка ${videoTrack.sourceStreamIndex} не сопоставлена с mkvmerge`,
+        severity: "error",
+      });
+    }
+  } else if (videoInspected.probe.video) {
+    warnings.push({
+      code: "mkvmerge_unavailable",
+      message: `mkvmerge не смог прочитать ${path.basename(videoInspected.filePath)} — сборка может не удаться`,
+      severity: "warning",
+    });
+  }
+
+  const mappingPreview = buildRecipeMappingPreview(recipe, inspected);
+  errors.push(...mappingPreviewValidationErrors(mappingPreview, recipe));
 
   if (errors.length > 0) throw new ValidationFailed(errors, warnings);
 
@@ -307,6 +359,7 @@ export async function validateBuildRecipe(
     inspected,
     videoSourceReleaseId: videoTrack.sourceReleaseId,
     videoDurationSeconds: videoDuration,
+    mappingPreview,
   };
 }
 

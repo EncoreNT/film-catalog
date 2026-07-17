@@ -1,6 +1,10 @@
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
 import { channelTargetLabel } from "@/lib/builds/build-presets";
 import type { SpecTag } from "@/lib/builds/build-display";
+import {
+  normalizeBuildTrackKind,
+  resolveCatalogTrack,
+} from "@/lib/builds/build-track-source";
 import type { BuildTrackKind } from "@/lib/builds/build-recipe-state";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import {
@@ -35,9 +39,7 @@ export function buildPhaseLabel(phase: string | null | undefined): string | null
   return BUILD_PHASE_LABELS[phase] ?? phase;
 }
 
-export function normalizeBuildTrackKind(kind: SerializedTrack["kind"]): BuildTrackKind {
-  return kind.toLowerCase() as BuildTrackKind;
-}
+export { normalizeBuildTrackKind } from "@/lib/builds/build-track-source";
 
 export function buildSourceRoleLabel(role: string): string {
   if (role === "video") return "Видео-источник";
@@ -261,17 +263,7 @@ export function resolveBuildSourceTrack(
   if (!release) return null;
 
   const kind = normalizeBuildTrackKind(track.kind);
-  if (kind === "video") return release.videoTrack;
-  if (kind === "audio") {
-    return (
-      release.audioTracks.find((item) => item.streamIndex === track.sourceStreamIndex) ??
-      null
-    );
-  }
-  return (
-    release.subtitleTracks.find((item) => item.streamIndex === track.sourceStreamIndex) ??
-    null
-  );
+  return resolveCatalogTrack(release, kind, track.sourceStreamIndex);
 }
 
 export function buildVideoTechLine(

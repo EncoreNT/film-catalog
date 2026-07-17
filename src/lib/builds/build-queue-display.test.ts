@@ -47,6 +47,7 @@ function stubBuild(
     startedAt: partial.startedAt ?? null,
     finishedAt: partial.finishedAt ?? null,
     queueOrder: partial.queueOrder ?? partial.id,
+    requiresTranscode: partial.requiresTranscode ?? false,
     createdAt: partial.createdAt ?? "2026-07-17T10:00:00.000Z",
     updatedAt: partial.updatedAt ?? "2026-07-17T10:00:00.000Z",
   };
@@ -117,6 +118,18 @@ describe("queuedPosition", () => {
     expect(queuedPosition(items[0]!, items)).toBe(1);
     expect(queuedPosition(items[1]!, items)).toBe(2);
     expect(queuedPosition(items[2]!, items)).toBeNull();
+  });
+
+  it("counts position within the same queue lane", () => {
+    const items = [
+      stubBuild({ id: 10, status: "QUEUED", queueOrder: 0, requiresTranscode: true }),
+      stubBuild({ id: 11, status: "QUEUED", queueOrder: 0, requiresTranscode: false }),
+      stubBuild({ id: 12, status: "QUEUED", queueOrder: 1, requiresTranscode: false }),
+    ];
+
+    expect(queuedPosition(items[0]!, items)).toBe(1);
+    expect(queuedPosition(items[1]!, items)).toBe(1);
+    expect(queuedPosition(items[2]!, items)).toBe(2);
   });
 });
 

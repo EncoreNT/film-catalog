@@ -1,5 +1,6 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
+import { resolveCatalogAudioTrack } from "@/lib/builds/build-track-source";
 import type {
   BuildRecipeTrackState,
   BuildTrackKind,
@@ -110,7 +111,7 @@ function estimateAudioBytes(
   durationSeconds: number,
   track: BuildSizeTrackInput,
 ): { bytes: number; confidence: BuildSizeConfidence } {
-  const audio = release.audioTracks.find((a) => a.streamIndex === streamIndex);
+  const audio = resolveCatalogAudioTrack(release, streamIndex);
   const mode = normalizeAudioMode(track.audioMode);
 
   if (mode === "transcode") {

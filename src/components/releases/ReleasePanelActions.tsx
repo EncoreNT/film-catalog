@@ -100,6 +100,8 @@ interface ExportDryRunResponse {
   collision: boolean;
   suggestedFilename: string;
   targetPathDisplay: string;
+  savedTargetDir: string | null;
+  savedTargetDirDisplay: string | null;
 }
 
 export function ReleasePanelActions({
@@ -110,7 +112,6 @@ export function ReleasePanelActions({
   exportJobState,
   exportDialogOpen,
   onExportDialogOpenChange,
-  exportSuccessMessage,
   onExportSuccessMessageChange,
 }: {
   movieId: number;
@@ -120,7 +121,6 @@ export function ReleasePanelActions({
   exportJobState: ReleaseExportJobState;
   exportDialogOpen: boolean;
   onExportDialogOpenChange: (open: boolean) => void;
-  exportSuccessMessage: string | null;
   onExportSuccessMessageChange: (message: string | null) => void;
 }) {
   const router = useRouter();
@@ -139,7 +139,6 @@ export function ReleasePanelActions({
     exportJob,
     setExportJob,
     exportActive,
-    polling: exportPolling,
     loading: exportActionLoading,
     setLoading: setExportActionLoading,
     loadActiveExport,
@@ -180,11 +179,11 @@ export function ReleasePanelActions({
         },
         "Не удалось подготовить экспорт",
       );
-      setExportTargetDir("");
-      setExportTargetDirRuntime("");
+      setExportTargetDir(dryRun.savedTargetDirDisplay ?? "");
+      setExportTargetDirRuntime(dryRun.savedTargetDir ?? "");
       setExportFilename(dryRun.suggestedFilename);
-      setExportCollision(false);
-      setExportTargetDisplay(null);
+      setExportCollision(dryRun.collision);
+      setExportTargetDisplay(dryRun.targetPathDisplay || null);
       onExportDialogOpenChange(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
@@ -345,22 +344,23 @@ export function ReleasePanelActions({
 
   return (
     <>
-      <div className="group/menu relative shrink-0 px-2 py-2 sm:px-3">
-        <button
-          type="button"
-          className="focus-ring font-mono-tech inline-flex items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface px-2.5 py-1.5 text-muted transition-colors hover:border-accent/40 hover:text-accent group-hover/menu:border-accent/40 group-hover/menu:text-accent group-focus-within/menu:border-accent/40 group-focus-within/menu:text-accent"
-          aria-label="Меню действий релиза"
-          aria-haspopup="menu"
-        >
-          <Menu className="h-3.5 w-3.5" aria-hidden />
-        </button>
+      <div className="flex shrink-0 flex-col items-end gap-1 px-2 py-2 sm:px-3">
+        <div className="group/menu relative">
+          <button
+            type="button"
+            className="focus-ring font-mono-tech inline-flex items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface px-2.5 py-1.5 text-muted transition-colors hover:border-accent/40 hover:text-accent group-hover/menu:border-accent/40 group-hover/menu:text-accent group-focus-within/menu:border-accent/40 group-focus-within/menu:text-accent"
+            aria-label="Меню действий релиза"
+            aria-haspopup="menu"
+          >
+            <Menu className="h-3.5 w-3.5" aria-hidden />
+          </button>
 
-        <div
-          className="pointer-events-none invisible absolute right-0 top-full z-30 pt-1 opacity-0 transition-[opacity,visibility] duration-150 group-hover/menu:pointer-events-auto group-hover/menu:visible group-hover/menu:opacity-100 group-focus-within/menu:pointer-events-auto group-focus-within/menu:visible group-focus-within/menu:opacity-100"
-          role="menu"
-          aria-label="Действия с релизом"
-        >
-          <div className="min-w-[15rem] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-elevated py-1 shadow-[0_12px_32px_rgba(0,0,0,0.55)]">
+          <div
+            className="pointer-events-none invisible absolute right-0 top-full z-30 pt-1 opacity-0 transition-[opacity,visibility] duration-150 group-hover/menu:pointer-events-auto group-hover/menu:visible group-hover/menu:opacity-100 group-focus-within/menu:pointer-events-auto group-focus-within/menu:visible group-focus-within/menu:opacity-100"
+            role="menu"
+            aria-label="Действия с релизом"
+          >
+            <div className="min-w-[15rem] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-elevated py-1 shadow-[0_12px_32px_rgba(0,0,0,0.55)]">
             <ReleaseActionsMenuItem
               label="Редактировать"
               href={`/movies/${movieSlug}/releases/${activeRelease.id}/edit`}
@@ -398,19 +398,15 @@ export function ReleasePanelActions({
               danger
               onClick={() => setConfirmKind("delete")}
             />
+            </div>
           </div>
         </div>
+        {error ? (
+          <p className="max-w-[min(20rem,45vw)] truncate text-right text-xs text-red-400" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
-      {exportSuccessMessage ? (
-        <p className="px-3 pb-2 text-xs text-accent" role="status">
-          {exportSuccessMessage}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="px-3 pb-2 text-xs text-red-400" role="alert">
-          {error}
-        </p>
-      ) : null}
       <ConfirmDialog
         open={confirmKind === "probe"}
         onClose={() => setConfirmKind(null)}
@@ -525,7 +521,6 @@ export function ReleasePanelActions({
                     <span className="truncate text-muted">
                       {exportJob.progressMessage ?? "Копирование…"}
                       {exportSpeed ? ` · ${exportSpeed}` : ""}
-                      {exportPolling ? " · обновление…" : ""}
                     </span>
                     <span className="shrink-0 tabular-nums text-accent">
                       {exportProgress}%

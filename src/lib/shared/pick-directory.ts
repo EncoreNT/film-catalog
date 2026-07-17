@@ -13,6 +13,9 @@ export class PickDirectoryCancelledError extends Error {
 
 function powershellFolderPickerScript(): string {
   return [
+    // WSL invokes Windows PowerShell; default OEM encoding corrupts Cyrillic paths.
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+    "$OutputEncoding = [Console]::OutputEncoding",
     "Add-Type -AssemblyName System.Windows.Forms",
     "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",
     "$dialog.Description = 'Выберите папку'",
@@ -20,6 +23,11 @@ function powershellFolderPickerScript(): string {
     "  Write-Output $dialog.SelectedPath",
     "}",
   ].join("; ");
+}
+
+/** Trim picker stdout and strip UTF-8 BOM if PowerShell emitted one. */
+export function normalizePickerStdout(stdout: string): string {
+  return stdout.replace(/^\uFEFF/, "").trim();
 }
 
 async function pickWithWindowsDialog(): Promise<string | null> {
@@ -35,10 +43,10 @@ async function pickWithWindowsDialog(): Promise<string | null> {
   const { stdout } = await execFileAsync(
     command,
     ["-NoProfile", "-STA", "-Command", powershellFolderPickerScript()],
-    { timeout: 120_000, windowsHide: true },
+    { timeout: 120_000, windowsHide: true, encoding: "utf8" },
   );
 
-  const selected = stdout.trim();
+  const selected = normalizePickerStdout(stdout);
   return selected || null;
 }
 

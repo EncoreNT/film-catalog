@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Clapperboard, LoaderCircle } from "lucide-react";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
@@ -104,12 +105,20 @@ export function BuildJobCard({
     allItems && build.status === "QUEUED" ? queuedPosition(build, allItems) : null;
   const trackCount = build.tracks.length;
   const isRunning = build.status === "RUNNING";
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [isRunning, build.updatedAt, build.progressOutTimeMs, build.progressPercent]);
+
   const progress =
     build.progressPercent != null ? Math.round(build.progressPercent) : null;
   const etaLabel = isRunning
-    ? buildRunningEtaLabel(build)
+    ? buildRunningEtaLabel(build, now)
     : build.status === "QUEUED" && allItems
-      ? buildQueuedEtaLabel(build, allItems)
+      ? buildQueuedEtaLabel(build, allItems, now)
       : null;
   const laserTier = buildLaserTier(build.visualTier);
   const tierRibbon = catalogTierRibbon(laserTier);

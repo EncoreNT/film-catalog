@@ -1,5 +1,6 @@
 import { execa } from "execa";
 import { access } from "fs/promises";
+import { prisma } from "@/lib/db/prisma";
 import { probeMediaFile } from "@/lib/media/ffprobe";
 import type { FfprobeStream } from "@/lib/media/ffprobe-parse";
 import {
@@ -8,7 +9,14 @@ import {
   resolveMkvTrackIdByOrdinal,
   type MkvIdentifyResult,
 } from "@/lib/builds/build-inspection";
+import { resolveFfprobeGlobalStreamIndex } from "@/lib/builds/build-stream-resolve";
 import { DURATION_WARNING_THRESHOLD_SECONDS } from "@/lib/builds/build-presets";
+
+export interface CatalogStreamRefs {
+  videoStreamIndex: number | null;
+  audioTracks: { streamIndex: number }[];
+  subtitleTracks: { streamIndex: number }[];
+}
 
 export interface InspectedReleaseFile {
   releaseId: number;
@@ -18,6 +26,8 @@ export interface InspectedReleaseFile {
   probe: Awaited<ReturnType<typeof probeMediaFile>>;
   mkv: MkvIdentifyResult | null;
   ffprobeStreams: FfprobeStream[];
+  /** Track identity keys from release DB — may differ from probe streamIndex convention. */
+  catalog: CatalogStreamRefs;
 }
 
 export interface BuildWarning {
@@ -73,6 +83,15 @@ export async function inspectReleaseFile(
 
   const exactDurationSeconds = mkv?.container.duration ?? probe.durationSeconds;
 
+  const release = await prisma.release.findUnique({
+    where: { id: releaseId },
+    select: {
+      videoTrack: { select: { streamIndex: true } },
+      audioTracks: { select: { streamIndex: true }, orderBy: { id: "asc" } },
+      subtitleTracks: { select: { streamIndex: true }, orderBy: { id: "asc" } },
+    },
+  });
+
   return {
     releaseId,
     filePath,
@@ -81,21 +100,59 @@ export async function inspectReleaseFile(
     probe,
     mkv,
     ffprobeStreams,
+    catalog: {
+      videoStreamIndex: release?.videoTrack?.streamIndex ?? null,
+      audioTracks: release?.audioTracks ?? [],
+      subtitleTracks: release?.subtitleTracks ?? [],
+    },
   };
 }
 
 export function resolveMkvTrackIdForStream(
   inspected: InspectedReleaseFile,
   kind: "video" | "audio" | "subtitle",
-  ffprobeStreamIndex: number,
+  streamRef: number,
 ): number | null {
   if (!inspected.mkv) return null;
+  const probeTracks =
+    kind === "video"
+      ? inspected.probe.video
+        ? [inspected.probe.video]
+        : []
+      : kind === "audio"
+        ? inspected.probe.audio
+        : inspected.probe.subtitles;
+  const catalogTracks =
+    kind === "video"
+      ? inspected.catalog.videoStreamIndex != null
+        ? [{ streamIndex: inspected.catalog.videoStreamIndex }]
+        : []
+      : kind === "audio"
+        ? inspected.catalog.audioTracks
+        : inspected.catalog.subtitleTracks;
+  const globalIndex = resolveFfprobeGlobalStreamIndex(
+    inspected.ffprobeStreams,
+    kind,
+    streamRef,
+    probeTracks,
+    catalogTracks,
+  );
+  if (globalIndex == null) return null;
   const ordinal = ffprobeOrdinalAmongType(
     inspected.ffprobeStreams,
-    ffprobeStreamIndex,
+    globalIndex,
     kind,
   );
-  if (ordinal < 0) return null;
+  if (ordinal < 0) {
+    const sortedProbe = [...probeTracks].sort(
+      (a, b) => a.streamIndex - b.streamIndex,
+    );
+    const probeOrdinal = sortedProbe.findIndex(
+      (t) => t.streamIndex === globalIndex,
+    );
+    if (probeOrdinal < 0) return null;
+    return resolveMkvTrackIdByOrdinal(inspected.mkv.tracks, kind, probeOrdinal);
+  }
   return resolveMkvTrackIdByOrdinal(inspected.mkv.tracks, kind, ordinal);
 }
 

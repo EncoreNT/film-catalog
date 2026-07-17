@@ -9,6 +9,7 @@ import type { BuildWarning } from "@/lib/builds/build-inspect-runtime";
 import { releaseInclude } from "@/lib/movies/movie-include";
 import { serializeBuild } from "@/lib/builds/build-serialize";
 import { sortBuildsForQueue } from "@/lib/builds/build-queue-display";
+import { recipeRequiresTranscode, buildTracksRequireTranscode } from "@/lib/builds/build-requires-transcode";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
@@ -32,12 +33,14 @@ export async function enqueueBuild(
     releases.map((r) => [r.id, r.filePath?.trim() ?? ""]),
   );
   const queueOrder = await nextQueueOrder();
+  const requiresTranscode = recipeRequiresTranscode(validated.recipe.tracks);
 
   return prisma.releaseBuild.create({
     data: {
       movieId,
       status: "QUEUED",
       queueOrder,
+      requiresTranscode,
       outputPath: validated.recipe.outputPath,
       outputReleaseType: validated.recipe.outputReleaseType ?? null,
       outputVersion: validated.recipe.outputVersion ?? "theatrical",
@@ -103,6 +106,13 @@ export async function nextQueueOrder(): Promise<number> {
   return (agg._max.queueOrder ?? 0) + 1;
 }
 
+export async function countRunningTranscodeBuilds(): Promise<number> {
+  return prisma.releaseBuild.count({
+    where: { status: "RUNNING", requiresTranscode: true },
+  });
+}
+
+/** @deprecated Use claim-next-media-job lanes instead. */
 export async function claimNextBuild(workerId: string) {
   await recoverStaleBuilds();
 
@@ -244,7 +254,10 @@ export async function requestBuildCancel(buildId: number) {
 export async function retryBuild(buildId: number) {
   const build = await prisma.releaseBuild.findUnique({
     where: { id: buildId },
-    select: { status: true },
+    select: {
+      status: true,
+      tracks: { select: { kind: true, audioMode: true } },
+    },
   });
   if (!build) throw new Error("Сборка не найдена");
   if (build.status !== "FAILED" && build.status !== "CANCELLED") {
@@ -252,12 +265,14 @@ export async function retryBuild(buildId: number) {
   }
 
   const queueOrder = await nextQueueOrder();
+  const requiresTranscode = buildTracksRequireTranscode(build.tracks);
 
   return prisma.releaseBuild.update({
     where: { id: buildId },
     data: {
       status: "QUEUED",
       queueOrder,
+      requiresTranscode,
       phase: null,
       progressPercent: 0,
       progressMessage: null,

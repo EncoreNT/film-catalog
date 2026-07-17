@@ -1,4 +1,5 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
+import { resolveCatalogAudioTrack } from "@/lib/builds/build-track-source";
 import {
   audioTrackChannelCount,
   is4K,
@@ -46,10 +47,9 @@ function audioTrackFromBuild(
 ): ReleaseWithTracks["audioTracks"][number] | null {
   if (track.kind !== "AUDIO" || track.sourceReleaseId == null) return null;
   const release = releaseForSource(sources, track.sourceReleaseId);
-  return (
-    release?.audioTracks.find((a) => a.streamIndex === track.sourceStreamIndex) ??
-    null
-  );
+  return release
+    ? resolveCatalogAudioTrack(release, track.sourceStreamIndex)
+    : null;
 }
 
 /**

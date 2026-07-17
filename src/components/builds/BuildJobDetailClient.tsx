@@ -9,7 +9,6 @@ import {
   FileOutput,
   FolderOpen,
   LoaderCircle,
-  RefreshCw,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/primitives/Button";
@@ -91,15 +90,23 @@ function ProgressPanel({
   build: SerializedBuild;
   queueItems: SerializedBuild[];
 }) {
+  const [now, setNow] = useState(() => Date.now());
   const isRunning = build.status === "RUNNING";
   const isQueued = build.status === "QUEUED";
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [isRunning, build.updatedAt, build.progressOutTimeMs, build.progressPercent]);
+
   const progress =
     build.progressPercent != null ? Math.round(build.progressPercent) : null;
   const phaseLabel = buildPhaseLabel(build.phase);
   const etaLabel = isRunning
-    ? buildRunningEtaLabel(build)
+    ? buildRunningEtaLabel(build, now)
     : isQueued
-      ? buildQueuedEtaLabel(build, queueItems)
+      ? buildQueuedEtaLabel(build, queueItems, now)
       : null;
 
   if (!isRunning && !isQueued && progress == null && !build.progressMessage) {
@@ -178,7 +185,6 @@ export function BuildJobDetailClient({
   const [queueItems, setQueueItems] = useState(initialQueueItems);
   const [loading, setLoading] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const meta = BUILD_STATUS_META[build.status];
@@ -241,10 +247,7 @@ export function BuildJobDetailClient({
   useEffect(() => {
     if (TERMINAL.has(build.status)) return;
     const timer = setInterval(() => {
-      setPolling(true);
-      void refresh()
-        .catch(() => undefined)
-        .finally(() => setPolling(false));
+      void refresh().catch(() => undefined);
     }, 3000);
     return () => clearInterval(timer);
   }, [build.status, refresh]);
@@ -389,12 +392,6 @@ export function BuildJobDetailClient({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {polling && isActive ? (
-                  <span className="font-mono-tech inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-faint">
-                    <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
-                    обновление
-                  </span>
-                ) : null}
                 <span
                   className={`font-mono-tech inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] ${statusMeta.badgeClass}`}
                 >

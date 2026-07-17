@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import "dotenv/config";
-import { claimNextMediaJob } from "../src/lib/worker/claim-next-media-job";
+import { claimAvailableMediaJobs, type MediaJob } from "../src/lib/worker/claim-next-media-job";
 import { runBuildJob } from "../src/lib/builds/build-runner";
 import { runExportJob } from "../src/lib/releases/export-runner";
 import {
@@ -16,40 +16,29 @@ async function sleep(ms: number) {
 }
 
 async function main() {
-  let capError = assertBuildCapabilities(await getBuildCapabilities());
-  if (capError) {
+  let buildsEnabled = assertBuildCapabilities(await getBuildCapabilities()) == null;
+  if (!buildsEnabled) {
     console.warn(
-      `[${WORKER_ID}] ${capError} — сборки отключены; экспорт и каталог работают; установите ffmpeg/ffprobe/mkvmerge или перезапустите worker`,
+      `[${WORKER_ID}] инструменты сборки недоступны — экспорт работает; установите ffmpeg/ffprobe/mkvmerge`,
     );
   } else {
-    console.log(`[${WORKER_ID}] started`);
+    console.log(`[${WORKER_ID}] started (copy: unlimited, transcode: max 2 parallel)`);
   }
 
   const shutdown = { value: false };
+  const inFlight = new Set<Promise<void>>();
+  const activeJobIds = new Set<string>();
+
   const handleSignal = () => {
     shutdown.value = true;
   };
   process.on("SIGINT", handleSignal);
   process.on("SIGTERM", handleSignal);
 
-  while (!shutdown.value) {
-    const job = await claimNextMediaJob(WORKER_ID, { includeBuilds: !capError });
-    if (!job) {
-      if (capError) {
-        capError = assertBuildCapabilities(await getBuildCapabilities());
-        if (!capError) {
-          console.log(`[${WORKER_ID}] инструменты найдены, обрабатываю очередь`);
-        }
-      }
-      await sleep(POLL_MS);
-      continue;
-    }
-
+  async function executeJob(job: MediaJob) {
+    const key = `${job.kind}:${job.id}`;
     console.log(`[${WORKER_ID}] running ${job.kind} #${job.id}`);
     const controller = new AbortController();
-    const onSignal = () => controller.abort();
-    process.once("SIGINT", onSignal);
-    process.once("SIGTERM", onSignal);
 
     try {
       if (job.kind === "build") {
@@ -61,9 +50,46 @@ async function main() {
     } catch (err) {
       console.error(`[${WORKER_ID}] ${job.kind} #${job.id} failed`, err);
     } finally {
-      process.off("SIGINT", onSignal);
-      process.off("SIGTERM", onSignal);
+      activeJobIds.delete(key);
     }
+  }
+
+  async function fillSlots() {
+    if (!buildsEnabled) {
+      buildsEnabled = assertBuildCapabilities(await getBuildCapabilities()) == null;
+      if (buildsEnabled) {
+        console.log(`[${WORKER_ID}] инструменты найдены, обрабатываю очередь сборок`);
+      }
+    }
+
+    const jobs = await claimAvailableMediaJobs(WORKER_ID, {
+      includeBuilds: buildsEnabled,
+    });
+
+    for (const job of jobs) {
+      const key = `${job.kind}:${job.id}`;
+      if (activeJobIds.has(key)) continue;
+      activeJobIds.add(key);
+
+      const task = executeJob(job);
+      inFlight.add(task);
+      void task.finally(() => {
+        inFlight.delete(task);
+        if (!shutdown.value) {
+          void fillSlots();
+        }
+      });
+    }
+  }
+
+  while (!shutdown.value) {
+    await fillSlots();
+    await sleep(POLL_MS);
+  }
+
+  if (inFlight.size > 0) {
+    console.log(`[${WORKER_ID}] waiting for ${inFlight.size} active job(s)...`);
+    await Promise.allSettled([...inFlight]);
   }
 
   console.log(`[${WORKER_ID}] stopped`);

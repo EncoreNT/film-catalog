@@ -37,6 +37,7 @@ export async function POST(
       warnings: validated.warnings,
       videoDurationSeconds: validated.videoDurationSeconds,
       videoSourceReleaseId: validated.videoSourceReleaseId,
+      mappingPreview: validated.mappingPreview,
     });
   } catch (err) {
     if (err instanceof ValidationFailed) {

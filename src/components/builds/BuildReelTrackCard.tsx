@@ -16,6 +16,7 @@ import type { ChannelTarget, TranscodeCodec } from "@/lib/builds/build-presets";
 import type {
   BuildRecipeTrackState,
 } from "@/lib/builds/build-recipe-state";
+import { resolveCatalogTrack } from "@/lib/builds/build-track-source";
 import {
   BuildInlineHint,
   ChipButton,
@@ -42,16 +43,7 @@ function resolveSourceTrack(
   | ReleaseWithTracks["subtitleTracks"][number]
   | null {
   const release = releases.find((r) => r.id === track.sourceReleaseId);
-  if (!release) return null;
-  if (track.kind === "video") return release.videoTrack;
-  if (track.kind === "audio") {
-    return (
-      release.audioTracks.find((a) => a.streamIndex === track.sourceStreamIndex) ?? null
-    );
-  }
-  return (
-    release.subtitleTracks.find((s) => s.streamIndex === track.sourceStreamIndex) ?? null
-  );
+  return resolveCatalogTrack(release, track.kind, track.sourceStreamIndex);
 }
 
 interface BuildReelTrackCardProps {

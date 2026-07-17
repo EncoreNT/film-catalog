@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
+import { setExportTargetDir } from "@/lib/db/settings";
 import { releaseInclude } from "@/lib/movies/movie-include";
 import { exportReleaseDryRun } from "@/lib/releases/export-release";
 import {
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest, context: ReleaseRouteContext) {
       body.filename,
       body.targetDir,
     );
+    await setExportTargetDir(body.targetDir);
     return NextResponse.json(serializeExport(job), { status: 202 });
   } catch (err) {
     return mapDomainError(err, "Не удалось поставить экспорт в очередь");

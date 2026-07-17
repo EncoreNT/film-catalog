@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFfmpegAudioOrdinalArgs, parseFfmpegSpeed } from "@/lib/builds/build-ffmpeg";
+import { buildFfmpegAudioOrdinalArgs, parseFfmpegProgressLine, parseFfmpegSpeed } from "@/lib/builds/build-ffmpeg";
 
 describe("build-ffmpeg", () => {
   it("builds transcode args with downmix target", () => {
@@ -27,5 +27,11 @@ describe("build-ffmpeg", () => {
   it("parses ffmpeg speed values", () => {
     expect(parseFfmpegSpeed("1.05x")).toBe(1.05);
     expect(parseFfmpegSpeed("N/A")).toBeNull();
+  });
+
+  it("converts ffmpeg out_time_ms from microseconds to milliseconds", () => {
+    expect(parseFfmpegProgressLine("out_time_ms=3600000000")).toEqual({
+      outTimeMs: 3_600_000,
+    });
   });
 });

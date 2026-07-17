@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { displayFilePath, resolveRuntimePath } from "@/lib/shared/display-path";
 
 const SCAN_ROOT_KEY = "scanRoot";
+const EXPORT_TARGET_DIR_KEY = "exportTargetDir";
 
 export async function getScanRoot(): Promise<string | null> {
   const setting = await prisma.setting.findUnique({
@@ -33,4 +34,40 @@ export async function assertDirectoryWritable(dirPath: string): Promise<void> {
 export function scanRootDisplay(runtimePath: string | null): string | null {
   if (!runtimePath) return null;
   return displayFilePath(runtimePath);
+}
+
+export async function getExportTargetDir(): Promise<string | null> {
+  const setting = await prisma.setting.findUnique({
+    where: { key: EXPORT_TARGET_DIR_KEY },
+  });
+  return setting?.value ?? null;
+}
+
+export async function setExportTargetDir(path: string): Promise<void> {
+  const runtimePath = resolveRuntimePath(path);
+  await prisma.setting.upsert({
+    where: { key: EXPORT_TARGET_DIR_KEY },
+    create: { key: EXPORT_TARGET_DIR_KEY, value: runtimePath },
+    update: { value: runtimePath },
+  });
+}
+
+export function exportTargetDirDisplay(runtimePath: string | null): string | null {
+  if (!runtimePath) return null;
+  return displayFilePath(runtimePath);
+}
+
+/** Returns saved export folder when it still exists and is writable. */
+export async function resolveSavedExportTargetDir(): Promise<{
+  runtime: string;
+  display: string;
+} | null> {
+  const saved = await getExportTargetDir();
+  if (!saved) return null;
+  try {
+    await assertDirectoryWritable(saved);
+    return { runtime: saved, display: displayFilePath(saved) };
+  } catch {
+    return null;
+  }
 }

@@ -12,6 +12,8 @@ import { BuildReelTrackCard } from "@/components/builds/BuildReelTrackCard";
 import { BuildVideoCard } from "@/components/builds/BuildVideoCard";
 import { BuildKindSection } from "@/components/builds/BuildKindSection";
 import { BuildValidationPanel } from "@/components/builds/BuildValidationPanel";
+import { BuildMappingPreviewPanel } from "@/components/builds/BuildMappingPreviewPanel";
+import type { BuildTrackMappingPreviewRow } from "@/lib/builds/build-mapping-preview";
 import { sourceTierTone } from "@/lib/builds/build-display";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
 
@@ -20,6 +22,7 @@ interface ValidationResult {
   warnings: { code: string; message: string; severity: string }[];
   errors?: { code: string; message: string; severity: string }[];
   error?: string;
+  mappingPreview?: BuildTrackMappingPreviewRow[];
 }
 
 interface BuildReelProps {
@@ -196,11 +199,16 @@ export function BuildReel({
       </BuildKindSection>
 
       {validation ? (
-        <BuildValidationPanel
-          validation={validation}
-          ackWarnings={ackWarnings}
-          onAckChange={onAckChange}
-        />
+        <>
+          {validation.ok && validation.mappingPreview?.length ? (
+            <BuildMappingPreviewPanel rows={validation.mappingPreview} />
+          ) : null}
+          <BuildValidationPanel
+            validation={validation}
+            ackWarnings={ackWarnings}
+            onAckChange={onAckChange}
+          />
+        </>
       ) : null}
     </div>
   );

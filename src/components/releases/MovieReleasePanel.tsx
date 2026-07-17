@@ -190,18 +190,26 @@ export function MovieReleasePanel({
             exportJobState={exportJobState}
             exportDialogOpen={exportDialogOpen}
             onExportDialogOpenChange={setExportDialogOpen}
-            exportSuccessMessage={exportSuccessMessage}
             onExportSuccessMessageChange={setExportSuccessMessage}
           />
         </div>
         {showExportStrip && stripJob ? (
           <ReleaseExportProgressStrip
             job={stripJob}
-            polling={exportJobState.polling}
             loading={exportJobState.loading}
             onOpen={() => setExportDialogOpen(true)}
             onCancel={() => void exportJobState.cancelExport()}
           />
+        ) : null}
+        {exportSuccessMessage ? (
+          <div
+            className="border-t border-accent/20 bg-accent/[0.06] px-3 py-2 sm:px-5"
+            role="status"
+          >
+            <p className="truncate font-mono-tech text-xs text-accent">
+              {exportSuccessMessage}
+            </p>
+          </div>
         ) : null}
       </div>
 
