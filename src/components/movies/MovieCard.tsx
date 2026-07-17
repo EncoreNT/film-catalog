@@ -20,6 +20,7 @@ import {
   premiumHdrView,
   releaseTier,
 } from "@/lib/media/spec-tags";
+import { isTvReadyRelease } from "@/lib/media/tv-ready";
 import { formatAudioLabel, translationShort } from "@/lib/media/audio-labels";
 import {
   movieExternalStorageNames,
@@ -37,6 +38,7 @@ import {
 } from "@/lib/media/tier-presentation";
 import { CoverPlaceholderBackdrop } from "@/components/shared/CoverPlaceholderBackdrop";
 import { ExternalStorageMark } from "@/components/shared/ExternalStorageMark";
+import { TvReadyMark } from "@/components/shared/TvReadyMark";
 import { TierCoverOverlay } from "@/components/shared/TierCoverOverlay";
 import {
   TooltipListHeader,
@@ -191,6 +193,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const tech = primary ? catalogCardTech(primary) : null;
   const tierRibbon = catalogTierRibbon(tier);
   const chipTone = tierChipTone(tier);
+  const tvReady = primary ? isTvReadyRelease(primary) : false;
 
   const hdrChip =
     premiumHdr != null
@@ -367,6 +370,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                 {hasExternal ? (
                   <ExternalStorageMark storageNames={externalStorageNames} />
                 ) : null}
+                {tvReady ? <TvReadyMark /> : null}
                 {!hasFile ? (
                   <span
                     className="shrink-0 text-faint"

@@ -4,6 +4,7 @@ import { RUS_AUDIO_FORMATS } from "@/lib/catalog/russian-audio-formats";
 import { audioTrackScopeWhere } from "@/lib/catalog/audio-track-scope";
 import { normalizeSearchQuery } from "@/lib/movies/movie-match-key";
 import { premiumOriginalSpatialAudioTrackWhere, premiumRussianAtmosAudioTrackWhere } from "@/lib/media/quality-predicates";
+import { tvReadyReleaseWhere } from "@/lib/media/tv-ready";
 import { prisma } from "@/lib/db/prisma";
 
 export type { MovieWithTracks } from "@/lib/movies/movie-include";
@@ -169,6 +170,10 @@ export function buildMovieWhere(
             : premiumRussianAtmosAudioTrackWhere,
       },
     });
+  }
+
+  if (query.tvReady === "true") {
+    releaseFilters.push(tvReadyReleaseWhere());
   }
 
   if (query.language || query.channelLayout) {

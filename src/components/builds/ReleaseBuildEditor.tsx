@@ -31,10 +31,13 @@ import { BuildOutputPanel } from "@/components/builds/BuildOutputPanel";
 import { BuildCapabilitiesPanel } from "@/components/builds/BuildCapabilitiesPanel";
 import { sourceTrackLabel } from "@/lib/builds/build-display";
 import { estimateBuildOutputSizeFromRecipe } from "@/lib/builds/build-output-size";
+import { suggestBuildOutputPath } from "@/lib/builds/build-filename";
+import { pickPrimaryRelease } from "@/lib/releases/release-primary";
 
 interface ReleaseBuildEditorProps {
   movieId: number;
   movieTitle: string;
+  movieYear: number | null;
   releases: ReleaseWithTracks[];
 }
 
@@ -98,6 +101,7 @@ function buildTrackFromSource(
 export function ReleaseBuildEditor({
   movieId,
   movieTitle,
+  movieYear,
   releases,
 }: ReleaseBuildEditorProps) {
   const router = useRouter();
@@ -127,6 +131,32 @@ export function ReleaseBuildEditor({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { mediaSaveDir?: string | null } | null) => {
+        if (cancelled || !data?.mediaSaveDir) return;
+        setState((current) => {
+          if (current.outputPath.trim()) return current;
+          const primary = pickPrimaryRelease(releases);
+          const suggested = suggestBuildOutputPath(data.mediaSaveDir!, {
+            movieTitle,
+            movieYear,
+            releaseType: current.outputReleaseType,
+            version: current.outputVersion,
+            resolutionLabel: primary?.videoTrack?.resolutionLabel,
+            hdr: primary?.videoTrack?.hdr,
+          });
+          return { ...current, outputPath: suggested };
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [movieTitle, movieYear, releases]);
 
   const toolsOk =
     capabilities != null &&
@@ -335,6 +365,36 @@ export function ReleaseBuildEditor({
   };
 
   const hasVideo = state.tracks.some((t) => t.kind === "video");
+  const handleSuggestPath = useCallback(() => {
+    void fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { mediaSaveDir?: string | null } | null) => {
+        if (!data?.mediaSaveDir) {
+          setError("Папка сохранения не настроена");
+          return;
+        }
+        const primary = pickPrimaryRelease(releases);
+        const suggested = suggestBuildOutputPath(data.mediaSaveDir, {
+          movieTitle,
+          movieYear,
+          releaseType: state.outputReleaseType,
+          version: state.outputVersion,
+          resolutionLabel: primary?.videoTrack?.resolutionLabel,
+          hdr: primary?.videoTrack?.hdr,
+        });
+        setState((current) => ({ ...current, outputPath: suggested }));
+        resetValidation();
+      })
+      .catch(() => setError("Не удалось получить настройки"));
+  }, [
+    movieTitle,
+    movieYear,
+    releases,
+    resetValidation,
+    state.outputReleaseType,
+    state.outputVersion,
+  ]);
+
   const pathFilled = state.outputPath.trim().length > 0;
   const sizeEstimate = useMemo(
     () => estimateBuildOutputSizeFromRecipe(state.tracks, releases),
@@ -444,6 +504,7 @@ export function ReleaseBuildEditor({
                 setState((s) => ({ ...s, outputVersion: value }));
                 resetValidation();
               }}
+              onSuggestPath={handleSuggestPath}
             />
             <div className="border-t border-border/60 pt-4">
               <BuildCapabilitiesPanel capabilities={capabilities} />

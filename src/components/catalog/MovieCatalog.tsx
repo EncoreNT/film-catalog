@@ -1,13 +1,11 @@
 "use client";
 
 import { type ReactNode, useCallback, useRef, useState, useTransition } from "react";
-import dynamic from "next/dynamic";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { MovieCard } from "@/components/movies/MovieCard";
 import { FilterToolbar, FilterSidebar } from "@/components/catalog/FilterBar";
 import { hasFacets } from "@/lib/catalog/filter-bar-utils";
 import { EmptyCatalog } from "@/components/catalog/EmptyCatalog";
-import { Modal } from "@/components/primitives/Modal";
 import { Pagination } from "@/components/primitives/Pagination";
 import { Select } from "@/components/primitives/Select";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,11 +21,6 @@ import {
   formatArchiveTotalSize,
 } from "@/lib/shared/format";
 import { pluralRu } from "@/lib/shared/russian-plural";
-
-const AddMovieForm = dynamic(
-  () => import("@/components/movies/AddMovieForm").then((module) => module.AddMovieForm),
-  { ssr: false },
-);
 
 const SORT_OPTIONS = [
   { value: "title", label: "Название" },
@@ -241,6 +234,7 @@ interface MovieCatalogProps {
     russianAudioFormats: Facet[];
     originalAudioFormats: Facet[];
     genres: Facet[];
+    tvReady: number;
   };
   total: number;
   totalCount: number;
@@ -269,7 +263,6 @@ export function MovieCatalog({
   const router = useRouter();
   const searchParams = useSearchParams();
   const status = searchParams.get("status") ?? "CATALOG";
-  const [addOpen, setAddOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [facetsOpen, setFacetsOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -504,15 +497,14 @@ export function MovieCatalog({
                 </Link>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(true)}
+                <Link
+                  href="/movies/new"
                   className="focus-ring group/btn flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-border-strong bg-bg-surface/80 px-3.5 py-1.5 text-sm font-medium text-text backdrop-blur-md transition-all duration-300 hover:border-neural/55 hover:text-neural-bright hover:bg-bg-surface-hover hover:shadow-[0_0_18px_rgba(139,92,246,0.55)] active:scale-[0.97]"
                 >
                   <Plus className="h-4 w-4" aria-hidden />
                   <span className="hidden sm:inline">Добавить вручную</span>
                   <span className="sm:hidden">Добавить</span>
-                </button>
+                </Link>
                 <Link
                   href="/scan"
                   className="focus-ring group/btn relative flex min-h-9 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-bg-deep shadow-[0_0_22px_rgba(232,176,90,0.55)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_32px_rgba(232,176,90,0.55)] active:scale-[0.97]"
@@ -763,14 +755,6 @@ export function MovieCatalog({
         </div>
       </div>
 
-      <Modal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        title="Добавить фильм"
-        size="wide"
-      >
-        <AddMovieForm onDone={() => setAddOpen(false)} />
-      </Modal>
     </MotionConfig>
   );
 }

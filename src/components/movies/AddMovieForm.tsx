@@ -1,33 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "motion/react";
 import {
-  Sparkles,
-  Plus,
-  ChevronRight,
-  ChevronLeft,
+  AlertCircle,
   Check,
-  Music,
-  Subtitles,
-  Clapperboard,
-  Loader2,
   FileVideo,
+  Loader2,
   ScanSearch,
 } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
 import { Field, TextAreaField } from "@/components/primitives/Field";
 import { Select } from "@/components/primitives/Select";
+import { FormActionBar } from "@/components/primitives/FormActionBar";
+import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { StoragePicker } from "@/components/shared/StoragePicker";
-import {
-  RELEASE_TYPES,
-} from "@/lib/shared/dictionaries";
+import { TrackEditorSection } from "@/components/shared/TrackEditorSection";
 import { GenrePicker } from "@/components/movies/GenrePicker";
 import { DurationInput } from "@/components/primitives/DurationInput";
 import { YearInput } from "@/components/primitives/YearInput";
 import { CoverUpload } from "@/components/primitives/CoverUpload";
-import { TrackEditorSection } from "@/components/shared/TrackEditorSection";
 import { useFilePathCheck } from "@/hooks/useFilePathCheck";
 import { useTrackEditor } from "@/hooks/useTrackEditor";
 import type { VideoFieldState } from "@/lib/movies/movie-form-types";
@@ -40,21 +33,18 @@ import {
 import { buildMovieCreatePayload } from "@/lib/movies/build-movie-payload";
 import { apiFetch, uploadCoverAfterCreate } from "@/lib/api/client";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
+import { RELEASE_TYPES } from "@/lib/shared/dictionaries";
+import {
+  commitFilePathInput,
+  FILE_PATH_INPUT_HINT,
+  normalizeFilePathInput,
+} from "@/lib/shared/display-path";
+import { trimOnInputBlur } from "@/lib/shared/text-trim";
 
-interface AddMovieFormProps {
-  onDone?: () => void;
-}
-
-const STEPS: { key: string; label: string; icon: React.ReactNode }[] = [
-  { key: "details", label: "Детали", icon: <Sparkles className="h-4 w-4" /> },
-  { key: "video", label: "Видео", icon: <Clapperboard className="h-4 w-4" /> },
-  { key: "audio", label: "Аудио", icon: <Music className="h-4 w-4" /> },
-  { key: "subs", label: "Субтитры", icon: <Subtitles className="h-4 w-4" /> },
-];
-
-export function AddMovieForm({ onDone }: AddMovieFormProps) {
+export function AddMovieForm() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
+  const markDirty = () => setIsDirty(true);
 
   const [title, setTitle] = useState("");
   const [year, setYear] = useState<number | null>(null);
@@ -62,7 +52,8 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
   const [filePath, setFilePath] = useState("");
   const { checking, exists: fileExists, checkFilePath } = useFilePathCheck();
   const [autoFilling, setAutoFilling] = useState(false);
-  const [autoFilled, setAutoFilled] = useState(false);
+  const [fileFillError, setFileFillError] = useState<string | null>(null);
+  const [fileFillMessage, setFileFillMessage] = useState<string | null>(null);
 
   const {
     storageKind,
@@ -112,7 +103,9 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
   const handleFilePathBlur = () => {
     const trimmed = filePath.trim();
     if (!trimmed) return;
-    applyParsedFilePathFields(trimmed, {
+    const { display, runtime } = commitFilePathInput(trimmed);
+    setFilePath(display);
+    applyParsedFilePathFields(runtime, {
       title,
       year,
       releaseType,
@@ -120,19 +113,22 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
       setYear,
       setReleaseType,
     });
-    void checkFilePath(trimmed);
+    markDirty();
+    void checkFilePath(display);
   };
 
   const handleAutoFill = async () => {
-    if (!filePath.trim()) {
-      setError("Укажите путь к файлу для автозаполнения");
+    const runtime = normalizeFilePathInput(filePath);
+    if (!runtime) {
+      setFileFillError("Укажите путь к файлу для автозаполнения");
       return;
     }
-    setError(null);
+    setFileFillError(null);
     setAutoFilling(true);
     try {
-      const trimmed = filePath.trim();
-      applyParsedFilePathFields(trimmed, {
+      const { display } = commitFilePathInput(filePath);
+      setFilePath(display);
+      applyParsedFilePathFields(runtime, {
         title,
         year,
         releaseType,
@@ -140,33 +136,35 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
         setYear,
         setReleaseType,
       });
-      const data = await probeFilePath(trimmed, { title: title || "probe" });
+      const data = await probeFilePath(runtime, { title: title || "probe" });
       applyProbeToTrackEditor(data, {
         setDurationSeconds,
         setVideo,
         setAudioRowsFromProbe,
         setSubtitleRowsFromProbe,
       });
-      setAutoFilled(true);
-      setTimeout(() => setAutoFilled(false), 3000);
+      markDirty();
+      setFileFillMessage("Данные из файла заполнены — проверьте дорожки справа");
+      setTimeout(() => setFileFillMessage(null), 4000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка автозаполнения");
+      setFileFillError(
+        err instanceof Error ? err.message : "Ошибка автозаполнения",
+      );
     } finally {
       setAutoFilling(false);
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
     if (!title.trim()) {
       setError("Укажите название");
-      setStep(0);
       return;
     }
     const storageError = validateStorage();
     if (storageError) {
       setError(storageError);
-      setStep(0);
       return;
     }
 
@@ -182,7 +180,7 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
         releaseType: releaseType || null,
         genres,
         durationSeconds,
-        filePath: filePath.trim() || null,
+        filePath: normalizeFilePathInput(filePath) ?? null,
         video,
         audioRows,
         subtitleRows: subRows,
@@ -202,7 +200,6 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
         coverFile,
         coverUrl,
       );
-      onDone?.();
       router.push(`/movies/${movie.slug}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
@@ -211,278 +208,272 @@ export function AddMovieForm({ onDone }: AddMovieFormProps) {
     }
   };
 
-  const canNext = step < STEPS.length - 1;
-  const canBack = step > 0;
+  const patchVideo = (patch: Partial<VideoFieldState>) => {
+    setVideo((current) => ({ ...current, ...patch }));
+    markDirty();
+  };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-1 overflow-x-auto pb-1">
-        {STEPS.map((s, i) => {
-          const active = i === step;
-          const done = i < step;
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setStep(i)}
-              className={`focus-ring flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-all duration-200 ${
-                active
-                  ? "border-accent/50 bg-accent/10 text-accent"
-                  : done
-                    ? "border-border-strong text-text"
-                    : "border-border text-faint hover:text-muted"
-              }`}
-              aria-current={active ? "step" : undefined}
-            >
-              {done ? <Check className="h-3.5 w-3.5" /> : s.icon}
-              <span className="font-mono-tech">{s.label}</span>
-            </button>
-          );
-        })}
-      </div>
+  const patchAudio = (
+    index: number,
+    patch: Parameters<typeof updateAudio>[1],
+  ) => {
+    updateAudio(index, patch);
+    markDirty();
+  };
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        >
-          {step === 0 ? (
-            <div className="space-y-5">
-              <DetailsFields
-                title={title}
-                setTitle={setTitle}
-                year={year}
-                setYear={setYear}
-                durationSeconds={durationSeconds}
-                setDurationSeconds={setDurationSeconds}
-                releaseType={releaseType}
-                setReleaseType={setReleaseType}
-                genres={genres}
-                setGenres={setGenres}
-                description={description}
-                setDescription={setDescription}
-                setCoverFile={setCoverFile}
-                setCoverUrl={setCoverUrl}
-              />
+  const patchSubtitle = (
+    index: number,
+    patch: Parameters<typeof updateSub>[1],
+  ) => {
+    updateSub(index, patch);
+    markDirty();
+  };
 
-              <StoragePicker
-                storageKind={storageKind}
-                onStorageKindChange={setStorageKind}
-                externalStorages={externalStorages}
-                selectedStorageId={selectedStorageId}
-                onSelectedStorageIdChange={setSelectedStorageId}
-                onCreateExternalStorage={createExternalStorage}
-              />
-
-              <div className="space-y-3">
-                <Field
-                  label="Путь к файлу (опционально)"
-                  value={filePath}
-                  onChange={(e) => setFilePath(e.target.value)}
-                  onBlur={handleFilePathBlur}
-                  placeholder="/Volumes/Seagate/Movies/film.mkv"
-                  hint="Абсолютный путь к видеофайлу. Укажите даже для внешнего диска, если он подключён — «Автозаполнить» прочитает техданные через ffprobe."
-                />
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    variant="secondary"
-                    loading={autoFilling}
-                    onClick={handleAutoFill}
-                    disabled={!filePath.trim()}
-                  >
-                    <ScanSearch className="h-4 w-4" />
-                    Автозаполнить из файла
-                  </Button>
-                  {filePath.trim() ? (
-                    <span className="flex items-center gap-2 text-sm text-muted">
-                      {checking ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                      ) : fileExists ? (
-                        <Check className="h-4 w-4 text-accent" />
-                      ) : (
-                        <FileVideo className="h-4 w-4 text-faint" />
-                      )}
-                      {checking
-                        ? "Проверяю файл…"
-                        : fileExists
-                          ? "Файл доступен"
-                          : "Файл не найден — можно заполнить вручную"}
-                    </span>
-                  ) : null}
-                  {autoFilled ? (
-                    <span className="font-mono-tech text-xs text-accent">
-                      данные заполнены — проверьте шаги «Видео» и «Аудио»
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {step === 1 ? (
-            <TrackEditorSection
-              video={video}
-              onVideoChange={(patch) => setVideo((current) => ({ ...current, ...patch }))}
-              audioRows={audioRows}
-              onUpdateAudio={updateAudio}
-              onAddAudio={addAudioRow}
-              onRemoveAudio={removeAudioRow}
-              subtitleRows={subRows}
-              onUpdateSubtitle={updateSub}
-              onAddSubtitle={addSubRow}
-              onRemoveSubtitle={removeSubRow}
-              showSectionTitle={false}
-              sections={["video"]}
-            />
-          ) : null}
-
-          {step === 2 ? (
-            <TrackEditorSection
-              video={video}
-              onVideoChange={(patch) => setVideo((current) => ({ ...current, ...patch }))}
-              audioRows={audioRows}
-              onUpdateAudio={updateAudio}
-              onAddAudio={addAudioRow}
-              onRemoveAudio={removeAudioRow}
-              subtitleRows={subRows}
-              onUpdateSubtitle={updateSub}
-              onAddSubtitle={addSubRow}
-              onRemoveSubtitle={removeSubRow}
-              showSectionTitle={false}
-              audioGridCols="three"
-              sections={["audio"]}
-            />
-          ) : null}
-
-          {step === 3 ? (
-            <TrackEditorSection
-              video={video}
-              onVideoChange={(patch) => setVideo((current) => ({ ...current, ...patch }))}
-              audioRows={audioRows}
-              onUpdateAudio={updateAudio}
-              onAddAudio={addAudioRow}
-              onRemoveAudio={removeAudioRow}
-              subtitleRows={subRows}
-              onUpdateSubtitle={updateSub}
-              onAddSubtitle={addSubRow}
-              onRemoveSubtitle={removeSubRow}
-              showSectionTitle={false}
-              audioGridCols="three"
-              emptySubtitleMessage="Субтитров нет"
-              sections={["subtitle"]}
-            />
-          ) : null}
-        </motion.div>
-      </AnimatePresence>
-
-      {error ? (
-        <p className="text-sm text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-        <Button
-          variant="ghost"
-          onClick={() => (canBack ? setStep((s) => s - 1) : onDone?.())}
-        >
-          <ChevronLeft className="h-4 w-4" />
-          {canBack ? "Назад" : "Отмена"}
-        </Button>
-        {canNext ? (
-          <Button variant="secondary" onClick={() => setStep((s) => s + 1)}>
-            Далее
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button variant="primary" loading={loading} onClick={handleSubmit}>
-            Добавить в каталог
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DetailsFields({
-  title,
-  setTitle,
-  year,
-  setYear,
-  durationSeconds,
-  setDurationSeconds,
-  releaseType,
-  setReleaseType,
-  genres,
-  setGenres,
-  description,
-  setDescription,
-  setCoverFile,
-  setCoverUrl,
-}: {
-  title: string;
-  setTitle: (v: string) => void;
-  year: number | null;
-  setYear: (v: number | null) => void;
-  durationSeconds: number | null;
-  setDurationSeconds: (v: number | null) => void;
-  releaseType: string;
-  setReleaseType: (v: string) => void;
-  genres: string[];
-  setGenres: (v: string[]) => void;
-  description: string;
-  setDescription: (v: string) => void;
-  setCoverFile: (v: File | null) => void;
-  setCoverUrl: (v: string | null) => void;
-}) {
-  return (
-    <div className="space-y-5">
-      <div className="flex items-start gap-3">
+  const cardSection = (
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
+      <CardSectionHeader label="основное" title="Карточка" />
+      <div className="flex flex-col gap-5">
         <CoverUpload
-          onFileChange={setCoverFile}
-          onUrlChange={setCoverUrl}
-          label="Обложка"
+          layout="stacked"
+          onFileChange={(file) => {
+            setCoverFile(file);
+            markDirty();
+          }}
+          onUrlChange={(url) => {
+            setCoverUrl(url);
+            markDirty();
+          }}
         />
-        <div className="min-w-0 flex-1">
-          <Field
-            label="Название"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            placeholder="Например, Криминальное чтиво"
+        <Field
+          label="Название"
+          variant="underline"
+          value={title}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            markDirty();
+          }}
+          required
+          placeholder="Например, Криминальное чтиво"
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <YearInput
+            value={year}
+            onChange={(y) => {
+              setYear(y);
+              markDirty();
+            }}
+            hint="Год выхода, 1888 — текущий+1."
+          />
+          <DurationInput
+            valueSeconds={durationSeconds}
+            onChange={(s) => {
+              setDurationSeconds(s);
+              markDirty();
+            }}
+            hint="Из ffprobe при автозаполнении или вручную."
+          />
+        </div>
+        <Select
+          label="Тип релиза"
+          value={releaseType}
+          onChange={(v) => {
+            setReleaseType(v);
+            markDirty();
+          }}
+          options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
+          hint="BDRemux, BDRip, WEB-DL…"
+        />
+        <GenrePicker
+          value={genres}
+          onChange={(g) => {
+            setGenres(g);
+            markDirty();
+          }}
+        />
+        <TextAreaField
+          label="Описание"
+          variant="underline"
+          value={description}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            markDirty();
+          }}
+          placeholder="Краткое описание фильма…"
+          hint="Краткое описание сюжета — на твоё усмотрение."
+          rows={4}
+        />
+      </div>
+    </MachinedCard>
+  );
+
+  const sourceSection = (
+    <MachinedCard variant="calm" bodyClassName="space-y-5">
+      <CardSectionHeader label="хранилище" title="Источник файла" />
+
+      <StoragePicker
+        compact
+        storageKind={storageKind}
+        onStorageKindChange={(value) => {
+          setStorageKind(value);
+          markDirty();
+        }}
+        externalStorages={externalStorages}
+        selectedStorageId={selectedStorageId}
+        onSelectedStorageIdChange={(value) => {
+          setSelectedStorageId(value);
+          markDirty();
+        }}
+        onCreateExternalStorage={async (name) => {
+          await createExternalStorage(name);
+          markDirty();
+        }}
+      />
+
+      <Field
+        label="Путь к файлу (опционально)"
+        placeholder="D:\Movies\film.mkv или /mnt/d/Movies/film.mkv"
+        hint={FILE_PATH_INPUT_HINT}
+      >
+        <input
+          id="add-movie-file-path"
+          className="focus-ring min-h-11 min-w-0 w-full rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60"
+          value={filePath}
+          onChange={(e) => {
+            setFilePath(e.target.value);
+            setFileFillError(null);
+            setFileFillMessage(null);
+            markDirty();
+          }}
+          onBlur={(e) =>
+            trimOnInputBlur(e, () => {
+              handleFilePathBlur();
+            })
+          }
+          aria-describedby="add-movie-file-path-feedback"
+          placeholder="D:\Movies\film.mkv или /mnt/d/Movies/film.mkv"
+        />
+        <div id="add-movie-file-path-feedback" className="pt-1">
+          {filePath.trim() ? (
+            <p className="flex items-center gap-2 text-xs text-muted">
+              {checking ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
+              ) : fileExists ? (
+                <Check className="h-3.5 w-3.5 text-accent" />
+              ) : (
+                <FileVideo className="h-3.5 w-3.5 text-faint" />
+              )}
+              {checking
+                ? "Проверяю файл…"
+                : fileExists
+                  ? "Файл доступен"
+                  : "Файл не найден — можно заполнить вручную"}
+            </p>
+          ) : (
+            <p className="text-xs text-faint">
+              Без пути фильм сохранится как карточка без привязки к файлу
+            </p>
+          )}
+        </div>
+      </Field>
+    </MachinedCard>
+  );
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex h-full min-h-0 flex-col pb-28 lg:pb-0"
+    >
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3 lg:gap-8">
+        <div className="flex flex-col gap-6 lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+          {cardSection}
+          {sourceSection}
+        </div>
+
+        <div className="flex h-full min-h-0 flex-col overflow-hidden lg:col-span-2">
+          <TrackEditorSection
+            tabbed
+            layout="panel"
+            variant="balanced"
+            videoColumnsOnXl
+            audioGridCols="adaptive"
+            headerTrailing={
+              <Button
+                type="button"
+                variant="secondary"
+                loading={autoFilling}
+                onClick={handleAutoFill}
+                disabled={!filePath.trim() || autoFilling}
+                className="ml-auto min-h-9 shrink-0 px-3 py-1.5"
+              >
+                <ScanSearch className="h-4 w-4" aria-hidden />
+                Заполнить из файла
+              </Button>
+            }
+            notice={
+              fileFillError ? (
+                <p
+                  className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+                  role="alert"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <span>{fileFillError}</span>
+                </p>
+              ) : fileFillMessage ? (
+                <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <span>{fileFillMessage}</span>
+                </p>
+              ) : null
+            }
+            video={video}
+            onVideoChange={patchVideo}
+            audioRows={audioRows}
+            onUpdateAudio={patchAudio}
+            onAddAudio={() => {
+              addAudioRow();
+              markDirty();
+            }}
+            onRemoveAudio={(index) => {
+              removeAudioRow(index);
+              markDirty();
+            }}
+            subtitleRows={subRows}
+            onUpdateSubtitle={patchSubtitle}
+            onAddSubtitle={() => {
+              addSubRow();
+              markDirty();
+            }}
+            onRemoveSubtitle={(index) => {
+              removeSubRow(index);
+              markDirty();
+            }}
+            mainTrackStyle="star"
+            minAudioRows={0}
+            emptySubtitleMessage="Субтитров нет"
           />
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <YearInput
-          value={year}
-          onChange={setYear}
-          hint="Год выхода фильма, от 1888 до текущего+1. Можно вводить цифрами или шагать кнопками; «Автозаполнить из файла» подставит само."
-        />
-        <DurationInput
-          valueSeconds={durationSeconds}
-          onChange={setDurationSeconds}
-          hint="Хранится в секундах. Переключайте формат справа: чч:мм:сс, минуты или секунды. «Автозаполнить из файла» подставит само."
-        />
-      </div>
-      <Select
-        label="Тип релиза"
-        value={releaseType}
-        onChange={setReleaseType}
-        options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
-        hint="Источник копии: BDRemux, BDRip, WEB-DL, Blu-ray и т.д. Влияет на качество."
-      />
-      <GenrePicker value={genres} onChange={setGenres} />
-      <TextAreaField
-        label="Описание"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Краткое описание фильма…"
-        hint="Краткое описание сюжета — на твоё усмотрение."
-      />
-    </div>
+
+      <FormActionBar
+        isDirty={isDirty}
+        saving={loading}
+        error={error}
+        idleMessage={
+          !isDirty && !loading && !error
+            ? "Заполните карточку или укажите файл для автозаполнения"
+            : undefined
+        }
+      >
+        <Link
+          href="/"
+          className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-all duration-200 hover:border-accent/50 hover:bg-bg-surface-hover hover:text-accent"
+        >
+          Отмена
+        </Link>
+        <Button type="submit" variant="primary" loading={loading}>
+          Добавить в каталог
+        </Button>
+      </FormActionBar>
+    </form>
   );
 }

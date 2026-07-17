@@ -54,5 +54,6 @@ docs/adr/0002-franchise-slots-model.md
 | [0004](0004-cinematic-tech-design-system.md) | Cinematic Tech design system | Accepted |
 | [0005](0005-tier-driven-spotlight.md) | Tier-driven ambient spotlight | Accepted |
 | [0006](0006-durable-release-build-worker.md) | Durable release build worker | Accepted |
+| [0007](0007-tv-export-and-runtime-paths.md) | TV export and runtime paths | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

@@ -32,6 +32,7 @@ export default async function NewReleaseBuildPage({ params }: PageProps) {
       <ReleaseBuildEditor
         movieId={movie.id}
         movieTitle={movie.title}
+        movieYear={movie.year}
         releases={movie.releases}
       />
     </ReleaseEditPageLayout>

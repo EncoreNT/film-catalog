@@ -55,6 +55,16 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | GET | `/api/storages` | Список внешних дисков (`ExternalStorage`) |
 | POST | `/api/storages` | Создать внешний диск |
 | GET | `/api/stats` | Archive metrics JSON |
+| GET | `/api/settings` | `mediaSaveDir` (+ display form) |
+| PATCH | `/api/settings` | Сохранить `mediaSaveDir` (Win/WSL → runtime path) |
+| GET | `/api/disk-space?path=` | Свободное место на томе для пути |
+
+## Releases (movie)
+
+| Method | Path | Назначение |
+|--------|------|------------|
+| DELETE | `/api/movies/[id]/releases/[releaseId]?deleteFile=true` | Удалить релиз; опционально файл на диске |
+| POST | `/api/movies/[id]/releases/[releaseId]/export` | Копия TV-ready файла в `mediaSaveDir` (`dryRun`, `filename`) |
 
 ## Release builds
 

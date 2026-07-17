@@ -123,6 +123,7 @@ export const movieListQuerySchema = z.object({
   resolution: z.string().optional(),
   hdr: z.string().optional(),
   premiumAudio: z.string().optional(),
+  tvReady: z.string().optional(),
   multiRelease: z.string().optional(),
   language: z.string().optional(),
   subtitleLang: z.string().optional(),

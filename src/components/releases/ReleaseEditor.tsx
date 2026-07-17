@@ -34,6 +34,12 @@ import {
 } from "@/lib/shared/dictionaries";
 import { trimOnInputBlur } from "@/lib/shared/text-trim";
 import {
+  commitFilePathInput,
+  FILE_PATH_INPUT_HINT,
+  formatFilePathInput,
+  normalizeFilePathInput,
+} from "@/lib/shared/display-path";
+import {
   applyParsedFilePathFields,
   applyProbeToTrackEditor,
   probeFilePath,
@@ -88,7 +94,9 @@ function useReleaseFormState(release: ReleaseWithTracks | null) {
   const [version, setVersion] = useState(
     release?.version ?? DEFAULT_MOVIE_VERSION,
   );
-  const [filePath, setFilePath] = useState(release?.filePath ?? "");
+  const [filePath, setFilePath] = useState(() =>
+    formatFilePathInput(release?.filePath ?? ""),
+  );
   const [pendingFileMeta, setPendingFileMeta] =
     useState<MovieFileMetaPayload | null>(null);
   const [fillingFromFile, setFillingFromFile] = useState(false);
@@ -180,8 +188,8 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
   const markDirty = () => setIsDirty(true);
 
   const handleFillFromFile = async () => {
-    const trimmed = form.filePath.trim();
-    if (!trimmed) {
+    const runtime = normalizeFilePathInput(form.filePath);
+    if (!runtime) {
       form.setFileFillError("Укажите путь к файлу");
       form.setFileFillMessage(null);
       return;
@@ -190,8 +198,10 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     form.setFillingFromFile(true);
     form.setFileFillMessage(null);
     try {
-      const data = await probeFilePath(trimmed, { title: movieTitle || "probe" });
-      applyParsedFilePathFields(trimmed, {
+      const { display } = commitFilePathInput(form.filePath);
+      form.setFilePath(display);
+      const data = await probeFilePath(runtime, { title: movieTitle || "probe" });
+      applyParsedFilePathFields(runtime, {
         releaseType: form.releaseType,
         setReleaseType: form.setReleaseType,
       });
@@ -220,7 +230,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     return buildReleaseUpdatePayload({
       releaseType: form.releaseType,
       version: form.version,
-      filePath: form.filePath,
+      filePath: normalizeFilePathInput(form.filePath),
       fileMeta: form.pendingFileMeta,
       externalStorageId,
       durationSeconds: form.durationSeconds,
@@ -345,8 +355,8 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
 
       <Field
         label="Путь к файлу"
-        placeholder="/Volumes/Seagate/Movies/film.mkv"
-        hint="Абсолютный путь к видеофайлу."
+        placeholder="D:\Movies\film.mkv или /mnt/d/Movies/film.mkv"
+        hint={FILE_PATH_INPUT_HINT}
       >
         <div className="flex flex-col gap-2">
           <input
@@ -364,7 +374,12 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             }}
             onBlur={(e) =>
               trimOnInputBlur(e, (ev) => {
-                form.setFilePath(ev.target.value);
+                const trimmed = ev.target.value.trim();
+                if (!trimmed) {
+                  form.setFilePath("");
+                } else {
+                  form.setFilePath(commitFilePathInput(trimmed).display);
+                }
                 form.setPendingFileMeta(null);
                 form.setFileFillMessage(null);
                 form.setFileFillError(null);
@@ -374,7 +389,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             aria-describedby={
               form.fileFillError ? "file-path-fill-feedback" : undefined
             }
-            placeholder="/Volumes/Seagate/Movies/film.mkv"
+            placeholder="D:\Movies\film.mkv или /mnt/d/Movies/film.mkv"
           />
           <Button
             type="button"

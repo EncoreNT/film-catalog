@@ -86,7 +86,7 @@ export function CardSectionHeader({
         </p>
         {labelTrailing}
       </div>
-      <div className="mt-1.5 flex items-center gap-2">
+      <div className="mt-1.5 flex w-full items-center gap-2">
         <h2 className="font-display text-xl font-semibold tracking-tight">
           {title}
         </h2>

@@ -11,7 +11,7 @@ export const FACET_KEYS = [
   "audioFormat",
   "audioTranslation",
 ] as const;
-export const SCALAR_FACET_KEYS = ["hdr", "premiumAudio"] as const;
+export const SCALAR_FACET_KEYS = ["hdr", "premiumAudio", "tvReady"] as const;
 export const SCALAR_KEYS = [
   "q",
   "minRating",
@@ -54,6 +54,7 @@ export interface FilterBarFacets {
   russianAudioFormats: Facet[];
   originalAudioFormats: Facet[];
   genres: Facet[];
+  tvReady: number;
 }
 
 export function facetCountMap(facets: Facet[]): Map<string, number> {

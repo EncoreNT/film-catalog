@@ -29,6 +29,7 @@ import {
   displayGenreName,
 } from "@/lib/shared/dictionaries";
 import { RUS_AUDIO_FORMATS } from "@/lib/catalog/russian-audio-formats";
+import { tvReadyFilterChipLabel } from "@/lib/media/tv-ready";
 import { trimInput } from "@/lib/shared/text-trim";
 import {
   sortGenreFacets,
@@ -234,6 +235,7 @@ export function FilterSidebar({
   );
   const hdrAnyActive = activeHdr.includes(HDR_ANY);
   const premiumAudioActive = searchParams.get("premiumAudio") === "true";
+  const tvReadyActive = searchParams.get("tvReady") === "true";
 
   const showResolution = hasFacets(facets.resolutions);
   const showGenres = hasFacets(facets.genres);
@@ -580,6 +582,23 @@ export function FilterSidebar({
                 >
                   <Sparkles className="h-3 w-3" aria-hidden />
                   {audioScope === "rus" ? "Рус. Atmos · DTS:X" : "Atmos · DTS:X"}
+                </Chip>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-micro text-faint/70">TV</p>
+                <Chip
+                  size="sm"
+                  active={tvReadyActive}
+                  count={facets.tvReady > 0 ? facets.tvReady : undefined}
+                  onClick={() =>
+                    updateParams({
+                      tvReady: tvReadyActive ? null : "true",
+                    })
+                  }
+                >
+                  <MonitorPlay className="h-3 w-3" aria-hidden />
+                  {tvReadyFilterChipLabel()}
                 </Chip>
               </div>
             </div>

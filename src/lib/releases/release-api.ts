@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { normalizeFilePathInput } from "@/lib/shared/display-path";
 import { probeMediaFile } from "@/lib/media/ffprobe";
 import { loadMovieFileMeta } from "@/lib/releases/load-movie-file-meta";
 import { syncReleaseTracks } from "@/lib/releases/release-tracks";
@@ -52,9 +53,10 @@ export async function resolveReleaseProbeData(input: ReleaseCreateInput) {
   let durationSeconds = input.durationSeconds ?? null;
 
   const shouldProbe = !!input.filePath?.trim() && !input.skipProbe;
-  if (shouldProbe) {
+  const runtimeFilePath = normalizeFilePathInput(input.filePath);
+  if (shouldProbe && runtimeFilePath) {
     try {
-      const probe = await probeMediaFile(input.filePath!.trim());
+      const probe = await probeMediaFile(runtimeFilePath);
       if (probe.durationSeconds != null) durationSeconds = probe.durationSeconds;
       if (probe.video) video = probe.video;
       if (probe.audio.length) audio = probe.audio;
@@ -68,16 +70,17 @@ export async function resolveReleaseProbeData(input: ReleaseCreateInput) {
 }
 
 export async function readReleaseFileMeta(filePath: string | null | undefined) {
-  if (!filePath?.trim()) {
+  const trimmedPath = normalizeFilePathInput(filePath);
+  if (!trimmedPath) {
     return { fileSize: null, fileMtime: null, fileHash: null, trimmedPath: null };
   }
   const { readMovieFileMeta } = await loadMovieFileMeta();
-  const meta = await readMovieFileMeta(filePath.trim());
+  const meta = await readMovieFileMeta(trimmedPath);
   return {
     fileSize: meta.fileSize,
     fileMtime: meta.fileMtime,
     fileHash: meta.fileHash,
-    trimmedPath: filePath.trim(),
+    trimmedPath,
   };
 }
 
@@ -137,7 +140,7 @@ export async function updateReleaseWithTracks(
   let nextFileHash = fileHash;
 
   if (filePath !== undefined) {
-    const trimmed = filePath?.trim() || null;
+    const trimmed = normalizeFilePathInput(filePath);
     if (!trimmed) {
       nextFileSize = null;
       nextFileMtime = null;
@@ -150,7 +153,10 @@ export async function updateReleaseWithTracks(
     data: {
       ...rest,
       ...(version != null ? { version } : {}),
-      filePath: filePath === undefined ? undefined : filePath ? filePath.trim() : null,
+      filePath:
+        filePath === undefined
+          ? undefined
+          : normalizeFilePathInput(filePath),
       fileSize: nextFileSize,
       fileMtime: nextFileMtime === undefined ? undefined : nextFileMtime,
       fileHash: nextFileHash,
