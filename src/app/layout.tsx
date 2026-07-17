@@ -4,6 +4,7 @@ import { GrainOverlay } from "@/components/layout/GrainOverlay";
 import { AmbientBackground } from "@/components/layout/AmbientBackground";
 import { SpotlightAimProvider } from "@/components/layout/SpotlightAimProvider";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { ActiveMediaJobsDock } from "@/components/media-jobs/ActiveMediaJobsDock";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,6 +40,8 @@ export default function RootLayout({
           <main className="container-wide relative z-10 px-6 pt-4 pb-8 lg:px-10 lg:pt-5 lg:pb-10 xl:px-14 2xl:px-20 3xl:px-24">
             {children}
           </main>
+
+          <ActiveMediaJobsDock />
         </SpotlightAimProvider>
       </body>
     </html>

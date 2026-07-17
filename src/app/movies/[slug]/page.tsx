@@ -9,10 +9,6 @@ import { MovieRatingWatchedSection } from "@/components/movies/MovieRatingWatche
 import { EmptyReleasesCard } from "@/components/movies/EmptyReleasesCard";
 import { SpotlightTarget } from "@/components/layout/SpotlightTarget";
 import { loadMovieDetailPage } from "@/lib/movies/load-movie-detail-page";
-import { prisma } from "@/lib/db/prisma";
-import { buildInclude } from "@/lib/builds/build-queue";
-import { serializeBuild } from "@/lib/builds/build-serialize";
-import { MovieBuildJobsPanel } from "@/components/builds/MovieBuildJobsPanel";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -29,13 +25,6 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
 
   const data = await loadMovieDetailPage(slug, releaseIdParam);
   if (!data) notFound();
-
-  const recentBuilds = await prisma.releaseBuild.findMany({
-    where: { movieId: data.movie.id },
-    include: buildInclude,
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
 
   const {
     movie,
@@ -92,11 +81,6 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
             movieId={movie.id}
             rating={movie.rating}
             watchedAt={movie.watchedAt}
-          />
-
-          <MovieBuildJobsPanel
-            movieSlug={movie.slug}
-            builds={recentBuilds.map(serializeBuild)}
           />
         </div>
 
