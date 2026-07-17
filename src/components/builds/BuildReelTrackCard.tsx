@@ -23,6 +23,8 @@ import {
   ReorderButton,
   SpecChip,
   TierDot,
+  TrackCheckboxOption,
+  TrackRadioOption,
 } from "@/components/builds/BuildAtoms";
 import {
   sourceTierTone,
@@ -158,14 +160,12 @@ export function BuildReelTrackCard({
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
               <ReorderButton
-                direction="up"
                 Icon={ArrowUp}
                 label="Выше"
                 onClick={onMoveUp}
                 disabled={!canMoveUp}
               />
               <ReorderButton
-                direction="down"
                 Icon={ArrowDown}
                 label="Ниже"
                 onClick={onMoveDown}
@@ -332,7 +332,7 @@ export function BuildReelTrackCard({
           ) : null}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Toggle
+            <TrackRadioOption
               checked={track.isDefault ?? false}
               onChange={(v) => onChange({ isDefault: v })}
               label="по умолчанию"
@@ -348,13 +348,13 @@ export function BuildReelTrackCard({
       ) : null}
 
       {track.kind === "subtitle" ? (
-        <div className="flex flex-wrap items-center gap-3 border-t border-border/60 px-3 py-2.5 sm:px-4">
-          <Toggle
+        <div className="flex flex-wrap items-center gap-4 border-t border-border/60 px-3 py-2.5 sm:px-4">
+          <TrackRadioOption
             checked={track.isDefault ?? false}
             onChange={(v) => onChange({ isDefault: v })}
             label="по умолчанию"
           />
-          <Toggle
+          <TrackCheckboxOption
             checked={track.forced ?? false}
             onChange={(v) => onChange({ forced: v })}
             label="форсированные"
@@ -362,40 +362,5 @@ export function BuildReelTrackCard({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      aria-pressed={checked}
-      className={`focus-ring font-mono-tech inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] transition-colors ${
-        checked
-          ? "border-accent/45 bg-accent/[0.1] text-accent-bright"
-          : "border-border bg-bg-deep/40 text-muted hover:text-text"
-      }`}
-    >
-      <span
-        className={`flex h-3 w-3 items-center justify-center rounded-full border transition-colors ${
-          checked ? "border-accent bg-accent" : "border-muted/60"
-        }`}
-        aria-hidden
-      >
-        {checked ? (
-          <span className="h-1 w-1 rounded-full bg-bg-deep" />
-        ) : null}
-      </span>
-      {label}
-    </button>
   );
 }

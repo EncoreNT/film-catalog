@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Check, Info } from "lucide-react";
 import {
   kindMeta,
   specTagClass,
@@ -133,13 +133,11 @@ export function ChipButton({
 
 /** Reorder handle button (up/down). */
 export function ReorderButton({
-  direction,
   onClick,
   disabled,
   label,
   Icon,
 }: {
-  direction: "up" | "down";
   onClick: () => void;
   disabled: boolean;
   label: string;
@@ -153,7 +151,89 @@ export function ReorderButton({
       aria-label={label}
       className={`focus-ring flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-muted transition-colors hover:bg-white/[0.06] hover:text-text disabled:cursor-not-allowed disabled:opacity-30`}
     >
-      <Icon className={`h-3.5 w-3.5 ${direction === "down" ? "rotate-180" : ""}`} strokeWidth={1.5} />
+      <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+    </button>
+  );
+}
+
+const trackOptionLabel =
+  "font-mono-tech text-[10px] uppercase tracking-[0.12em] transition-colors";
+
+/** Exclusive default — radio affordance (one per kind in the build). */
+export function TrackRadioOption({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="focus-ring group inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-1 py-1"
+    >
+      <span
+        aria-hidden
+        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border bg-bg-elevated shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 group-hover:border-accent/50 ${
+          checked
+            ? "border-accent bg-accent/15 shadow-[0_0_12px_var(--accent-glow)]"
+            : "border-border-strong"
+        }`}
+      >
+        <span
+          className={`h-2 w-2 rounded-full bg-accent transition-all duration-150 ${
+            checked ? "scale-100 opacity-100" : "scale-0 opacity-0"
+          }`}
+        />
+      </span>
+      <span className={`${trackOptionLabel} ${checked ? "text-accent-bright" : "text-muted group-hover:text-text"}`}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
+/** Per-track flag — checkbox affordance (independent for each track). */
+export function TrackCheckboxOption({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="focus-ring group inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-1 py-1"
+    >
+      <span
+        aria-hidden
+        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border bg-bg-elevated shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 group-hover:border-accent/50 ${
+          checked
+            ? "border-accent bg-accent/15 shadow-[0_0_12px_var(--accent-glow)]"
+            : "border-border-strong"
+        }`}
+      >
+        <Check
+          className={`h-3 w-3 text-accent transition-all duration-150 ${
+            checked ? "scale-100 opacity-100" : "scale-75 opacity-0"
+          }`}
+          strokeWidth={2.5}
+        />
+      </span>
+      <span className={`${trackOptionLabel} ${checked ? "text-accent-bright" : "text-muted group-hover:text-text"}`}>
+        {label}
+      </span>
     </button>
   );
 }

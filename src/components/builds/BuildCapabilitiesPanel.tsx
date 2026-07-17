@@ -24,6 +24,13 @@ function shortToolVersion(raw: string | null | undefined): string | null {
   return match ? `v${match[1]}` : null;
 }
 
+function formatToolsStatusBadge(missingCount: number, missingLabels: string[]): string {
+  if (missingCount === 0) return "все найдены";
+  if (missingCount === TOOLS.length) return "утилиты не установлены";
+  if (missingCount === 1) return `нет ${missingLabels[0]}`;
+  return `не хватает ${missingCount} утилит`;
+}
+
 export function BuildCapabilitiesPanel({ capabilities }: BuildCapabilitiesPanelProps) {
   const missing = capabilities
     ? TOOLS.filter((t) => !capabilities[t.key].available)
@@ -38,7 +45,10 @@ export function BuildCapabilitiesPanel({ capabilities }: BuildCapabilitiesPanelP
           : "border-danger/35 bg-danger/[0.08] text-danger"
       }`}
     >
-      {allOk ? "все найдены" : `${missing.length} нет в PATH`}
+      {formatToolsStatusBadge(
+        missing.length,
+        missing.map((t) => t.label),
+      )}
     </span>
   ) : (
     <span className="font-mono-tech rounded-full border border-border bg-bg-deep/50 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-faint">

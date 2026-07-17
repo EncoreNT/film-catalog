@@ -13,7 +13,7 @@ import {
 } from "@/lib/builds/build-display";
 
 interface BuildVideoCardProps {
-  /** Текущая видео-дорожка в рецепте или null, если видео ещё не выбрано. */
+  /** Текущая видео-дорожка в сборке или null, если видео ещё не выбрано. */
   track: {
     sourceReleaseId: number;
     sourceStreamIndex: number;

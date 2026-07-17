@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import { TierDot } from "@/components/builds/BuildAtoms";
 import type { TierTone } from "@/lib/builds/build-display";
 
@@ -29,12 +30,32 @@ export function BuildKindSection({
   children,
 }: BuildKindSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const sectionRef = useRef<HTMLElement>(null);
+  const scrollOnExpandRef = useRef(false);
+  const reduceMotion = useReducedMotion();
+
+  const handleToggle = () => {
+    if (!open) scrollOnExpandRef.current = true;
+    setOpen((v) => !v);
+  };
+
+  useLayoutEffect(() => {
+    if (!open || !scrollOnExpandRef.current) return;
+    scrollOnExpandRef.current = false;
+    sectionRef.current?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [open, reduceMotion]);
 
   return (
-    <section className="overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated/40">
+    <section
+      ref={sectionRef}
+      className="scroll-mt-3 overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated/40"
+    >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         aria-expanded={open}
         className="focus-ring flex w-full items-center gap-3 px-3.5 py-3 text-left sm:px-4"
       >

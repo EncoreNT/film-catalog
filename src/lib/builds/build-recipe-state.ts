@@ -144,7 +144,7 @@ export function moveTrackWithinKind(
 
 const EXCLUSIVE_DEFAULT_KINDS = ["audio", "subtitle"] as const;
 
-/** At most one default track per audio and subtitle in the recipe. */
+/** At most one default track per audio and subtitle in the build. */
 export function normalizeExclusiveDefaults(
   tracks: BuildRecipeTrackState[],
 ): BuildRecipeTrackState[] {

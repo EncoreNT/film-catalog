@@ -46,7 +46,7 @@ export function BuildWarningsPanel({
       ) : (
         <p className="flex items-start gap-2 text-sm text-accent">
           <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          Рецепт готов к постановке в очередь
+          Сборка готова к постановке в очередь
         </p>
       )}
       {warnings.length > 0 ? (

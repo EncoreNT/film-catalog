@@ -38,7 +38,7 @@ export function BuildValidationPanel({
 
   return (
     <MachinedCard variant="calm" bodyClassName="space-y-4">
-      <CardSectionHeader label="проверка" title="Состояние рецепта" />
+      <CardSectionHeader label="проверка" title="Состояние сборки" />
 
       <div className="flex items-center gap-2.5">
         <span className={`neural-pulse h-2 w-2 rounded-full ${tone.dot}`} aria-hidden />
@@ -74,7 +74,7 @@ export function BuildValidationPanel({
       {!hasErrors && !hasWarnings ? (
         <p className="flex items-start gap-2 text-sm text-accent">
           <Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden />
-          Рецепт собран корректно — можно ставить в очередь.
+          Сборка настроена корректно — можно ставить в очередь.
         </p>
       ) : null}
 

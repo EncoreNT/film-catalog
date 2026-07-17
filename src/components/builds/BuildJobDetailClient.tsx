@@ -147,7 +147,7 @@ export function BuildJobDetailClient({
       ) : null}
 
       <MachinedCard variant="calm" bodyClassName="space-y-3">
-        <CardSectionHeader label="дорожки" title="Рецепт" />
+        <CardSectionHeader label="дорожки" title="Состав сборки" />
         {build.tracks.map((track) => (
           <div
             key={track.id}

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Wand2, Layers } from "lucide-react";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { Button } from "@/components/primitives/Button";
@@ -11,6 +10,7 @@ import {
   MachinedCard,
   CardSectionHeader,
 } from "@/components/primitives/MachinedCard";
+import { InfoHint } from "@/components/primitives/InfoHint";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
 import { apiFetch } from "@/lib/api/client";
 import type { BuildCapabilities } from "@/lib/builds/build-capabilities";
@@ -33,7 +33,6 @@ import { sourceTrackLabel } from "@/lib/builds/build-display";
 
 interface ReleaseBuildEditorProps {
   movieId: number;
-  movieSlug: string;
   movieTitle: string;
   releases: ReleaseWithTracks[];
 }
@@ -97,7 +96,6 @@ function buildTrackFromSource(
 
 export function ReleaseBuildEditor({
   movieId,
-  movieSlug,
   movieTitle,
   releases,
 }: ReleaseBuildEditorProps) {
@@ -345,6 +343,13 @@ export function ReleaseBuildEditor({
     validation?.ok === true &&
     (warningsCount === 0 || ackWarnings);
 
+  const actionBarHint =
+    validation?.ok === true
+      ? "состав сборки проверен — можно ставить в очередь"
+      : validation?.ok === false
+        ? "есть ошибки — исправьте и проверьте снова"
+        : "настройте состав сборки и нажмите «Проверить»";
+
   return (
     <form
       onSubmit={(e) => {
@@ -360,16 +365,18 @@ export function ReleaseBuildEditor({
             <CardSectionHeader
               label="источники"
               title={movieTitle}
+              labelTrailing={
+                <InfoHint
+                  label="Источники"
+                  text="Клик по дорожке — добавить в сборку или убрать. Видео меняется только сменой релиза."
+                />
+              }
               trailing={
                 <span className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-muted">
                   {releases.length} {pluralReleases(releases.length)}
                 </span>
               }
             />
-            <p className="font-mono-tech -mt-1 text-[11px] leading-relaxed text-muted">
-              Нажмите на дорожку, чтобы добавить или убрать её из сборки. Видео заменяется
-              другим релизом.
-            </p>
             <BuildSourceDecks
               releases={releases}
               inReel={inReel}
@@ -439,13 +446,7 @@ export function ReleaseBuildEditor({
         </div>
       </div>
 
-      <FormActionBar isDirty saving={loading} error={error}>
-        <Link
-          href={`/movies/${movieSlug}`}
-          className="focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-bg-elevated"
-        >
-          Отмена
-        </Link>
+      <FormActionBar idleMessage={actionBarHint} saving={loading} error={error}>
         <Button
           type="button"
           variant="secondary"

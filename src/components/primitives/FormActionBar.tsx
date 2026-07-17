@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 
 interface FormActionBarProps {
   isDirty?: boolean;
+  /** Overrides default saved/dirty idle text (not shown while loading or when error is set). */
+  idleMessage?: string;
   saving?: boolean;
   actionLoading?: boolean;
   error?: string | null;
@@ -13,6 +15,7 @@ interface FormActionBarProps {
 
 export function FormActionBar({
   isDirty = false,
+  idleMessage,
   saving = false,
   actionLoading = false,
   error = null,
@@ -39,6 +42,8 @@ export function FormActionBar({
             <span className="truncate text-sm text-danger" role="alert">
               {error}
             </span>
+          ) : idleMessage ? (
+            <span className="font-mono-tech text-sm text-muted">{idleMessage}</span>
           ) : isDirty ? (
             <>
               <span

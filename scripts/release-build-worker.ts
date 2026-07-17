@@ -15,14 +15,14 @@ async function sleep(ms: number) {
 }
 
 async function main() {
-  const caps = await getBuildCapabilities();
-  const capError = assertBuildCapabilities(caps);
+  let capError = assertBuildCapabilities(await getBuildCapabilities());
   if (capError) {
-    console.error(`[${WORKER_ID}] ${capError}`);
-    process.exit(1);
+    console.warn(
+      `[${WORKER_ID}] ${capError} — сборки отключены, каталог работает; установите ffmpeg/ffprobe/mkvmerge или перезапустите worker`,
+    );
+  } else {
+    console.log(`[${WORKER_ID}] started`);
   }
-
-  console.log(`[${WORKER_ID}] started`);
 
   const shutdown = { value: false };
   const handleSignal = () => {
@@ -32,6 +32,15 @@ async function main() {
   process.on("SIGTERM", handleSignal);
 
   while (!shutdown.value) {
+    if (capError) {
+      await sleep(POLL_MS);
+      capError = assertBuildCapabilities(await getBuildCapabilities());
+      if (!capError) {
+        console.log(`[${WORKER_ID}] инструменты найдены, обрабатываю очередь сборок`);
+      }
+      continue;
+    }
+
     await recoverStaleBuilds();
     const job = await claimNextBuild(WORKER_ID);
     if (!job) {

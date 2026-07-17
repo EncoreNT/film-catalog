@@ -31,7 +31,6 @@ export default async function NewReleaseBuildPage({ params }: PageProps) {
     <ReleaseEditPageLayout movie={movie} eyebrow="сборка релиза" fillViewport>
       <ReleaseBuildEditor
         movieId={movie.id}
-        movieSlug={movie.slug}
         movieTitle={movie.title}
         releases={movie.releases}
       />
