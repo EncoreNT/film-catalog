@@ -6,6 +6,7 @@ import {
 } from "@/lib/builds/build-presets";
 import type { BuildRecipe } from "@/lib/builds/build-validation";
 import type { BuildWarning } from "@/lib/builds/build-inspect-runtime";
+import { releaseInclude } from "@/lib/movies/movie-include";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
@@ -78,14 +79,16 @@ export async function enqueueBuild(
 }
 
 export const buildInclude = {
-  movie: { select: { id: true, slug: true, title: true } },
+  movie: {
+    select: { id: true, slug: true, title: true, coverPath: true, updatedAt: true },
+  },
   outputRelease: {
-    select: { id: true, filePath: true },
+    include: releaseInclude,
   },
   externalStorage: { select: { id: true, name: true } },
   sources: {
     include: {
-      release: { select: { id: true, releaseType: true, version: true } },
+      release: { include: releaseInclude },
     },
   },
   tracks: { orderBy: { sortOrder: "asc" as const } },

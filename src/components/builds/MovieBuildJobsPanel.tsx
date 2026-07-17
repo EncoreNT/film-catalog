@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
+import { sortBuildsForQueue } from "@/lib/builds/build-queue-display";
 import { BuildJobCard } from "@/components/builds/BuildJobCard";
 
 export function MovieBuildJobsPanel({
@@ -13,6 +14,8 @@ export function MovieBuildJobsPanel({
 }) {
   if (builds.length === 0) return null;
 
+  const sorted = sortBuildsForQueue(builds);
+
   return (
     <div className="surface-card rounded-[var(--radius)] p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -22,8 +25,8 @@ export function MovieBuildJobsPanel({
         </Link>
       </div>
       <div className="space-y-2">
-        {builds.slice(0, 3).map((build) => (
-          <BuildJobCard key={build.id} build={build} />
+        {sorted.slice(0, 3).map((build) => (
+          <BuildJobCard key={build.id} build={build} allItems={sorted} compact />
         ))}
       </div>
       <Link

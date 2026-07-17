@@ -18,20 +18,25 @@ interface BuildWarningsPanelProps {
   };
   ackWarnings: boolean;
   onAckChange: (value: boolean) => void;
+  readOnly?: boolean;
 }
 
 export function BuildWarningsPanel({
   validation,
   ackWarnings,
   onAckChange,
+  readOnly = false,
 }: BuildWarningsPanelProps) {
   const errors = validation.errors ?? [];
   const warnings = validation.warnings ?? [];
 
   return (
     <MachinedCard variant="calm" bodyClassName="space-y-4">
-      <CardSectionHeader label="проверка" title="Результат валидации" />
-      {!validation.ok ? (
+      <CardSectionHeader
+        label="проверка"
+        title={readOnly ? "Предупреждения при постановке" : "Результат валидации"}
+      />
+      {!readOnly && !validation.ok ? (
         <div className="space-y-2">
           <p className="flex items-start gap-2 text-sm text-danger">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -43,12 +48,12 @@ export function BuildWarningsPanel({
             </p>
           ))}
         </div>
-      ) : (
+      ) : !readOnly ? (
         <p className="flex items-start gap-2 text-sm text-accent">
           <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           Сборка готова к постановке в очередь
         </p>
-      )}
+      ) : null}
       {warnings.length > 0 ? (
         <div className="space-y-2">
           {warnings.map((item) => (
@@ -56,15 +61,23 @@ export function BuildWarningsPanel({
               {item.message}
             </p>
           ))}
-          <label className="flex items-start gap-2 text-sm text-text">
-            <input
-              type="checkbox"
-              checked={ackWarnings}
-              onChange={(e) => onAckChange(e.target.checked)}
-            />
-            Понимаю предупреждения и хочу продолжить
-          </label>
+          {!readOnly ? (
+            <label className="flex items-start gap-2 text-sm text-text">
+              <input
+                type="checkbox"
+                checked={ackWarnings}
+                onChange={(e) => onAckChange(e.target.checked)}
+              />
+              Понимаю предупреждения и хочу продолжить
+            </label>
+          ) : (
+            <p className="text-xs text-muted">
+              Эти предупреждения были подтверждены при создании сборки.
+            </p>
+          )}
         </div>
+      ) : readOnly ? (
+        <p className="text-sm text-muted">Предупреждений не было.</p>
       ) : null}
     </MachinedCard>
   );

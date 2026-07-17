@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { buildInclude } from "@/lib/builds/build-queue";
 import { serializeBuild } from "@/lib/builds/build-serialize";
+import { sortBuildsForQueue } from "@/lib/builds/build-queue-display";
 import { BuildsPageClient } from "@/components/builds/BuildsPageClient";
 
 interface PageProps {
@@ -20,19 +21,23 @@ export default async function BuildsPage({ searchParams }: PageProps) {
     take: 50,
   });
 
+  const serialized = sortBuildsForQueue(items.map(serializeBuild));
+
   return (
-    <div className="container-wide space-y-6 py-8">
-      <div>
-        <p className="font-mono-tech text-[11px] uppercase text-faint">очередь</p>
-        <h1 className="font-display text-3xl font-semibold text-text">Сборки</h1>
-        <p className="mt-2 text-sm text-muted">
-          Фоновые задачи по сборке пользовательских MKV-релизов.
+    <div className="container-wide space-y-8 py-8 sm:py-10">
+      <header className="max-w-2xl space-y-3">
+        <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-faint">
+          очередь
         </p>
-      </div>
-      <BuildsPageClient
-        initialItems={items.map(serializeBuild)}
-        movieId={movieId}
-      />
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-text sm:text-4xl">
+          Сборки
+        </h1>
+        <p className="text-sm leading-relaxed text-muted sm:text-[0.95rem]">
+          Фоновые задачи по сборке пользовательских MKV. Сначала идут активные сборки и
+          очередь worker, ниже завершённые.
+        </p>
+      </header>
+      <BuildsPageClient initialItems={serialized} movieId={movieId} />
     </div>
   );
 }

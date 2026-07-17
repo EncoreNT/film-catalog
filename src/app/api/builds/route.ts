@@ -4,6 +4,7 @@ import { buildListQuerySchema } from "@/lib/api/validators/build";
 import { paginatedResponse } from "@/lib/api/api-utils";
 import { buildInclude } from "@/lib/builds/build-queue";
 import { serializeBuild } from "@/lib/builds/build-serialize";
+import { sortBuildsForQueue } from "@/lib/builds/build-queue-display";
 
 export async function GET(request: NextRequest) {
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
@@ -28,5 +29,8 @@ export async function GET(request: NextRequest) {
     prisma.releaseBuild.count({ where }),
   ]);
 
-  return paginatedResponse(items.map(serializeBuild), { page, limit, total });
+  return paginatedResponse(
+    sortBuildsForQueue(items.map(serializeBuild)),
+    { page, limit, total },
+  );
 }

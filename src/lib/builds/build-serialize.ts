@@ -1,5 +1,10 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { buildInclude } from "@/lib/builds/build-queue";
+import {
+  buildSpotlightFromVisual,
+  resolveBuildVisualTier,
+  type BuildVisualTier,
+} from "@/lib/builds/build-visual-tier";
 
 type BuildWithRelations = Prisma.ReleaseBuildGetPayload<{
   include: typeof buildInclude;
@@ -14,6 +19,17 @@ export function serializeBuild(build: BuildWithRelations) {
       warnings = [];
     }
   }
+
+  const tierInput = {
+    sources: build.sources.flatMap((s) =>
+      s.releaseId != null && s.release
+        ? [{ role: s.role, releaseId: s.releaseId, release: s.release }]
+        : [],
+    ),
+    tracks: build.tracks,
+    outputRelease: build.outputRelease,
+  };
+  const visualTier = resolveBuildVisualTier(tierInput);
 
   return {
     id: build.id,
@@ -32,6 +48,8 @@ export function serializeBuild(build: BuildWithRelations) {
     outputRelease: build.outputRelease,
     externalStorage: build.externalStorage,
     warnings,
+    visualTier,
+    spotlightTier: buildSpotlightFromVisual(visualTier),
     sources: build.sources.map((s) => ({
       id: s.id,
       releaseId: s.releaseId,
@@ -55,6 +73,7 @@ export function serializeBuild(build: BuildWithRelations) {
       offsetMs: t.offsetMs,
       isDefault: t.isDefault,
       forced: t.forced,
+      keepOriginal: t.keepOriginal,
     })),
     startedAt: build.startedAt?.toISOString() ?? null,
     finishedAt: build.finishedAt?.toISOString() ?? null,
@@ -64,3 +83,4 @@ export function serializeBuild(build: BuildWithRelations) {
 }
 
 export type SerializedBuild = ReturnType<typeof serializeBuild>;
+export type { BuildVisualTier };
