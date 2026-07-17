@@ -1,13 +1,14 @@
 #!/usr/bin/env tsx
 import "dotenv/config";
-import { claimNextBuild, recoverStaleBuilds } from "../src/lib/builds/build-queue";
+import { claimNextMediaJob } from "../src/lib/worker/claim-next-media-job";
 import { runBuildJob } from "../src/lib/builds/build-runner";
+import { runExportJob } from "../src/lib/releases/export-runner";
 import {
   assertBuildCapabilities,
   getBuildCapabilities,
 } from "../src/lib/builds/build-capabilities";
 
-const WORKER_ID = `build-worker-${process.pid}`;
+const WORKER_ID = `media-worker-${process.pid}`;
 const POLL_MS = 2_000;
 
 async function sleep(ms: number) {
@@ -18,7 +19,7 @@ async function main() {
   let capError = assertBuildCapabilities(await getBuildCapabilities());
   if (capError) {
     console.warn(
-      `[${WORKER_ID}] ${capError} — сборки отключены, каталог работает; установите ffmpeg/ffprobe/mkvmerge или перезапустите worker`,
+      `[${WORKER_ID}] ${capError} — сборки отключены; экспорт и каталог работают; установите ffmpeg/ffprobe/mkvmerge или перезапустите worker`,
     );
   } else {
     console.log(`[${WORKER_ID}] started`);
@@ -32,33 +33,33 @@ async function main() {
   process.on("SIGTERM", handleSignal);
 
   while (!shutdown.value) {
-    if (capError) {
-      await sleep(POLL_MS);
-      capError = assertBuildCapabilities(await getBuildCapabilities());
-      if (!capError) {
-        console.log(`[${WORKER_ID}] инструменты найдены, обрабатываю очередь сборок`);
-      }
-      continue;
-    }
-
-    await recoverStaleBuilds();
-    const job = await claimNextBuild(WORKER_ID);
+    const job = await claimNextMediaJob(WORKER_ID, { includeBuilds: !capError });
     if (!job) {
+      if (capError) {
+        capError = assertBuildCapabilities(await getBuildCapabilities());
+        if (!capError) {
+          console.log(`[${WORKER_ID}] инструменты найдены, обрабатываю очередь`);
+        }
+      }
       await sleep(POLL_MS);
       continue;
     }
 
-    console.log(`[${WORKER_ID}] running build #${job.id}`);
+    console.log(`[${WORKER_ID}] running ${job.kind} #${job.id}`);
     const controller = new AbortController();
     const onSignal = () => controller.abort();
     process.once("SIGINT", onSignal);
     process.once("SIGTERM", onSignal);
 
     try {
-      await runBuildJob(job.id, controller.signal);
-      console.log(`[${WORKER_ID}] finished build #${job.id}`);
+      if (job.kind === "build") {
+        await runBuildJob(job.id, controller.signal);
+      } else {
+        await runExportJob(job.id, controller.signal);
+      }
+      console.log(`[${WORKER_ID}] finished ${job.kind} #${job.id}`);
     } catch (err) {
-      console.error(`[${WORKER_ID}] build #${job.id} failed`, err);
+      console.error(`[${WORKER_ID}] ${job.kind} #${job.id} failed`, err);
     } finally {
       process.off("SIGINT", onSignal);
       process.off("SIGTERM", onSignal);

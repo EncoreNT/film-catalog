@@ -23,6 +23,18 @@ describe("file-path-check", () => {
         "/api/movies?path=%2Fa%20b.mkv",
       );
     });
+
+    it("converts Windows paths to WSL before encoding", () => {
+      expect(buildFilePathHeadUrl("D:\\Movies\\film.mkv")).toBe(
+        "/api/movies?path=%2Fmnt%2Fd%2FMovies%2Ffilm.mkv",
+      );
+    });
+
+    it("converts WSL paths before encoding", () => {
+      expect(buildFilePathHeadUrl("/mnt/d/Movies/film.mkv")).toBe(
+        "/api/movies?path=%2Fmnt%2Fd%2FMovies%2Ffilm.mkv",
+      );
+    });
   });
 
   describe("filePathExistsFromHead", () => {

@@ -17,6 +17,7 @@
     "db:backfill-match-keys": "tsx scripts/backfill-match-keys.ts",
     "db:backfill-slugs": "tsx scripts/backfill-movie-slugs.ts",
     "db:seed-builds": "tsx scripts/seed-build-fixtures.ts",
+    "db:seed-exports": "tsx scripts/seed-export-fixtures.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {

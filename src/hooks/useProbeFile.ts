@@ -16,6 +16,7 @@ import {
   parseMoviePath,
   type ParsedName,
 } from "@/lib/media/name-parser";
+import { normalizeFilePathInput } from "@/lib/shared/display-path";
 
 export interface ProbeTrackEditor {
   setDurationSeconds?: (seconds: number) => void;
@@ -56,13 +57,17 @@ export async function probeFilePath(
   filePath: string,
   options?: { title?: string },
 ): Promise<ProbeResult & Partial<MovieFileMetaPayload>> {
+  const runtime = normalizeFilePathInput(filePath);
+  if (!runtime) {
+    throw new Error("Укажите путь к файлу");
+  }
   const res = await fetch("/api/movies", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: options?.title ?? "probe",
       probeOnly: true,
-      filePath: filePath.trim(),
+      filePath: runtime,
     }),
   });
   const data = await res.json();

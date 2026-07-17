@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { MovieStatus } from "@/generated/prisma/client";
 import { matchesAudioTrackScope } from "@/lib/catalog/audio-track-scope";
+import { tvReadyReleaseWhere } from "@/lib/media/tv-ready";
 import {
   ORIGINAL_TRANSLATION_TYPE,
   RUS_AUDIO_FORMATS,
@@ -18,6 +19,7 @@ export interface CatalogFacets {
   russianTranslationTypes: FacetOption[];
   russianAudioFormats: FacetOption[];
   originalAudioFormats: FacetOption[];
+  tvReady: number;
 }
 
 export interface CatalogGenreFacet {
@@ -81,6 +83,7 @@ function formatMovieCounts(rows: AudioFacetRow[], scope: Scope): FacetOption[] {
 export function buildCatalogFacetsFromRows(
   audioRows: AudioFacetRow[],
   videoRows: VideoFacetRow[],
+  tvReadyCount = 0,
 ): CatalogFacets {
   const resolutionBuckets = new Map<string, Set<number>>();
   for (const row of videoRows) {
@@ -112,6 +115,7 @@ export function buildCatalogFacetsFromRows(
     ).filter((f) => f.value !== ORIGINAL_TRANSLATION_TYPE),
     russianAudioFormats: formatMovieCounts(audioRows, "rus"),
     originalAudioFormats: formatMovieCounts(audioRows, "original"),
+    tvReady: tvReadyCount,
   };
 }
 
@@ -123,7 +127,7 @@ export async function getCatalogFacets(
     ? { movie: { status: { in: statuses! } } }
     : {};
 
-  const [audioRows, videoRows] = await Promise.all([
+  const [audioRows, videoRows, tvReadyGroups] = await Promise.all([
     prisma.audioTrack.findMany({
       where: { release: releaseWhere },
       select: {
@@ -142,6 +146,13 @@ export async function getCatalogFacets(
         resolutionLabel: true,
       },
     }),
+    prisma.release.groupBy({
+      by: ["movieId"],
+      where: {
+        ...releaseWhere,
+        ...tvReadyReleaseWhere(),
+      },
+    }),
   ]);
 
   return buildCatalogFacetsFromRows(
@@ -157,6 +168,7 @@ export async function getCatalogFacets(
       movieId: row.release.movieId,
       resolutionLabel: row.resolutionLabel,
     })),
+    tvReadyGroups.length,
   );
 }
 

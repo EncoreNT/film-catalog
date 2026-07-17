@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Plus, Star, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/primitives/Button";
@@ -54,6 +54,10 @@ interface TrackEditorSectionProps {
   tabbed?: boolean;
   /** default — stacked page; panel — flex column with scrollable tab body (release editor). */
   layout?: "default" | "panel";
+  /** Action beside the «Дорожки» title (e.g. fill-from-file). */
+  headerTrailing?: ReactNode;
+  /** Inline notice below header, above tabs (probe feedback, …). */
+  notice?: ReactNode;
 }
 
 export function TrackEditorSection({
@@ -79,6 +83,8 @@ export function TrackEditorSection({
   videoColumnsOnXl = false,
   tabbed = false,
   layout = "default",
+  headerTrailing,
+  notice,
 }: TrackEditorSectionProps) {
   const showVideo = sections.includes("video");
   const showAudio = sections.includes("audio");
@@ -532,10 +538,12 @@ export function TrackEditorSection({
             label="содержимое"
             title="Дорожки"
             className={isPanel ? "shrink-0" : undefined}
+            trailing={headerTrailing}
           />
         ) : null}
+        {notice ? <div className="shrink-0">{notice}</div> : null}
         <div
-          className={`${showSectionTitle && !isPanel ? "mt-5" : ""} flex shrink-0 gap-1 border-b border-border`}
+          className={`${showSectionTitle && !isPanel ? "mt-5" : notice ? "mt-1" : ""} flex shrink-0 gap-1 border-b border-border`}
           role="tablist"
           aria-label="Дорожки"
         >

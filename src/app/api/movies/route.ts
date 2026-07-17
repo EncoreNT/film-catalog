@@ -37,7 +37,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function HEAD(request: NextRequest) {
-  const filePath = request.nextUrl.searchParams.get("path");
+  const rawPath = request.nextUrl.searchParams.get("path");
+  if (!rawPath) {
+    return new NextResponse(null, { status: 400 });
+  }
+  const { normalizeFilePathInput } = await import("@/lib/shared/display-path");
+  const filePath = normalizeFilePathInput(rawPath);
   if (!filePath) {
     return new NextResponse(null, { status: 400 });
   }

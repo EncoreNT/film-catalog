@@ -43,16 +43,18 @@ export async function PATCH(request: NextRequest, context: ReleaseRouteContext) 
   }
 }
 
-export async function DELETE(_request: NextRequest, context: ReleaseRouteContext) {
+export async function DELETE(request: NextRequest, context: ReleaseRouteContext) {
   const movieId = await parseRouteId(context.params);
   if (isErrorResponse(movieId)) return movieId;
 
   const releaseId = await parseReleaseId(context.params);
   if (isErrorResponse(releaseId)) return releaseId;
 
+  const deleteFile = request.nextUrl.searchParams.get("deleteFile") === "true";
+
   try {
-    await deleteRelease(movieId, releaseId);
-    return NextResponse.json({ ok: true });
+    const result = await deleteRelease(movieId, releaseId, { deleteFile });
+    return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     return mapDomainError(err, "Не удалось удалить релиз");
   }

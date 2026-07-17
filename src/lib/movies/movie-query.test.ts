@@ -122,6 +122,16 @@ describe("buildMovieWhere", () => {
     });
     expect(where.AND).toBeUndefined();
   });
+
+  it("filters TV-ready releases", () => {
+    const where = buildMovieWhere(queryFrom({ tvReady: "true" }));
+    expect(where.releases?.some).toMatchObject({
+      filePath: { endsWith: ".mkv" },
+      videoTrack: {
+        codec: { in: ["hevc", "h265", "h264", "avc"] },
+      },
+    });
+  });
 });
 
 describe("buildMovieOrder", () => {

@@ -3,13 +3,14 @@ import {
 } from "@/lib/media/quality-predicates";
 import type { SpecTagKind } from "@/lib/media/spec-tags";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
-import { displayFilePath } from "@/lib/shared/display-path";
+import { isTvReadyRelease } from "@/lib/media/tv-ready";
 import {
   releaseHasExternalStorage,
   releaseStorageIsExternal,
   releaseStorageLabel,
 } from "@/lib/releases/release-storage";
 import { formatDate, formatFileSizeGB } from "@/lib/shared/format";
+import { displayFilePath } from "@/lib/shared/display-path";
 import { formatBitrateKbps, formatFps } from "@/lib/shared/resolution";
 import {
   codecFull,
@@ -79,6 +80,7 @@ export type ReleaseDetailView = {
   fileSizeLabel: string | null;
   storageLabel: string | null;
   storageExternal: boolean;
+  tvReady: boolean;
   createdAtLabel: string;
   updatedAtLabel: string;
 };
@@ -182,6 +184,7 @@ export function buildReleaseDetailView(
     fileSizeLabel: formatFileSizeGB(release.fileSize),
     storageLabel: releaseStorageLabel(release),
     storageExternal: releaseStorageIsExternal(release),
+    tvReady: isTvReadyRelease(release),
     createdAtLabel: formatDate(release.createdAt),
     updatedAtLabel: formatDate(release.updatedAt),
   };

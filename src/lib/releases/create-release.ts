@@ -3,6 +3,7 @@ import { releaseCreateSchema } from "@/lib/api/validators";
 import { releaseInclude } from "@/lib/movies/movie-include";
 import { maybeExtractCover } from "@/lib/covers/cover-storage";
 import { createReleaseWithTracks } from "@/lib/releases/release-api";
+import { normalizeFilePathInput } from "@/lib/shared/display-path";
 import type { z } from "zod";
 
 type ReleaseCreateInput = z.infer<typeof releaseCreateSchema>;
@@ -24,10 +25,10 @@ export async function createRelease(movieId: number, data: ReleaseCreateInput) {
     });
   });
 
-  const trimmedPath = data.filePath?.trim();
-  if (trimmedPath && !movie.coverPath) {
+  const normalizedPath = normalizeFilePathInput(data.filePath);
+  if (normalizedPath && !movie.coverPath) {
     try {
-      await maybeExtractCover(movieId, trimmedPath, false);
+      await maybeExtractCover(movieId, normalizedPath, false);
     } catch {
       // non-fatal
     }

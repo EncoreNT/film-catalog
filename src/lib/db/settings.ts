@@ -1,4 +1,7 @@
+import { access } from "node:fs/promises";
+import { constants } from "node:fs";
 import { prisma } from "@/lib/db/prisma";
+import { displayFilePath, resolveRuntimePath } from "@/lib/shared/display-path";
 
 const SCAN_ROOT_KEY = "scanRoot";
 
@@ -11,9 +14,23 @@ export async function getScanRoot(): Promise<string | null> {
 }
 
 export async function setScanRoot(path: string): Promise<void> {
+  const runtimePath = resolveRuntimePath(path);
   await prisma.setting.upsert({
     where: { key: SCAN_ROOT_KEY },
-    create: { key: SCAN_ROOT_KEY, value: path },
-    update: { value: path },
+    create: { key: SCAN_ROOT_KEY, value: runtimePath },
+    update: { value: runtimePath },
   });
+}
+
+export async function assertDirectoryWritable(dirPath: string): Promise<void> {
+  try {
+    await access(dirPath, constants.R_OK | constants.W_OK | constants.X_OK);
+  } catch {
+    throw new Error(`Папка недоступна или не существует: ${displayFilePath(dirPath)}`);
+  }
+}
+
+export function scanRootDisplay(runtimePath: string | null): string | null {
+  if (!runtimePath) return null;
+  return displayFilePath(runtimePath);
 }

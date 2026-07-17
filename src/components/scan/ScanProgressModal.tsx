@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
 import { NativeDialog } from "@/components/primitives/NativeDialog";
+import { MachinedCard } from "@/components/primitives/MachinedCard";
 
 export interface ScanProgress {
   index: number;
@@ -40,7 +41,7 @@ export function ScanProgressModal({
       ariaLabel="Сканирование"
       className="fixed inset-0 m-auto w-[min(100%-2rem,28rem)] max-h-[90dvh] overflow-visible rounded-[var(--radius)] border-0 bg-transparent p-0 text-text backdrop:bg-bg-deep/70 backdrop:backdrop-blur-sm open:animate-in"
     >
-      <div className="surface-card space-y-5 p-6">
+      <MachinedCard bodyClassName="space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-xl font-semibold">
@@ -65,12 +66,12 @@ export function ScanProgressModal({
         <div className="space-y-2">
           <div className="h-2 w-full overflow-hidden rounded-full bg-bg-elevated">
             <div
-              className="h-full rounded-full bg-accent transition-[width] duration-200 ease-out"
+              className="h-full rounded-full bg-accent transition-[width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]"
               style={{ width: `${cancelled ? 100 : pct}%` }}
             />
           </div>
           <div className="flex items-center justify-between text-xs text-muted">
-            <span className="font-mono-tech">{pct}%</span>
+            <span className="font-mono-tech tabular-nums">{pct}%</span>
             <span className="font-mono-tech">
               {cancelled ? "остановлено" : "в процессе"}
             </span>
@@ -79,7 +80,7 @@ export function ScanProgressModal({
 
         {progress?.fileName ? (
           <p
-            className="truncate rounded-md border border-border bg-bg-surface px-3 py-2 font-mono text-xs text-muted"
+            className="truncate rounded-[12px] border border-border bg-bg-surface px-3 py-2 font-mono text-xs text-muted"
             title={progress.fileName}
           >
             {progress.fileName}
@@ -97,7 +98,7 @@ export function ScanProgressModal({
             </Button>
           )}
         </div>
-      </div>
+      </MachinedCard>
     </NativeDialog>
   );
 }

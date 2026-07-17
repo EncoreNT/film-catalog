@@ -12,6 +12,7 @@ import {
   readReleaseFileMeta,
 } from "@/lib/releases/release-api";
 import { loadMovieFileMeta } from "@/lib/releases/load-movie-file-meta";
+import { normalizeFilePathInput } from "@/lib/shared/display-path";
 import { probeMediaFile } from "@/lib/media/ffprobe";
 import type { z } from "zod";
 
@@ -19,8 +20,9 @@ type MovieCreateInput = z.infer<typeof movieCreateSchema>;
 
 export async function probeOnlyMovie(data: MovieCreateInput) {
   const releaseInput = extractReleaseInputFromMovieCreate(data);
-  const filePath = releaseInput?.filePath ?? data.filePath;
-  if (!filePath?.trim()) {
+  const rawPath = releaseInput?.filePath ?? data.filePath;
+  const filePath = normalizeFilePathInput(rawPath);
+  if (!filePath) {
     throw new Error("Укажите путь к файлу для автозаполнения");
   }
   try {
@@ -74,10 +76,10 @@ export async function createMovie(data: MovieCreateInput) {
     });
   });
 
-  const trimmedPath = releaseInput?.filePath?.trim();
-  if (trimmedPath && movie && !movie.coverPath) {
+  const normalizedPath = normalizeFilePathInput(releaseInput?.filePath);
+  if (normalizedPath && movie && !movie.coverPath) {
     try {
-      await maybeExtractCover(movie.id, trimmedPath, false);
+      await maybeExtractCover(movie.id, normalizedPath, false);
     } catch {
       // non-fatal
     }

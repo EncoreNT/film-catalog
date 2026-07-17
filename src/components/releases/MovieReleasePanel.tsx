@@ -7,7 +7,9 @@ import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
+import { ReleaseExportProgressStrip } from "@/components/releases/ReleaseExportProgressStrip";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
+import { useReleaseExportJob } from "@/hooks/useReleaseExportJob";
 import {
   releaseToTabTier,
   tierTabStyles,
@@ -26,9 +28,6 @@ function releaseTabInner(
         label={release.storageLabel}
       />
       <span>{release.label}</span>
-      {/* Tier tag on every tiered tab. It inherits the tab's currentColor, so
-          it reads at full intensity on the active tab and faded on inactive
-          ones — no separate muted styling needed. */}
       {release.tier ? (
         <span className="font-mono-tech text-[10px] uppercase tracking-[0.18em]">
           {tierTab.tag}
@@ -61,10 +60,28 @@ export function MovieReleasePanel({
 }: MovieReleasePanelProps) {
   const pathname = usePathname();
   const [activeId, setActiveId] = useState(initialActiveReleaseId);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportSuccessMessage, setExportSuccessMessage] = useState<string | null>(
+    null,
+  );
   const showTabs = releases.length > 1;
 
   const activeRelease =
     releases.find((r) => r.id === activeId) ?? releases[0] ?? null;
+
+  const handleExportSucceeded = useCallback(
+    (job: { targetPathDisplay: string }) => {
+      setExportSuccessMessage(`Скопировано: ${job.targetPathDisplay}`);
+      setExportDialogOpen(false);
+    },
+    [],
+  );
+
+  const exportJobState = useReleaseExportJob({
+    movieId,
+    releaseId: activeRelease?.id ?? 0,
+    onSucceeded: handleExportSucceeded,
+  });
 
   const syncUrl = useCallback(
     (id: number) => {
@@ -111,67 +128,81 @@ export function MovieReleasePanel({
     );
   }
 
-  // Spotlight follows the ACTIVE release tab, live: switching tabs recolors the
-  // whole ambient (cone + glow) via the <SpotlightTier/> signal. Untiered
-  // releases read as "standard" (cool white).
   const activeTier = activeRelease.tier ?? "standard";
+  const showExportStrip =
+    exportJobState.exportActive &&
+    !exportDialogOpen &&
+    exportJobState.exportJob != null;
+  const stripJob = exportJobState.exportJob;
 
   return (
     <section className="surface-release-panel overflow-hidden">
       <SpotlightTier tier={activeTier} />
-      <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/85 sm:flex-row sm:items-stretch sm:justify-between">
-        {showTabs ? (
-          <div
-            className="flex flex-wrap gap-0 px-1 pt-1"
-            role="tablist"
-            aria-label="Релизы"
-          >
-            {releases.map((release) => {
-              const active = release.id === activeId;
-              const tierTab = tierTabStyles(releaseToTabTier(release.tier));
-              return (
-                <button
-                  key={release.id}
-                  type="button"
-                  role="tab"
-                  id={`release-tab-${release.id}`}
-                  aria-selected={active}
-                  aria-controls={`release-panel-${release.id}`}
-                  onClick={() => selectRelease(release.id)}
-                  className={`focus-ring font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs transition-colors ${
-                    active ? tierTab.text : tierTab.inactiveText
-                  }`}
-                >
-                  {releaseTabInner(release, active, tierTab)}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          // Single release: render the same active-tab visual as the
-          // multi-release case (tier color + tier tag + underline) so the
-          // console header reads consistently whether there is one release
-          // or several. Static, non-interactive — there is nothing to switch.
-          <div className="flex flex-wrap gap-0 px-1 pt-1">
-            {releases.map((release) => {
-              const tierTab = tierTabStyles(releaseToTabTier(release.tier));
-              return (
-                <div
-                  key={release.id}
-                  className={`font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs ${tierTab.text}`}
-                >
-                  {releaseTabInner(release, true, tierTab)}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <ReleasePanelActions
-          movieId={movieId}
-          movieSlug={movieSlug}
-          activeRelease={activeRelease}
-          releaseCount={releases.length}
-        />
+      <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/85">
+        <div className="flex flex-col gap-0 sm:flex-row sm:items-stretch sm:justify-between">
+          {showTabs ? (
+            <div
+              className="flex flex-wrap gap-0 px-1 pt-1"
+              role="tablist"
+              aria-label="Релизы"
+            >
+              {releases.map((release) => {
+                const active = release.id === activeId;
+                const tierTab = tierTabStyles(releaseToTabTier(release.tier));
+                return (
+                  <button
+                    key={release.id}
+                    type="button"
+                    role="tab"
+                    id={`release-tab-${release.id}`}
+                    aria-selected={active}
+                    aria-controls={`release-panel-${release.id}`}
+                    onClick={() => selectRelease(release.id)}
+                    className={`focus-ring font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs transition-colors ${
+                      active ? tierTab.text : tierTab.inactiveText
+                    }`}
+                  >
+                    {releaseTabInner(release, active, tierTab)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-0 px-1 pt-1">
+              {releases.map((release) => {
+                const tierTab = tierTabStyles(releaseToTabTier(release.tier));
+                return (
+                  <div
+                    key={release.id}
+                    className={`font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs ${tierTab.text}`}
+                  >
+                    {releaseTabInner(release, true, tierTab)}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <ReleasePanelActions
+            movieId={movieId}
+            movieSlug={movieSlug}
+            activeRelease={activeRelease}
+            releaseCount={releases.length}
+            exportJobState={exportJobState}
+            exportDialogOpen={exportDialogOpen}
+            onExportDialogOpenChange={setExportDialogOpen}
+            exportSuccessMessage={exportSuccessMessage}
+            onExportSuccessMessageChange={setExportSuccessMessage}
+          />
+        </div>
+        {showExportStrip && stripJob ? (
+          <ReleaseExportProgressStrip
+            job={stripJob}
+            polling={exportJobState.polling}
+            loading={exportJobState.loading}
+            onOpen={() => setExportDialogOpen(true)}
+            onCancel={() => void exportJobState.cancelExport()}
+          />
+        ) : null}
       </div>
 
       <div
