@@ -106,3 +106,7 @@ export const buildListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
+
+export const buildReorderQueueSchema = z.object({
+  orderedIds: z.array(z.number().int().positive()).min(1),
+});

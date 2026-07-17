@@ -75,7 +75,7 @@ function queueSortKey(build: SerializedBuild): number {
     case "RUNNING":
       return timestampMs(build.startedAt) || timestampMs(build.updatedAt);
     case "QUEUED":
-      return timestampMs(build.createdAt);
+      return build.queueOrder;
     case "FAILED":
     case "SUCCEEDED":
     case "CANCELLED":
@@ -92,6 +92,12 @@ export function compareBuildsForQueue(
 ): number {
   const rankDiff = STATUS_RANK[a.status] - STATUS_RANK[b.status];
   if (rankDiff !== 0) return rankDiff;
+
+  if (a.status === "QUEUED" && b.status === "QUEUED") {
+    const orderDiff = a.queueOrder - b.queueOrder;
+    if (orderDiff !== 0) return orderDiff;
+    return a.id - b.id;
+  }
 
   const aKey = queueSortKey(a);
   const bKey = queueSortKey(b);
@@ -147,7 +153,7 @@ const SECTION_META: Record<
   },
   queued: {
     title: "Ожидают запуска",
-    hint: "Порядок совпадает с очередью worker: первая сверху пойдёт следующей",
+    hint: "Перетащите или используйте стрелки — worker возьмёт верхнюю сборку следующей",
     statuses: ["QUEUED"],
   },
   failed: {
@@ -180,6 +186,11 @@ export function groupBuildsForDisplay(
   }
 
   return sections;
+}
+
+/** Collapsible queue sections: archive hidden by default, active groups open. */
+export function defaultBuildSectionOpen(id: BuildQueueSectionId): boolean {
+  return id !== "archive";
 }
 
 export interface BuildQueueSummary {

@@ -25,17 +25,10 @@ export default async function BuildsPage({ searchParams }: PageProps) {
 
   return (
     <div className="container-wide space-y-8 py-8 sm:py-10">
-      <header className="max-w-2xl space-y-3">
-        <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-faint">
-          очередь
-        </p>
+      <header className="max-w-2xl">
         <h1 className="font-display text-3xl font-semibold tracking-tight text-text sm:text-4xl">
           Сборки
         </h1>
-        <p className="text-sm leading-relaxed text-muted sm:text-[0.95rem]">
-          Фоновые задачи по сборке пользовательских MKV. Сначала идут активные сборки и
-          очередь worker, ниже завершённые.
-        </p>
       </header>
       <BuildsPageClient initialItems={serialized} movieId={movieId} />
     </div>

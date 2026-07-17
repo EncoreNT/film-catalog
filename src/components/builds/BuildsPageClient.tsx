@@ -16,6 +16,8 @@ import {
   summarizeBuildQueue,
 } from "@/lib/builds/build-queue-display";
 import { BuildJobCard } from "@/components/builds/BuildJobCard";
+import { BuildQueueSectionBlock } from "@/components/builds/BuildQueueSectionBlock";
+import { BuildQueuedList } from "@/components/builds/BuildQueuedList";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
 
 const FILTERS: { id: BuildQueueFilter; label: string }[] = [
@@ -180,44 +182,45 @@ export function BuildsPageClient({
           В этой группе пока ничего нет.
         </p>
       ) : filter === "all" ? (
-        <div className="space-y-8">
+        <div className="space-y-4">
           {sections.map((section, sectionIndex) => (
-            <section key={section.id} className="space-y-3">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <h2 className="font-display text-lg font-semibold text-text">
-                    {section.title}
-                  </h2>
-                  {section.hint ? (
-                    <p className="mt-1 max-w-2xl text-sm text-muted">{section.hint}</p>
-                  ) : null}
-                </div>
-                <span className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-faint">
-                  {section.items.length}
-                </span>
-              </div>
-
-              <ul className="space-y-2">
-                {section.items.map((build, index) => (
-                  <motion.li
-                    key={build.id}
-                    initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.35,
-                      delay: reduceMotion ? 0 : sectionIndex * 0.04 + index * 0.03,
-                      ease: [0.16, 1, 0.3, 1],
-                    }}
-                  >
-                    <BuildJobCard
-                      build={build}
-                      allItems={items}
-                      onHover={(next) => setHoverBuildId(next?.id ?? null)}
-                    />
-                  </motion.li>
-                ))}
-              </ul>
-            </section>
+            <BuildQueueSectionBlock
+              key={section.id}
+              id={section.id}
+              title={section.title}
+              hint={section.hint}
+              count={section.items.length}
+            >
+              {section.id === "queued" && !movieId ? (
+                <BuildQueuedList
+                  builds={section.items}
+                  allItems={items}
+                  onItemsChange={setItems}
+                  onHover={(next) => setHoverBuildId(next?.id ?? null)}
+                />
+              ) : (
+                <ul className="space-y-2">
+                  {section.items.map((build, index) => (
+                    <motion.li
+                      key={build.id}
+                      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.35,
+                        delay: reduceMotion ? 0 : sectionIndex * 0.04 + index * 0.03,
+                        ease: [0.16, 1, 0.3, 1],
+                      }}
+                    >
+                      <BuildJobCard
+                        build={build}
+                        allItems={items}
+                        onHover={(next) => setHoverBuildId(next?.id ?? null)}
+                      />
+                    </motion.li>
+                  ))}
+                </ul>
+              )}
+            </BuildQueueSectionBlock>
           ))}
         </div>
       ) : (

@@ -7,6 +7,8 @@ import {
 import type { BuildRecipe } from "@/lib/builds/build-validation";
 import type { BuildWarning } from "@/lib/builds/build-inspect-runtime";
 import { releaseInclude } from "@/lib/movies/movie-include";
+import { serializeBuild } from "@/lib/builds/build-serialize";
+import { sortBuildsForQueue } from "@/lib/builds/build-queue-display";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
@@ -29,11 +31,13 @@ export async function enqueueBuild(
   const releasePathMap = new Map(
     releases.map((r) => [r.id, r.filePath?.trim() ?? ""]),
   );
+  const queueOrder = await nextQueueOrder();
 
   return prisma.releaseBuild.create({
     data: {
       movieId,
       status: "QUEUED",
+      queueOrder,
       outputPath: validated.recipe.outputPath,
       outputReleaseType: validated.recipe.outputReleaseType ?? null,
       outputVersion: validated.recipe.outputVersion ?? "theatrical",
@@ -94,12 +98,17 @@ export const buildInclude = {
   tracks: { orderBy: { sortOrder: "asc" as const } },
 } as const;
 
+export async function nextQueueOrder(): Promise<number> {
+  const agg = await prisma.releaseBuild.aggregate({ _max: { queueOrder: true } });
+  return (agg._max.queueOrder ?? 0) + 1;
+}
+
 export async function claimNextBuild(workerId: string) {
   await recoverStaleBuilds();
 
   const candidate = await prisma.releaseBuild.findFirst({
     where: { status: "QUEUED", cancelRequested: false },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
     select: { id: true },
   });
   if (!candidate) return null;
@@ -237,10 +246,13 @@ export async function retryBuild(buildId: number) {
     throw new Error("Повтор доступен только для неуспешных или отменённых сборок");
   }
 
+  const queueOrder = await nextQueueOrder();
+
   return prisma.releaseBuild.update({
     where: { id: buildId },
     data: {
       status: "QUEUED",
+      queueOrder,
       phase: null,
       progressPercent: 0,
       progressMessage: null,
@@ -262,6 +274,47 @@ export async function assertMovieHasNoActiveBuilds(movieId: number) {
   if (active > 0) {
     throw new Error("У фильма уже есть активная сборка");
   }
+}
+
+export async function reorderQueuedBuilds(orderedIds: number[]) {
+  const uniqueIds = [...new Set(orderedIds)];
+  if (uniqueIds.length !== orderedIds.length) {
+    throw new Error("Список содержит дубликаты");
+  }
+
+  const queued = await prisma.releaseBuild.findMany({
+    where: { status: "QUEUED" },
+    select: { id: true },
+    orderBy: [{ queueOrder: "asc" }, { id: "asc" }],
+  });
+
+  const queuedIds = queued.map((b) => b.id);
+  if (uniqueIds.length !== queuedIds.length) {
+    throw new Error("Нужен полный список сборок в очереди");
+  }
+
+  const queuedSet = new Set(queuedIds);
+  for (const id of uniqueIds) {
+    if (!queuedSet.has(id)) {
+      throw new Error("В списке есть сборки не из очереди");
+    }
+  }
+
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.releaseBuild.update({
+        where: { id, status: "QUEUED" },
+        data: { queueOrder: index },
+      }),
+    ),
+  );
+
+  const items = await prisma.releaseBuild.findMany({
+    where: { id: { in: orderedIds } },
+    include: buildInclude,
+  });
+
+  return sortBuildsForQueue(items.map(serializeBuild));
 }
 
 export async function isBuildCancelRequested(buildId: number): Promise<boolean> {
