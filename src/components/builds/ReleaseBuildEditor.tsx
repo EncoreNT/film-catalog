@@ -34,6 +34,28 @@ import { estimateBuildOutputSizeFromRecipe } from "@/lib/builds/build-output-siz
 import { suggestBuildOutputPath } from "@/lib/builds/build-filename";
 import { pickPrimaryRelease } from "@/lib/releases/release-primary";
 
+function buildSuggestInput(
+  releases: ReleaseWithTracks[],
+  state: BuildRecipeFormState,
+  movieTitle: string,
+  movieYear: number | null,
+) {
+  const videoReleaseId = state.tracks.find((t) => t.kind === "video")
+    ?.sourceReleaseId;
+  const videoRelease =
+    releases.find((r) => r.id === videoReleaseId) ?? pickPrimaryRelease(releases);
+  return {
+    tracks: state.tracks,
+    releases,
+    movieTitle,
+    movieYear,
+    releaseType: state.outputReleaseType,
+    version: state.outputVersion,
+    resolutionLabel: videoRelease?.videoTrack?.resolutionLabel,
+    hdr: videoRelease?.videoTrack?.hdr,
+  };
+}
+
 interface ReleaseBuildEditorProps {
   movieId: number;
   movieTitle: string;
@@ -133,29 +155,14 @@ export function ReleaseBuildEditor({
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/settings")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { mediaSaveDir?: string | null } | null) => {
-        if (cancelled || !data?.mediaSaveDir) return;
-        setState((current) => {
-          if (current.outputPath.trim()) return current;
-          const primary = pickPrimaryRelease(releases);
-          const suggested = suggestBuildOutputPath(data.mediaSaveDir!, {
-            movieTitle,
-            movieYear,
-            releaseType: current.outputReleaseType,
-            version: current.outputVersion,
-            resolutionLabel: primary?.videoTrack?.resolutionLabel,
-            hdr: primary?.videoTrack?.hdr,
-          });
-          return { ...current, outputPath: suggested };
-        });
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    setState((current) => {
+      if (current.outputPath.trim()) return current;
+      const suggested = suggestBuildOutputPath(
+        buildSuggestInput(releases, current, movieTitle, movieYear),
+      );
+      if (!suggested) return current;
+      return { ...current, outputPath: suggested };
+    });
   }, [movieTitle, movieYear, releases]);
 
   const toolsOk =
@@ -365,35 +372,23 @@ export function ReleaseBuildEditor({
   };
 
   const hasVideo = state.tracks.some((t) => t.kind === "video");
-  const handleSuggestPath = useCallback(() => {
-    void fetch("/api/settings")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { mediaSaveDir?: string | null } | null) => {
-        if (!data?.mediaSaveDir) {
-          setError("Папка сохранения не настроена");
-          return;
-        }
-        const primary = pickPrimaryRelease(releases);
-        const suggested = suggestBuildOutputPath(data.mediaSaveDir, {
-          movieTitle,
-          movieYear,
-          releaseType: state.outputReleaseType,
-          version: state.outputVersion,
-          resolutionLabel: primary?.videoTrack?.resolutionLabel,
-          hdr: primary?.videoTrack?.hdr,
-        });
-        setState((current) => ({ ...current, outputPath: suggested }));
-        resetValidation();
-      })
-      .catch(() => setError("Не удалось получить настройки"));
-  }, [
-    movieTitle,
-    movieYear,
-    releases,
-    resetValidation,
-    state.outputReleaseType,
-    state.outputVersion,
-  ]);
+  const handleSuggestPath = useCallback((): string | null => {
+    let error: string | null = null;
+    setState((current) => {
+      const suggested = suggestBuildOutputPath(
+        buildSuggestInput(releases, current, movieTitle, movieYear),
+      );
+      if (!suggested) {
+        error = "У видео-источника нет пути к файлу";
+        return current;
+      }
+      return { ...current, outputPath: suggested };
+    });
+    if (!error) {
+      resetValidation();
+    }
+    return error;
+  }, [movieTitle, movieYear, releases, resetValidation]);
 
   const pathFilled = state.outputPath.trim().length > 0;
   const sizeEstimate = useMemo(

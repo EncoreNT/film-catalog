@@ -7,6 +7,7 @@ import { displayFileDir, displayFilePath } from "@/lib/shared/display-path";
 import { SpecTag } from "@/components/shared/SpecTag";
 import { ReleaseStorageBadge } from "@/components/releases/ReleaseStorageBadge";
 import { ReleaseSpecHero } from "@/components/releases/ReleaseSpecHero";
+import { TvReadyReleaseNotice } from "@/components/shared/TvReadyMark";
 import { tagIcon } from "@/components/releases/ReleaseSpecRibbon";
 
 type CopyTarget = "file" | "dir";
@@ -108,6 +109,12 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
       {release.showRibbon ? (
         <div className="mb-6">
           <ReleaseSpecHero release={release} />
+        </div>
+      ) : null}
+
+      {release.tvReady ? (
+        <div className="mb-6">
+          <TvReadyReleaseNotice />
         </div>
       ) : null}
 

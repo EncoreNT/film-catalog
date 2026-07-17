@@ -59,8 +59,8 @@ export function ScanPageClient({
     if (!trimmed) return;
 
     try {
-      const res = await fetch("/api/settings", {
-        method: "PATCH",
+      const res = await fetch("/api/scan", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scanRoot: trimmed }),
       });

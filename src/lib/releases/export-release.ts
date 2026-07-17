@@ -1,12 +1,13 @@
-import { access, copyFile, stat } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
-import { getMediaSaveDir } from "@/lib/db/settings";
+import { assertDirectoryWritable } from "@/lib/db/settings";
 import { isTvReadyRelease } from "@/lib/media/tv-ready";
 import {
   displayFilePath,
   joinRuntimePath,
+  resolveRuntimePath,
   sanitizeFilename,
 } from "@/lib/shared/display-path";
 
@@ -21,12 +22,6 @@ export interface ExportDryRunResult {
   targetPathDisplay: string;
   collision: boolean;
   suggestedFilename: string;
-}
-
-export interface ExportResult {
-  ok: true;
-  targetPath: string;
-  targetPathDisplay: string;
 }
 
 function basenameFromRelease(release: ReleaseWithTracks): string | null {
@@ -88,41 +83,51 @@ export async function resolveExportCollisionAsync(
   return { exists: true, suggestedFilename: normalized };
 }
 
-async function requireExportContext(
-  release: ReleaseWithTracks,
-): Promise<{ mediaSaveDir: string }> {
+function requireExportableRelease(release: ReleaseWithTracks): void {
   if (!isTvReadyRelease(release)) {
     throw new Error("Релиз не подходит для воспроизведения на TV");
   }
   if (!release.filePath) {
     throw new Error("У релиза не указан путь к файлу");
   }
+}
 
-  const mediaSaveDir = await getMediaSaveDir();
-  if (!mediaSaveDir) {
-    throw new Error("Папка сохранения не настроена");
-  }
-
-  return { mediaSaveDir };
+async function resolveTargetDir(targetDir: string): Promise<string> {
+  const runtimeDir = resolveRuntimePath(targetDir);
+  await assertDirectoryWritable(runtimeDir);
+  return runtimeDir;
 }
 
 export async function exportReleaseDryRun(
   release: ReleaseWithTracks,
   movie: ExportMovieInfo,
+  targetDir?: string,
   filename?: string,
 ): Promise<ExportDryRunResult> {
-  const { mediaSaveDir } = await requireExportContext(release);
+  requireExportableRelease(release);
   const chosenFilename = normalizeExportFilename(
     filename?.trim() || suggestExportFilename(release, movie),
   );
+
+  if (!targetDir?.trim()) {
+    return {
+      ok: true,
+      targetPath: "",
+      targetPathDisplay: "",
+      collision: false,
+      suggestedFilename: chosenFilename,
+    };
+  }
+
+  const runtimeDir = await resolveTargetDir(targetDir);
   const collision = await resolveExportCollisionAsync(
-    mediaSaveDir,
+    runtimeDir,
     chosenFilename,
   );
   const finalFilename = collision.exists
     ? collision.suggestedFilename
     : chosenFilename;
-  const targetPath = joinRuntimePath(mediaSaveDir, finalFilename);
+  const targetPath = joinRuntimePath(runtimeDir, finalFilename);
 
   return {
     ok: true,
@@ -133,31 +138,8 @@ export async function exportReleaseDryRun(
   };
 }
 
-export async function exportReleaseToMediaDir(
-  release: ReleaseWithTracks,
-  movie: ExportMovieInfo,
-  filename: string,
-): Promise<ExportResult> {
-  const { mediaSaveDir } = await requireExportContext(release);
-  const targetFilename = normalizeExportFilename(filename);
-  const targetPath = joinRuntimePath(mediaSaveDir, targetFilename);
-
-  if (await fileExists(targetPath)) {
-    throw new Error(`Файл уже существует: ${displayFilePath(targetPath)}`);
-  }
-
-  await copyFile(release.filePath!, targetPath);
-  const [copied, source] = await Promise.all([
-    stat(targetPath),
-    stat(release.filePath!),
-  ]);
-  if (copied.size !== source.size) {
-    throw new Error("Размер скопированного файла не совпадает с исходником");
-  }
-
-  return {
-    ok: true,
-    targetPath,
-    targetPathDisplay: displayFilePath(targetPath),
-  };
+export async function assertExportSourceReadable(release: ReleaseWithTracks) {
+  requireExportableRelease(release);
+  const sourceStat = await stat(release.filePath!);
+  return sourceStat.size;
 }

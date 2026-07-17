@@ -6,26 +6,15 @@ describe("exportReleaseBlockReason", () => {
     expect(
       exportReleaseBlockReason({
         hasFilePath: true,
-        mediaSaveDirConfigured: true,
       }),
     ).toBeNull();
   });
 
-  it("explains missing file path first", () => {
+  it("explains missing file path", () => {
     expect(
       exportReleaseBlockReason({
         hasFilePath: false,
-        mediaSaveDirConfigured: false,
       }),
     ).toContain("путь к файлу");
-  });
-
-  it("explains missing media save dir", () => {
-    expect(
-      exportReleaseBlockReason({
-        hasFilePath: true,
-        mediaSaveDirConfigured: false,
-      }),
-    ).toContain("папка сохранения");
   });
 });

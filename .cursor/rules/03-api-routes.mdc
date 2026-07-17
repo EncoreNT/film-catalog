@@ -51,12 +51,11 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 |--------|------|------------|
 | GET | `/api/scan` | Текущий scanRoot |
 | POST | `/api/scan` | Запуск скана → **NDJSON stream** |
-| PUT | `/api/scan` | Только сохранить scanRoot |
+| PUT | `/api/scan` | Сохранить scanRoot (Win/WSL → runtime path) |
 | GET | `/api/storages` | Список внешних дисков (`ExternalStorage`) |
 | POST | `/api/storages` | Создать внешний диск |
 | GET | `/api/stats` | Archive metrics JSON |
-| GET | `/api/settings` | `mediaSaveDir` (+ display form) |
-| PATCH | `/api/settings` | Сохранить `mediaSaveDir` (Win/WSL → runtime path) |
+| POST | `/api/pick-directory` | Нативный диалог выбора папки → runtime path |
 | GET | `/api/disk-space?path=` | Свободное место на томе для пути |
 
 ## Releases (movie)
@@ -64,7 +63,11 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | Method | Path | Назначение |
 |--------|------|------------|
 | DELETE | `/api/movies/[id]/releases/[releaseId]?deleteFile=true` | Удалить релиз; опционально файл на диске |
-| POST | `/api/movies/[id]/releases/[releaseId]/export` | Копия TV-ready файла в `mediaSaveDir` (`dryRun`, `filename`) |
+| GET | `/api/movies/[id]/releases/[releaseId]/export` | Активный экспорт: `{ job: Export \| null }` |
+| POST | `/api/movies/[id]/releases/[releaseId]/export` | Постановка копии TV-ready в очередь (`dryRun`, `targetDir`, `filename`) → 202 |
+| GET | `/api/exports/[id]` | Статус job экспорта |
+| POST | `/api/exports/[id]/cancel` | Отмена |
+| POST | `/api/exports/[id]/retry` | Повтор FAILED/CANCELLED |
 
 ## Release builds
 

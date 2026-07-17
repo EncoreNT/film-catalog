@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Film, Settings } from "lucide-react";
+import { Film } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Каталог" },
@@ -70,19 +70,6 @@ export function SiteHeader() {
               </Link>
             );
           })}
-          <Link
-            href="/settings"
-            aria-current={pathname === "/settings" ? "page" : undefined}
-            aria-label="Настройки"
-            title="Настройки"
-            className={`focus-ring rounded-full p-2 transition-all duration-200 sm:p-2.5 ${
-              pathname === "/settings"
-                ? "bg-accent/12 text-accent"
-                : "text-muted hover:bg-bg-surface-hover hover:text-text"
-            }`}
-          >
-            <Settings className="h-4 w-4" aria-hidden />
-          </Link>
         </nav>
       </div>
     </header>

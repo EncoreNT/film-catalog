@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { FileOutput, Sparkles } from "lucide-react";
 import { Field } from "@/components/primitives/Field";
 import { Select } from "@/components/primitives/Select";
-import { Button } from "@/components/primitives/Button";
 import { StoragePicker } from "@/components/shared/StoragePicker";
 import type { useStoragePicker } from "@/hooks/useStoragePicker";
 import {
@@ -28,7 +27,7 @@ interface BuildOutputPanelProps {
   onOutputPathChange: (value: string) => void;
   onReleaseTypeChange: (value: string) => void;
   onVersionChange: (value: string) => void;
-  onSuggestPath?: () => void;
+  onSuggestPath?: () => string | null;
 }
 
 export function BuildOutputPanel({
@@ -47,9 +46,11 @@ export function BuildOutputPanel({
   );
   const [freeBytes, setFreeBytes] = useState<number | null>(null);
   const [diskLoading, setDiskLoading] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
 
   useEffect(() => {
     setPathInput(outputPath ? displayFilePath(outputPath) : "");
+    if (outputPath.trim()) setSuggestError(null);
   }, [outputPath]);
 
   useEffect(() => {
@@ -132,9 +133,9 @@ export function BuildOutputPanel({
         label="Путь к MKV"
         hint={FILE_PATH_INPUT_HINT}
       >
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex gap-2">
           <input
-            className="focus-ring font-mono-tech normal-case min-h-11 w-full flex-1 rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-xs text-text placeholder:text-muted/50"
+            className="focus-ring font-mono-tech normal-case min-h-11 w-full min-w-0 flex-1 rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-xs text-text placeholder:text-muted/50"
             value={pathInput}
             onChange={(e) => setPathInput(e.target.value)}
             onBlur={() => commitPathInput(pathInput)}
@@ -143,17 +144,25 @@ export function BuildOutputPanel({
             autoComplete="off"
           />
           {onSuggestPath ? (
-            <Button
+            <button
               type="button"
-              variant="secondary"
-              className="shrink-0"
-              onClick={onSuggestPath}
+              className="focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface text-muted transition-colors hover:border-accent/50 hover:text-accent"
+              onClick={() => {
+                const err = onSuggestPath() ?? null;
+                setSuggestError(err);
+              }}
+              title="Имя рядом с исходником по составу сборки"
+              aria-label="Имя рядом с исходником по составу сборки"
             >
               <Sparkles className="h-4 w-4" aria-hidden />
-              Предложить имя
-            </Button>
+            </button>
           ) : null}
         </div>
+        {suggestError ? (
+          <p className="text-xs text-danger" role="alert">
+            {suggestError}
+          </p>
+        ) : null}
       </Field>
 
       <div className="grid gap-3">
