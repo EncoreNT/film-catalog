@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFfmpegAudioOrdinalArgs } from "@/lib/builds/build-ffmpeg";
+import { buildFfmpegAudioOrdinalArgs, parseFfmpegSpeed } from "@/lib/builds/build-ffmpeg";
 
 describe("build-ffmpeg", () => {
   it("builds transcode args with downmix target", () => {
@@ -22,5 +22,10 @@ describe("build-ffmpeg", () => {
     expect(args).toContain("6");
     expect(args).toContain("-itsoffset");
     expect(args).toContain("0.25");
+  });
+
+  it("parses ffmpeg speed values", () => {
+    expect(parseFfmpegSpeed("1.05x")).toBe(1.05);
+    expect(parseFfmpegSpeed("N/A")).toBeNull();
   });
 });

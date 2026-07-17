@@ -14,6 +14,10 @@ import {
   buildTimeCaption,
   queuedPosition,
 } from "@/lib/builds/build-queue-display";
+import {
+  buildQueuedEtaLabel,
+  buildRunningEtaLabel,
+} from "@/lib/builds/build-eta";
 import { catalogTierRibbon } from "@/lib/media/spec-tags";
 import {
   tierCardGlow,
@@ -102,6 +106,11 @@ export function BuildJobCard({
   const isRunning = build.status === "RUNNING";
   const progress =
     build.progressPercent != null ? Math.round(build.progressPercent) : null;
+  const etaLabel = isRunning
+    ? buildRunningEtaLabel(build)
+    : build.status === "QUEUED" && allItems
+      ? buildQueuedEtaLabel(build, allItems)
+      : null;
   const laserTier = buildLaserTier(build.visualTier);
   const tierRibbon = catalogTierRibbon(laserTier);
   const chipTone = tierChipTone(laserTier);
@@ -208,6 +217,9 @@ export function BuildJobCard({
                     <span className="text-neural-bright/90"> · позиция {queuePos}</span>
                   ) : null}
                   {timeCaption ? <span className="text-faint"> · {timeCaption}</span> : null}
+                  {etaLabel ? (
+                    <span className="text-accent/85"> · {etaLabel}</span>
+                  ) : null}
                 </p>
 
                 {build.status === "FAILED" && build.errorMessage ? (

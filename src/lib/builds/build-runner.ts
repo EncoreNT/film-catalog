@@ -12,6 +12,7 @@ import { registerBuildOutput } from "@/lib/builds/build-register";
 import {
   buildFfmpegAudioOrdinalArgs,
   parseFfmpegProgressLine,
+  parseFfmpegSpeed,
 } from "@/lib/builds/build-ffmpeg";
 import {
   buildMkvmergeArgs,
@@ -40,6 +41,31 @@ interface ResolvedTrack {
   syncFileIndex: number;
 }
 
+interface FfmpegProgressContext {
+  durationMs: number;
+  stepIndex: number;
+  stepTotal: number;
+  progressMin: number;
+  progressMax: number;
+}
+
+function resolveDurationMs(
+  exactDurationSeconds: number | null | undefined,
+  durationSeconds: number | null | undefined,
+): number {
+  const seconds = exactDurationSeconds ?? durationSeconds;
+  if (seconds != null && seconds > 0) {
+    return Math.round(seconds * 1000);
+  }
+  return 7_200_000;
+}
+
+function clampProgress01(value: number): number {
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value;
+}
+
 export async function runBuildJob(buildId: number, signal?: AbortSignal) {
   const stopHeartbeat = startHeartbeat(buildId);
   const tempFiles: string[] = [];
@@ -55,6 +81,11 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       phase: "prepare",
       progressPercent: 2,
       progressMessage: "Подготовка",
+      progressSpeed: null,
+      progressOutTimeMs: null,
+      progressDurationMs: null,
+      progressStepIndex: null,
+      progressStepTotal: null,
     });
 
     const partPath = buildPartPath(build.outputPath, buildId);
@@ -81,6 +112,15 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
     if (!videoTrack?.sourceReleaseId) throw new Error("Не задан видео-источник");
 
     const videoInspected = inspectedCache.get(videoTrack.sourceReleaseId)!;
+    const transcodeDurationMs = resolveDurationMs(
+      videoInspected.exactDurationSeconds,
+      videoInspected.durationSeconds,
+    );
+    const transcodeTracks = build.tracks.filter(
+      (track) => track.kind === "AUDIO" && track.audioMode === "TRANSCODE",
+    );
+    let transcodeStepIndex = 0;
+
     const videoMkvId = resolveMkvTrackIdForStream(
       videoInspected,
       "video",
@@ -167,7 +207,12 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       if (track.audioMode === "TRANSCODE") {
         await updateBuildProgress(buildId, {
           phase: "transcode",
-          progressMessage: `Перекодирование аудио #${track.sortOrder + 1}`,
+          progressMessage: `Перекодирование ${transcodeStepIndex + 1}/${transcodeTracks.length}`,
+          progressStepIndex: transcodeStepIndex,
+          progressStepTotal: transcodeTracks.length,
+          progressDurationMs: transcodeDurationMs,
+          progressOutTimeMs: 0,
+          progressSpeed: null,
         });
         const outDir = path.dirname(build.outputPath);
         const tempPath = tempTranscodedAudioPath(buildId, track.sortOrder, outDir);
@@ -188,7 +233,14 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
           audioOrdinal,
         );
 
-        await runFfmpegWithProgress(buildId, args, signal, 10, 55);
+        await runFfmpegWithProgress(buildId, args, signal, {
+          durationMs: transcodeDurationMs,
+          stepIndex: transcodeStepIndex,
+          stepTotal: transcodeTracks.length,
+          progressMin: 10,
+          progressMax: 55,
+        });
+        transcodeStepIndex += 1;
 
         const tempInspected = await inspectReleaseFile(releaseId, tempPath, signal);
         const tempMkvId = resolveMkvTrackIdForStream(
@@ -198,9 +250,6 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         );
         if (tempMkvId == null) throw new Error("Не удалось прочитать перекодированное аудио");
 
-        // Перекодированная дорожка заменяет оригинал (keepOriginal=false) или
-        // добавляется рядом с ним (keepOriginal=true). В режиме замены оригинал
-        // в mux не попадает.
         addAudioTrack(track.sortOrder, tempPath, tempMkvId, track.isDefault, 0);
 
         if (track.keepOriginal) {
@@ -281,6 +330,11 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       phase: "mux",
       progressPercent: 60,
       progressMessage: "Сборка MKV",
+      progressSpeed: null,
+      progressOutTimeMs: null,
+      progressDurationMs: null,
+      progressStepIndex: null,
+      progressStepTotal: null,
     });
 
     const muxArgs = buildMkvmergeArgs({
@@ -332,8 +386,7 @@ async function runFfmpegWithProgress(
   buildId: number,
   args: string[],
   signal: AbortSignal | undefined,
-  minPct: number,
-  maxPct: number,
+  ctx: FfmpegProgressContext,
 ) {
   const child = execa("ffmpeg", args, {
     cancelSignal: signal,
@@ -341,22 +394,42 @@ async function runFfmpegWithProgress(
     stderr: "pipe",
   });
 
-  child.stdout?.on("data", (chunk: Buffer) => {
+  let lastOutTimeMs: number | undefined;
+  let lastSpeed: number | undefined;
+
+  const handleChunk = (chunk: Buffer) => {
     const lines = chunk.toString().split("\n");
     for (const line of lines) {
       const progress = parseFfmpegProgressLine(line);
-      if (progress?.outTimeMs != null) {
-        const pct = Math.min(maxPct, minPct + (progress.outTimeMs / 1_000_000) * 5);
-        void updateBuildProgress(buildId, {
-          progressPercent: pct,
-          progressMessage: progress.speed
-            ? `Перекодирование (${progress.speed}x)`
-            : "Перекодирование",
-        });
+      if (!progress) continue;
+      if (progress.outTimeMs != null) lastOutTimeMs = progress.outTimeMs;
+      if (progress.speed != null) {
+        const parsed = parseFfmpegSpeed(progress.speed);
+        if (parsed != null) lastSpeed = parsed;
       }
-    }
-  });
+      if (lastOutTimeMs == null) continue;
 
+      const localProgress = clampProgress01(lastOutTimeMs / ctx.durationMs);
+      const overall =
+        (ctx.stepIndex + localProgress) / Math.max(1, ctx.stepTotal);
+      const pct = ctx.progressMin + overall * (ctx.progressMax - ctx.progressMin);
+
+      void updateBuildProgress(buildId, {
+        progressPercent: Math.min(ctx.progressMax, pct),
+        progressMessage: lastSpeed
+          ? `Перекодирование (${lastSpeed.toFixed(2)}x)`
+          : "Перекодирование",
+        progressSpeed: lastSpeed ?? null,
+        progressOutTimeMs: lastOutTimeMs,
+        progressDurationMs: ctx.durationMs,
+        progressStepIndex: ctx.stepIndex,
+        progressStepTotal: ctx.stepTotal,
+      });
+    }
+  };
+
+  child.stdout?.on("data", handleChunk);
+  child.stderr?.on("data", handleChunk);
   await child;
 }
 

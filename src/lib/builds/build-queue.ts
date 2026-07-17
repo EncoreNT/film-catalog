@@ -178,6 +178,11 @@ export async function updateBuildProgress(
     phase?: string;
     progressPercent?: number;
     progressMessage?: string;
+    progressSpeed?: number | null;
+    progressOutTimeMs?: number | null;
+    progressDurationMs?: number | null;
+    progressStepIndex?: number | null;
+    progressStepTotal?: number | null;
   },
 ) {
   await prisma.releaseBuild.update({

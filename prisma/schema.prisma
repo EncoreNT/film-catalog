@@ -187,6 +187,11 @@ model ReleaseBuild {
   phase                String?
   progressPercent      Float?
   progressMessage      String?
+  progressSpeed        Float?
+  progressOutTimeMs    Int?
+  progressDurationMs   Int?
+  progressStepIndex    Int?
+  progressStepTotal    Int?
   errorMessage         String?
   cancelRequested      Boolean            @default(false)
   heartbeatAt          DateTime?

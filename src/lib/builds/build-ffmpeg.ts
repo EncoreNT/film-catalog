@@ -107,3 +107,13 @@ export function parseFfmpegProgressLine(line: string): {
   if (key === "speed") return { speed: value };
   return null;
 }
+
+/** Parses ffmpeg progress speed values like `1.05x` or `0.98`. */
+export function parseFfmpegSpeed(speed: string | null | undefined): number | null {
+  if (!speed) return null;
+  const normalized = speed.trim().toLowerCase().replace(/x$/, "");
+  if (normalized === "n/a" || normalized === "") return null;
+  const value = Number.parseFloat(normalized);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value;
+}

@@ -35,7 +35,12 @@ import { buildLaserTier } from "@/lib/builds/build-visual-tier";
 import {
   BUILD_STATUS_META,
   buildTimeCaption,
+  sortBuildsForQueue,
 } from "@/lib/builds/build-queue-display";
+import {
+  buildQueuedEtaLabel,
+  buildRunningEtaLabel,
+} from "@/lib/builds/build-eta";
 import {
   buildOutputMeta,
   buildPhaseLabel,
@@ -79,12 +84,23 @@ function heroAccentClass(
   return null;
 }
 
-function ProgressPanel({ build }: { build: SerializedBuild }) {
+function ProgressPanel({
+  build,
+  queueItems,
+}: {
+  build: SerializedBuild;
+  queueItems: SerializedBuild[];
+}) {
   const isRunning = build.status === "RUNNING";
   const isQueued = build.status === "QUEUED";
   const progress =
     build.progressPercent != null ? Math.round(build.progressPercent) : null;
   const phaseLabel = buildPhaseLabel(build.phase);
+  const etaLabel = isRunning
+    ? buildRunningEtaLabel(build)
+    : isQueued
+      ? buildQueuedEtaLabel(build, queueItems)
+      : null;
 
   if (!isRunning && !isQueued && progress == null && !build.progressMessage) {
     return null;
@@ -111,6 +127,11 @@ function ProgressPanel({ build }: { build: SerializedBuild }) {
             </p>
           ) : build.progressMessage ? (
             <p className="text-xs text-muted">{build.progressMessage}</p>
+          ) : null}
+          {etaLabel ? (
+            <p className="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-accent/90">
+              {etaLabel}
+            </p>
           ) : null}
         </div>
         {progress != null ? (
@@ -147,11 +168,14 @@ function ProgressPanel({ build }: { build: SerializedBuild }) {
 
 export function BuildJobDetailClient({
   initialBuild,
+  initialQueueItems = [],
 }: {
   initialBuild: SerializedBuild;
+  initialQueueItems?: SerializedBuild[];
 }) {
   const reduceMotion = useReducedMotion();
   const [build, setBuild] = useState(initialBuild);
+  const [queueItems, setQueueItems] = useState(initialQueueItems);
   const [loading, setLoading] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [polling, setPolling] = useState(false);
@@ -186,12 +210,32 @@ export function BuildJobDetailClient({
       : meta;
 
   const refresh = useCallback(async () => {
-    const next = await apiFetch<SerializedBuild>(
-      `/api/builds/${build.id}`,
-      undefined,
-      "Не удалось загрузить сборку",
-    );
+    const [next, runningPage, queuedPage] = await Promise.all([
+      apiFetch<SerializedBuild>(
+        `/api/builds/${build.id}`,
+        undefined,
+        "Не удалось загрузить сборку",
+      ),
+      apiFetch<{ items: SerializedBuild[] }>(
+        "/api/builds?status=RUNNING&limit=100",
+        undefined,
+        "Не удалось загрузить очередь",
+      ),
+      apiFetch<{ items: SerializedBuild[] }>(
+        "/api/builds?status=QUEUED&limit=100",
+        undefined,
+        "Не удалось загрузить очередь",
+      ),
+    ]);
+
     setBuild(next);
+    setQueueItems(
+      sortBuildsForQueue(
+        [...runningPage.items, ...queuedPage.items].map((item) =>
+          item.id === next.id ? next : item,
+        ),
+      ),
+    );
   }, [build.id]);
 
   useEffect(() => {
@@ -329,8 +373,6 @@ export function BuildJobDetailClient({
                     </span>
                   ) : null}
                 </div>
-                <p className="truncate text-sm text-muted">{outputMeta.basename}</p>
-                <BuildOutputSizeNote estimate={sizeEstimate} compact />
                 <DetailMetaLine
                   className="pt-0.5 text-[11px] sm:text-xs"
                   separator="pipe"
@@ -366,7 +408,7 @@ export function BuildJobDetailClient({
               </div>
             </div>
 
-            <ProgressPanel build={build} />
+            <ProgressPanel build={build} queueItems={queueItems} />
 
             {build.status === "FAILED" && build.errorMessage ? (
               <div
