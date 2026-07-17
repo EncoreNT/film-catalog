@@ -12,6 +12,7 @@ import {
   type TierTone,
 } from "@/lib/builds/build-display";
 import type { BuildTrackKind } from "@/lib/builds/build-recipe-state";
+import { formatFileSizeGB } from "@/lib/shared/format";
 import { SectionLabel, SpecChip, TierDot } from "@/components/builds/BuildAtoms";
 import type { SpecTag } from "@/lib/builds/build-display";
 
@@ -80,6 +81,7 @@ function SourceDeck({ release, tone, inReel, activeVideoKey, onPick }: DeckProps
     ? sourceTrackKey(release.id, "video", video.streamIndex)
     : null;
   const videoActive = videoKey ? activeVideoKey === videoKey : false;
+  const sourceSizeLabel = formatFileSizeGB(release.fileSize);
 
   return (
     <div
@@ -95,6 +97,14 @@ function SourceDeck({ release, tone, inReel, activeVideoKey, onPick }: DeckProps
         <span className="font-mono-tech min-w-0 flex-1 truncate text-[11px] uppercase tracking-[0.12em] text-text">
           {releaseTabLabel(release)}
         </span>
+        {sourceSizeLabel ? (
+          <span
+            className="font-mono-tech shrink-0 text-[10px] tabular-nums tracking-[0.08em] text-faint"
+            title="Размер исходного файла"
+          >
+            {sourceSizeLabel}
+          </span>
+        ) : null}
         <ChevronDown
           className={`h-3.5 w-3.5 shrink-0 text-muted transition-transform duration-300 ease-out ${
             open ? "" : "-rotate-90"

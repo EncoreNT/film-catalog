@@ -8,7 +8,6 @@ import {
   ExternalLink,
   FileOutput,
   FolderOpen,
-  HardDrive,
   LoaderCircle,
   RefreshCw,
 } from "lucide-react";
@@ -17,10 +16,14 @@ import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import { DetailMetaLine } from "@/components/primitives/DetailMetaLine";
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+import { CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
-import { BuildJobDetailTrackRow } from "@/components/builds/BuildJobDetailTrackRow";
-import { BuildWarningsPanel } from "@/components/builds/BuildWarningsPanel";
+import { BuildJobCompositionSummary } from "@/components/builds/BuildJobCompositionSummary";
+import { BuildOutputSizeNote } from "@/components/builds/BuildOutputSizeNote";
+import {
+  BuildJobAcknowledgedWarnings,
+  type BuildAcknowledgedWarning,
+} from "@/components/builds/BuildJobAcknowledgedWarnings";
 import { SectionLabel } from "@/components/builds/BuildAtoms";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
 import { SpotlightTarget } from "@/components/layout/SpotlightTarget";
@@ -38,9 +41,9 @@ import {
   buildPhaseLabel,
   buildSourceRoleLabel,
   buildTimelineEntries,
-  BUILD_TRACK_KIND_SECTION,
-  groupBuildTracksByKind,
+  buildCompositionHeadline,
 } from "@/lib/builds/build-detail-display";
+import { estimateBuildOutputSizeFromBuild } from "@/lib/builds/build-output-size";
 import { catalogTierRibbon } from "@/lib/media/spec-tags";
 import {
   tierChipTone,
@@ -57,23 +60,23 @@ const TIER_CHIP: Record<ReturnType<typeof tierChipTone>, string> = {
   ruby: "border-crimson/45 text-crimson-bright",
 };
 
-function heroShellClass(
+function heroAccentClass(
   build: SerializedBuild,
   cancelPending: boolean,
-): string {
+): string | null {
   if (build.status === "RUNNING" && !cancelPending) {
-    return "border-accent/35 bg-bg-elevated/40";
+    return "border-accent/35";
   }
   if (cancelPending) {
-    return "border-ember/35 bg-bg-elevated/35";
+    return "border-ember/35";
   }
   if (build.visualTier === "ruby") {
-    return "border-crimson/35 bg-bg-elevated/40";
+    return "border-crimson/35";
   }
   if (build.visualTier === "gold") {
-    return "border-accent/35 bg-bg-elevated/40";
+    return "border-accent/35";
   }
-  return "border-border bg-bg-elevated/25";
+  return null;
 }
 
 function ProgressPanel({ build }: { build: SerializedBuild }) {
@@ -158,7 +161,14 @@ export function BuildJobDetailClient({
   const coverUrl = movieCoverUrlFromMovie(build.movie);
   const outputMeta = useMemo(() => buildOutputMeta(build), [build]);
   const timeline = useMemo(() => buildTimelineEntries(build), [build]);
-  const trackGroups = useMemo(() => groupBuildTracksByKind(build.tracks), [build.tracks]);
+  const compositionHeadline = useMemo(
+    () => buildCompositionHeadline(build.tracks),
+    [build.tracks],
+  );
+  const sizeEstimate = useMemo(
+    () => estimateBuildOutputSizeFromBuild(build),
+    [build],
+  );
   const timeCaption = buildTimeCaption(build);
   const isActive = build.status === "RUNNING" || build.status === "QUEUED";
   const cancelPending = build.cancelRequested && isActive;
@@ -230,16 +240,19 @@ export function BuildJobDetailClient({
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <SpotlightTier tier={build.spotlightTier} />
+  const heroAccent = heroAccentClass(build, cancelPending);
 
-      <motion.section
-        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className={`relative overflow-hidden rounded-[var(--radius)] border p-4 sm:p-6 ${heroShellClass(build, cancelPending)}`}
-      >
+  return (
+    <>
+      <div className="flex min-h-0 flex-1 flex-col gap-6 lg:gap-8">
+        <SpotlightTier tier={build.spotlightTier} />
+
+        <motion.header
+          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className={`surface-release-panel relative shrink-0 overflow-hidden p-4 max-lg:sticky max-lg:top-4 max-lg:z-20 sm:p-6 ${heroAccent ?? ""}`}
+        >
         {build.status === "RUNNING" && !cancelPending ? (
           <span
             aria-hidden
@@ -277,15 +290,12 @@ export function BuildJobDetailClient({
                   </div>
                 )}
 
-                <TierCoverOverlay tier={laserTier} />
-
-                {tierRibbon ? (
-                  <span
-                    className={`absolute left-1.5 top-1.5 z-10 max-w-[calc(100%-0.75rem)] rounded-full border bg-bg-deep/90 px-2 py-0.5 font-mono-tech text-[0.55rem] uppercase tracking-[0.1em] ${TIER_CHIP[chipTone]}`}
-                  >
-                    {tierRibbon}
-                  </span>
-                ) : null}
+                <TierCoverOverlay
+                  tier={laserTier}
+                  showScrim={false}
+                  holoRestOpacity="opacity-[0.1]"
+                  holoHoverOpacity="group-hover/laser:opacity-35"
+                />
 
                 <span
                   aria-hidden
@@ -302,15 +312,25 @@ export function BuildJobDetailClient({
                   Сборка #{build.id}
                   {timeCaption ? <span className="text-muted"> · {timeCaption}</span> : null}
                 </p>
-                <h1 className="font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
-                  <Link
-                    href={`/movies/${build.movie.slug}`}
-                    className="focus-ring text-text transition-colors hover:text-accent"
-                  >
-                    {build.movie.title}
-                  </Link>
-                </h1>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <h1 className="font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
+                    <Link
+                      href={`/movies/${build.movie.slug}`}
+                      className="focus-ring text-text transition-colors hover:text-accent"
+                    >
+                      {build.movie.title}
+                    </Link>
+                  </h1>
+                  {tierRibbon ? (
+                    <span
+                      className={`font-mono-tech shrink-0 rounded-full border bg-bg-deep/90 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${TIER_CHIP[chipTone]}`}
+                    >
+                      {tierRibbon}
+                    </span>
+                  ) : null}
+                </div>
                 <p className="truncate text-sm text-muted">{outputMeta.basename}</p>
+                <BuildOutputSizeNote estimate={sizeEstimate} compact />
                 <DetailMetaLine
                   className="pt-0.5 text-[11px] sm:text-xs"
                   separator="pipe"
@@ -406,25 +426,31 @@ export function BuildJobDetailClient({
             {error ? <p className="text-sm text-danger">{error}</p> : null}
           </div>
         </div>
-      </motion.section>
+        </motion.header>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="space-y-6 lg:col-span-2">
-          <MachinedCard variant="calm" bodyClassName="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] border border-accent/35 bg-accent/[0.08] text-accent">
-                <FileOutput className="h-4 w-4" strokeWidth={1.5} aria-hidden />
-              </span>
-              <CardSectionHeader label="результат" title="Выходной файл" />
-            </div>
+        <div className="scroll-subtle min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain lg:pr-1">
+          <BuildJobAcknowledgedWarnings
+            warnings={build.warnings as BuildAcknowledgedWarning[]}
+          />
 
-            <dl className="space-y-3 text-sm">
+          <div className="grid gap-6 lg:grid-cols-5 lg:gap-8">
+            <div className="space-y-6 lg:col-span-2">
+              <section className="surface-release-panel space-y-4 p-4 sm:p-5">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] border border-accent/35 bg-accent/[0.08] text-accent">
+                    <FileOutput className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+                  </span>
+                  <CardSectionHeader label="результат" title="Выходной файл" />
+                </div>
+
+                <dl className="space-y-3 text-sm">
               <div>
                 <dt className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-faint">
                   Имя файла
                 </dt>
                 <dd className="mt-1 font-medium text-text">{outputMeta.basename}</dd>
               </div>
+              <BuildOutputSizeNote estimate={sizeEstimate} />
               <div>
                 <dt className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-faint">
                   Полный путь
@@ -448,9 +474,6 @@ export function BuildJobDetailClient({
                   </dt>
                   <dd className="mt-1 text-text">{outputMeta.version ?? "Театральная"}</dd>
                 </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-muted" strokeWidth={1.5} aria-hidden />
                 <div>
                   <dt className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-faint">
                     Хранилище
@@ -458,15 +481,15 @@ export function BuildJobDetailClient({
                   <dd className="mt-1 text-text">{outputMeta.storage}</dd>
                 </div>
               </div>
-            </dl>
-          </MachinedCard>
+                </dl>
+              </section>
 
-          {build.sources.length > 0 ? (
-            <MachinedCard variant="calm" bodyClassName="space-y-4">
-              <CardSectionHeader
-                label="источники"
-                title={`Файлы (${build.sources.length})`}
-              />
+              {build.sources.length > 0 ? (
+                <section className="surface-release-panel space-y-4 p-4 sm:p-5">
+                  <CardSectionHeader
+                    label="источники"
+                    title={`Файлы (${build.sources.length})`}
+                  />
               <ul className="space-y-3">
                 {build.sources.map((source) => {
                   const releaseLabel = source.release?.releaseType
@@ -477,7 +500,7 @@ export function BuildJobDetailClient({
                   return (
                     <li
                       key={source.id}
-                      className="rounded-[var(--radius-sm)] border border-border/80 bg-bg-deep/35 px-3 py-3"
+                      className="rounded-[var(--radius-sm)] border border-border-strong bg-bg-surface px-3 py-3"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <SectionLabel>{buildSourceRoleLabel(source.role)}</SectionLabel>
@@ -499,61 +522,29 @@ export function BuildJobDetailClient({
                     </li>
                   );
                 })}
-              </ul>
-            </MachinedCard>
-          ) : null}
-        </div>
+                  </ul>
+                </section>
+              ) : null}
+            </div>
 
-        <div className="space-y-6 lg:col-span-3">
-          <MachinedCard variant="calm" bodyClassName="space-y-5">
-            <CardSectionHeader
-              label="состав"
-              title={`Состав MKV · ${build.tracks.length} ${
-                build.tracks.length === 1
-                  ? "дорожка"
-                  : build.tracks.length < 5
-                    ? "дорожки"
-                    : "дорожек"
-              }`}
-            />
+            <div className="space-y-6 lg:col-span-3">
+              <section className="surface-release-panel space-y-4 p-4 sm:p-5">
+                <CardSectionHeader
+                  label="состав"
+                  title="Состав MKV"
+                  trailing={
+                    compositionHeadline ? (
+                      <span className="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-muted">
+                        {compositionHeadline}
+                      </span>
+                    ) : null
+                  }
+                />
 
-            {trackGroups.length === 0 ? (
-              <p className="text-sm text-muted">Дорожки не заданы.</p>
-            ) : (
-              trackGroups.map((group) => {
-                const section = BUILD_TRACK_KIND_SECTION[group.kind];
-                return (
-                  <div key={group.kind} className="space-y-2.5">
-                    <div>
-                      <p className="text-sm font-medium text-text">{section.title}</p>
-                      {section.hint ? (
-                        <p className="text-xs text-muted">{section.hint}</p>
-                      ) : null}
-                    </div>
-                    <div className="space-y-2">
-                      {group.items.map((track) => (
-                        <BuildJobDetailTrackRow
-                          key={track.id}
-                          track={track}
-                          index={track.sortOrder}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </MachinedCard>
-
-          <BuildWarningsPanel
-            readOnly
-            validation={{
-              ok: true,
-              warnings: build.warnings as { code: string; message: string; severity: string }[],
-            }}
-            ackWarnings
-            onAckChange={() => undefined}
-          />
+                <BuildJobCompositionSummary tracks={build.tracks} sources={build.sources} />
+              </section>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -581,6 +572,6 @@ export function BuildJobDetailClient({
         }
         confirmLabel="Отменить сборку"
       />
-    </div>
+    </>
   );
 }

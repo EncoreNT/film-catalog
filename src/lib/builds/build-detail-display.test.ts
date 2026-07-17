@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAudioTechLine,
+  buildCompositionHeadline,
   buildPhaseLabel,
+  buildSourceReleaseMap,
   buildSourceRoleLabel,
+  buildTrackActionSummary,
+  buildTrackDetailLine,
   buildTrackDetailTags,
+  buildTrackFlags,
   buildTrackTitle,
   buildTimelineEntries,
+  buildVideoTechLine,
   groupBuildTracksByKind,
   normalizeBuildTrackKind,
+  resolveBuildSourceTrack,
 } from "@/lib/builds/build-detail-display";
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
+import type { BuildSourceRelease } from "@/lib/builds/build-detail-display";
 
 function track(
   partial: Partial<SerializedBuild["tracks"][number]> &
@@ -86,6 +95,146 @@ describe("build-detail-display", () => {
       track({ id: 3, kind: "SUBTITLE", sourceStreamIndex: 3, sortOrder: 2 }),
     ]);
     expect(groups.map((g) => g.kind)).toEqual(["video", "audio", "subtitle"]);
+  });
+
+  it("builds transcode action summary for audio tracks", () => {
+    expect(
+      buildTrackActionSummary(
+        track({
+          id: 1,
+          kind: "AUDIO",
+          sourceStreamIndex: 2,
+          audioMode: "TRANSCODE",
+          transcodeCodec: "ac3",
+          transcodeBitrate: 640,
+          channelTarget: "UP_TO_51",
+        }),
+      ),
+    ).toEqual({
+      label: "→ AC3 · 640 · 5.1",
+      tone: "neural",
+    });
+  });
+
+  it("collects composition flags", () => {
+    expect(
+      buildTrackFlags(
+        track({
+          id: 1,
+          kind: "AUDIO",
+          sourceStreamIndex: 0,
+          isDefault: true,
+          keepOriginal: true,
+          audioMode: "TRANSCODE",
+        }),
+      ),
+    ).toEqual(["главная", "+ оригинал"]);
+  });
+
+  it("builds composition headline from track groups", () => {
+    expect(
+      buildCompositionHeadline([
+        track({ id: 1, kind: "VIDEO", sourceStreamIndex: 0, sortOrder: 0 }),
+        track({ id: 2, kind: "AUDIO", sourceStreamIndex: 1, sortOrder: 1 }),
+        track({ id: 3, kind: "AUDIO", sourceStreamIndex: 2, sortOrder: 2 }),
+        track({ id: 4, kind: "SUBTITLE", sourceStreamIndex: 3, sortOrder: 3 }),
+      ]),
+    ).toBe("1 видео · 2 аудио · 1 субтитр");
+  });
+
+  it("formats video and audio tech lines for composition detail", () => {
+    expect(
+      buildVideoTechLine({
+        id: 1,
+        releaseId: 1,
+        streamIndex: 0,
+        width: 3840,
+        height: 2160,
+        resolutionLabel: "4K",
+        codec: "hevc",
+        hdr: "HDR10+",
+        fps: "23.976",
+        bitrate: 65000,
+      }),
+    ).toBe("HEVC · 4K UHD · HDR10+ · 23.976 fps · 65.0Mbps");
+
+    expect(
+      buildAudioTechLine({
+        id: 2,
+        releaseId: 1,
+        streamIndex: 1,
+        codec: "dts",
+        profile: "HD MA",
+        channels: 8,
+        channelLayout: "7.1",
+        bitrate: 3072,
+        language: "rus",
+        title: null,
+        translationType: "dub",
+        isDefault: true,
+      }),
+    ).toContain("3.1Mbps");
+  });
+
+  it("merges source tech and build flags in detail line", () => {
+    const release: BuildSourceRelease = {
+      id: 10,
+      videoTrack: {
+        id: 1,
+        releaseId: 10,
+        streamIndex: 0,
+        width: 1920,
+        height: 1080,
+        resolutionLabel: "1080p",
+        codec: "avc",
+        hdr: "SDR",
+        fps: "24",
+        bitrate: 25000,
+      },
+      audioTracks: [
+        {
+          id: 2,
+          releaseId: 10,
+          streamIndex: 1,
+          codec: "ac3",
+          profile: null,
+          channels: 6,
+          channelLayout: "5.1",
+          bitrate: 640,
+          language: "rus",
+          title: null,
+          translationType: "dub",
+          isDefault: true,
+        },
+      ],
+      subtitleTracks: [],
+    };
+
+    const releases = buildSourceReleaseMap([
+      {
+        id: 1,
+        releaseId: 10,
+        filePath: "/a.mkv",
+        durationSeconds: 7200,
+        role: "video",
+        release: release as NonNullable<SerializedBuild["sources"][number]["release"]>,
+      },
+    ]);
+
+    const audioTrack = track({
+      id: 3,
+      kind: "AUDIO",
+      sourceStreamIndex: 1,
+      sourceReleaseId: 10,
+      isDefault: true,
+    });
+
+    expect(buildTrackDetailLine(audioTrack, resolveBuildSourceTrack(releases, audioTrack))).toContain(
+      "640kbps",
+    );
+    expect(buildTrackDetailLine(audioTrack, resolveBuildSourceTrack(releases, audioTrack))).toContain(
+      "главная",
+    );
   });
 
   it("includes cancel flag in timeline", () => {

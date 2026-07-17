@@ -11,11 +11,14 @@ import {
   RELEASE_TYPES,
 } from "@/lib/shared/dictionaries";
 import { SectionLabel } from "@/components/builds/BuildAtoms";
+import { BuildOutputSizeNote } from "@/components/builds/BuildOutputSizeNote";
+import type { BuildSizeEstimate } from "@/lib/builds/build-output-size";
 
 interface BuildOutputPanelProps {
   outputPath: string;
   outputReleaseType: string;
   outputVersion: string;
+  sizeEstimate: BuildSizeEstimate | null;
   storage: ReturnType<typeof useStoragePicker>;
   onOutputPathChange: (value: string) => void;
   onReleaseTypeChange: (value: string) => void;
@@ -26,6 +29,7 @@ export function BuildOutputPanel({
   outputPath,
   outputReleaseType,
   outputVersion,
+  sizeEstimate,
   storage,
   onOutputPathChange,
   onReleaseTypeChange,
@@ -39,6 +43,8 @@ export function BuildOutputPanel({
         </span>
         <SectionLabel>назначение</SectionLabel>
       </div>
+
+      <BuildOutputSizeNote estimate={sizeEstimate} />
 
       <StoragePicker
         compact

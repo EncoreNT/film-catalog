@@ -30,6 +30,7 @@ import { BuildReel } from "@/components/builds/BuildReel";
 import { BuildOutputPanel } from "@/components/builds/BuildOutputPanel";
 import { BuildCapabilitiesPanel } from "@/components/builds/BuildCapabilitiesPanel";
 import { sourceTrackLabel } from "@/lib/builds/build-display";
+import { estimateBuildOutputSizeFromRecipe } from "@/lib/builds/build-output-size";
 
 interface ReleaseBuildEditorProps {
   movieId: number;
@@ -335,6 +336,10 @@ export function ReleaseBuildEditor({
 
   const hasVideo = state.tracks.some((t) => t.kind === "video");
   const pathFilled = state.outputPath.trim().length > 0;
+  const sizeEstimate = useMemo(
+    () => estimateBuildOutputSizeFromRecipe(state.tracks, releases),
+    [state.tracks, releases],
+  );
   const warningsCount = validation?.warnings?.length ?? 0;
   const canSubmit =
     toolsOk &&
@@ -425,6 +430,7 @@ export function ReleaseBuildEditor({
               outputPath={state.outputPath}
               outputReleaseType={state.outputReleaseType}
               outputVersion={state.outputVersion}
+              sizeEstimate={sizeEstimate}
               storage={storage}
               onOutputPathChange={(value) => {
                 setState((s) => ({ ...s, outputPath: value }));

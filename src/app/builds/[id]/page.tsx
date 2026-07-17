@@ -21,8 +21,10 @@ export default async function BuildDetailPage({ params }: PageProps) {
   if (!build) notFound();
 
   return (
-    <div className="container-wide space-y-6 py-8 sm:py-10">
-      <BackLink href="/builds">К очереди сборок</BackLink>
+    <div className="flex flex-col gap-6 py-6 sm:py-8 lg:-mb-10 lg:h-[calc(100dvh-10.25rem)] lg:min-h-0 lg:overflow-hidden lg:gap-8">
+      <div className="shrink-0">
+        <BackLink href="/builds">К очереди сборок</BackLink>
+      </div>
       <BuildJobDetailClient initialBuild={serializeBuild(build)} />
     </div>
   );

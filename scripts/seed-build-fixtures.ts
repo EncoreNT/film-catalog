@@ -261,7 +261,7 @@ function buildScenarios(releases: Map<number, ReleaseCtx>): BuildSeed[] {
       tracks: rubyRecipe(angels, { engStreamIndex: 1 }),
     },
     {
-      label: "running — перекодирование",
+      label: "running — перекодирование (mock warnings)",
       movieId: alita.movieId,
       status: "RUNNING",
       outputPath: "/tmp/build-fixtures/alita-transcode.mkv",
@@ -271,6 +271,26 @@ function buildScenarios(releases: Map<number, ReleaseCtx>): BuildSeed[] {
       progressMessage: "Перекодирование аудио #3",
       startedAt: hours(0.5),
       createdAt: hours(0.6),
+      warnings: [
+        {
+          code: "duration_delta",
+          message:
+            "«Eng TrueHD Atmos»: длительность источника отличается от видео на 1.4 с",
+          severity: "warning",
+        },
+        {
+          code: "transcode_bitrate_upscale",
+          message:
+            "«Eng TrueHD Atmos»: битрейт 768 kbps выше источника (512 kbps). Апскейл не имеет смысла.",
+          severity: "warning",
+        },
+        {
+          code: "subtitle_forced_default",
+          message:
+            "«Rus forced»: принудительные субтитры помечены как дорожка по умолчанию",
+          severity: "warning",
+        },
+      ],
       sourceReleaseIds: [alita.id],
       videoSourceReleaseId: alita.id,
       tracks: alitaRecipe(alita),
@@ -342,6 +362,12 @@ function buildScenarios(releases: Map<number, ReleaseCtx>): BuildSeed[] {
           code: "transcode_bitrate_upscale",
           message:
             "«Eng TrueHD Atmos»: битрейт 768 kbps выше источника (512 kbps). Апскейл не имеет смысла.",
+          severity: "warning",
+        },
+        {
+          code: "audio_copy_lossless",
+          message:
+            "«Rus DTS-HD 7.1»: lossless-источник копируется без перекодирования, размер MKV вырастет",
           severity: "warning",
         },
       ],
