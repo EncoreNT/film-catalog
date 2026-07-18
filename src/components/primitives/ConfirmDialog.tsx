@@ -62,12 +62,12 @@ export function ConfirmDialog({
           >
             {title}
           </h2>
-          <p
+          <div
             id={descId}
-            className="mt-2 text-sm leading-relaxed text-muted"
+            className="mt-2 space-y-2 text-sm leading-relaxed text-muted"
           >
             {description}
-          </p>
+          </div>
         </div>
       </div>
 

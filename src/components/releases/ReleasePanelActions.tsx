@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   HardDriveDownload,
   LoaderCircle,
   Menu,
@@ -417,41 +418,72 @@ export function ReleasePanelActions({
         confirmLabel="Пересканировать"
         tone="accent"
       />
-      {confirmKind === "delete" ? (
-        <div className="fixed inset-0 z-[111] flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            aria-label="Закрыть"
-            onClick={() => setConfirmKind(null)}
-          />
-          <div className="relative w-[min(100%-2rem,440px)] rounded-[var(--radius)] border border-border bg-bg-elevated p-5 shadow-xl">
-            <p className="font-display text-lg font-semibold">Удалить релиз?</p>
-            <p className="mt-2 text-sm text-muted">
-              Можно удалить только запись или вместе с файлом на диске.
+      <NativeDialog
+        open={confirmKind === "delete"}
+        onClose={() => setConfirmKind(null)}
+        preventCancel={loading}
+        zIndex={110}
+        ariaLabelledBy="delete-release-dialog-title"
+        ariaDescribedBy="delete-release-dialog-desc"
+        className="confirm-dialog fixed inset-0 m-auto flex w-[min(100%-2rem,440px)] max-w-[440px] flex-col rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+      >
+        <div className="flex items-start gap-4 p-5 pb-4">
+          <span
+            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-danger/30 bg-danger/10 text-danger"
+            aria-hidden
+          >
+            <AlertTriangle className="h-5 w-5" strokeWidth={1.5} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2
+              id="delete-release-dialog-title"
+              className="font-display text-lg font-semibold leading-tight"
+            >
+              Удалить релиз?
+            </h2>
+            <p
+              id="delete-release-dialog-desc"
+              className="mt-2 text-sm leading-relaxed text-muted"
+            >
+              Запись исчезнет из каталога. Файл MKV можно оставить на диске или
+              удалить вместе с записью.
             </p>
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <Button variant="ghost" onClick={() => setConfirmKind(null)}>
-                Отмена
-              </Button>
-              <Button
-                variant="secondary"
-                loading={loading}
-                onClick={() => void handleDelete(false)}
-              >
-                Только из каталога
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => setConfirmKind("deleteFile")}
-                disabled={!activeRelease.filePath}
-              >
-                Дальше…
-              </Button>
-            </div>
           </div>
         </div>
-      ) : null}
+        <div className="space-y-3 border-t border-border px-5 py-4">
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="secondary"
+              className="w-full"
+              loading={loading}
+              onClick={() => void handleDelete(false)}
+            >
+              Удалить только запись
+            </Button>
+            <Button
+              variant="danger"
+              className="w-full"
+              onClick={() => setConfirmKind("deleteFile")}
+              disabled={!activeRelease.filePath}
+              title={
+                activeRelease.filePath
+                  ? undefined
+                  : "У релиза нет пути к файлу на диске"
+              }
+            >
+              Удалить запись и файл
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => setConfirmKind(null)}
+            disabled={loading}
+          >
+            Отмена
+          </Button>
+        </div>
+      </NativeDialog>
       <ConfirmDialog
         open={confirmKind === "deleteFile"}
         onClose={() => setConfirmKind(null)}
@@ -460,13 +492,18 @@ export function ReleasePanelActions({
         title="Удалить файл с диска?"
         description={
           <>
-            Это необратимо. Будут удалены релиз в каталоге и файл:
-            <span className="mt-2 block font-mono-tech text-xs text-text">
-              {activeRelease.filePathDisplay ?? activeRelease.filePath}
-            </span>
+            Действие необратимо. Будут удалены запись в каталоге и файл:
+            <div className="rounded-[var(--radius-sm)] border border-danger/30 bg-danger/[0.06] px-3 py-2.5">
+              <p className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-danger/90">
+                путь к файлу
+              </p>
+              <p className="scroll-subtle mt-1.5 max-h-32 overflow-y-auto break-all font-mono-tech text-xs leading-relaxed text-text">
+                {activeRelease.filePathDisplay ?? activeRelease.filePath}
+              </p>
+            </div>
           </>
         }
-        confirmLabel="Удалить релиз и файл"
+        confirmLabel="Удалить безвозвратно"
       />
       <NativeDialog
         open={exportDialogOpen}
@@ -474,15 +511,18 @@ export function ReleasePanelActions({
         preventCancel={exportBusy && !exportActive}
         zIndex={110}
         ariaLabelledBy="export-dialog-title"
-        className="confirm-dialog fixed inset-0 m-auto flex w-[min(100%-2rem,480px)] max-w-[480px] flex-col rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+        className="confirm-dialog fixed inset-0 m-auto flex w-[min(100%-2rem,480px)] max-w-[480px] min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
       >
-        <div className="space-y-5 p-5">
-          <div>
+        <div className="min-w-0 space-y-5 overflow-hidden p-5">
+          <div className="min-w-0">
             <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-accent">
               экспорт
             </p>
-            <div className="mt-1 flex items-start justify-between gap-3">
-              <h2 id="export-dialog-title" className="font-display text-lg font-semibold leading-tight">
+            <div className="mt-1 flex min-w-0 items-start justify-between gap-3">
+              <h2
+                id="export-dialog-title"
+                className="min-w-0 font-display text-lg font-semibold leading-tight"
+              >
                 {EXPORT_RELEASE_DIALOG_TITLE}
               </h2>
               {exportMeta ? (
@@ -499,13 +539,18 @@ export function ReleasePanelActions({
           </div>
 
           {exportActive ? (
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <p className="text-sm leading-relaxed text-muted">
                 Копирование идёт в фоне. Можно закрыть диалог — прогресс останется
                 в полоске под вкладками релиза.
               </p>
               {exportTargetDisplay ? (
-                <p className="font-mono-tech text-xs text-muted">{exportTargetDisplay}</p>
+                <p
+                  className="truncate font-mono-tech text-xs text-muted"
+                  title={exportTargetDisplay}
+                >
+                  {exportTargetDisplay}
+                </p>
               ) : null}
               {exportJob && exportSizeHint(exportJob) ? (
                 <p className="font-mono-tech text-xs text-faint">
@@ -538,12 +583,17 @@ export function ReleasePanelActions({
               ) : null}
             </div>
           ) : exportJob?.status === "FAILED" ? (
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <p className="text-sm text-danger">
                 {exportJob.errorMessage ?? "Ошибка копирования"}
               </p>
               {exportTargetDisplay ? (
-                <p className="font-mono-tech text-xs text-muted">{exportTargetDisplay}</p>
+                <p
+                  className="truncate font-mono-tech text-xs text-muted"
+                  title={exportTargetDisplay}
+                >
+                  {exportTargetDisplay}
+                </p>
               ) : null}
             </div>
           ) : (

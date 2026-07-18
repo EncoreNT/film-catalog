@@ -119,16 +119,28 @@ export function ReleaseBuildEditor({
     };
   }, []);
 
+  const autoOutputPath = useMemo(
+    () =>
+      suggestBuildOutputPath(
+        buildSuggestInput(releases, state, movieTitle, movieYear),
+      ),
+    [
+      releases,
+      state.tracks,
+      state.outputReleaseType,
+      state.outputVersion,
+      movieTitle,
+      movieYear,
+    ],
+  );
+
   useEffect(() => {
+    if (!autoOutputPath) return;
     setState((current) => {
-      if (current.outputPath.trim()) return current;
-      const suggested = suggestBuildOutputPath(
-        buildSuggestInput(releases, current, movieTitle, movieYear),
-      );
-      if (!suggested) return current;
-      return { ...current, outputPath: suggested };
+      if (current.outputPath === autoOutputPath) return current;
+      return { ...current, outputPath: autoOutputPath };
     });
-  }, [movieTitle, movieYear, releases]);
+  }, [autoOutputPath]);
 
   const toolsOk =
     capabilities != null &&
@@ -337,24 +349,6 @@ export function ReleaseBuildEditor({
   };
 
   const hasVideo = state.tracks.some((t) => t.kind === "video");
-  const handleSuggestPath = useCallback((): string | null => {
-    let error: string | null = null;
-    setState((current) => {
-      const suggested = suggestBuildOutputPath(
-        buildSuggestInput(releases, current, movieTitle, movieYear),
-      );
-      if (!suggested) {
-        error = "У видео-источника нет пути к файлу";
-        return current;
-      }
-      return { ...current, outputPath: suggested };
-    });
-    if (!error) {
-      resetValidation();
-    }
-    return error;
-  }, [movieTitle, movieYear, releases, resetValidation]);
-
   const pathFilled = state.outputPath.trim().length > 0;
   const sizeEstimate = useMemo(
     () => estimateBuildOutputSizeFromRecipe(state.tracks, releases),
@@ -464,7 +458,6 @@ export function ReleaseBuildEditor({
                 setState((s) => ({ ...s, outputVersion: value }));
                 resetValidation();
               }}
-              onSuggestPath={handleSuggestPath}
             />
             <div className="border-t border-border/60 pt-4">
               <BuildCapabilitiesPanel capabilities={capabilities} />

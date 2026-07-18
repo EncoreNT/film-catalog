@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FileOutput, Sparkles } from "lucide-react";
+import { AlertTriangle, FileOutput } from "lucide-react";
 import { Field } from "@/components/primitives/Field";
 import { Select } from "@/components/primitives/Select";
 import { StoragePicker } from "@/components/shared/StoragePicker";
@@ -27,7 +27,6 @@ interface BuildOutputPanelProps {
   onOutputPathChange: (value: string) => void;
   onReleaseTypeChange: (value: string) => void;
   onVersionChange: (value: string) => void;
-  onSuggestPath?: () => string | null;
 }
 
 export function BuildOutputPanel({
@@ -39,18 +38,14 @@ export function BuildOutputPanel({
   onOutputPathChange,
   onReleaseTypeChange,
   onVersionChange,
-  onSuggestPath,
 }: BuildOutputPanelProps) {
   const [pathInput, setPathInput] = useState(() =>
     outputPath ? displayFilePath(outputPath) : "",
   );
   const [freeBytes, setFreeBytes] = useState<number | null>(null);
   const [diskLoading, setDiskLoading] = useState(false);
-  const [suggestError, setSuggestError] = useState<string | null>(null);
-
   useEffect(() => {
     setPathInput(outputPath ? displayFilePath(outputPath) : "");
-    if (outputPath.trim()) setSuggestError(null);
   }, [outputPath]);
 
   useEffect(() => {
@@ -73,10 +68,23 @@ export function BuildOutputPanel({
     return () => window.clearTimeout(timer);
   }, [outputPath]);
 
-  const diskFitLabel = useMemo(
+  const diskShortfall = useMemo(
     () => formatDiskSpaceFitLabel(freeBytes, sizeEstimate?.totalBytes ?? null),
     [freeBytes, sizeEstimate?.totalBytes],
   );
+
+  const diskStatusLine = useMemo(() => {
+    if (diskLoading) return "Проверяем свободное место…";
+    if (freeBytes == null) return null;
+    return [
+      `Свободно: ${formatArchiveTotalSize(freeBytes)}`,
+      sizeEstimate
+        ? `оценка сборки: ${formatBuildOutputSizeLabel(sizeEstimate)}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }, [diskLoading, freeBytes, sizeEstimate]);
 
   const commitPathInput = (value: string) => {
     const trimmed = value.trim();
@@ -101,22 +109,31 @@ export function BuildOutputPanel({
 
       <BuildOutputSizeNote estimate={sizeEstimate} />
 
-      {outputPath ? (
-        <p className="font-mono-tech text-xs text-muted">
-          {diskLoading
-            ? "Проверяем свободное место…"
-            : freeBytes != null
-              ? [
-                  `Свободно: ${formatArchiveTotalSize(freeBytes)}`,
-                  sizeEstimate
-                    ? `оценка сборки: ${formatBuildOutputSizeLabel(sizeEstimate)}`
-                    : null,
-                  diskFitLabel,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
-              : null}
-        </p>
+      {outputPath && diskShortfall ? (
+        <div
+          className="flex items-start gap-2.5 rounded-[var(--radius-sm)] border border-ember/35 bg-ember/[0.08] px-3 py-2.5"
+          role="alert"
+        >
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 shrink-0 text-ember-bright"
+            strokeWidth={1.5}
+            aria-hidden
+          />
+          <div className="min-w-0 space-y-0.5">
+            <p className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-ember-bright">
+              мало места на диске
+            </p>
+            <p className="text-xs leading-relaxed text-text">
+              Не хватит ≈ {diskShortfall}
+              {freeBytes != null && sizeEstimate
+                ? ` — свободно ${formatArchiveTotalSize(freeBytes)}, нужно ${formatBuildOutputSizeLabel(sizeEstimate)}`
+                : null}
+              .
+            </p>
+          </div>
+        </div>
+      ) : outputPath && diskStatusLine ? (
+        <p className="font-mono-tech text-xs text-muted">{diskStatusLine}</p>
       ) : null}
 
       <StoragePicker
@@ -133,36 +150,15 @@ export function BuildOutputPanel({
         label="Путь к MKV"
         hint={FILE_PATH_INPUT_HINT}
       >
-        <div className="flex gap-2">
-          <input
-            className="focus-ring font-mono-tech normal-case min-h-11 w-full min-w-0 flex-1 rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-xs text-text placeholder:text-muted/50"
-            value={pathInput}
-            onChange={(e) => setPathInput(e.target.value)}
-            onBlur={() => commitPathInput(pathInput)}
-            placeholder="D:\TV\Movies\custom.mkv или /mnt/d/TV/Movies/custom.mkv"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          {onSuggestPath ? (
-            <button
-              type="button"
-              className="focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface text-muted transition-colors hover:border-accent/50 hover:text-accent"
-              onClick={() => {
-                const err = onSuggestPath() ?? null;
-                setSuggestError(err);
-              }}
-              title="Имя рядом с исходником по составу сборки"
-              aria-label="Имя рядом с исходником по составу сборки"
-            >
-              <Sparkles className="h-4 w-4" aria-hidden />
-            </button>
-          ) : null}
-        </div>
-        {suggestError ? (
-          <p className="text-xs text-danger" role="alert">
-            {suggestError}
-          </p>
-        ) : null}
+        <input
+          className="focus-ring font-mono-tech normal-case min-h-11 w-full min-w-0 rounded-[var(--radius)] border border-border bg-bg-elevated px-3 py-2 text-xs text-text placeholder:text-muted/50"
+          value={pathInput}
+          onChange={(e) => setPathInput(e.target.value)}
+          onBlur={() => commitPathInput(pathInput)}
+          placeholder="D:\TV\Movies\custom.mkv или /mnt/d/TV/Movies/custom.mkv"
+          spellCheck={false}
+          autoComplete="off"
+        />
       </Field>
 
       <div className="grid gap-3">
