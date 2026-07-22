@@ -8,8 +8,10 @@ import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
 import { ReleaseExportProgressStrip } from "@/components/releases/ReleaseExportProgressStrip";
+import { ReleaseMoveProgressStrip } from "@/components/releases/ReleaseMoveProgressStrip";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
 import { useReleaseExportJob } from "@/hooks/useReleaseExportJob";
+import { useReleaseMoveJob } from "@/hooks/useReleaseMoveJob";
 import {
   releaseToTabTier,
   tierTabStyles,
@@ -61,7 +63,11 @@ export function MovieReleasePanel({
   const pathname = usePathname();
   const [activeId, setActiveId] = useState(initialActiveReleaseId);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [exportSuccessMessage, setExportSuccessMessage] = useState<string | null>(
+    null,
+  );
+  const [moveSuccessMessage, setMoveSuccessMessage] = useState<string | null>(
     null,
   );
   const showTabs = releases.length > 1;
@@ -81,6 +87,24 @@ export function MovieReleasePanel({
     movieId,
     releaseId: activeRelease?.id ?? 0,
     onSucceeded: handleExportSucceeded,
+  });
+
+  const handleMoveSucceeded = useCallback(
+    (job: { targetPathDisplay: string; warningMessage?: string | null }) => {
+      setMoveSuccessMessage(
+        job.warningMessage
+          ? `Перемещено: ${job.targetPathDisplay}. ${job.warningMessage}`
+          : `Перемещено: ${job.targetPathDisplay}`,
+      );
+      setMoveDialogOpen(false);
+    },
+    [],
+  );
+
+  const moveJobState = useReleaseMoveJob({
+    movieId,
+    releaseId: activeRelease?.id ?? 0,
+    onSucceeded: handleMoveSucceeded,
   });
 
   const syncUrl = useCallback(
@@ -133,7 +157,12 @@ export function MovieReleasePanel({
     exportJobState.exportActive &&
     !exportDialogOpen &&
     exportJobState.exportJob != null;
-  const stripJob = exportJobState.exportJob;
+  const stripExportJob = exportJobState.exportJob;
+  const showMoveStrip =
+    moveJobState.moveActive &&
+    !moveDialogOpen &&
+    moveJobState.moveJob != null;
+  const stripMoveJob = moveJobState.moveJob;
 
   return (
     <section className="surface-release-panel overflow-hidden">
@@ -191,15 +220,36 @@ export function MovieReleasePanel({
             exportDialogOpen={exportDialogOpen}
             onExportDialogOpenChange={setExportDialogOpen}
             onExportSuccessMessageChange={setExportSuccessMessage}
+            moveJobState={moveJobState}
+            moveDialogOpen={moveDialogOpen}
+            onMoveDialogOpenChange={setMoveDialogOpen}
           />
         </div>
-        {showExportStrip && stripJob ? (
+        {showMoveStrip && stripMoveJob ? (
+          <ReleaseMoveProgressStrip
+            job={stripMoveJob}
+            loading={moveJobState.loading}
+            onOpen={() => setMoveDialogOpen(true)}
+            onCancel={() => void moveJobState.cancelMove()}
+          />
+        ) : null}
+        {showExportStrip && stripExportJob ? (
           <ReleaseExportProgressStrip
-            job={stripJob}
+            job={stripExportJob}
             loading={exportJobState.loading}
             onOpen={() => setExportDialogOpen(true)}
             onCancel={() => void exportJobState.cancelExport()}
           />
+        ) : null}
+        {moveSuccessMessage ? (
+          <div
+            className="border-t border-neural/20 bg-neural/[0.06] px-3 py-2 sm:px-5"
+            role="status"
+          >
+            <p className="truncate font-mono-tech text-xs text-neural">
+              {moveSuccessMessage}
+            </p>
+          </div>
         ) : null}
         {exportSuccessMessage ? (
           <div

@@ -3,7 +3,10 @@ import {
 } from "@/lib/media/quality-predicates";
 import type { SpecTagKind } from "@/lib/media/spec-tags";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
-import { isTvReadyRelease } from "@/lib/media/tv-ready";
+import {
+  isTvReadyRelease,
+  isTvCompatibleAudioCodec,
+} from "@/lib/media/tv-ready";
 import {
   releaseHasExternalStorage,
   releaseStorageIsExternal,
@@ -45,6 +48,7 @@ export type ReleaseDetailAudioTrack = {
   channelLayout: string | null;
   bitrate: string | null;
   title: string | null;
+  tvCompatible: boolean;
 };
 
 export type ReleaseDetailSubtitleTrack = {
@@ -77,9 +81,11 @@ export type ReleaseDetailView = {
   subtitleTracks: ReleaseDetailSubtitleTrack[];
   filePath: string | null;
   filePathDisplay: string | null;
+  fileSizeBytes: number | null;
   fileSizeLabel: string | null;
   storageLabel: string | null;
   storageExternal: boolean;
+  externalStorageId: number | null;
   tvReady: boolean;
   createdAtLabel: string;
   updatedAtLabel: string;
@@ -106,6 +112,7 @@ function buildAudioTrack(
         : null,
     bitrate,
     title: track.title,
+    tvCompatible: isTvCompatibleAudioCodec(track.codec),
   };
 }
 
@@ -181,9 +188,11 @@ export function buildReleaseDetailView(
     filePathDisplay: release.filePath
       ? displayFilePath(release.filePath)
       : null,
+    fileSizeBytes: release.fileSize,
     fileSizeLabel: formatFileSizeGB(release.fileSize),
     storageLabel: releaseStorageLabel(release),
     storageExternal: releaseStorageIsExternal(release),
+    externalStorageId: release.externalStorageId,
     tvReady: isTvReadyRelease(release),
     createdAtLabel: formatDate(release.createdAt),
     updatedAtLabel: formatDate(release.updatedAt),

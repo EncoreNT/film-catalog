@@ -11,7 +11,7 @@ The app runs on WSL while the browser often runs on Windows. Release files live 
 
 1. **Runtime paths in DB, Windows display in UI** — extend `display-path.ts` with `resolveRuntimePath()`; paths entered or picked in the UI are stored as WSL/runtime paths; show Windows form via `displayFilePath()`.
 
-2. **TV-ready predicate** — MKV + H.264/HEVC video + main Russian track (default among Russian tracks, else first Russian) with codec AC-3 / E-AC-3 / AAC. Used for export button visibility, catalog filter, and card badge.
+2. **TV-ready predicate** — MKV + H.264/HEVC video + at least one Russian track with codec AC-3 / E-AC-3 / AAC (not only the default track). Used for export button visibility, catalog filter, and card badge.
 
 3. **Export is copy-only via job queue** — `POST .../export` enqueues `ReleaseExport` job with user-chosen `targetDir`; worker copies file with progress. Does not create a new `Release`. On collision, dry-run returns a suffixed filename; user picks folder and confirms/edits name before enqueue. Same worker as builds (`scripts/release-build-worker.ts`), FIFO by `createdAt` across job types.
 

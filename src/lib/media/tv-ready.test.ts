@@ -108,7 +108,7 @@ describe("isTvReadyRelease", () => {
     ).toBe(true);
   });
 
-  it("returns false when main Russian track is TrueHD", () => {
+  it("returns false when main Russian track is TrueHD without TV fallback", () => {
     expect(
       isTvReadyRelease(
         release({
@@ -118,6 +118,21 @@ describe("isTvReadyRelease", () => {
         }),
       ),
     ).toBe(false);
+  });
+
+  it("returns true when any Russian track is E-AC-3, even if default is TrueHD", () => {
+    expect(
+      isTvReadyRelease(
+        release({
+          id: 1,
+          videoTrack: video("hevc"),
+          audioTracks: [
+            audio({ streamIndex: 0, codec: "truehd", isDefault: true }),
+            audio({ streamIndex: 1, codec: "eac3", isDefault: false }),
+          ],
+        }),
+      ),
+    ).toBe(true);
   });
 
   it("returns false for non-MKV container", () => {

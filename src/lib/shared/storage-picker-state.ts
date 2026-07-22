@@ -6,6 +6,11 @@ export function initialStorageKind(
   return storage ? "external" : "local";
 }
 
+/** Move dialog: preselect opposite of current release location. */
+export function moveTargetStorageKind(sourceIsExternal: boolean): StorageKind {
+  return sourceIsExternal ? "local" : "external";
+}
+
 export function initialSelectedStorageId(
   storage: { id: number } | null | undefined,
 ): string {

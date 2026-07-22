@@ -7,7 +7,7 @@ import { displayFileDir, displayFilePath } from "@/lib/shared/display-path";
 import { SpecTag } from "@/components/shared/SpecTag";
 import { ReleaseStorageBadge } from "@/components/releases/ReleaseStorageBadge";
 import { ReleaseSpecHero } from "@/components/releases/ReleaseSpecHero";
-import { TvReadyReleaseNotice } from "@/components/shared/TvReadyMark";
+import { TvReadyReleaseNotice, TvCompatibleTrackBadge } from "@/components/shared/TvReadyMark";
 import { tagIcon } from "@/components/releases/ReleaseSpecRibbon";
 
 type CopyTarget = "file" | "dir";
@@ -247,7 +247,7 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
                         <span className="font-mono text-sm text-faint">—</span>
                       )}
                     </span>
-                    <span className="flex min-w-0 items-center overflow-hidden">
+                    <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                       {track.formatLabel ? (
                         <SpecTag
                           kind={track.is3D ? "audio-3d" : "audio"}
@@ -265,6 +265,10 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
                       ) : (
                         <span className="font-mono text-sm text-faint">—</span>
                       )}
+                      {track.tvCompatible &&
+                      track.languageCode === "rus" ? (
+                        <TvCompatibleTrackBadge />
+                      ) : null}
                     </span>
                     <span className="flex min-w-0 items-center">
                       {track.channelLayout ? (

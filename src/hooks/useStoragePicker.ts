@@ -18,9 +18,10 @@ interface InitialExternalStorage {
 
 export function useStoragePicker(
   initialExternalStorage?: InitialExternalStorage | null,
+  options?: { defaultKind?: StorageKind },
 ) {
   const [storageKind, setStorageKindState] = useState<StorageKind>(() =>
-    initialStorageKind(initialExternalStorage),
+    options?.defaultKind ?? initialStorageKind(initialExternalStorage),
   );
   const [storages, setStorages] = useState<StorageOption[]>([]);
   const [selectedStorageId, setSelectedStorageId] = useState(() =>

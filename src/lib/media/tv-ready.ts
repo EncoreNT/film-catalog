@@ -45,18 +45,33 @@ function hasTvCompatibleVideo(release: ReleaseWithTracks): boolean {
   return (TV_COMPATIBLE_VIDEO_CODECS as readonly string[]).includes(codec);
 }
 
-function hasTvCompatibleMainRussianAudio(release: ReleaseWithTracks): boolean {
-  const track = mainRussianTrack(release);
-  if (!track?.codec) return false;
+export function isTvCompatibleAudioCodec(
+  codec: string | null | undefined,
+): boolean {
+  if (!codec) return false;
   return (TV_COMPATIBLE_AUDIO_CODECS as readonly string[]).includes(
-    track.codec.toLowerCase(),
+    codec.toLowerCase(),
+  );
+}
+
+export function hasTvCompatibleRussianAudioTrack(
+  release: ReleaseWithTracks,
+): boolean {
+  return release.audioTracks.some(
+    (track) =>
+      track.language === RUS_LANGUAGE &&
+      isTvCompatibleAudioCodec(track.codec),
   );
 }
 
 export function isTvReadyRelease(release: ReleaseWithTracks): boolean {
   if (!release.filePath?.toLowerCase().endsWith(".mkv")) return false;
   if (!hasTvCompatibleVideo(release)) return false;
-  return hasTvCompatibleMainRussianAudio(release);
+  return hasTvCompatibleRussianAudioTrack(release);
+}
+
+export function tvCompatibleTrackHint(): string {
+  return "Кодек поддерживается большинством телевизоров";
 }
 
 /** Prisma filter — approximate superset of {@link isTvReadyRelease}. */
@@ -66,35 +81,11 @@ export function tvReadyReleaseWhere(): Prisma.ReleaseWhereInput {
     videoTrack: {
       codec: { in: [...TV_COMPATIBLE_VIDEO_CODECS] },
     },
-    OR: [
-      {
-        audioTracks: {
-          some: {
-            language: RUS_LANGUAGE,
-            isDefault: true,
-            codec: { in: [...TV_COMPATIBLE_AUDIO_CODECS] },
-          },
-        },
+    audioTracks: {
+      some: {
+        language: RUS_LANGUAGE,
+        codec: { in: [...TV_COMPATIBLE_AUDIO_CODECS] },
       },
-      {
-        AND: [
-          {
-            NOT: {
-              audioTracks: {
-                some: { language: RUS_LANGUAGE, isDefault: true },
-              },
-            },
-          },
-          {
-            audioTracks: {
-              some: {
-                language: RUS_LANGUAGE,
-                codec: { in: [...TV_COMPATIBLE_AUDIO_CODECS] },
-              },
-            },
-          },
-        ],
-      },
-    ],
+    },
   };
 }

@@ -24,6 +24,10 @@ interface StoragePickerProps {
   onSelectedStorageIdChange: (value: string) => void;
   onCreateExternalStorage: (name: string) => Promise<void>;
   layout?: StoragePickerLayout;
+  /** Section label; default «Хранилище». */
+  label?: string;
+  /** Stack label and stretch segment + disk select to full modal width. */
+  fullWidth?: boolean;
   /** @deprecated Use layout="embedded" */
   embedded?: boolean;
   /** @deprecated Use layout="embedded" */
@@ -40,6 +44,8 @@ export function StoragePicker({
   onSelectedStorageIdChange,
   onCreateExternalStorage,
   layout,
+  label = "Хранилище",
+  fullWidth = false,
   embedded = false,
   compact = false,
 }: StoragePickerProps) {
@@ -141,25 +147,25 @@ export function StoragePicker({
     <>
       {isToolbar ? (
         <span className="flex shrink-0 items-center gap-1 font-mono-tech text-xs text-muted">
-          Хранилище
+          {label}
           <InfoHint
-            label="Хранилище"
+            label={label}
             text="Локальный — без записи в каталоге дисков. Внешний — выберите или создайте именованный накопитель."
           />
         </span>
       ) : isEmbedded ? (
         <span className="flex items-center gap-1.5 text-sm text-muted">
-          Хранилище
+          {label}
           <InfoHint
-            label="Хранилище"
+            label={label}
             text="Локальный — без записи в каталоге дисков. Внешний — выберите или создайте именованный накопитель."
           />
         </span>
       ) : (
         <div className="flex items-center gap-1.5">
-          <p className="font-mono-tech text-muted">хранилище</p>
+          <p className="font-mono-tech text-muted">{label.toLowerCase()}</p>
           <InfoHint
-            label="Хранилище"
+            label={label}
             text="Локальный — без записи в каталоге дисков. Внешний — выберите или создайте именованный накопитель."
           />
         </div>
@@ -197,7 +203,7 @@ export function StoragePicker({
       ariaLabel="Хранилище"
       value={storageKind}
       onChange={(v) => handleStorageKindChange(v as StorageKind)}
-      fullWidth={!isEmbedded}
+      fullWidth={fullWidth || !isEmbedded}
       size={isEmbedded ? "compact" : "default"}
       options={[
         {
@@ -314,7 +320,10 @@ export function StoragePicker({
 
   const externalSelect =
     storageKind === "external" && !isToolbar ? (
-      <div className="relative max-w-md w-full" ref={containerRef}>
+      <div
+        className={`relative w-full ${fullWidth ? "" : "max-w-md"}`}
+        ref={containerRef}
+      >
         <button
           type="button"
           onClick={open ? closeDropdown : openDropdown}
@@ -373,11 +382,13 @@ export function StoragePicker({
         className={
           isEmbedded
             ? "flex flex-wrap items-center gap-x-4 gap-y-2"
-            : "flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4"
+            : fullWidth
+              ? "space-y-2"
+              : "flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4"
         }
       >
         {labelHint}
-        {segmentControl}
+        <div className={fullWidth ? "w-full" : undefined}>{segmentControl}</div>
       </div>
 
       {externalSelect}

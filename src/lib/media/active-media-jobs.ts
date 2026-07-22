@@ -5,17 +5,22 @@ import type { SerializedBuild } from "@/lib/builds/build-serialize";
 import { exportInclude } from "@/lib/releases/export-queue";
 import { serializeExport } from "@/lib/releases/export-serialize";
 import type { SerializedExport } from "@/lib/releases/export-serialize";
+import { moveInclude } from "@/lib/releases/move-queue";
+import { serializeMove } from "@/lib/releases/move-serialize";
+import type { SerializedMove } from "@/lib/releases/move-serialize";
 import type { ReleaseBuildStatus } from "@/generated/prisma/client";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
 export type ActiveMediaJob =
   | { kind: "build"; job: SerializedBuild }
-  | { kind: "export"; job: SerializedExport };
+  | { kind: "export"; job: SerializedExport }
+  | { kind: "move"; job: SerializedMove };
 
 export interface ActiveMediaJobsPayload {
   builds: SerializedBuild[];
   exports: SerializedExport[];
+  moves: SerializedMove[];
   jobs: ActiveMediaJob[];
   summary: {
     total: number;
@@ -37,10 +42,12 @@ function statusRank(status: ReleaseBuildStatus): number {
 export function sortActiveMediaJobs(
   builds: SerializedBuild[],
   exports: SerializedExport[],
+  moves: SerializedMove[] = [],
 ): ActiveMediaJob[] {
   const jobs: ActiveMediaJob[] = [
     ...builds.map((job) => ({ kind: "build" as const, job })),
     ...exports.map((job) => ({ kind: "export" as const, job })),
+    ...moves.map((job) => ({ kind: "move" as const, job })),
   ];
 
   return jobs.sort((a, b) => {
@@ -65,8 +72,9 @@ export function sortActiveMediaJobs(
 export function summarizeActiveMediaJobs(
   builds: SerializedBuild[],
   exports: SerializedExport[],
+  moves: SerializedMove[] = [],
 ) {
-  const all = [...builds, ...exports];
+  const all = [...builds, ...exports, ...moves];
   return {
     total: all.length,
     running: all.filter((job) => job.status === "RUNNING").length,
@@ -75,7 +83,7 @@ export function summarizeActiveMediaJobs(
 }
 
 export async function fetchActiveMediaJobs(): Promise<ActiveMediaJobsPayload> {
-  const [buildRows, exportRows] = await Promise.all([
+  const [buildRows, exportRows, moveRows] = await Promise.all([
     prisma.releaseBuild.findMany({
       where: { status: { in: ACTIVE_STATUSES } },
       include: buildInclude,
@@ -84,15 +92,21 @@ export async function fetchActiveMediaJobs(): Promise<ActiveMediaJobsPayload> {
       where: { status: { in: ACTIVE_STATUSES } },
       include: exportInclude,
     }),
+    prisma.releaseMove.findMany({
+      where: { status: { in: ACTIVE_STATUSES } },
+      include: moveInclude,
+    }),
   ]);
 
   const builds = buildRows.map(serializeBuild);
   const exports = exportRows.map(serializeExport);
+  const moves = moveRows.map(serializeMove);
 
   return {
     builds,
     exports,
-    jobs: sortActiveMediaJobs(builds, exports),
-    summary: summarizeActiveMediaJobs(builds, exports),
+    moves,
+    jobs: sortActiveMediaJobs(builds, exports, moves),
+    summary: summarizeActiveMediaJobs(builds, exports, moves),
   };
 }

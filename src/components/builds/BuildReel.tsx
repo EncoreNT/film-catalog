@@ -11,28 +11,18 @@ import {
 import { BuildReelTrackCard } from "@/components/builds/BuildReelTrackCard";
 import { BuildVideoCard } from "@/components/builds/BuildVideoCard";
 import { BuildKindSection } from "@/components/builds/BuildKindSection";
-import { BuildValidationPanel } from "@/components/builds/BuildValidationPanel";
-import { BuildMappingPreviewPanel } from "@/components/builds/BuildMappingPreviewPanel";
-import type { BuildTrackMappingPreviewRow } from "@/lib/builds/build-mapping-preview";
 import { sourceTierTone } from "@/lib/builds/build-display";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
-
-interface ValidationResult {
-  ok: boolean;
-  warnings: { code: string; message: string; severity: string }[];
-  errors?: { code: string; message: string; severity: string }[];
-  error?: string;
-  mappingPreview?: BuildTrackMappingPreviewRow[];
-}
+import {
+  buildSourceTrackKey,
+  type DurationMismatchInfo,
+} from "@/lib/builds/build-duration-hint";
 
 interface BuildReelProps {
   state: BuildRecipeFormState;
   releases: ReleaseWithTracks[];
-  /** Audio track keys (releaseId:audio:streamIndex) flagged for duration mismatch. */
-  durationMismatchKeys: Set<string>;
-  validation: ValidationResult | null;
-  ackWarnings: boolean;
-  onAckChange: (v: boolean) => void;
+  /** Audio track keys (releaseId:audio:streamIndex) → duration mismatch details. */
+  durationMismatchByKey: Map<string, DurationMismatchInfo>;
   onTrackChange: (index: number, patch: Partial<BuildRecipeTrackState>) => void;
   onTrackRemove: (index: number) => void;
   onReorder: (tracks: BuildRecipeTrackState[]) => void;
@@ -43,10 +33,7 @@ interface BuildReelProps {
 export function BuildReel({
   state,
   releases,
-  durationMismatchKeys,
-  validation,
-  ackWarnings,
-  onAckChange,
+  durationMismatchByKey,
   onTrackChange,
   onTrackRemove,
   onReorder,
@@ -122,9 +109,13 @@ export function BuildReel({
                     <BuildReelTrackCard
                       track={track}
                       releases={releases}
-                      hasDurationMismatch={durationMismatchKeys.has(
-                        `${track.sourceReleaseId}:audio:${track.sourceStreamIndex}`,
-                      )}
+                      durationMismatch={durationMismatchByKey.get(
+                        buildSourceTrackKey(
+                          track.sourceReleaseId,
+                          "audio",
+                          track.sourceStreamIndex,
+                        ),
+                      ) ?? null}
                       canMoveUp={posInGroup > 0}
                       canMoveDown={posInGroup < audioTracks.length - 1}
                       onChange={(patch) => onTrackChange(flatIndex, patch)}
@@ -178,7 +169,7 @@ export function BuildReel({
                     <BuildReelTrackCard
                       track={track}
                       releases={releases}
-                      hasDurationMismatch={false}
+                      durationMismatch={null}
                       canMoveUp={posInGroup > 0}
                       canMoveDown={posInGroup < subTracks.length - 1}
                       onChange={(patch) => onTrackChange(flatIndex, patch)}
@@ -197,19 +188,6 @@ export function BuildReel({
           </div>
         )}
       </BuildKindSection>
-
-      {validation ? (
-        <>
-          {validation.ok && validation.mappingPreview?.length ? (
-            <BuildMappingPreviewPanel rows={validation.mappingPreview} />
-          ) : null}
-          <BuildValidationPanel
-            validation={validation}
-            ackWarnings={ackWarnings}
-            onAckChange={onAckChange}
-          />
-        </>
-      ) : null}
     </div>
   );
 }

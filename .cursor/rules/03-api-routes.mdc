@@ -68,6 +68,11 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | GET | `/api/exports/[id]` | Статус job экспорта |
 | POST | `/api/exports/[id]/cancel` | Отмена |
 | POST | `/api/exports/[id]/retry` | Повтор FAILED/CANCELLED |
+| GET | `/api/movies/[id]/releases/[releaseId]/move` | Активное перемещение: `{ job, activeExport, activeBuild }` |
+| POST | `/api/movies/[id]/releases/[releaseId]/move` | Постановка перемещения (`dryRun`, `targetDir`, `filename`, `externalStorageId`) → 202 |
+| GET | `/api/moves/[id]` | Статус job перемещения |
+| POST | `/api/moves/[id]/cancel` | Отмена |
+| POST | `/api/moves/[id]/retry` | Повтор FAILED/CANCELLED |
 
 ## Release builds
 

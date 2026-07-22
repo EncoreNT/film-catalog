@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
 import type { SerializedExport } from "@/lib/releases/export-serialize";
+import type { SerializedMove } from "@/lib/releases/move-serialize";
 import {
   sortActiveMediaJobs,
   summarizeActiveMediaJobs,
@@ -83,6 +84,44 @@ function stubExport(
   };
 }
 
+function stubMove(
+  overrides: Partial<SerializedMove> & Pick<SerializedMove, "id" | "status">,
+): SerializedMove {
+  return {
+    movieId: 1,
+    releaseId: 10,
+    movie: {
+      id: 1,
+      slug: "test",
+      title: "Test",
+      coverPath: null,
+      updatedAt: new Date("2026-07-17T10:00:00.000Z"),
+    },
+    release: {} as SerializedMove["release"],
+    phase: null,
+    progressPercent: null,
+    progressMessage: null,
+    progressSpeed: null,
+    sourceFilePath: "/src/test.mkv",
+    sourceFilePathDisplay: "/src/test.mkv",
+    sourceFileSize: 1_000_000,
+    targetPath: "/dst/test.mkv",
+    targetPathDisplay: "/dst/test.mkv",
+    targetFilename: "test.mkv",
+    externalStorageId: null,
+    externalStorage: null,
+    errorMessage: null,
+    warningMessage: null,
+    cancelRequested: false,
+    queueOrder: 0,
+    startedAt: null,
+    finishedAt: null,
+    createdAt: "2026-07-17T10:00:00.000Z",
+    updatedAt: "2026-07-17T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
 describe("sortActiveMediaJobs", () => {
   it("orders running jobs before queued and respects queue order", () => {
     const builds = [
@@ -111,6 +150,25 @@ describe("sortActiveMediaJobs", () => {
       "build:2",
     ]);
   });
+
+  it("includes move jobs in sort order", () => {
+    const sorted = sortActiveMediaJobs(
+      [stubBuild({ id: 1, status: "QUEUED", queueOrder: 1 })],
+      [],
+      [
+        stubMove({
+          id: 2,
+          status: "RUNNING",
+          startedAt: "2026-07-17T10:00:00.000Z",
+        }),
+      ],
+    );
+
+    expect(sorted.map((entry) => `${entry.kind}:${entry.job.id}`)).toEqual([
+      "move:2",
+      "build:1",
+    ]);
+  });
 });
 
 describe("summarizeActiveMediaJobs", () => {
@@ -121,8 +179,9 @@ describe("summarizeActiveMediaJobs", () => {
         stubBuild({ id: 2, status: "QUEUED" }),
       ],
       [stubExport({ id: 3, status: "QUEUED" })],
+      [stubMove({ id: 4, status: "RUNNING" })],
     );
 
-    expect(summary).toEqual({ total: 3, running: 1, queued: 2 });
+    expect(summary).toEqual({ total: 4, running: 2, queued: 2 });
   });
 });

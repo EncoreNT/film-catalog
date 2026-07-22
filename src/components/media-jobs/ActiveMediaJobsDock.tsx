@@ -6,6 +6,7 @@ import { Layers3, LoaderCircle, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { BuildJobCard } from "@/components/builds/BuildJobCard";
 import { ExportJobCard } from "@/components/media-jobs/ExportJobCard";
+import { MoveJobCard } from "@/components/media-jobs/MoveJobCard";
 import { apiFetch } from "@/lib/api/client";
 import type { ActiveMediaJobsPayload } from "@/lib/media/active-media-jobs";
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
@@ -34,6 +35,9 @@ function ActiveJobRow({
     return (
       <BuildJobCard build={entry.job} allItems={allBuilds} compact />
     );
+  }
+  if (entry.kind === "move") {
+    return <MoveJobCard job={entry.job} compact />;
   }
   return <ExportJobCard job={entry.job} compact />;
 }

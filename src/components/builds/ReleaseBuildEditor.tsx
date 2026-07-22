@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wand2, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { Button } from "@/components/primitives/Button";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
@@ -29,11 +29,14 @@ import {
 import { BuildReel } from "@/components/builds/BuildReel";
 import { BuildOutputPanel } from "@/components/builds/BuildOutputPanel";
 import { BuildCapabilitiesPanel } from "@/components/builds/BuildCapabilitiesPanel";
+import { BuildValidationPanel } from "@/components/builds/BuildValidationPanel";
+import { BuildMappingPreviewPanel } from "@/components/builds/BuildMappingPreviewPanel";
 import { estimateBuildOutputSizeFromRecipe } from "@/lib/builds/build-output-size";
 import { suggestBuildOutputPath } from "@/lib/builds/build-filename";
 import { buildRecipeTrackFromCatalogPick } from "@/lib/builds/build-track-source";
 import type { BuildTrackMappingPreviewRow } from "@/lib/builds/build-mapping-preview";
 import { pickPrimaryRelease } from "@/lib/releases/release-primary";
+import { computeAudioDurationMismatchMap } from "@/lib/builds/build-duration-hint";
 
 function buildSuggestInput(
   releases: ReleaseWithTracks[],
@@ -72,7 +75,14 @@ interface ValidationResult {
   mappingPreview?: BuildTrackMappingPreviewRow[];
 }
 
-const DURATION_HINT_THRESHOLD = 1;
+function warningsFingerprint(
+  warnings: ValidationResult["warnings"] | undefined,
+): string {
+  return (warnings ?? [])
+    .map((w) => `${w.code}\0${w.message}`)
+    .sort()
+    .join("\n");
+}
 
 function buildTrackFromSource(
   releases: ReleaseWithTracks[],
@@ -97,13 +107,17 @@ export function ReleaseBuildEditor({
   );
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [ackWarnings, setAckWarnings] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<BuildCapabilities | null>(null);
+  const validateSeq = useRef(0);
+  const warningsFpRef = useRef("");
+  const lastValidatedRecipeRef = useRef<string | null>(null);
 
   const storage = useStoragePicker(
     releases.find((r) => r.id === state.externalStorageId)?.externalStorage ?? null,
   );
+  const resolveExternalStorageId = storage.resolveExternalStorageId;
 
   useEffect(() => {
     let cancelled = false;
@@ -163,31 +177,86 @@ export function ReleaseBuildEditor({
     return v ? sourceTrackKey(v.sourceReleaseId, "video", v.sourceStreamIndex) : null;
   }, [state.tracks]);
 
-  // Client-side duration heuristic: flag an audio track when its source
-  // release duration differs from the video source release duration.
-  const durationMismatchKeys = useMemo(() => {
-    const video = state.tracks.find((t) => t.kind === "video");
-    if (!video) return new Set<string>();
-    const videoRelease = releases.find((r) => r.id === video.sourceReleaseId);
-    const videoDuration = videoRelease?.durationSeconds ?? null;
-    if (videoDuration == null) return new Set<string>();
-    const flags = new Set<string>();
-    for (const t of state.tracks) {
-      if (t.kind !== "audio") continue;
-      const audioRelease = releases.find((r) => r.id === t.sourceReleaseId);
-      const audioDuration = audioRelease?.durationSeconds ?? null;
-      if (audioDuration == null) continue;
-      if (Math.abs(audioDuration - videoDuration) > DURATION_HINT_THRESHOLD) {
-        flags.add(sourceTrackKey(t.sourceReleaseId, "audio", t.sourceStreamIndex));
-      }
-    }
-    return flags;
-  }, [state.tracks, releases]);
+  const durationMismatchByKey = useMemo(
+    () => computeAudioDurationMismatchMap(state.tracks, releases),
+    [state.tracks, releases],
+  );
 
-  const resetValidation = useCallback(() => {
-    setValidation(null);
-    setAckWarnings(false);
-  }, []);
+  const hasVideo = state.tracks.some((t) => t.kind === "video");
+  const pathFilled = state.outputPath.trim().length > 0;
+
+  const validationPrerequisiteHint = useMemo(() => {
+    if (!hasVideo) return "Добавьте видео в состав сборки — проверка запустится автоматически.";
+    if (!pathFilled) return "Укажите путь выходного файла — проверка запустится автоматически.";
+    return null;
+  }, [hasVideo, pathFilled]);
+
+  const runValidate = useCallback(async () => {
+    if (!hasVideo || !pathFilled) {
+      setValidation(null);
+      lastValidatedRecipeRef.current = null;
+      return;
+    }
+
+    const seq = ++validateSeq.current;
+
+    try {
+      const externalStorageId = await resolveExternalStorageId();
+      const payload = serializeBuildRecipe({ ...state, externalStorageId });
+      const recipeKey = JSON.stringify(payload);
+      if (recipeKey === lastValidatedRecipeRef.current) return;
+
+      setError(null);
+
+      const res = await fetch(`/api/movies/${movieId}/builds/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await res.json().catch(() => null)) as ValidationResult | null;
+      if (seq !== validateSeq.current) return;
+
+      if (!data) {
+        setError("Не удалось прочитать ответ проверки");
+        setValidation(null);
+        lastValidatedRecipeRef.current = null;
+        return;
+      }
+
+      lastValidatedRecipeRef.current = recipeKey;
+      setValidation(data);
+      const nextFp = warningsFingerprint(data.warnings);
+      setAckWarnings((acked) => {
+        if (warningsFpRef.current === nextFp) return acked;
+        warningsFpRef.current = nextFp;
+        return false;
+      });
+      if (!data.ok && data.error) setError(data.error);
+    } catch (err) {
+      if (seq !== validateSeq.current) return;
+      setError(err instanceof Error ? err.message : "Ошибка проверки");
+      setValidation(null);
+      lastValidatedRecipeRef.current = null;
+    }
+  }, [hasVideo, pathFilled, movieId, state, resolveExternalStorageId]);
+
+  useEffect(() => {
+    if (validationPrerequisiteHint) {
+      setValidation(null);
+      warningsFpRef.current = "";
+      lastValidatedRecipeRef.current = null;
+      setAckWarnings(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void runValidate();
+    }, 450);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [validationPrerequisiteHint, runValidate]);
 
   const handlePick = useCallback(
     (releaseId: number, kind: BuildRecipeTrackState["kind"], streamIndex: number) => {
@@ -228,9 +297,8 @@ export function ReleaseBuildEditor({
         next.sort((a, b) => order[a.kind] - order[b.kind]);
         return { ...current, tracks: normalizeExclusiveDefaults(next) };
       });
-      resetValidation();
     },
-    [releases, resetValidation],
+    [releases],
   );
 
   const handleVideoReleaseChange = useCallback(
@@ -244,9 +312,8 @@ export function ReleaseBuildEditor({
         const withoutVideo = current.tracks.filter((t) => t.kind !== "video");
         return { ...current, tracks: [track, ...withoutVideo] };
       });
-      resetValidation();
     },
-    [releases, resetValidation],
+    [releases],
   );
 
   const handleTrackChange = useCallback(
@@ -255,9 +322,8 @@ export function ReleaseBuildEditor({
         ...current,
         tracks: applyTrackPatch(current.tracks, index, patch),
       }));
-      resetValidation();
     },
-    [resetValidation],
+    [],
   );
 
   const handleTrackRemove = useCallback((index: number) => {
@@ -265,47 +331,17 @@ export function ReleaseBuildEditor({
       ...current,
       tracks: current.tracks.filter((_, i) => i !== index),
     }));
-    resetValidation();
-  }, [resetValidation]);
+  }, []);
 
   const handleReorder = useCallback((tracks: BuildRecipeTrackState[]) => {
     setState((current) => ({ ...current, tracks }));
-    resetValidation();
-  }, [resetValidation]);
-
-  const handleValidate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const externalStorageId = await storage.resolveExternalStorageId();
-      const payload = serializeBuildRecipe({ ...state, externalStorageId });
-      const res = await fetch(`/api/movies/${movieId}/builds/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = (await res.json().catch(() => null)) as ValidationResult | null;
-      if (!data) {
-        setError("Не удалось прочитать ответ проверки");
-        setValidation(null);
-        return;
-      }
-      setValidation(data);
-      setAckWarnings(false);
-      if (!data.ok && data.error) setError(data.error);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
-      setValidation(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, []);
 
   const handleSubmit = async () => {
-    setLoading(true);
+    setSubmitting(true);
     setError(null);
     try {
-      const externalStorageId = await storage.resolveExternalStorageId();
+      const externalStorageId = await resolveExternalStorageId();
       const payload = {
         ...serializeBuildRecipe({ ...state, externalStorageId }),
         acknowledgeWarnings:
@@ -344,12 +380,10 @@ export function ReleaseBuildEditor({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const hasVideo = state.tracks.some((t) => t.kind === "video");
-  const pathFilled = state.outputPath.trim().length > 0;
   const sizeEstimate = useMemo(
     () => estimateBuildOutputSizeFromRecipe(state.tracks, releases),
     [state.tracks, releases],
@@ -362,12 +396,22 @@ export function ReleaseBuildEditor({
     validation?.ok === true &&
     (warningsCount === 0 || ackWarnings);
 
-  const actionBarHint =
-    validation?.ok === true
-      ? "состав сборки проверен — можно ставить в очередь"
-      : validation?.ok === false
-        ? "есть ошибки — исправьте и проверьте снова"
-        : "настройте состав сборки и нажмите «Проверить»";
+  const actionBarHint = useMemo(() => {
+    if (!toolsOk) return "не все утилиты доступны — см. панель справа";
+    if (validationPrerequisiteHint) return validationPrerequisiteHint;
+    if (validation?.ok === false) return "есть ошибки — см. блок «Готовность к очереди» справа";
+    if (validation?.ok && warningsCount > 0 && !ackWarnings) {
+      return "подтвердите предупреждения справа, чтобы поставить в очередь";
+    }
+    if (validation?.ok) return "состав проверен — можно поставить в очередь";
+    return "настройте состав сборки";
+  }, [
+    toolsOk,
+    validationPrerequisiteHint,
+    validation?.ok,
+    warningsCount,
+    ackWarnings,
+  ]);
 
   return (
     <form
@@ -424,10 +468,7 @@ export function ReleaseBuildEditor({
             <BuildReel
               state={state}
               releases={releases}
-              durationMismatchKeys={durationMismatchKeys}
-              validation={validation}
-              ackWarnings={ackWarnings}
-              onAckChange={setAckWarnings}
+              durationMismatchByKey={durationMismatchByKey}
               onTrackChange={handleTrackChange}
               onTrackRemove={handleTrackRemove}
               onReorder={handleReorder}
@@ -438,49 +479,48 @@ export function ReleaseBuildEditor({
 
         {/* Output + health */}
         <div className="lg:col-span-3 lg:overflow-y-auto lg:pr-1 scroll-subtle">
-          <MachinedCard variant="calm" bodyClassName="space-y-6">
-            <CardSectionHeader label="назначение" title="Выходной файл" />
-            <BuildOutputPanel
-              outputPath={state.outputPath}
-              outputReleaseType={state.outputReleaseType}
-              outputVersion={state.outputVersion}
-              sizeEstimate={sizeEstimate}
-              storage={storage}
-              onOutputPathChange={(value) => {
-                setState((s) => ({ ...s, outputPath: value }));
-                resetValidation();
-              }}
-              onReleaseTypeChange={(value) => {
-                setState((s) => ({ ...s, outputReleaseType: value }));
-                resetValidation();
-              }}
-              onVersionChange={(value) => {
-                setState((s) => ({ ...s, outputVersion: value }));
-                resetValidation();
-              }}
+          <div className="space-y-4 lg:sticky lg:top-0">
+            <BuildValidationPanel
+              validation={validation}
+              prerequisiteHint={validationPrerequisiteHint}
+              ackWarnings={ackWarnings}
+              onAckChange={setAckWarnings}
             />
-            <div className="border-t border-border/60 pt-4">
-              <BuildCapabilitiesPanel capabilities={capabilities} />
-            </div>
-          </MachinedCard>
+            <MachinedCard variant="calm" bodyClassName="space-y-6">
+              <CardSectionHeader label="назначение" title="Выходной файл" />
+              <BuildOutputPanel
+                outputPath={state.outputPath}
+                outputReleaseType={state.outputReleaseType}
+                outputVersion={state.outputVersion}
+                sizeEstimate={sizeEstimate}
+                storage={storage}
+                onOutputPathChange={(value) => {
+                  setState((s) => ({ ...s, outputPath: value }));
+                }}
+                onReleaseTypeChange={(value) => {
+                  setState((s) => ({ ...s, outputReleaseType: value }));
+                }}
+                onVersionChange={(value) => {
+                  setState((s) => ({ ...s, outputVersion: value }));
+                }}
+              />
+              <div className="border-t border-border/60 pt-4">
+                <BuildCapabilitiesPanel capabilities={capabilities} />
+              </div>
+            </MachinedCard>
+            {validation?.ok && validation.mappingPreview?.length ? (
+              <BuildMappingPreviewPanel rows={validation.mappingPreview} />
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <FormActionBar idleMessage={actionBarHint} saving={loading} error={error}>
-        <Button
-          type="button"
-          variant="secondary"
-          loading={loading}
-          onClick={() => void handleValidate()}
-        >
-          <Wand2 className="h-4 w-4" strokeWidth={1.5} aria-hidden />
-          Проверить
-        </Button>
+      <FormActionBar idleMessage={actionBarHint} saving={submitting} error={error}>
         <Button
           type="submit"
           variant="primary"
           disabled={!canSubmit}
-          loading={loading}
+          loading={submitting}
         >
           Поставить в очередь
         </Button>

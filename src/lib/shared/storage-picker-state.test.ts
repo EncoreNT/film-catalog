@@ -3,6 +3,7 @@ import {
   initialSelectedStorageId,
   initialStorageKind,
   insertStorageOption,
+  moveTargetStorageKind,
   resolveExternalStorageId,
 } from "@/lib/shared/storage-picker-state";
 
@@ -36,6 +37,16 @@ describe("storage-picker-state", () => {
 
     it("returns null when external is chosen but id is empty", () => {
       expect(resolveExternalStorageId("external", "")).toBeNull();
+    });
+  });
+
+  describe("moveTargetStorageKind", () => {
+    it("prefers external when source is local", () => {
+      expect(moveTargetStorageKind(false)).toBe("external");
+    });
+
+    it("prefers local when source is external", () => {
+      expect(moveTargetStorageKind(true)).toBe("local");
     });
   });
 

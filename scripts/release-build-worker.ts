@@ -3,6 +3,7 @@ import "dotenv/config";
 import { claimAvailableMediaJobs, type MediaJob } from "../src/lib/worker/claim-next-media-job";
 import { runBuildJob } from "../src/lib/builds/build-runner";
 import { runExportJob } from "../src/lib/releases/export-runner";
+import { runMoveJob } from "../src/lib/releases/move-runner";
 import {
   assertBuildCapabilities,
   getBuildCapabilities,
@@ -43,8 +44,10 @@ async function main() {
     try {
       if (job.kind === "build") {
         await runBuildJob(job.id, controller.signal);
-      } else {
+      } else if (job.kind === "export") {
         await runExportJob(job.id, controller.signal);
+      } else {
+        await runMoveJob(job.id, controller.signal);
       }
       console.log(`[${WORKER_ID}] finished ${job.kind} #${job.id}`);
     } catch (err) {

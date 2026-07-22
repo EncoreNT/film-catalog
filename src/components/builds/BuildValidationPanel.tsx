@@ -15,45 +15,91 @@ interface BuildValidationPanelProps {
     warnings: BuildWarning[];
     errors?: BuildWarning[];
     error?: string;
-  };
+  } | null;
+  /** Shown when prerequisites block validation (no video, empty path, …). */
+  prerequisiteHint?: string | null;
   ackWarnings: boolean;
   onAckChange: (value: boolean) => void;
 }
 
 export function BuildValidationPanel({
   validation,
+  prerequisiteHint = null,
   ackWarnings,
   onAckChange,
 }: BuildValidationPanelProps) {
-  const errors = validation.errors ?? [];
-  const warnings = validation.warnings ?? [];
-  const hasErrors = !validation.ok;
+  const errors = validation?.errors ?? [];
+  const warnings = validation?.warnings ?? [];
+  const hasErrors = validation != null && !validation.ok;
   const hasWarnings = warnings.length > 0;
+  const needsAck = hasWarnings && !ackWarnings && !hasErrors;
 
-  const tone = hasErrors
-    ? { dot: "bg-danger shadow-[0_0_8px_rgba(248,113,113,0.5)]", text: "text-danger", label: "ошибки" }
-    : hasWarnings
-      ? { dot: "bg-ember-bright shadow-[0_0_8px_var(--ember-glow)]", text: "text-ember-bright", label: "предупреждения" }
-      : { dot: "bg-accent-bright shadow-[0_0_8px_var(--accent-glow)]", text: "text-accent-bright", label: "готово" };
+  const tone = prerequisiteHint
+    ? {
+        dot: "bg-white/35",
+        text: "text-muted",
+      }
+    : hasErrors
+      ? {
+          dot: "bg-danger shadow-[0_0_8px_rgba(248,113,113,0.5)]",
+          text: "text-danger",
+        }
+      : hasWarnings
+        ? {
+            dot: "bg-ember-bright shadow-[0_0_8px_var(--ember-glow)]",
+            text: "text-ember-bright",
+          }
+        : validation?.ok
+          ? {
+              dot: "bg-accent-bright shadow-[0_0_8px_var(--accent-glow)]",
+              text: "text-accent-bright",
+            }
+          : {
+              dot: "bg-white/35",
+              text: "text-muted",
+            };
+
+  const showStatus = prerequisiteHint != null || validation != null;
+
+  const ringClass = needsAck
+    ? "ring-1 ring-ember/45"
+    : hasErrors
+      ? "ring-1 ring-danger/40"
+      : "";
 
   return (
-    <MachinedCard variant="calm" bodyClassName="space-y-4">
-      <CardSectionHeader label="проверка" title="Состояние сборки" />
+    <div id="build-validation">
+      <MachinedCard
+        variant="calm"
+        className={ringClass}
+        bodyClassName="space-y-4"
+      >
+      <CardSectionHeader label="проверка" title="Готовность к очереди" />
 
-      <div className="flex items-center gap-2.5">
-        <span className={`neural-pulse h-2 w-2 rounded-full ${tone.dot}`} aria-hidden />
-        <span className={`font-mono-tech text-xs uppercase tracking-[0.16em] ${tone.text}`}>
-          {hasErrors
-            ? `${errors.length} ${plural(errors.length, "ошибка", "ошибки", "ошибок")}`
-            : hasWarnings
-              ? `${warnings.length} ${plural(warnings.length, "предупреждение", "предупреждения", "предупреждений")}`
-              : "готов к очереди"}
-        </span>
-      </div>
+      {showStatus ? (
+        <div className="flex items-center gap-2.5">
+          <span className={`neural-pulse h-2 w-2 rounded-full ${tone.dot}`} aria-hidden />
+          <span className={`font-mono-tech text-xs uppercase tracking-[0.16em] ${tone.text}`}>
+            {prerequisiteHint
+              ? "ожидает настройки"
+              : hasErrors
+                ? `${errors.length} ${plural(errors.length, "ошибка", "ошибки", "ошибок")}`
+                : hasWarnings
+                  ? `${warnings.length} ${plural(warnings.length, "предупреждение", "предупреждения", "предупреждений")}`
+                  : validation?.ok
+                    ? "готов к очереди"
+                    : null}
+          </span>
+        </div>
+      ) : null}
 
-      {hasErrors ? (
-        <div className="space-y-2">
-          {validation.error ? (
+      {prerequisiteHint ? (
+        <p className="text-sm leading-relaxed text-muted">{prerequisiteHint}</p>
+      ) : null}
+
+      {!prerequisiteHint && hasErrors ? (
+        <div className="space-y-2" role="alert">
+          {validation?.error ? (
             <p className="flex items-start gap-2 text-sm text-danger">
               <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden />
               {validation.error}
@@ -71,15 +117,21 @@ export function BuildValidationPanel({
         </div>
       ) : null}
 
-      {!hasErrors && !hasWarnings ? (
+      {!prerequisiteHint && validation?.ok && !hasWarnings ? (
         <p className="flex items-start gap-2 text-sm text-accent">
           <Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden />
           Сборка настроена корректно — можно ставить в очередь.
         </p>
       ) : null}
 
-      {hasWarnings ? (
-        <div className="space-y-2.5">
+      {!prerequisiteHint && hasWarnings ? (
+        <div className="space-y-2.5" role="status" aria-live="polite">
+          {needsAck ? (
+            <p className="text-xs leading-relaxed text-ember-bright">
+              Подтвердите предупреждения ниже — без этого кнопка «Поставить в очередь»
+              останется недоступной.
+            </p>
+          ) : null}
           {warnings.map((item) => (
             <p
               key={item.code + item.message}
@@ -93,7 +145,7 @@ export function BuildValidationPanel({
             type="button"
             onClick={() => onAckChange(!ackWarnings)}
             aria-pressed={ackWarnings}
-            className={`focus-ring font-mono-tech inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] transition-colors ${
+            className={`focus-ring font-mono-tech inline-flex min-h-11 items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] transition-colors ${
               ackWarnings
                 ? "border-ember/45 bg-ember/[0.1] text-ember-bright"
                 : "border-border bg-bg-deep/40 text-muted hover:text-text"
@@ -111,7 +163,8 @@ export function BuildValidationPanel({
           </button>
         </div>
       ) : null}
-    </MachinedCard>
+      </MachinedCard>
+    </div>
   );
 }
 

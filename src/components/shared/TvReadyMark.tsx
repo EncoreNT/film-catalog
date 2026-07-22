@@ -2,7 +2,7 @@
 
 import { Tv } from "lucide-react";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
-import { tvReadyMarkDetail, tvReadyMarkLabel } from "@/lib/media/tv-ready";
+import { tvReadyMarkDetail, tvReadyMarkLabel, tvCompatibleTrackHint } from "@/lib/media/tv-ready";
 
 interface TvReadyMarkProps {
   className?: string;
@@ -72,5 +72,30 @@ export function TvReadyReleaseNotice({
         </div>
       </div>
     </article>
+  );
+}
+
+export function TvCompatibleTrackBadge({ className = "" }: { className?: string }) {
+  const hint = tvCompatibleTrackHint();
+
+  return (
+    <HoverTooltip
+      className={`inline-flex shrink-0 cursor-help ${className}`}
+      content={
+        <div className="px-3 py-2">
+          <p className="text-xs font-medium text-text">Дорожка для телевизора</p>
+          <p className="mt-0.5 font-mono-tech text-[0.6rem] leading-snug text-muted">
+            {hint}
+          </p>
+        </div>
+      }
+    >
+      <span
+        className="font-mono-tech inline-flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full border border-cyan/45 bg-cyan/[0.1] px-1 text-[0.55rem] uppercase tracking-[0.08em] text-cyan"
+        aria-label={`TV: ${hint}`}
+      >
+        TV
+      </span>
+    </HoverTooltip>
   );
 }

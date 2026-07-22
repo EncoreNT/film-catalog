@@ -33,6 +33,13 @@ import {
   transcodeQualityHint,
   TIER_TONE,
 } from "@/lib/builds/build-display";
+import {
+  durationMismatchInlineLabel,
+  durationMismatchTooltipLines,
+  DURATION_MISMATCH_SEVERITY_TONE,
+  type DurationMismatchInfo,
+} from "@/lib/builds/build-duration-hint";
+import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 
 function resolveSourceTrack(
   releases: ReleaseWithTracks[],
@@ -49,7 +56,7 @@ function resolveSourceTrack(
 interface BuildReelTrackCardProps {
   track: BuildRecipeTrackState;
   releases: ReleaseWithTracks[];
-  hasDurationMismatch: boolean;
+  durationMismatch: DurationMismatchInfo | null;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onChange: (patch: Partial<BuildRecipeTrackState>) => void;
@@ -61,7 +68,7 @@ interface BuildReelTrackCardProps {
 export function BuildReelTrackCard({
   track,
   releases,
-  hasDurationMismatch,
+  durationMismatch,
   canMoveUp,
   canMoveDown,
   onChange,
@@ -329,11 +336,8 @@ export function BuildReelTrackCard({
               onChange={(v) => onChange({ isDefault: v })}
               label="по умолчанию"
             />
-            {hasDurationMismatch ? (
-              <span className="font-mono-tech flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] text-ember-bright">
-                <Clock className="h-3 w-3" strokeWidth={1.5} aria-hidden />
-                рассинхрон длительности
-              </span>
+            {durationMismatch ? (
+              <DurationMismatchHint info={durationMismatch} />
             ) : null}
           </div>
         </div>
@@ -354,5 +358,27 @@ export function BuildReelTrackCard({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function DurationMismatchHint({ info }: { info: DurationMismatchInfo }) {
+  const tooltip = durationMismatchTooltipLines(info);
+  return (
+    <HoverTooltip
+      className={`font-mono-tech inline-flex cursor-help items-center gap-1 text-[10px] uppercase tracking-[0.14em] ${DURATION_MISMATCH_SEVERITY_TONE[info.severity]}`}
+      content={
+        <div className="px-3 py-2">
+          <p className="text-xs font-medium text-text">{tooltip.headline}</p>
+          <p className="mt-0.5 font-mono-tech text-[0.6rem] leading-snug text-muted">
+            {tooltip.detail}
+          </p>
+        </div>
+      }
+    >
+      <span className="inline-flex items-center gap-1" aria-label={`${tooltip.headline}. ${tooltip.detail}`}>
+        <Clock className="h-3 w-3 shrink-0" strokeWidth={1.5} aria-hidden />
+        {durationMismatchInlineLabel(info)}
+      </span>
+    </HoverTooltip>
   );
 }

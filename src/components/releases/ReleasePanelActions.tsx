@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  HardDrive,
   HardDriveDownload,
   LoaderCircle,
   Menu,
@@ -22,12 +23,18 @@ import { NativeDialog } from "@/components/primitives/NativeDialog";
 import { FolderPathField } from "@/components/shared/FolderPathField";
 import { apiFetch } from "@/lib/api/client";
 import type { ReleaseExportJobState } from "@/hooks/useReleaseExportJob";
+import type { ReleaseMoveJobState } from "@/hooks/useReleaseMoveJob";
 import {
   EXPORT_RELEASE_CONFIRM_LABEL,
   EXPORT_RELEASE_DIALOG_TITLE,
   EXPORT_RELEASE_MENU_LABEL,
   exportReleaseBlockReason,
 } from "@/lib/releases/export-release-ui";
+import {
+  MOVE_RELEASE_MENU_LABEL,
+  moveReleaseBlockReason,
+} from "@/lib/releases/move-release-ui";
+import { ReleaseMoveDialog } from "@/components/releases/ReleaseMoveDialog";
 import type { SerializedExport } from "@/lib/releases/export-serialize";
 import {
   EXPORT_STATUS_META,
@@ -114,6 +121,9 @@ export function ReleasePanelActions({
   exportDialogOpen,
   onExportDialogOpenChange,
   onExportSuccessMessageChange,
+  moveJobState,
+  moveDialogOpen,
+  onMoveDialogOpenChange,
 }: {
   movieId: number;
   movieSlug: string;
@@ -123,6 +133,9 @@ export function ReleasePanelActions({
   exportDialogOpen: boolean;
   onExportDialogOpenChange: (open: boolean) => void;
   onExportSuccessMessageChange: (message: string | null) => void;
+  moveJobState: ReleaseMoveJobState;
+  moveDialogOpen: boolean;
+  onMoveDialogOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
   const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
@@ -295,6 +308,16 @@ export function ReleasePanelActions({
       : null;
   const exportSpeed = exportSpeedLabel(exportJob?.progressSpeed);
   const exportBusy = loading || exportActionLoading;
+  const moveBusy = loading || moveJobState.loading;
+  const actionsBusy = exportBusy || moveBusy;
+
+  const moveBlockReason = moveReleaseBlockReason({
+    hasFilePath: Boolean(activeRelease.filePath),
+    activeJob: moveJobState.moveActive,
+    activeExport: moveJobState.activeExport,
+    activeBuild: moveJobState.activeBuild,
+  });
+  const canMove = moveBlockReason == null;
 
   const handleRescan = async () => {
     setLoading(true);
@@ -370,14 +393,21 @@ export function ReleasePanelActions({
             <ReleaseActionsMenuItem
               label="Пересканировать"
               icon={<ScanSearch className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-              disabled={!activeRelease.filePath || exportBusy}
+              disabled={!activeRelease.filePath || actionsBusy}
               onClick={() => setConfirmKind("probe")}
+            />
+            <ReleaseActionsMenuItem
+              label={MOVE_RELEASE_MENU_LABEL}
+              icon={<HardDrive className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+              disabled={(!canMove && !moveJobState.moveActive) || actionsBusy}
+              disabledHint={moveJobState.moveActive ? null : moveBlockReason}
+              onClick={() => onMoveDialogOpenChange(true)}
             />
             {showExportAction ? (
               <ReleaseActionsMenuItem
                 label={EXPORT_RELEASE_MENU_LABEL}
                 icon={<HardDriveDownload className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-                disabled={(!canExport && !exportActive) || exportBusy}
+                disabled={(!canExport && !exportActive) || actionsBusy}
                 disabledHint={exportActive ? null : exportBlockReason}
                 onClick={() => void openExportDialog()}
               />
@@ -395,7 +425,7 @@ export function ReleasePanelActions({
             <ReleaseActionsMenuItem
               label="Удалить"
               icon={<Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-              disabled={releaseCount <= 1 || exportBusy}
+              disabled={releaseCount <= 1 || actionsBusy}
               danger
               onClick={() => setConfirmKind("delete")}
             />
@@ -679,6 +709,14 @@ export function ReleasePanelActions({
           )}
         </div>
       </NativeDialog>
+      <ReleaseMoveDialog
+        open={moveDialogOpen}
+        onClose={() => onMoveDialogOpenChange(false)}
+        movieId={movieId}
+        activeRelease={activeRelease}
+        moveJobState={moveJobState}
+        onError={setError}
+      />
     </>
   );
 }

@@ -46,6 +46,7 @@ model ExternalStorage {
 
   releases Release[]
   builds   ReleaseBuild[]
+  moves    ReleaseMove[]
 }
 
 model Movie {
@@ -67,6 +68,7 @@ model Movie {
   releases    Release[]
   builds      ReleaseBuild[]
   exports     ReleaseExport[]
+  moves       ReleaseMove[]
 
   @@index([status])
   @@index([matchKey])
@@ -97,6 +99,7 @@ model Release {
   buildTracks    ReleaseBuildTrack[]
   outputBuilds   ReleaseBuild[]       @relation("BuildOutputRelease")
   exports        ReleaseExport[]
+  moves          ReleaseMove[]
 
   @@index([movieId])
   @@index([fileHash])
@@ -248,6 +251,41 @@ model ReleaseExport {
 
   movie   Movie   @relation(fields: [movieId], references: [id], onDelete: Restrict)
   release Release @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+
+  @@index([movieId])
+  @@index([releaseId])
+  @@index([status])
+  @@index([status, queueOrder])
+  @@index([createdAt])
+}
+
+model ReleaseMove {
+  id                Int                @id @default(autoincrement())
+  movieId           Int
+  releaseId         Int
+  status            ReleaseBuildStatus @default(QUEUED)
+  phase             String?
+  progressPercent   Float?
+  progressMessage   String?
+  progressSpeed     Float?
+  sourceFilePath    String
+  sourceFileSize    Int?
+  targetPath        String
+  targetFilename    String
+  externalStorageId Int?
+  errorMessage      String?
+  warningMessage    String?
+  cancelRequested   Boolean            @default(false)
+  heartbeatAt       DateTime?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  queueOrder        Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  movie           Movie            @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  release         Release          @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  externalStorage ExternalStorage? @relation(fields: [externalStorageId], references: [id], onDelete: SetNull)
 
   @@index([movieId])
   @@index([releaseId])
