@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   audioTrackChannelCount,
   bestRussianDubTrack,
+  catalogAudioChipLabel,
   catalogCardTech,
   catalogTierRibbon,
   premiumHdrView,
@@ -239,6 +240,44 @@ describe("catalogCardTech", () => {
   });
 });
 
+describe("catalogAudioChipLabel", () => {
+  it("shows DTS:X with channels on the cover chip", () => {
+    expect(
+      catalogAudioChipLabel(
+        release({
+          id: 1,
+          audioTracks: [
+            audio({
+              codec: "dts-hd",
+              profile: "DTS:X MA",
+              channels: 8,
+              channelLayout: "7.1",
+            }),
+          ],
+        }),
+      ),
+    ).toBe("DTS:X 7.1");
+  });
+
+  it("shows codec + channels for non-spatial tracks", () => {
+    expect(
+      catalogAudioChipLabel(
+        release({
+          id: 2,
+          audioTracks: [
+            audio({
+              codec: "ac3",
+              profile: null,
+              channels: 6,
+              channelLayout: "5.1",
+            }),
+          ],
+        }),
+      ),
+    ).toBe("AC3 5.1");
+  });
+});
+
 describe("releaseTier", () => {
   it("ruby: 4K + HDR + Atmos 7.1", () => {
     expect(
@@ -459,7 +498,7 @@ describe("releaseTier", () => {
     ).toBeNull();
   });
 
-  it("DTS:X не считается Atmos для ruby, но даёт gold при 7.1", () => {
+  it("DTS:X даёт ruby при 4K + HDR + рус. дубляж 7.1", () => {
     expect(
       releaseTier(
         release({
@@ -470,7 +509,7 @@ describe("releaseTier", () => {
           ],
         }),
       ),
-    ).toBe("gold");
+    ).toBe("ruby");
   });
 
   it("fallback каналов из channelLayout при channels=null: AC3 5.1 → gold", () => {
@@ -559,8 +598,41 @@ describe("catalogTierRibbon", () => {
     expect(catalogTierRibbon("gold")).toBe("4K | HDR");
   });
 
-  it("ruby → 4K | HDR | РУС. ATMOS", () => {
-    expect(catalogTierRibbon("ruby")).toBe("4K | HDR | РУС. ATMOS");
+  it("ruby без релиза → generic ATMOS · DTS:X", () => {
+    expect(catalogTierRibbon("ruby")).toBe("4K | HDR | РУС. ATMOS · DTS:X");
+  });
+
+  it("ruby с Atmos → РУС. ATMOS", () => {
+    expect(
+      catalogTierRibbon(
+        "ruby",
+        release({
+          id: 1,
+          videoTrack: video("HDR10"),
+          audioTracks: [audio()],
+        }),
+      ),
+    ).toBe("4K | HDR | РУС. ATMOS");
+  });
+
+  it("ruby с DTS:X → РУС. DTS:X", () => {
+    expect(
+      catalogTierRibbon(
+        "ruby",
+        release({
+          id: 2,
+          videoTrack: video("HDR10"),
+          audioTracks: [
+            audio({
+              codec: "dts-hd",
+              profile: "DTS:X MA",
+              channels: 8,
+              channelLayout: "7.1",
+            }),
+          ],
+        }),
+      ),
+    ).toBe("4K | HDR | РУС. DTS:X");
   });
 
   it("null tier → null ribbon", () => {
@@ -579,6 +651,25 @@ describe("releaseQuickSpecHints", () => {
         }),
       ),
     ).toEqual(["4K", "HDR", "Atmos"]);
+  });
+
+  it("returns 4K, HDR and DTS:X for a DTS:X ruby release", () => {
+    expect(
+      releaseQuickSpecHints(
+        release({
+          id: 4,
+          videoTrack: video("HDR10"),
+          audioTracks: [
+            audio({
+              codec: "dts-hd",
+              profile: "DTS:X MA",
+              channels: 8,
+              channelLayout: "7.1",
+            }),
+          ],
+        }),
+      ),
+    ).toEqual(["4K", "HDR", "DTS:X"]);
   });
 
   it("omits Atmos when the main track is not Atmos", () => {

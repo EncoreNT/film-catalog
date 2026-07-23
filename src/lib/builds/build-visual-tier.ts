@@ -7,7 +7,7 @@ import {
   releaseTier,
   type ReleaseTier,
 } from "@/lib/media/release-tags";
-import { normalizeAudioProfile } from "@/lib/media/quality-predicates";
+import { isSpatialAudioProfile } from "@/lib/media/quality-predicates";
 import {
   releaseTierToSpotlight,
   type SpotlightTier,
@@ -73,7 +73,7 @@ export function resolveBuildVisualTier(build: BuildTierInput): BuildVisualTier |
     if (!audio) continue;
     if (audio.language !== "rus" || audio.translationType !== "dub") continue;
     if (
-      normalizeAudioProfile(audio.profile) === "Atmos" &&
+      isSpatialAudioProfile(audio.profile) &&
       audioTrackChannelCount(audio) >= 8
     ) {
       return "ruby";

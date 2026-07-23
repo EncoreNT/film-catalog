@@ -109,6 +109,33 @@ describe("resolveBuildVisualTier", () => {
     ).toBe("ruby");
   });
 
+  it("returns ruby for planned 4K HDR mux with rus DTS:X dub track", () => {
+    const videoRelease = release({
+      id: 1,
+      videoTrack: video("HDR10"),
+      audioTracks: [
+        audio({
+          codec: "dts-hd",
+          profile: "DTS:X MA",
+          channels: 8,
+          channelLayout: "7.1",
+          streamIndex: 1,
+        }),
+      ],
+    });
+
+    expect(
+      resolveBuildVisualTier({
+        sources: [{ role: "video", releaseId: 1, release: videoRelease }],
+        tracks: [
+          { kind: "VIDEO", sourceReleaseId: 1, sourceStreamIndex: 0 },
+          { kind: "AUDIO", sourceReleaseId: 1, sourceStreamIndex: 1 },
+        ],
+        outputRelease: null,
+      }),
+    ).toBe("ruby");
+  });
+
   it("returns gold for 4K HDR with 5.1 audio in mux", () => {
     const videoRelease = release({
       id: 1,

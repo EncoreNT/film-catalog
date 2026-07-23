@@ -2,13 +2,12 @@ import { access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { assertDirectoryWritable } from "@/lib/db/settings";
-import { getDiskSpaceForPath } from "@/lib/shared/disk-space";
 import {
   displayFilePath,
   joinRuntimePath,
   resolveRuntimePath,
 } from "@/lib/shared/display-path";
-import { formatArchiveTotalSize, formatFileSizeGB } from "@/lib/shared/format";
+import { assertTargetDirFits } from "@/lib/shared/disk-space-fit";
 import {
   resolveExportCollisionAsync,
   suggestExportFilename,
@@ -114,14 +113,5 @@ export async function assertMoveTargetFits(
   targetDir: string,
   requiredBytes: number | null | undefined,
 ): Promise<void> {
-  if (requiredBytes == null || requiredBytes <= 0) return;
-
-  const info = await getDiskSpaceForPath(targetDir);
-  if (!info) return;
-
-  if (requiredBytes > info.freeBytes) {
-    const need = formatFileSizeGB(requiredBytes) ?? "—";
-    const free = formatArchiveTotalSize(info.freeBytes) ?? "—";
-    throw new Error(`Недостаточно места на диске: нужно ${need}, свободно ${free}`);
-  }
+  return assertTargetDirFits(targetDir, requiredBytes);
 }

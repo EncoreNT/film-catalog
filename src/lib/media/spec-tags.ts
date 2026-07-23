@@ -33,6 +33,7 @@ export {
 export {
   catalogCardTags,
   catalogCardTech,
+  catalogAudioChipLabel,
   type CardTech,
 } from "@/lib/media/catalog-card-tags";
 

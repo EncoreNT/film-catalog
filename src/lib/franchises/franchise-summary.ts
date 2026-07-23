@@ -36,7 +36,7 @@ function primaryRelease(movie: MovieWithTracks | null) {
 /**
  * Per-slot quality tier, unified with the project's release tier language
  * (`releaseTier` → ruby / gold / null). A linked film is "ruby" (4K + any
- * HDR + рус. Atmos ≥ 7.1 on the best dub) or "gold" (4K + any HDR + surround
+ * HDR + рус. Atmos или DTS:X ≥ 7.1 on the best dub) or "gold" (4K + any HDR + surround
  * ≥ 5.1 on the main track); a linked film that does not qualify is
  * "standard", and an unlinked slot is "missing". The reel and tooltip use
  * the same ruby / gold / standard vocabulary as the movie card and release

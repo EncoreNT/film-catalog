@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Gem, MonitorPlay, Sun } from "lucide-react";
-import { catalogTierRibbon } from "@/lib/media/release-tags";
+import { RUBY_TIER_RIBBON_GENERIC } from "@/lib/media/release-tags";
 import type { ArchiveMetrics } from "@/lib/catalog/archive-metrics";
 
 export interface ArchiveQualityFilterParams {
@@ -62,8 +62,8 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   },
   {
     key: "elite",
-    label: catalogTierRibbon("ruby")!,
-    shortLabel: catalogTierRibbon("ruby")!,
+    label: RUBY_TIER_RIBBON_GENERIC,
+    shortLabel: RUBY_TIER_RIBBON_GENERIC,
     elite: true,
     icon: Gem,
     isActive: ({ resolution, hdr, premiumAudio }, isCatalog) =>

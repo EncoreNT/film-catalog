@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   HardDrive,
   HardDriveDownload,
-  LoaderCircle,
   Menu,
   Pencil,
   Plus,
@@ -18,15 +17,11 @@ import {
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
 import { Button } from "@/components/primitives/Button";
-import { Field } from "@/components/primitives/Field";
 import { NativeDialog } from "@/components/primitives/NativeDialog";
-import { FolderPathField } from "@/components/shared/FolderPathField";
 import { apiFetch } from "@/lib/api/client";
 import type { ReleaseExportJobState } from "@/hooks/useReleaseExportJob";
 import type { ReleaseMoveJobState } from "@/hooks/useReleaseMoveJob";
 import {
-  EXPORT_RELEASE_CONFIRM_LABEL,
-  EXPORT_RELEASE_DIALOG_TITLE,
   EXPORT_RELEASE_MENU_LABEL,
   exportReleaseBlockReason,
 } from "@/lib/releases/export-release-ui";
@@ -34,14 +29,8 @@ import {
   MOVE_RELEASE_MENU_LABEL,
   moveReleaseBlockReason,
 } from "@/lib/releases/move-release-ui";
+import { ReleaseExportDialog } from "@/components/releases/ReleaseExportDialog";
 import { ReleaseMoveDialog } from "@/components/releases/ReleaseMoveDialog";
-import type { SerializedExport } from "@/lib/releases/export-serialize";
-import {
-  EXPORT_STATUS_META,
-  exportSpeedLabel,
-  exportSizeHint,
-  isExportTerminal,
-} from "@/lib/releases/export-display";
 
 function ReleaseActionsMenuItem({
   label,
@@ -104,14 +93,6 @@ function ReleaseActionsMenuItem({
 
 type ConfirmKind = null | "probe" | "delete" | "deleteFile";
 
-interface ExportDryRunResponse {
-  collision: boolean;
-  suggestedFilename: string;
-  targetPathDisplay: string;
-  savedTargetDir: string | null;
-  savedTargetDirDisplay: string | null;
-}
-
 export function ReleasePanelActions({
   movieId,
   movieSlug,
@@ -141,29 +122,8 @@ export function ReleasePanelActions({
   const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [exportTargetDir, setExportTargetDir] = useState("");
-  const [exportTargetDirRuntime, setExportTargetDirRuntime] = useState("");
-  const [exportFilename, setExportFilename] = useState("");
-  const [exportCollision, setExportCollision] = useState(false);
-  const [exportTargetDisplay, setExportTargetDisplay] = useState<string | null>(
-    null,
-  );
 
-  const {
-    exportJob,
-    setExportJob,
-    exportActive,
-    loading: exportActionLoading,
-    setLoading: setExportActionLoading,
-    loadActiveExport,
-    cancelExport,
-  } = exportJobState;
-
-  useEffect(() => {
-    if (!exportDialogOpen || !exportJob) return;
-    setExportFilename(exportJob.targetFilename);
-    setExportTargetDisplay(exportJob.targetPathDisplay);
-  }, [exportDialogOpen, exportJob]);
+  const { exportActive, loading: exportActionLoading } = exportJobState;
 
   const showExportAction = activeRelease.tvReady;
   const exportBlockReason = exportReleaseBlockReason({
@@ -171,142 +131,11 @@ export function ReleasePanelActions({
   });
   const canExport = exportBlockReason == null;
 
-  const openExportDialog = async () => {
-    setLoading(true);
-    setError(null);
+  const openExportDialog = () => {
     onExportSuccessMessageChange(null);
-    try {
-      const active = await loadActiveExport();
-      if (active) {
-        setExportFilename(active.targetFilename);
-        setExportTargetDisplay(active.targetPathDisplay);
-        onExportDialogOpenChange(true);
-        return;
-      }
-
-      const dryRun = await apiFetch<ExportDryRunResponse>(
-        `/api/movies/${movieId}/releases/${activeRelease.id}/export`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dryRun: true }),
-        },
-        "Не удалось подготовить экспорт",
-      );
-      setExportTargetDir(dryRun.savedTargetDirDisplay ?? "");
-      setExportTargetDirRuntime(dryRun.savedTargetDir ?? "");
-      setExportFilename(dryRun.suggestedFilename);
-      setExportCollision(dryRun.collision);
-      setExportTargetDisplay(dryRun.targetPathDisplay || null);
-      onExportDialogOpenChange(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
-    } finally {
-      setLoading(false);
-    }
+    onExportDialogOpenChange(true);
   };
 
-  const refreshExportDryRun = async (filename: string, targetDir: string) => {
-    if (!targetDir.trim()) {
-      setExportCollision(false);
-      setExportTargetDisplay(null);
-      return;
-    }
-
-    const dryRun = await apiFetch<ExportDryRunResponse>(
-      `/api/movies/${movieId}/releases/${activeRelease.id}/export`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dryRun: true, filename, targetDir }),
-      },
-      "Не удалось проверить имя файла",
-    );
-    setExportCollision(dryRun.collision);
-    setExportTargetDisplay(dryRun.targetPathDisplay);
-    if (dryRun.collision) {
-      setExportFilename(dryRun.suggestedFilename);
-    }
-  };
-
-  const handleExportTargetDirChange = (runtimePath: string, displayPath: string) => {
-    setExportTargetDirRuntime(runtimePath);
-    setExportTargetDir(displayPath);
-    if (runtimePath.trim()) {
-      void refreshExportDryRun(exportFilename, runtimePath).catch((err) => {
-        setError(err instanceof Error ? err.message : "Ошибка");
-      });
-    } else {
-      setExportCollision(false);
-      setExportTargetDisplay(null);
-    }
-  };
-
-  const handleExport = async () => {
-    setExportActionLoading(true);
-    setError(null);
-    try {
-      const job = await apiFetch<SerializedExport>(
-        `/api/movies/${movieId}/releases/${activeRelease.id}/export`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: exportFilename,
-            targetDir: exportTargetDirRuntime,
-          }),
-        },
-        "Не удалось поставить экспорт в очередь",
-      );
-      setExportJob(job);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
-    } finally {
-      setExportActionLoading(false);
-    }
-  };
-
-  const handleExportCancel = async () => {
-    setExportActionLoading(true);
-    setError(null);
-    try {
-      const next = await cancelExport();
-      if (next && isExportTerminal(next.status)) {
-        onExportDialogOpenChange(false);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
-    } finally {
-      setExportActionLoading(false);
-    }
-  };
-
-  const handleExportRetry = async () => {
-    if (!exportJob) return;
-    setExportActionLoading(true);
-    setError(null);
-    try {
-      const next = await apiFetch<SerializedExport>(
-        `/api/exports/${exportJob.id}/retry`,
-        { method: "POST" },
-        "Не удалось повторить экспорт",
-      );
-      setExportJob(next);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
-    } finally {
-      setExportActionLoading(false);
-    }
-  };
-
-  const exportMeta = exportJob
-    ? EXPORT_STATUS_META[exportJob.status as keyof typeof EXPORT_STATUS_META]
-    : null;
-  const exportProgress =
-    exportJob?.progressPercent != null
-      ? Math.round(exportJob.progressPercent)
-      : null;
-  const exportSpeed = exportSpeedLabel(exportJob?.progressSpeed);
   const exportBusy = loading || exportActionLoading;
   const moveBusy = loading || moveJobState.loading;
   const actionsBusy = exportBusy || moveBusy;
@@ -356,14 +185,7 @@ export function ReleasePanelActions({
   };
 
   const closeExportDialog = () => {
-    if (exportActive) {
-      onExportDialogOpenChange(false);
-      return;
-    }
     onExportDialogOpenChange(false);
-    if (exportJob && isExportTerminal(exportJob.status)) {
-      setExportJob(null);
-    }
   };
 
   return (
@@ -535,180 +357,14 @@ export function ReleasePanelActions({
         }
         confirmLabel="Удалить безвозвратно"
       />
-      <NativeDialog
+      <ReleaseExportDialog
         open={exportDialogOpen}
         onClose={closeExportDialog}
-        preventCancel={exportBusy && !exportActive}
-        zIndex={110}
-        ariaLabelledBy="export-dialog-title"
-        className="confirm-dialog fixed inset-0 m-auto flex w-[min(100%-2rem,480px)] max-w-[480px] min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
-      >
-        <div className="min-w-0 space-y-5 overflow-hidden p-5">
-          <div className="min-w-0">
-            <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-accent">
-              экспорт
-            </p>
-            <div className="mt-1 flex min-w-0 items-start justify-between gap-3">
-              <h2
-                id="export-dialog-title"
-                className="min-w-0 font-display text-lg font-semibold leading-tight"
-              >
-                {EXPORT_RELEASE_DIALOG_TITLE}
-              </h2>
-              {exportMeta ? (
-                <span
-                  className={`font-mono-tech inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] ${exportMeta.badgeClass}`}
-                >
-                  {exportJob?.status === "RUNNING" ? (
-                    <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden />
-                  ) : null}
-                  {exportMeta.label}
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          {exportActive ? (
-            <div className="min-w-0 space-y-3">
-              <p className="text-sm leading-relaxed text-muted">
-                Копирование идёт в фоне. Можно закрыть диалог — прогресс останется
-                в полоске под вкладками релиза.
-              </p>
-              {exportTargetDisplay ? (
-                <p
-                  className="truncate font-mono-tech text-xs text-muted"
-                  title={exportTargetDisplay}
-                >
-                  {exportTargetDisplay}
-                </p>
-              ) : null}
-              {exportJob && exportSizeHint(exportJob) ? (
-                <p className="font-mono-tech text-xs text-faint">
-                  Размер: {exportSizeHint(exportJob)}
-                </p>
-              ) : null}
-              {exportJob?.status === "QUEUED" ? (
-                <p className="text-sm text-muted">Ожидание в очереди…</p>
-              ) : null}
-              {exportJob?.status === "RUNNING" && exportProgress != null ? (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-3 text-[11px]">
-                    <span className="truncate text-muted">
-                      {exportJob.progressMessage ?? "Копирование…"}
-                      {exportSpeed ? ` · ${exportSpeed}` : ""}
-                    </span>
-                    <span className="shrink-0 tabular-nums text-accent">
-                      {exportProgress}%
-                    </span>
-                  </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-bg-deep/80 ring-1 ring-inset ring-border/60">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-accent/80 to-accent-bright transition-[width] duration-500"
-                      style={{
-                        width: `${Math.min(100, Math.max(0, exportProgress))}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : exportJob?.status === "FAILED" ? (
-            <div className="min-w-0 space-y-3">
-              <p className="text-sm text-danger">
-                {exportJob.errorMessage ?? "Ошибка копирования"}
-              </p>
-              {exportTargetDisplay ? (
-                <p
-                  className="truncate font-mono-tech text-xs text-muted"
-                  title={exportTargetDisplay}
-                >
-                  {exportTargetDisplay}
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <>
-              <p className="text-sm leading-relaxed text-muted">
-                Выберите папку на диске и имя файла. Запись релиза в каталоге не
-                изменится.
-              </p>
-              <div className="space-y-5">
-                <FolderPathField
-                  id="export-target-dir"
-                  label="Папка назначения"
-                  value={exportTargetDir}
-                  onChange={handleExportTargetDirChange}
-                  disabled={exportBusy}
-                />
-                <Field
-                  id="export-filename"
-                  label="Имя файла"
-                  variant="underline"
-                  className="font-mono-tech normal-case"
-                  value={exportFilename}
-                  onChange={(e) => setExportFilename(e.target.value)}
-                  onBlur={() => {
-                    if (exportFilename.trim() && exportTargetDirRuntime.trim()) {
-                      void refreshExportDryRun(
-                        exportFilename,
-                        exportTargetDirRuntime,
-                      ).catch((err) => {
-                        setError(err instanceof Error ? err.message : "Ошибка");
-                      });
-                    }
-                  }}
-                  spellCheck={false}
-                  disabled={exportBusy}
-                />
-              </div>
-              {exportCollision ? (
-                <p className="text-sm text-ember" role="alert">
-                  Файл с таким именем уже существует. Предложено новое имя с суффиксом.
-                </p>
-              ) : null}
-              {exportTargetDisplay ? (
-                <p className="truncate font-mono-tech text-xs text-faint" title={exportTargetDisplay}>
-                  {exportTargetDisplay}
-                </p>
-              ) : null}
-            </>
-          )}
-        </div>
-        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
-          {exportActive ? (
-            <>
-              <Button variant="ghost" onClick={closeExportDialog} disabled={exportBusy}>
-                Скрыть
-              </Button>
-              <Button
-                variant="secondary"
-                loading={exportBusy}
-                onClick={() => void handleExportCancel()}
-              >
-                Отменить
-              </Button>
-            </>
-          ) : exportJob?.status === "FAILED" ? (
-            <>
-              <Button variant="ghost" onClick={closeExportDialog}>
-                Закрыть
-              </Button>
-              <Button variant="primary" loading={exportBusy} onClick={() => void handleExportRetry()}>
-                Повторить
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" onClick={closeExportDialog} disabled={exportBusy}>
-                Отмена
-              </Button>
-              <Button variant="primary" loading={exportBusy} disabled={!exportTargetDirRuntime.trim()} onClick={() => void handleExport()}>
-                {EXPORT_RELEASE_CONFIRM_LABEL}
-              </Button>
-            </>
-          )}
-        </div>
-      </NativeDialog>
+        movieId={movieId}
+        activeRelease={activeRelease}
+        exportJobState={exportJobState}
+        onError={setError}
+      />
       <ReleaseMoveDialog
         open={moveDialogOpen}
         onClose={() => onMoveDialogOpenChange(false)}

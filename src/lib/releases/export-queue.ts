@@ -10,6 +10,7 @@ import {
   exportReleaseDryRun,
   type ExportMovieInfo,
 } from "@/lib/releases/export-release";
+import { assertTargetDirFits } from "@/lib/shared/disk-space-fit";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
@@ -34,6 +35,7 @@ export async function enqueueExport(
   targetDir: string,
 ) {
   const dryRun = await exportReleaseDryRun(release, movie, targetDir, filename);
+  await assertTargetDirFits(targetDir, release.fileSize);
   const sourceFilePath = release.filePath!.trim();
 
   return prisma.releaseExport.create({

@@ -7,6 +7,7 @@ import {
   premiumAudio,
   translationShort,
 } from "@/lib/media/audio-labels";
+import { normalizeAudioProfile } from "@/lib/media/quality-predicates";
 import { formatHdrLabel } from "@/lib/shared/dictionaries";
 import {
   hdrCatalogTag,
@@ -141,4 +142,29 @@ export function catalogCardTags(release: ReleaseWithTracks): CatalogCardTag[] {
   }
 
   return sortCatalogCardTags(tags);
+}
+
+/** Compact audio label for catalog card cover chips (e.g. "DTS:X 7.1"). */
+export function catalogAudioChipLabel(
+  release: ReleaseWithTracks,
+): string | null {
+  const main = mainAudioTrack(release);
+  if (!main) return null;
+
+  const channels =
+    main.channelLayout && main.channelLayout !== "other"
+      ? main.channelLayout
+      : null;
+  const profile = normalizeAudioProfile(main.profile);
+
+  if (profile === "DTS:X MA") {
+    return channels ? `DTS:X ${channels}` : "DTS:X";
+  }
+  if (profile === "Atmos") {
+    const codec = codecShort(main.codec);
+    return [codec, channels].filter(Boolean).join(" ") || "Atmos";
+  }
+
+  const codec = codecShort(main.codec);
+  return [codec, channels].filter(Boolean).join(" ") || null;
 }

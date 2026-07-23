@@ -16,6 +16,7 @@ import { MovieReleasesTooltip } from "@/components/movies/MovieReleasesTooltip";
 import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
 import {
   catalogCardTech,
+  catalogAudioChipLabel,
   catalogTierRibbon,
   premiumHdrView,
   releaseTier,
@@ -191,7 +192,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
   const premiumHdr = primary ? premiumHdrView(primary) : null;
   const tier = primary ? releaseTier(primary) : null;
   const tech = primary ? catalogCardTech(primary) : null;
-  const tierRibbon = catalogTierRibbon(tier);
+  const tierRibbon = primary ? catalogTierRibbon(tier, primary) : catalogTierRibbon(tier);
   const chipTone = tierChipTone(tier);
   const tvReady = primary ? isTvReadyRelease(primary) : false;
 
@@ -200,12 +201,8 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
       ? { short: shortHdrLabel(premiumHdr.label), full: premiumHdr.label }
       : null;
 
-  // Audio chip label = codec + channels (e.g. "TrueHD 7.1", "AC3 5.1").
-  // The chip opens AudioTracksPopover with every track of the release.
-  const audioChipLabel =
-    tech != null
-      ? [tech.audioCodecShort, tech.channels].filter(Boolean).join(" ") || null
-      : null;
+  // Audio chip label = spatial profile or codec + channels (e.g. "DTS:X 7.1", "TrueHD 7.1").
+  const audioChipLabel = primary ? catalogAudioChipLabel(primary) : null;
 
   const duration = formatDuration(primary?.durationSeconds ?? null);
   const genres = orderedMovieGenres(movie).slice(0, 2);
