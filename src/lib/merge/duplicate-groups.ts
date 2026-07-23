@@ -14,6 +14,24 @@ export interface DuplicateGroup {
   movies: DuplicateMovie[];
 }
 
+/** Pure grouping helper (testable without Prisma). */
+export function groupMoviesByMatchKey(
+  movies: Array<DuplicateMovie & { matchKey: string | null }>,
+): DuplicateGroup[] {
+  const groups = new Map<string, DuplicateMovie[]>();
+  for (const movie of movies) {
+    if (!movie.matchKey) continue;
+    const { matchKey, ...rest } = movie;
+    const list = groups.get(matchKey) ?? [];
+    list.push(rest);
+    groups.set(matchKey, list);
+  }
+
+  return [...groups.entries()]
+    .filter(([, list]) => list.length >= 2)
+    .map(([matchKey, list]) => ({ matchKey, movies: list }));
+}
+
 /** All matchKey groups with 2+ non-excluded movies (for /duplicates page). */
 export async function findAllDuplicateGroups(): Promise<DuplicateGroup[]> {
   const movies = await prisma.movie.findMany({
@@ -33,16 +51,5 @@ export async function findAllDuplicateGroups(): Promise<DuplicateGroup[]> {
     orderBy: [{ matchKey: "asc" }, { id: "asc" }],
   });
 
-  const groups = new Map<string, DuplicateMovie[]>();
-  for (const movie of movies) {
-    if (!movie.matchKey) continue;
-    const { matchKey, ...rest } = movie;
-    const list = groups.get(matchKey) ?? [];
-    list.push(rest);
-    groups.set(matchKey, list);
-  }
-
-  return [...groups.entries()]
-    .filter(([, list]) => list.length >= 2)
-    .map(([matchKey, list]) => ({ matchKey, movies: list }));
+  return groupMoviesByMatchKey(movies);
 }

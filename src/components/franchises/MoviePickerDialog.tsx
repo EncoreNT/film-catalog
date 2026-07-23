@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Film, Loader2, Search, X } from "lucide-react";
+import { Film, Loader2, Search } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
-import { Button } from "@/components/primitives/Button";
+import { DialogHeader } from "@/components/primitives/DialogHeader";
 import { NativeDialog } from "@/components/primitives/NativeDialog";
 import { trimInput } from "@/lib/shared/text-trim";
 import { pickPrimaryRelease } from "@/lib/releases/release-primary";
@@ -68,22 +68,11 @@ function MoviePickerDialogContent({
       }
       className="fixed inset-0 m-auto flex w-[min(100%-2rem,720px)] max-h-[88dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm open:animate-in"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="min-w-0">
-          <p className="font-mono-tech text-accent">
-            {slotLabel ?? "привязка фильма"}
-          </p>
-          <h2 className="font-display text-xl font-semibold">Выбор из каталога</h2>
-        </div>
-        <Button
-          variant="ghost"
-          onClick={onClose}
-          aria-label="Закрыть"
-          className="!min-h-11 !w-11 !p-0"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
+      <DialogHeader
+        eyebrow={slotLabel ?? "привязка фильма"}
+        title="Выбор из каталога"
+        onClose={onClose}
+      />
 
       <div className="border-b border-border px-5 py-3">
         <div className="focus-ring flex items-center gap-2 rounded-[var(--radius)] border border-border bg-bg-surface px-3">

@@ -55,5 +55,10 @@ docs/adr/0002-franchise-slots-model.md
 | [0005](0005-tier-driven-spotlight.md) | Tier-driven ambient spotlight | Accepted |
 | [0006](0006-durable-release-build-worker.md) | Durable release build worker | Accepted |
 | [0007](0007-tv-export-and-runtime-paths.md) | TV export and runtime paths | Accepted |
+| [0008](0008-release-move-job-queue.md) | Release move job queue | Accepted |
+| [0009](0009-tier-classification-model.md) | Tier classification (ruby/gold/standard) | Accepted |
+| [0010](0010-unified-media-jobs-worker.md) | Unified media jobs worker | Accepted |
+| [0011](0011-franchise-slot-full-replace-sync.md) | Franchise slot full-replace sync | Accepted |
+| [0012](0012-scan-hash-prefix-move-detection.md) | Scan hash prefix + move detection | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

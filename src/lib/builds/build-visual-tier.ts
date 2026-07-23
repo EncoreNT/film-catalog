@@ -1,20 +1,21 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { resolveCatalogAudioTrack } from "@/lib/builds/build-track-source";
 import {
-  audioTrackChannelCount,
-  is4K,
-  isAnyHDR,
+  inferTierFrom4kHdrAndAudioTracks,
+  buildSpotlightFromVisual,
+  maxSpotlightTier,
+  type BuildVisualTier,
+} from "@/lib/media/tier-core";
+import {
   releaseTier,
   type ReleaseTier,
 } from "@/lib/media/release-tags";
-import { isSpatialAudioProfile } from "@/lib/media/quality-predicates";
 import {
   releaseTierToSpotlight,
   type SpotlightTier,
 } from "@/lib/media/tier-presentation";
 
-/** Catalog tier for a build job card / spotlight (includes non-premium "standard"). */
-export type BuildVisualTier = ReleaseTier | "standard";
+export type { BuildVisualTier } from "@/lib/media/tier-core";
 
 export type BuildTierSource = {
   role: string;
@@ -64,40 +65,14 @@ export function resolveBuildVisualTier(build: BuildTierInput): BuildVisualTier |
   const videoRelease = build.sources.find((s) => s.role === "video")?.release;
   if (!videoRelease?.videoTrack) return null;
 
-  if (!is4K(videoRelease) || !isAnyHDR(videoRelease)) {
-    return "standard";
-  }
+  const audioTracks = build.tracks
+    .map((track) => audioTrackFromBuild(build.sources, track))
+    .filter((track): track is ReleaseWithTracks["audioTracks"][number] => track != null);
 
-  for (const track of build.tracks) {
-    const audio = audioTrackFromBuild(build.sources, track);
-    if (!audio) continue;
-    if (audio.language !== "rus" || audio.translationType !== "dub") continue;
-    if (
-      isSpatialAudioProfile(audio.profile) &&
-      audioTrackChannelCount(audio) >= 8
-    ) {
-      return "ruby";
-    }
-  }
-
-  for (const track of build.tracks) {
-    const audio = audioTrackFromBuild(build.sources, track);
-    if (audio && audioTrackChannelCount(audio) >= 6) {
-      return "gold";
-    }
-  }
-
-  return "standard";
+  return inferTierFrom4kHdrAndAudioTracks(videoRelease, audioTracks);
 }
 
-export function buildSpotlightFromVisual(
-  tier: BuildVisualTier | null,
-): SpotlightTier {
-  if (tier === "ruby") return "ruby";
-  if (tier === "gold") return "gold";
-  if (tier === "standard") return "standard";
-  return "general";
-}
+export { buildSpotlightFromVisual };
 
 /** Spotlight for a single build detail page. */
 export function buildDetailSpotlightTier(build: BuildTierInput): SpotlightTier {
@@ -118,12 +93,7 @@ export function resolveBuildQueueSpotlightTier(
   );
   const pool = active.length > 0 ? active : items;
   if (pool.length === 0) return "general";
-
-  const tiers = pool.map((b) => b.visualTier);
-  if (tiers.some((t) => t === "ruby")) return "ruby";
-  if (tiers.some((t) => t === "gold")) return "gold";
-  if (tiers.some((t) => t === "standard")) return "standard";
-  return "general";
+  return maxSpotlightTier(pool.map((b) => b.visualTier));
 }
 
 /** Maps build visual tier to laser-frame / card glow release tier. */

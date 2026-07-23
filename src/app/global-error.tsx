@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { fontVariables } from "@/lib/fonts";
+import { fontVariables } from "@/lib/shared/fonts";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { ErrorSceneFrame } from "@/components/layout/ErrorScene";

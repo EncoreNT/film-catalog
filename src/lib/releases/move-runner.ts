@@ -1,12 +1,12 @@
-import { access, rename, rm, stat, unlink } from "node:fs/promises";
-import { constants } from "node:fs";
+import { rename, rm, stat, unlink } from "node:fs/promises";
 import { prisma } from "@/lib/db/prisma";
 import {
   copyFileWithProgress,
   copyProgressPercent,
 } from "@/lib/shared/copy-with-progress";
-import { formatFileSizeGB } from "@/lib/shared/format";
 import { displayFilePath } from "@/lib/shared/display-path";
+import { mediaJobFileExists } from "@/lib/media-jobs/file-exists";
+import { mediaJobProgressMessage } from "@/lib/media-jobs/job-progress-message";
 import { exportPartPath } from "@/lib/releases/export-part-path";
 import { readMovieFileMeta } from "@/lib/releases/movie-file-meta";
 import {
@@ -19,18 +19,11 @@ import {
 const PROGRESS_DB_INTERVAL_MS = 2_000;
 
 function moveProgressMessage(bytesCopied: number, totalBytes: number): string {
-  const copied = formatFileSizeGB(bytesCopied) ?? "0 ГБ";
-  const total = formatFileSizeGB(totalBytes) ?? "—";
-  return `${copied} / ${total}`;
+  return mediaJobProgressMessage(bytesCopied, totalBytes);
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath, constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
+  return mediaJobFileExists(filePath);
 }
 
 export async function runMoveJob(moveId: number, signal?: AbortSignal) {

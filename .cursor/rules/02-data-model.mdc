@@ -50,6 +50,15 @@ ADR: `docs/adr/0006-durable-release-build-worker.md`.
 - `sources[]` — snapshot исходных Release/filePath
 - Worker: `scripts/release-build-worker.ts`, concurrency 1, SQLite queue
 
+### ReleaseExport / ReleaseMove (TV export & file move)
+
+ADR: `docs/adr/0007-tv-export-and-runtime-paths.md`, `0008`, `0010`.
+
+- Shared job status enum with builds: QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED
+- `ReleaseExport` — copy release to user-chosen TV folder (stream copy)
+- `ReleaseMove` — copy + update Release path + optional external storage + delete source
+- Shared lib: `lib/media-jobs/*`; worker: `lib/worker/claim-next-media-job.ts`
+
 ### VideoTrack (1:1 с Release)
 
 `streamIndex`, `width`, `height`, `resolutionLabel`, `codec`, `hdr`, `fps`, `bitrate`

@@ -69,6 +69,21 @@ Build API URLs with `?v=updatedAt.getTime()` for cache busting. Never link direc
 - `merge-preview.ts` — merge candidate cards for `/duplicates`
 - `alternative-quality.ts` — duplicate detection helpers
 
+## shared/ — канонические хелперы
+
+- **Размер:** `format-bytes.ts` → `formatBytes({ unit: 'gb'|'short'|'archive' })`; не дублировать `formatFileSizeGB`
+- **Длительность:** `duration-format.ts` → `formatDuration`, `formatBuildEtaSeconds`, `formatDurationDelta`
+- **Текст:** `text-normalize.ts` → `normalizeSearchText`, `normalizeMatchKeyTitle`
+- **Аудио профиль:** `validateAudioProfileForCodec` (dictionaries) vs `nullifyAudioProfile` (quality-predicates)
+
+## media/tier-core.ts — tier predicates
+
+ADR: `0009`. `releaseTier()` остаётся в `release-tags.ts`; filter/spotlight/build используют `tier-core`.
+
+## media-jobs/ — export/move shared
+
+ADR: `0010`. `job-display`, `job-progress-message`, `part-path`, `serialize-base`.
+
 ## catalog/archive-metrics.ts
 
 Total/catalog/draft/excluded counts + aggregate stats for dashboard. Elite tier: `archiveEliteTierWhere` from `media/quality-predicates.ts` (specs may split across releases).

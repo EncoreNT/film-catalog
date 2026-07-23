@@ -1,55 +1,56 @@
 import { describe, expect, it } from "vitest";
-import { releaseTabLabel } from "@/lib/media/spec-tags";
-import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
+import { groupMoviesByMatchKey } from "@/lib/merge/duplicate-groups";
 
-function release(
-  partial: Partial<ReleaseWithTracks> & { id: number },
-): ReleaseWithTracks {
-  return {
-    id: partial.id,
-    movieId: 1,
-    externalStorageId: null,
-    filePath: null,
-    fileSize: null,
-    fileMtime: null,
-    fileHash: null,
-    releaseType: partial.releaseType ?? null,
-    version: "theatrical",
-    durationSeconds: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    externalStorage: null,
-    videoTrack: partial.videoTrack ?? null,
-    audioTracks: [],
-    subtitleTracks: [],
-  };
-}
+describe("groupMoviesByMatchKey", () => {
+  it("groups movies with the same matchKey", () => {
+    const groups = groupMoviesByMatchKey([
+      {
+        id: 1,
+        slug: "a",
+        title: "A",
+        year: 2001,
+        status: "CATALOG",
+        matchKey: "a|2001",
+        _count: { releases: 1 },
+      },
+      {
+        id: 2,
+        slug: "b",
+        title: "B",
+        year: 2001,
+        status: "DRAFT",
+        matchKey: "a|2001",
+        _count: { releases: 0 },
+      },
+      {
+        id: 3,
+        slug: "c",
+        title: "C",
+        year: 1999,
+        status: "CATALOG",
+        matchKey: "c|1999",
+        _count: { releases: 1 },
+      },
+    ]);
 
-describe("releaseTabLabel", () => {
-  it("combines release type and resolution", () => {
-    expect(
-      releaseTabLabel(
-        release({
-          id: 2,
-          releaseType: "bdrip",
-          videoTrack: {
-            id: 1,
-            releaseId: 2,
-            streamIndex: 0,
-            width: 1920,
-            height: 1080,
-            resolutionLabel: "1080p",
-            codec: null,
-            hdr: null,
-            fps: null,
-            bitrate: null,
-          },
-        }),
-      ),
-    ).toBe("BDRip · 1080p");
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.matchKey).toBe("a|2001");
+    expect(groups[0]?.movies).toHaveLength(2);
   });
 
-  it("falls back when there are no distinguishing tags", () => {
-    expect(releaseTabLabel(release({ id: 2 }))).toBe("релиз #2");
+  it("ignores singleton groups", () => {
+    expect(
+      groupMoviesByMatchKey([
+        {
+          id: 1,
+          slug: "solo",
+          title: "Solo",
+          year: null,
+          status: "CATALOG",
+          matchKey: "solo|",
+          _count: { releases: 1 },
+        },
+      ]),
+    ).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 # «Кинозал»: полное продуктовое и техническое описание
 
-> Актуально для состояния проекта на 13 июля 2026 года.
+> Актуально для состояния проекта на 23 июля 2026 года.
 >
 > Документ задуман как автономный контекст: его можно целиком передать ChatGPT или
 > другому разработчику, у которого нет доступа к репозиторию.
@@ -882,11 +882,18 @@ npm run typecheck
 
 ## 18. Архитектурные решения
 
-В `docs/adr/` зафиксированы:
+В `docs/adr/` зафиксированы (полный индекс — [`README.md`](adr/README.md)):
 
-- ADR-0001: разделение Movie и Release, primary release и ручной merge;
-- ADR-0002: только внешние хранилища представлены сущностью, локальный диск — null;
-- ADR-0003: доменная раскладка `lib/` и `components/`, тонкие API routes.
+- ADR-0001–0003: Movie/Release split, external storage, lib/components layout
+- ADR-0004–0005: Cinematic Tech design system, tier-driven spotlight (UI)
+- ADR-0006: durable MKV build worker
+- ADR-0007–0008: TV export, release move queues
+- ADR-0009: tier classification (ruby/gold computation vs spotlight)
+- ADR-0010: unified media-jobs lib (export/move shared code)
+- ADR-0011: franchise slot full-replace sync
+- ADR-0012: scan hash prefix + move detection
+
+Канонические модули после рефакторинга 2026-07: `lib/media/tier-core.ts`, `lib/shared/format-bytes.ts`, `lib/shared/duration-format.ts`, `lib/media-jobs/*`. Карта для AI: `.cursor/rules/07-project-map.mdc`.
 
 Изменения модели данных, новых pipeline или принципиальных архитектурных паттернов
 должны сопровождаться новым ADR.

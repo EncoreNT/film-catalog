@@ -20,21 +20,13 @@ import {
   buildRunningEtaLabel,
 } from "@/lib/builds/build-eta";
 import { catalogTierRibbon } from "@/lib/media/spec-tags";
+import { TierChip } from "@/components/shared/TierChip";
 import {
   tierCardGlow,
   tierChipTone,
   tierPosterGlow,
 } from "@/lib/media/tier-presentation";
 import type { BuildVisualTier } from "@/lib/builds/build-visual-tier";
-
-const CHIP_TONE: Record<
-  ReturnType<typeof tierChipTone>,
-  { base: string }
-> = {
-  default: { base: "border-border-strong text-text/85" },
-  gold: { base: "border-accent/45 text-accent-bright" },
-  ruby: { base: "border-crimson/45 text-crimson-bright" },
-};
 
 function buildCardShellClass(
   visualTier: BuildVisualTier | null,
@@ -193,11 +185,7 @@ export function BuildJobCard({
                       {build.movie.title}
                     </p>
                     {tierRibbon ? (
-                      <span
-                        className={`font-mono-tech shrink-0 rounded-full border bg-bg-deep/90 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${CHIP_TONE[chipTone].base}`}
-                      >
-                        {tierRibbon}
-                      </span>
+                      <TierChip tone={chipTone}>{tierRibbon}</TierChip>
                     ) : null}
                   </div>
 

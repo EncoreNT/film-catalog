@@ -7,7 +7,7 @@
  * free-form validator — switching format just re-renders the same value.
  */
 
-import { secondsToHmsParts } from "@/lib/shared/duration-parts";
+import { formatDuration } from "@/lib/shared/duration-format";
 
 export type DurationFormat = "hms" | "minutes" | "seconds";
 
@@ -76,8 +76,6 @@ export function parseDuration(
   return { seconds: h * 3600 + m * 60 + s, error: null };
 }
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
 /** Format stored seconds into the given format's text representation. */
 export function formatDurationField(
   format: DurationFormat,
@@ -87,8 +85,7 @@ export function formatDurationField(
   const total = Math.round(seconds);
   if (format === "seconds") return String(total);
   if (format === "minutes") return String(Math.round(total / 60));
-  const { h, m, s } = secondsToHmsParts(total);
-  return `${h}:${pad2(m)}:${pad2(s)}`;
+  return formatDuration(total, "hms") ?? "";
 }
 
 /**

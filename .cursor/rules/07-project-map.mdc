@@ -1,0 +1,73 @@
+---
+description: Компактная карта проекта для AI — куда смотреть без полного grep
+alwaysApply: false
+---
+
+# Project map (Film Catalog)
+
+**Первый stop перед ресерчем.** Детали — в sibling rules `00`–`06` и ADR `docs/adr/`.
+
+## Quick lookup
+
+| Ищешь | Открой |
+|--------|--------|
+| Tier ruby/gold rules | `lib/media/release-tags.ts` → `releaseTier()`; shared predicates → `lib/media/tier-core.ts` |
+| Spotlight / ambient color | ADR-0005; `lib/media/tier-presentation.ts`; `components/layout/SpotlightTier.tsx` |
+| Catalog filters / facets | `lib/movies/movie-query.ts`, `lib/catalog/catalog-facets.ts`, `lib/catalog/audio-track-scope.ts` |
+| Scan / import | `lib/media/scanner.ts`, `lib/media/name-parser.ts`, `lib/media/ffprobe.ts` |
+| Build MKV queue | `lib/builds/*`, `scripts/release-build-worker.ts`, ADR-0006 |
+| Export / move jobs | `lib/releases/export-*`, `lib/releases/move-*`, `lib/media-jobs/*`, ADR-0007/8/10 |
+| Covers | `lib/covers/cover-url.ts`, `lib/covers/cover-storage.ts` |
+| Merge / duplicates | `lib/merge/movie-merge.ts`, `lib/merge/duplicate-groups.ts` |
+| Franchises | `lib/franchises/franchise-slots.ts`, `franchise-summary.ts` |
+| Prisma includes | `lib/movies/movie-include.ts`, `lib/franchises/franchise-include.ts` |
+| API validators | `lib/api/validators.ts` + split files in `validators/` |
+| UI primitives | `components/primitives/`; domain cards → `components/{movies,builds,…}/` |
+
+## Canonical modules (не дублировать)
+
+| Concern | Module |
+|---------|--------|
+| File size formatting | `lib/shared/format-bytes.ts` |
+| Duration display/ETA | `lib/shared/duration-format.ts` |
+| Form duration fields | `lib/shared/duration.ts` |
+| Search vs matchKey text | `lib/shared/text-normalize.ts` |
+| Codec profile validation | `validateAudioProfileForCodec` in `dictionaries.ts` |
+| Tier profile nullify | `nullifyAudioProfile` in `quality-predicates.ts` |
+| Export/move UI labels | `lib/media-jobs/job-display.ts` |
+| Copy progress string | `lib/media-jobs/job-progress-message.ts` |
+| Tier filter combos | `lib/media/tier-core.ts` |
+
+## Anti-patterns
+
+- ❌ Second `formatFileSizeGB` with other rounding — use `formatBytes`
+- ❌ Inline ruby/gold if-chains — use `tier-core` / `releaseTier`
+- ❌ New export/move status badge maps — extend `buildMediaJobStatusMeta`
+- ❌ `normalizeAudioProfile` name for new code — use explicit names above
+- ❌ Prisma include ad-hoc — use `movieInclude` / `franchiseInclude`
+
+## Tests by domain
+
+| Domain | Path pattern |
+|--------|----------------|
+| Tier / tags | `lib/media/release-tags.test.ts`, `tier-core.test.ts` |
+| Builds | `lib/builds/*.test.ts` (stream mapping, ffmpeg args) |
+| Parsers | `name-parser.test.ts`, `ffprobe.test.ts`, `ffprobe-parse.test.ts` |
+| Catalog query | `movie-query.test.ts`, `catalog-facets.test.ts` |
+| Media jobs | `lib/media-jobs/job-display.test.ts` |
+| Shared format | `format-bytes.test.ts`, `duration-format.test.ts` |
+
+## When to read full rules
+
+| Rule | Trigger |
+|------|---------|
+| `01-architecture` | New route, pipeline, layer violation |
+| `02-data-model` | Prisma schema / relations |
+| `03-api-routes` | New REST handler |
+| `04-nextjs-ui` | Component / design tokens |
+| `05-domain-pipelines` | Scanner, ffprobe, filters |
+| `06-engineering-standards` | ADR, tests, DB checklist |
+
+## ADR index (0001–0012)
+
+See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0009** tier computation, **0010** media-jobs, **0011** franchise slots, **0012** scan hash.

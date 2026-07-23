@@ -1,6 +1,5 @@
 "use client";
 
-import { type ReactNode } from "react";
 import Link from "next/link";
 import { AudioLines, Layers, Star } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
@@ -35,10 +34,11 @@ import {
   tierCardGlow,
   tierChipTone,
   tierPosterGlow,
-  type TierChipTone,
 } from "@/lib/media/tier-presentation";
 import { CoverPlaceholderBackdrop } from "@/components/shared/CoverPlaceholderBackdrop";
 import { ExternalStorageMark } from "@/components/shared/ExternalStorageMark";
+import { SpecTag } from "@/components/shared/SpecTag";
+import { TierChip } from "@/components/shared/TierChip";
 import { TvReadyMark } from "@/components/shared/TvReadyMark";
 import { TierCoverOverlay } from "@/components/shared/TierCoverOverlay";
 import {
@@ -56,54 +56,6 @@ interface MovieCardProps {
 function shortHdrLabel(label: string): string {
   if (label.startsWith("Dolby Vision")) return "DV";
   return label; // HDR10, HDR10+, HLG
-}
-
-const CHIP_TONE: Record<TierChipTone, { base: string; hover: string }> = {
-  default: {
-    base: "border-border-strong text-text/85",
-    hover: "hover:border-text/40",
-  },
-  gold: {
-    base: "border-accent/45 text-accent-bright",
-    hover: "hover:border-accent/75",
-  },
-  ruby: {
-    base: "border-crimson/45 text-crimson-bright",
-    hover: "hover:border-crimson/80",
-  },
-};
-
-/**
- * Compact content-hugging spec chip — the single badge language for card
- * metadata. Hugs its content (no `w-full` stretch), tier-aware tone, optional
- * icon. The audio chip passes `interactive` to brighten its border on hover
- * and signal the popover that opens over it.
- */
-function SpecChip({
-  children,
-  tone = "default",
-  icon,
-  interactive = false,
-  className = "",
-  title,
-}: {
-  children: ReactNode;
-  tone?: TierChipTone;
-  icon?: ReactNode;
-  interactive?: boolean;
-  className?: string;
-  title?: string;
-}) {
-  const t = CHIP_TONE[tone];
-  return (
-    <span
-      className={`font-mono-tech inline-flex items-center gap-1 rounded-full border bg-bg-deep/90 px-2 py-[3px] text-[0.55rem] font-semibold uppercase tracking-[0.14em] whitespace-nowrap transition-colors duration-200 ${t.base} ${interactive ? `${t.hover} cursor-help` : ""} ${className}`}
-      title={title}
-    >
-      {icon}
-      {children}
-    </span>
-  );
 }
 
 /**
@@ -260,7 +212,9 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                 Regular cards have no ribbon — that absence is the signal. */}
             <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2.5">
               {tierRibbon != null ? (
-                <SpecChip tone={chipTone}>{tierRibbon}</SpecChip>
+                <TierChip tone={chipTone} size="xs">
+                  {tierRibbon}
+                </TierChip>
               ) : (
                 <span />
               )}
@@ -311,23 +265,34 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
               {tech != null || hdrChip != null ? (
                 <div className="flex flex-wrap items-center gap-1">
                   {tech?.releaseType ? (
-                    <SpecChip tone={chipTone}>{tech.releaseType}</SpecChip>
+                    <SpecTag variant="chip" tone={chipTone} size="xs">
+                      {tech.releaseType}
+                    </SpecTag>
                   ) : null}
                   {tech?.resolution && tier == null ? (
-                    <SpecChip tone={chipTone}>{tech.resolution}</SpecChip>
+                    <SpecTag variant="chip" tone={chipTone} size="xs">
+                      {tech.resolution}
+                    </SpecTag>
                   ) : null}
                   {hdrChip ? (
-                    <SpecChip tone={chipTone} title={hdrChip.full}>
+                    <SpecTag
+                      variant="chip"
+                      tone={chipTone}
+                      size="xs"
+                      title={hdrChip.full}
+                    >
                       {hdrChip.short}
-                    </SpecChip>
+                    </SpecTag>
                   ) : null}
                   {audioChipLabel && primary ? (
                     <HoverTooltip
                       interactive
                       content={<AudioTracksPopover release={primary} />}
                     >
-                      <SpecChip
+                      <SpecTag
+                        variant="chip"
                         tone={chipTone}
+                        size="xs"
                         interactive
                         icon={
                           <AudioLines
@@ -338,7 +303,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                         title="Все аудиодорожки релиза: наведите для списка"
                       >
                         {audioChipLabel}
-                      </SpecChip>
+                      </SpecTag>
                     </HoverTooltip>
                   ) : null}
                 </div>

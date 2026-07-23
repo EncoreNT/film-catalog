@@ -29,7 +29,7 @@ import {
 import {
   DEFAULT_MOVIE_VERSION,
   MOVIE_VERSIONS,
-  normalizeAudioProfile,
+  validateAudioProfileForCodec,
   RELEASE_TYPES,
 } from "@/lib/shared/dictionaries";
 import { trimOnInputBlur } from "@/lib/shared/text-trim";
@@ -113,7 +113,7 @@ function useReleaseFormState(release: ReleaseWithTracks | null) {
     initialAudio: (release?.audioTracks ?? []).map((track) => ({
       rowKey: `audio-${track.id}`,
       codec: track.codec ?? "",
-      profile: normalizeAudioProfile(track.codec ?? "", track.profile ?? "None"),
+      profile: validateAudioProfileForCodec(track.codec ?? "", track.profile ?? "None"),
       channelLayout: track.channelLayout ?? "",
       language: track.language ?? "",
       translationType: track.translationType ?? "",

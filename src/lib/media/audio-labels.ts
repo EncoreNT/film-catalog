@@ -2,7 +2,7 @@ import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import {
   isPremiumRussianAtmosTrack,
   isSpatialAudioProfile,
-  normalizeAudioProfile,
+  nullifyAudioProfile,
 } from "@/lib/media/quality-predicates";
 import { dictLabel, AUDIO_CODECS } from "@/lib/shared/dictionaries";
 
@@ -35,7 +35,7 @@ export function audioTrackTag(track: ReleaseWithTracks["audioTracks"][number]): 
   profile: string | null;
   is3D: boolean;
 } {
-  const profile = normalizeAudioProfile(track.profile);
+  const profile = nullifyAudioProfile(track.profile);
   return {
     codec: codecShort(track.codec),
     profile,

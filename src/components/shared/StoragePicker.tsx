@@ -4,14 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   HardDrive,
-  Loader2,
   Plug,
-  Plus,
-  Search,
 } from "lucide-react";
 import { InfoHint } from "@/components/primitives/InfoHint";
+import { CreatableCombobox } from "@/components/primitives/CreatableCombobox";
 import { SegmentedControl } from "@/components/primitives/SegmentedControl";
-import { trimInput } from "@/lib/shared/text-trim";
 import type { StorageKind, StorageOption } from "@/lib/shared/storage-types";
 
 type StoragePickerLayout = "default" | "embedded" | "toolbar";
@@ -234,88 +231,40 @@ export function StoragePicker({
 
   const externalMenu =
     open && storageKind === "external" ? (
-      <div
-        role="listbox"
+      <CreatableCombobox
+        open
+        query={query}
+        onQueryChange={setQuery}
+        items={filteredStorages.map((s) => ({
+          id: s.id,
+          label: s.name,
+          selected: String(s.id) === selectedStorageId,
+          meta:
+            s._count?.releases != null ? (
+              <span className="font-mono-tech shrink-0 text-xs text-faint">
+                {s._count.releases}
+              </span>
+            ) : undefined,
+        }))}
+        onSelect={(item) => {
+          const storage = externalStorages.find((s) => s.id === item.id);
+          if (storage) pickStorage(storage);
+        }}
+        disabled={creatingName != null}
+        canCreate={canCreate}
+        creating={creatingName === trimmedQuery}
+        onCreate={createStorage}
+        emptyMessage={
+          trimmedQuery
+            ? "Ничего не найдено"
+            : "Нет сохранённых внешних дисков"
+        }
+        itemIcon={
+          <Plug className="h-3.5 w-3.5 shrink-0 text-accent/70" aria-hidden />
+        }
+        inputRef={inputRef}
         className="surface-elevated scroll-subtle absolute left-0 top-full z-50 mt-1 max-h-64 min-w-full w-[max(100%,min(100vw-2rem,16rem))] overflow-auto p-1 shadow-2xl"
-      >
-        <div className="px-1 pb-1 pt-1">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted/60"
-              aria-hidden
-            />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onBlur={() => {
-                const trimmed = trimInput(query);
-                if (trimmed !== query) setQuery(trimmed);
-              }}
-              placeholder="Поиск или создание…"
-              className="focus-ring min-h-8 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
-            />
-          </div>
-        </div>
-
-        {filteredStorages.length === 0 && !canCreate ? (
-          <p className="px-3 py-2 text-sm text-muted">
-            {trimmedQuery
-              ? "Ничего не найдено"
-              : "Нет сохранённых внешних дисков"}
-          </p>
-        ) : null}
-
-        {filteredStorages.map((s) => {
-          const selected = String(s.id) === selectedStorageId;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              role="option"
-              aria-selected={selected}
-              disabled={creatingName != null}
-              onClick={() => pickStorage(s)}
-              className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                selected
-                  ? "bg-accent/15 text-accent"
-                  : "text-text hover:bg-bg-surface-hover"
-              }`}
-            >
-              <Plug
-                className="h-3.5 w-3.5 shrink-0 text-accent/70"
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1 truncate">{s.name}</span>
-              {s._count?.releases != null ? (
-                <span className="font-mono-tech shrink-0 text-xs text-faint">
-                  {s._count.releases}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-
-        {canCreate ? (
-          <button
-            type="button"
-            role="option"
-            aria-selected={false}
-            disabled={creatingName != null}
-            onClick={() => createStorage(trimmedQuery)}
-            className="mt-0.5 flex w-full items-center gap-2 rounded-[var(--radius-sm)] border border-accent/30 bg-accent/10 px-3 py-1.5 text-left text-sm text-accent transition-colors hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="truncate">Создать «{trimmedQuery}»</span>
-            {creatingName === trimmedQuery ? (
-              <Loader2
-                className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin"
-                aria-hidden
-              />
-            ) : null}
-          </button>
-        ) : null}
-      </div>
+      />
     ) : null;
 
   const externalSelect =

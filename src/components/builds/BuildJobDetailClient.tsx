@@ -48,6 +48,7 @@ import {
   buildCompositionHeadline,
 } from "@/lib/builds/build-detail-display";
 import { estimateBuildOutputSizeFromBuild } from "@/lib/builds/build-output-size";
+import { TierChip } from "@/components/shared/TierChip";
 import { catalogTierRibbon } from "@/lib/media/spec-tags";
 import {
   tierChipTone,
@@ -57,12 +58,6 @@ import { formatDuration } from "@/lib/shared/format";
 import { dictLabel, RELEASE_TYPES } from "@/lib/shared/dictionaries";
 
 const TERMINAL = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
-
-const TIER_CHIP: Record<ReturnType<typeof tierChipTone>, string> = {
-  default: "border-border-strong text-text/85",
-  gold: "border-accent/45 text-accent-bright",
-  ruby: "border-crimson/45 text-crimson-bright",
-};
 
 function heroAccentClass(
   build: SerializedBuild,
@@ -369,11 +364,7 @@ export function BuildJobDetailClient({
                     </Link>
                   </h1>
                   {tierRibbon ? (
-                    <span
-                      className={`font-mono-tech shrink-0 rounded-full border bg-bg-deep/90 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] ${TIER_CHIP[chipTone]}`}
-                    >
-                      {tierRibbon}
-                    </span>
+                    <TierChip tone={chipTone}>{tierRibbon}</TierChip>
                   ) : null}
                 </div>
                 <DetailMetaLine

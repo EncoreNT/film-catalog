@@ -1,5 +1,6 @@
 import type { SlotTier } from "@/lib/franchises/franchise-summary";
 import type { ReleaseTier } from "@/lib/media/release-tags";
+import { maxSpotlightTier, type SpotlightTier } from "@/lib/media/tier-core";
 
 /** Visual tier used for card glow, holo overlays, and chip tones. */
 export type VisualTier = ReleaseTier | SlotTier | null;
@@ -7,7 +8,7 @@ export type VisualTier = ReleaseTier | SlotTier | null;
 export type TierChipTone = "default" | "gold" | "ruby";
 export type PosterGlowVariant = "rest" | "inset";
 export type TabTier = "ruby" | "gold" | "none";
-export type SpotlightTier = "general" | "standard" | "gold" | "ruby";
+export type { SpotlightTier } from "@/lib/media/tier-core";
 
 export type TierTabStyle = {
   text: string;
@@ -50,6 +51,33 @@ export function tierChipTone(tier: VisualTier): TierChipTone {
   if (tier === "ruby") return "ruby";
   if (tier === "gold") return "gold";
   return "default";
+}
+
+/** Border + text classes for compact tier chips (cards, build queue). */
+export const TIER_CHIP_TONE: Record<
+  TierChipTone,
+  { base: string; hover: string }
+> = {
+  default: {
+    base: "border-border-strong text-text/85",
+    hover: "hover:border-text/40",
+  },
+  gold: {
+    base: "border-accent/45 text-accent-bright",
+    hover: "hover:border-accent/75",
+  },
+  ruby: {
+    base: "border-crimson/45 text-crimson-bright",
+    hover: "hover:border-crimson/80",
+  },
+};
+
+export function tierChipClass(
+  tone: TierChipTone,
+  options?: { interactive?: boolean },
+): string {
+  const t = TIER_CHIP_TONE[tone];
+  return `${t.base}${options?.interactive ? ` ${t.hover} cursor-help` : ""}`;
 }
 
 export const TIER_BOTTOM_SCRIM = {
@@ -117,10 +145,7 @@ export function slotTierToSpotlight(tier: SlotTier): SpotlightTier {
 export function resolveSpotlightTier(
   tiers: Array<ReleaseTier | SlotTier | null | undefined>,
 ): SpotlightTier {
-  if (tiers.some((t) => t === "ruby")) return "ruby";
-  if (tiers.some((t) => t === "gold")) return "gold";
-  if (tiers.some((t) => t === "standard")) return "standard";
-  return "general";
+  return maxSpotlightTier(tiers);
 }
 
 // ── Franchise quality reel (slot tier → CSS) ─────────────────────────────

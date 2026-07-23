@@ -73,7 +73,7 @@ export function getAudioProfilesForCodec(codec: string): DictOption[] {
   );
 }
 
-export function normalizeAudioProfile(
+export function validateAudioProfileForCodec(
   codec: string,
   profile: string | null | undefined,
 ): string {
@@ -83,6 +83,9 @@ export function normalizeAudioProfile(
   if (values.includes(profile)) return profile;
   return "None";
 }
+
+/** @deprecated Use validateAudioProfileForCodec */
+export const normalizeAudioProfile = validateAudioProfileForCodec;
 
 export const CHANNEL_LAYOUTS: DictOption[] = [
   { value: "1.0", label: "1.0 (моно)" },

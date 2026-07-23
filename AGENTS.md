@@ -21,8 +21,9 @@ npm install && npm run db:migrate && npm run dev
 | [`04-nextjs-ui`](.cursor/rules/04-nextjs-ui.mdc) | Pages, components, дизайн-система |
 | [`05-domain-pipelines`](.cursor/rules/05-domain-pipelines.mdc) | scanner, ffprobe, фильтры, обложки |
 | [`06-engineering-standards`](.cursor/rules/06-engineering-standards.mdc) | **Всегда** — ADR, тесты, слои, reuse, БД |
+| [`07-project-map`](.cursor/rules/07-project-map.mdc) | **Первый stop** — lookup table, canonical modules |
 
-**Перед ресерчем кодовой базы** — открыть релевантные rules.
+**Перед ресерчем кодовой базы** — открой [`07-project-map`](.cursor/rules/07-project-map.mdc), затем релевантные rules.
 
 ## ADR
 

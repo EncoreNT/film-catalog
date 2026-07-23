@@ -4,7 +4,7 @@ import {
   isPremiumOriginalSpatialTrack,
   isPremiumRussianAtmosTrack,
   isSpatialAudioProfile,
-  normalizeAudioProfile,
+  nullifyAudioProfile,
 } from "@/lib/media/quality-predicates";
 
 describe("quality-predicates", () => {
@@ -48,9 +48,9 @@ describe("quality-predicates", () => {
     ).toBe(false);
   });
 
-  it("normalizeAudioProfile", () => {
-    expect(normalizeAudioProfile("None")).toBeNull();
-    expect(normalizeAudioProfile("Atmos")).toBe("Atmos");
+  it("nullifyAudioProfile", () => {
+    expect(nullifyAudioProfile("None")).toBeNull();
+    expect(nullifyAudioProfile("Atmos")).toBe("Atmos");
   });
 
   it("hdrShortLabel", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { normalizeAudioProfile } from "@/lib/shared/dictionaries";
+import { validateAudioProfileForCodec } from "@/lib/shared/dictionaries";
 import type { AudioFormRow, SubtitleFormRow } from "@/lib/movies/movie-form-types";
 import {
   createAudioRowKey,
@@ -30,7 +30,7 @@ export function useTrackEditor(options: UseTrackEditorOptions = {}) {
         if (idx !== index) return row;
         const next = { ...row, ...patch };
         if (patch.codec !== undefined) {
-          next.profile = normalizeAudioProfile(patch.codec, row.profile);
+          next.profile = validateAudioProfileForCodec(patch.codec, row.profile);
         }
         return next;
       }),

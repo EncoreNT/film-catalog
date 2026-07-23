@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { fontVariables } from "@/lib/fonts";
+import { fontVariables } from "@/lib/shared/fonts";
 import { GrainOverlay } from "@/components/layout/GrainOverlay";
 import { AmbientBackground } from "@/components/layout/AmbientBackground";
 import { SpotlightAimProvider } from "@/components/layout/SpotlightAimProvider";

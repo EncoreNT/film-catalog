@@ -9,7 +9,7 @@ import {
 import { formatBitrateKbps } from "@/lib/shared/resolution";
 import {
   isSpatialAudioProfile,
-  normalizeAudioProfile,
+  nullifyAudioProfile,
 } from "@/lib/media/quality-predicates";
 import {
   audioTrackTag,
@@ -263,7 +263,7 @@ function rubySpatialRibbonSuffix(
   release: ReleaseWithTracks,
 ): "ATMOS" | "DTS:X" {
   const bestRusDub = bestRussianDubTrack(release);
-  if (normalizeAudioProfile(bestRusDub?.profile) === "DTS:X MA") {
+  if (nullifyAudioProfile(bestRusDub?.profile) === "DTS:X MA") {
     return "DTS:X";
   }
   return "ATMOS";
@@ -360,7 +360,7 @@ export function releaseQuickSpecHints(release: ReleaseWithTracks): string[] {
   if (is4K(release)) hints.push("4K");
   if (isAnyHDR(release)) hints.push("HDR");
   const bestRusDub = bestRussianDubTrack(release);
-  const profile = normalizeAudioProfile(bestRusDub?.profile);
+  const profile = nullifyAudioProfile(bestRusDub?.profile);
   if (profile === "Atmos") hints.push("Atmos");
   else if (profile === "DTS:X MA") hints.push("DTS:X");
   return hints;

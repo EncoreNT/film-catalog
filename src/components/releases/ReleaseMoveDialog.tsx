@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LoaderCircle } from "lucide-react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
-import { Button } from "@/components/primitives/Button";
-import { NativeDialog } from "@/components/primitives/NativeDialog";
+import { ReleaseTransferDialog } from "@/components/releases/ReleaseTransferDialog";
 import { StoragePicker } from "@/components/shared/StoragePicker";
 import { ReleaseJobDialogProgress } from "@/components/releases/ReleaseJobDialogProgress";
 import { ReleasePathBlock } from "@/components/releases/ReleasePathBlock";
@@ -290,41 +288,63 @@ export function ReleaseMoveDialog({
     !diskSpace.loading &&
     validateStorage() == null;
 
+  const footerActions = moveActive
+    ? [
+        {
+          label: "Скрыть",
+          variant: "ghost" as const,
+          onClick: closeDialog,
+          disabled: busy,
+        },
+        {
+          label: "Отменить",
+          variant: "secondary" as const,
+          loading: busy,
+          onClick: () => void handleCancel(),
+        },
+      ]
+    : moveJob?.status === "FAILED"
+      ? [
+          { label: "Закрыть", variant: "ghost" as const, onClick: closeDialog },
+          {
+            label: "Повторить",
+            variant: "primary" as const,
+            loading: busy,
+            onClick: () => void handleRetry(),
+          },
+        ]
+      : moveJob?.status === "SUCCEEDED"
+        ? [{ label: "Готово", variant: "primary" as const, onClick: closeDialog }]
+        : [
+            {
+              label: "Отмена",
+              variant: "ghost" as const,
+              onClick: closeDialog,
+              disabled: busy,
+            },
+            {
+              label: MOVE_RELEASE_CONFIRM_LABEL,
+              variant: "primary" as const,
+              loading: busy,
+              disabled: !canSubmit,
+              onClick: () => void handleMove(),
+            },
+          ];
+
   return (
-    <NativeDialog
+    <ReleaseTransferDialog
       open={open}
       onClose={closeDialog}
       preventCancel={busy && !moveActive}
-      zIndex={110}
-      ariaLabelledBy="move-dialog-title"
-      className="confirm-dialog fixed inset-0 m-auto flex w-[min(100%-2rem,560px)] max-w-[560px] min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated p-0 text-text backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+      accent="neural"
+      eyebrow="перемещение"
+      title={MOVE_RELEASE_DIALOG_TITLE}
+      titleId="move-dialog-title"
+      statusMeta={moveMeta}
+      statusRunning={moveJob?.status === "RUNNING"}
+      footerActions={footerActions}
     >
-      <div className="min-w-0 space-y-4 p-5">
-        <div className="min-w-0">
-          <p className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-neural">
-            перемещение
-          </p>
-          <div className="mt-1 flex min-w-0 items-start justify-between gap-3">
-            <h2
-              id="move-dialog-title"
-              className="min-w-0 font-display text-lg font-semibold leading-tight"
-            >
-              {MOVE_RELEASE_DIALOG_TITLE}
-            </h2>
-            {moveMeta ? (
-              <span
-                className={`font-mono-tech inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] ${moveMeta.badgeClass}`}
-              >
-                {moveJob?.status === "RUNNING" ? (
-                  <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden />
-                ) : null}
-                {moveMeta.label}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        {moveActive ? (
+      {moveActive ? (
           <ReleaseJobDialogProgress
             accent="neural"
             activeDescription="Файл копируется на новый диск. После проверки каталог обновится, а исходник будет удалён. Можно закрыть диалог — прогресс останется под вкладками релиза и в списке фоновых задач."
@@ -408,46 +428,6 @@ export function ReleaseMoveDialog({
             />
           </>
         )}
-      </div>
-      <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
-        {moveActive ? (
-          <>
-            <Button variant="ghost" onClick={closeDialog} disabled={busy}>
-              Скрыть
-            </Button>
-            <Button variant="secondary" loading={busy} onClick={() => void handleCancel()}>
-              Отменить
-            </Button>
-          </>
-        ) : moveJob?.status === "FAILED" ? (
-          <>
-            <Button variant="ghost" onClick={closeDialog}>
-              Закрыть
-            </Button>
-            <Button variant="primary" loading={busy} onClick={() => void handleRetry()}>
-              Повторить
-            </Button>
-          </>
-        ) : moveJob?.status === "SUCCEEDED" ? (
-          <Button variant="primary" onClick={closeDialog}>
-            Готово
-          </Button>
-        ) : (
-          <>
-            <Button variant="ghost" onClick={closeDialog} disabled={busy}>
-              Отмена
-            </Button>
-            <Button
-              variant="primary"
-              loading={busy}
-              disabled={!canSubmit}
-              onClick={() => void handleMove()}
-            >
-              {MOVE_RELEASE_CONFIRM_LABEL}
-            </Button>
-          </>
-        )}
-      </div>
-    </NativeDialog>
+    </ReleaseTransferDialog>
   );
 }

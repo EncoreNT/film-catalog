@@ -6,24 +6,24 @@ import { AlertTriangle, Check, Info } from "lucide-react";
 import {
   kindMeta,
   specTagClass,
-  type SpecTag,
+  type SpecTag as BuildSpecTag,
   type TierTone,
   TIER_TONE,
 } from "@/lib/builds/build-display";
+import { SpecTag } from "@/components/shared/SpecTag";
 import type { BuildTrackKind } from "@/lib/builds/build-recipe-state";
 
 /** Mono-tech spec chip: `4K`, `E-AC3`, `5.1`, `Русский`… */
-export function SpecChip({ tag, active }: { tag: SpecTag; active?: boolean }) {
+export function SpecChip({ tag, active }: { tag: BuildSpecTag; active?: boolean }) {
   return (
-    <span
-      className={`font-mono-tech inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] transition-colors ${
-        active
-          ? "border-accent/55 bg-accent/[0.12] text-accent-bright"
-          : `border-border bg-bg-deep/50 ${specTagClass(tag)}`
-      }`}
+    <SpecTag
+      variant="chip"
+      size="sm"
+      active={active}
+      textClass={active ? undefined : specTagClass(tag)}
     >
       {tag.label}
-    </span>
+    </SpecTag>
   );
 }
 

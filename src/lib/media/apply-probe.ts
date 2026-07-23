@@ -1,5 +1,5 @@
 import type { ProbeResult } from "@/lib/media/ffprobe";
-import { normalizeAudioProfile } from "@/lib/shared/dictionaries";
+import { validateAudioProfileForCodec } from "@/lib/shared/dictionaries";
 import type {
   AudioFormRow,
   SubtitleFormRow,
@@ -29,7 +29,7 @@ export function probeToAudioRows(audio: ProbeResult["audio"]): AudioFormRow[] {
   return audio.map((track) => ({
     rowKey: createAudioRowKey(),
     codec: track.codec ?? "",
-    profile: normalizeAudioProfile(track.codec ?? "", track.profile ?? "None"),
+    profile: validateAudioProfileForCodec(track.codec ?? "", track.profile ?? "None"),
     channelLayout: track.channelLayout ?? "",
     language: track.language ?? "",
     translationType: track.translationType ?? "",

@@ -2,12 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import { Gem, MonitorPlay, Sun } from "lucide-react";
 import { RUBY_TIER_RIBBON_GENERIC } from "@/lib/media/release-tags";
 import type { ArchiveMetrics } from "@/lib/catalog/archive-metrics";
+import {
+  matchesCatalogGoldFilter,
+  matchesCatalogRubyFilter,
+  type ArchiveQualityFilterParams,
+} from "@/lib/media/tier-core";
 
-export interface ArchiveQualityFilterParams {
-  resolution: string | null;
-  hdr: string | null;
-  premiumAudio: string | null;
-}
+export type { ArchiveQualityFilterParams } from "@/lib/media/tier-core";
 
 export interface ArchiveQualityMetricDef {
   key: keyof ArchiveMetrics;
@@ -37,8 +38,7 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
     stackedLabel: ["4K", "HDR"],
     caption: "Gold tier · Ultra HD с расширенным динамическим диапазоном",
     icon: MonitorPlay,
-    isActive: ({ resolution, hdr }, isCatalog) =>
-      isCatalog && resolution === "4K" && hdr === "HDR_ANY",
+    isActive: (params, isCatalog) => matchesCatalogGoldFilter(params, isCatalog),
     toggleFilter: (active) =>
       active
         ? CLEAR_QUALITY_FILTERS
@@ -66,11 +66,7 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
     shortLabel: RUBY_TIER_RIBBON_GENERIC,
     elite: true,
     icon: Gem,
-    isActive: ({ resolution, hdr, premiumAudio }, isCatalog) =>
-      isCatalog &&
-      resolution === "4K" &&
-      hdr === "HDR_ANY" &&
-      premiumAudio === "true",
+    isActive: (params, isCatalog) => matchesCatalogRubyFilter(params, isCatalog),
     toggleFilter: (active) =>
       active
         ? CLEAR_QUALITY_FILTERS

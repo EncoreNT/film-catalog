@@ -2,6 +2,7 @@ import { DURATION_WARNING_THRESHOLD_SECONDS } from "@/lib/builds/build-presets";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import type { BuildRecipeTrackState } from "@/lib/builds/build-recipe-state";
 import { formatDurationField } from "@/lib/shared/duration";
+import { formatDuration, formatDurationDelta } from "@/lib/shared/duration-format";
 
 export type DurationMismatchSeverity = "minor" | "moderate" | "critical";
 
@@ -33,17 +34,7 @@ export const DURATION_MISMATCH_SEVERITY_TONE: Record<
 };
 
 /** Human-readable delta for inline badges (seconds or minutes). */
-export function formatDurationDelta(seconds: number): string {
-  if (seconds < 60) {
-    return seconds < 10
-      ? `${seconds.toFixed(1).replace(/\.0$/, "")} с`
-      : `${Math.round(seconds)} с`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const rest = Math.round(seconds % 60);
-  if (rest === 0) return `${minutes} мин`;
-  return `${minutes} мин ${rest} с`;
-}
+export { formatDurationDelta } from "@/lib/shared/duration-format";
 
 export function durationMismatchSeverity(
   deltaSeconds: number,
@@ -114,7 +105,7 @@ export function computeAudioDurationMismatchMap(
 
 /** Precise duration for mismatch tooltips (includes seconds). */
 export function formatDurationPrecise(seconds: number): string {
-  return formatDurationField("hms", seconds);
+  return formatDuration(seconds, "hms") ?? "";
 }
 
 export function durationMismatchInlineLabel(info: DurationMismatchInfo): string {

@@ -1,17 +1,13 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import {
+  normalizeMatchKeyTitle,
+  normalizeSearchQuery,
+} from "@/lib/shared/text-normalize";
 
 type DbClient = Prisma.TransactionClient | typeof prisma;
 
-/** NFC + Unicode-aware lowercasing for title/matchKey/search (SQLite lower() misses Cyrillic). */
-export function normalizeMatchKeyTitle(title: string): string {
-  return title.normalize("NFC").toLowerCase().replace(/\s+/g, " ").trim();
-}
-
-/** Normalized query needle for case-insensitive catalog search via matchKey. */
-export function normalizeSearchQuery(q: string): string {
-  return normalizeMatchKeyTitle(q);
-}
+export { normalizeMatchKeyTitle, normalizeSearchQuery } from "@/lib/shared/text-normalize";
 
 /**
  * Normalized key used to detect duplicate movies (same work, different releases).

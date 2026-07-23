@@ -30,16 +30,23 @@ film-catalog/
 │   │   ├── franchises/        # FranchiseForm, FranchiseCard, …
 │   │   ├── scan/              # ScanProgressModal, DraftQueueGrid, …
 │   │   ├── duplicates/        # DuplicateGroupList, …
-│   │   └── shared/            # StoragePicker, TrackEditorSection, SpecTag, TierCoverOverlay
+│   │   ├── builds/            # BuildJobCard, BuildAtoms, …
+│   │   ├── media-jobs/        # MediaJobCard (export/move wrappers)
+│   │   └── shared/            # StoragePicker, SpecTag, TierChip, TierCoverOverlay
 │   ├── hooks/                 # Client hooks (useStoragePicker, useTrackEditor)
 │   ├── lib/                   # Бизнес-логика по доменам
 │   │   ├── db/                # prisma, settings, data-path
 │   │   ├── api/               # api-utils, validators, ndjson-stream
-│   │   ├── shared/            # slug, format, dictionaries, text-trim, …
-│   │   ├── media/             # scanner, ffprobe, spec-tags, probe-from-file
+│   │   ├── shared/            # slug, format-bytes, duration-format, text-normalize, dictionaries
+│   │   ├── media/             # scanner, ffprobe, release-tags, tier-core, spec-tags
+│   │   ├── media-jobs/        # shared export/move display, part-path, serialize-base
+│   │   ├── builds/            # MKV build pipeline (~35 modules)
+│   │   ├── worker/            # claim-next-media-job.ts
+│   │   ├── layout/            # spotlight-aim.ts (UI geometry)
+│   │   ├── ui/                # floating-position.ts
 │   │   ├── covers/            # cover-storage, serve/save/upload helpers
 │   │   ├── movies/            # movie-query, movie-include, create-movie, …
-│   │   ├── releases/          # release-api, release-primary, …
+│   │   ├── releases/          # release-api, export/move runners, …
 │   │   ├── catalog/           # catalog-facets, archive-metrics, …
 │   │   ├── franchises/        # franchise-slots, franchise-summary, …
 │   │   └── merge/             # movie-merge, merge-preview, …
@@ -130,6 +137,19 @@ scripts/release-build-worker.ts → claimNextBuild → runBuildJob
 ```
 
 ADR: `docs/adr/0006-durable-release-build-worker.md`. Домен: `lib/builds/*`.
+
+## Поток: TV export и move
+
+```
+Release detail → POST /api/releases/[id]/export | /move
+         → ReleaseExport | ReleaseMove QUEUED
+scripts/release-build-worker.ts → claimNextMediaJob
+         → runExportJob | runMoveJob (lib/releases/*-runner.ts)
+         → shared display/progress: lib/media-jobs/*
+Move success → update Release.filePath + externalStorage; unlink source (best-effort)
+```
+
+ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib).
 
 ## Поток: каталог и фильтры
 

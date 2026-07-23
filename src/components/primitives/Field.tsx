@@ -1,5 +1,5 @@
 import { type InputHTMLAttributes, type ReactNode } from "react";
-import { InfoHint } from "./InfoHint";
+import { FormFieldShell } from "./FormFieldShell";
 import { trimOnInputBlur, trimOnTextareaBlur } from "@/lib/shared/text-trim";
 
 type FieldVariant = "filled" | "underline";
@@ -63,19 +63,16 @@ export function Field({
 }: FieldProps) {
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
   const isUnderline = variant === "underline";
-  const labelClass = isUnderline
-    ? "font-mono-tech text-[11px] uppercase tracking-[0.18em] text-muted"
-    : "text-sm text-muted";
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <label htmlFor={fieldId} className={labelClass}>
-          {label}
-          {required ? <span className="ml-0.5 text-danger" aria-hidden>*</span> : null}
-        </label>
-        {hint ? <InfoHint text={hint} label={label} /> : null}
-      </div>
+    <FormFieldShell
+      label={label}
+      htmlFor={fieldId}
+      hint={hint}
+      error={error}
+      required={required}
+      labelVariant={isUnderline ? "underline" : "default"}
+    >
       {children ?? (
         isUnderline ? (
           <div className="relative">
@@ -104,12 +101,7 @@ export function Field({
           />
         )
       )}
-      {error ? (
-        <p id={`${fieldId}-error`} className="text-xs text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    </FormFieldShell>
   );
 }
 
@@ -134,18 +126,15 @@ export function TextAreaField({
 }: TextAreaFieldProps) {
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
   const isUnderline = variant === "underline";
-  const labelClass = isUnderline
-    ? "font-mono-tech text-[11px] uppercase tracking-[0.18em] text-muted"
-    : "text-sm text-muted";
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <label htmlFor={fieldId} className={labelClass}>
-          {label}
-        </label>
-        {hint ? <InfoHint text={hint} label={label} /> : null}
-      </div>
+    <FormFieldShell
+      label={label}
+      htmlFor={fieldId}
+      hint={hint}
+      error={error}
+      labelVariant={isUnderline ? "underline" : "default"}
+    >
       {isUnderline ? (
         <div className="relative">
           <textarea
@@ -168,11 +157,6 @@ export function TextAreaField({
           {...props}
         />
       )}
-      {error ? (
-        <p className="text-xs text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    </FormFieldShell>
   );
 }

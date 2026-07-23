@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { displayFilePath } from "@/lib/shared/display-path";
+import { serializeMediaJobTimestamps } from "@/lib/media-jobs/serialize-base";
 import { moveInclude } from "@/lib/releases/move-queue";
 
 type MoveWithRelations = Prisma.ReleaseMoveGetPayload<{
@@ -30,10 +31,7 @@ export function serializeMove(job: MoveWithRelations) {
     warningMessage: job.warningMessage,
     cancelRequested: job.cancelRequested,
     queueOrder: job.queueOrder,
-    startedAt: job.startedAt?.toISOString() ?? null,
-    finishedAt: job.finishedAt?.toISOString() ?? null,
-    createdAt: job.createdAt.toISOString(),
-    updatedAt: job.updatedAt.toISOString(),
+    ...serializeMediaJobTimestamps(job),
   };
 }
 

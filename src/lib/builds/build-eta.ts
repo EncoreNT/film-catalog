@@ -1,5 +1,8 @@
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
 import { parseFfmpegSpeed } from "@/lib/builds/build-ffmpeg";
+import { formatBuildEtaSeconds } from "@/lib/shared/duration-format";
+
+export { formatBuildEtaSeconds };
 
 const DEFAULT_TRANSCODE_SPEED = 1;
 const PREPARE_ETA_SECONDS = 30;
@@ -354,33 +357,6 @@ export function estimateQueuedWaitSeconds(
   }
 
   return waitSeconds;
-}
-
-export function formatBuildEtaSeconds(seconds: number | null | undefined): string | null {
-  if (seconds == null || !Number.isFinite(seconds)) return null;
-
-  const total = Math.max(0, Math.floor(seconds));
-  if (total < 45) return "меньше минуты";
-
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const secs = total % 60;
-
-  if (hours <= 0 && total < 600) {
-    if (minutes <= 0) return `~${secs} с`;
-    if (secs > 0) return `~${minutes} мин ${secs} с`;
-    return minutes === 1 ? "~1 мин" : `~${minutes} мин`;
-  }
-
-  if (hours <= 0) {
-    return minutes === 1 ? "~1 мин" : `~${minutes} мин`;
-  }
-
-  if (minutes <= 0) {
-    return hours === 1 ? "~1 ч" : `~${hours} ч`;
-  }
-
-  return hours === 1 ? `~1 ч ${minutes} мин` : `~${hours} ч ${minutes} мин`;
 }
 
 export function buildRunningEtaLabel(

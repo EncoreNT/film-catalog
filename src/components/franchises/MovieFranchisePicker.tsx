@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Library, Loader2, Plus, Search, X } from "lucide-react";
+import { ChevronDown, Library, Loader2, Plus, X } from "lucide-react";
+import { CreatableCombobox } from "@/components/primitives/CreatableCombobox";
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { FranchiseSlotPickerDialog } from "@/components/franchises/FranchiseSlotPickerDialog";
 import type { MovieFranchiseMembership } from "@/lib/movies/movie-franchise-memberships";
 import { searchTextEquals } from "@/lib/shared/search-text";
-import { trimInput } from "@/lib/shared/text-trim";
 import { apiFetch } from "@/lib/api/client";
 import { useDebouncedApiSearch } from "@/hooks/useDebouncedApiSearch";
 
@@ -258,85 +258,39 @@ export function MovieFranchisePicker({
           </button>
 
           {open ? (
-            <div
-              role="listbox"
-              className="surface-elevated absolute z-50 mt-2 max-h-72 w-full overflow-auto p-1 shadow-2xl"
-            >
-              <div className="px-1 pb-1 pt-2">
-                <div className="relative">
-                  <Search
-                    className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted/60"
-                    aria-hidden
-                  />
-                  <input
-                    ref={inputRef}
-                    value={query}
-                    onChange={(e) => onQueryChange(e.target.value)}
-                    onBlur={() => {
-                      const trimmed = trimInput(query);
-                      if (trimmed !== query) onQueryChange(trimmed);
-                    }}
-                    placeholder="Поиск или создание…"
-                    className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
-                  />
-                  {searching ? (
-                    <Loader2
-                      className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-accent/70"
-                      aria-hidden
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              {results.filter((r) => !joinedIds.has(r.id)).length === 0 &&
-              !canCreate ? (
-                <p className="px-3 py-2 text-sm text-muted">
-                  {trimmedQuery
-                    ? "Ничего не найдено"
-                    : "Нет доступных франшиз"}
-                </p>
-              ) : null}
-
-              {results
+            <CreatableCombobox
+              open
+              query={query}
+              onQueryChange={onQueryChange}
+              loading={searching}
+              disabled={busy}
+              items={results
                 .filter((r) => !joinedIds.has(r.id))
-                .map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    disabled={busy}
-                    onClick={() => pickFranchise(r)}
-                    className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-text transition-colors hover:bg-bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Library
-                      className="h-4 w-4 shrink-0 text-accent/70"
-                      aria-hidden
-                    />
-                    <span className="truncate">{r.name}</span>
-                  </button>
-                ))}
-
-              {canCreate ? (
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={false}
-                  disabled={busy}
-                  onClick={() => createFranchise(trimmedQuery)}
-                  className="mt-1 flex w-full items-center gap-2 rounded-[var(--radius-sm)] border border-accent/30 bg-accent/10 px-3 py-2 text-left text-sm text-accent transition-colors hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Plus className="h-4 w-4 shrink-0" aria-hidden />
-                  <span className="truncate">Создать «{trimmedQuery}»</span>
-                  {creatingName === trimmedQuery ? (
-                    <Loader2
-                      className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin"
-                      aria-hidden
-                    />
-                  ) : null}
-                </button>
-              ) : null}
-            </div>
+                .map((r) => ({
+                  id: r.id,
+                  label: r.name,
+                }))}
+              onSelect={(item) => {
+                const franchise = results.find((r) => r.id === item.id);
+                if (franchise) pickFranchise(franchise);
+              }}
+              canCreate={canCreate}
+              creating={creatingName === trimmedQuery}
+              onCreate={createFranchise}
+              emptyMessage={
+                trimmedQuery ? "Ничего не найдено" : "Нет доступных франшиз"
+              }
+              itemIcon={
+                <Library
+                  className="h-4 w-4 shrink-0 text-accent/70"
+                  aria-hidden
+                />
+              }
+              createIcon={<Plus className="h-4 w-4 shrink-0" aria-hidden />}
+              inputRef={inputRef}
+              className="surface-elevated absolute z-50 mt-2 max-h-72 w-full overflow-auto p-1 shadow-2xl"
+              searchInputClassName="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
+            />
           ) : null}
         </div>
       </div>

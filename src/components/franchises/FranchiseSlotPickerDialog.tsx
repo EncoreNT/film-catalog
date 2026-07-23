@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Film, Library, Loader2, Plus, X } from "lucide-react";
+import { Film, Library, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
+import { DialogHeader } from "@/components/primitives/DialogHeader";
 import { NativeDialog } from "@/components/primitives/NativeDialog";
 import { apiFetch } from "@/lib/api/client";
 import { isFutureFranchiseSlotState } from "@/lib/franchises/franchise-slot-future";
@@ -141,26 +142,18 @@ function FranchiseSlotPickerDialogContent({
       ariaLabel={`${title}: ${franchiseName}`}
       className={DIALOG_CLASS}
     >
-      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="min-w-0">
-          <p className="font-mono-tech text-accent">{title}</p>
-          <h2 className="font-display truncate text-xl font-semibold">
-            {franchiseName}
-          </h2>
-          <p className="mt-1 truncate text-sm text-muted">
+      <DialogHeader
+        eyebrow={title}
+        title={franchiseName}
+        subtitle={
+          <>
             Фильм: <span className="text-text">{movieTitle}</span>
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          onClick={onClose}
-          disabled={placing != null}
-          aria-label="Закрыть"
-          className="!min-h-11 !w-11 !p-0"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
+          </>
+        }
+        onClose={onClose}
+        closeDisabled={placing != null}
+        align="start"
+      />
 
       <div className="relative min-h-0 flex-1 overflow-y-auto p-4">
         {loading ? (

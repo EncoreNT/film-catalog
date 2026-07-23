@@ -14,17 +14,20 @@ export type AudioTrackLike = {
   translationType?: string | null;
 };
 
-export function normalizeAudioProfile(
+export function nullifyAudioProfile(
   profile: string | null | undefined,
 ): string | null {
   if (!profile || profile === "None") return null;
   return profile;
 }
 
+/** @deprecated Use nullifyAudioProfile */
+export const normalizeAudioProfile = nullifyAudioProfile;
+
 export function isSpatialAudioProfile(
   profile: string | null | undefined,
 ): boolean {
-  const normalized = normalizeAudioProfile(profile);
+  const normalized = nullifyAudioProfile(profile);
   return (
     normalized === "Atmos" ||
     normalized === "DTS:X MA"

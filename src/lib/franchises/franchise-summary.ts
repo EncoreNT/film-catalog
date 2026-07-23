@@ -7,7 +7,7 @@ import {
   dictLabel,
   RELEASE_TYPES,
 } from "@/lib/shared/dictionaries";
-import { hdrShortLabel, normalizeAudioProfile } from "@/lib/media/quality-predicates";
+import { hdrShortLabel, nullifyAudioProfile } from "@/lib/media/quality-predicates";
 import { formatDuration } from "@/lib/shared/format";
 import { pickPrimaryRelease } from "@/lib/releases/release-primary";
 import {
@@ -119,7 +119,7 @@ function slotAudioShort(movie: MovieWithTracks | null): string | null {
   const release = primaryRelease(movie);
   const track = release ? mainAudioTrack(release) : null;
   if (!track) return null;
-  const profile = normalizeAudioProfile(track.profile);
+  const profile = nullifyAudioProfile(track.profile);
   if (profile === "Atmos") return "ATMOS";
   if (profile === "DTS:X MA") return "DTS:X";
   if (track.codec) return codecShort(track.codec)?.toUpperCase() ?? track.codec.toUpperCase();

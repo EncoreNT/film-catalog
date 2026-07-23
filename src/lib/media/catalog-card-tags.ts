@@ -7,7 +7,7 @@ import {
   premiumAudio,
   translationShort,
 } from "@/lib/media/audio-labels";
-import { normalizeAudioProfile } from "@/lib/media/quality-predicates";
+import { nullifyAudioProfile } from "@/lib/media/quality-predicates";
 import { formatHdrLabel } from "@/lib/shared/dictionaries";
 import {
   hdrCatalogTag,
@@ -155,7 +155,7 @@ export function catalogAudioChipLabel(
     main.channelLayout && main.channelLayout !== "other"
       ? main.channelLayout
       : null;
-  const profile = normalizeAudioProfile(main.profile);
+  const profile = nullifyAudioProfile(main.profile);
 
   if (profile === "DTS:X MA") {
     return channels ? `DTS:X ${channels}` : "DTS:X";

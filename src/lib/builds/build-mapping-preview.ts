@@ -11,6 +11,7 @@ import {
   resolveInspectedMkvTrackId,
   resolveInspectedSubtitleTrack,
 } from "@/lib/builds/build-track-inspect";
+import { normalizeComparableTitle } from "@/lib/shared/text-normalize";
 
 type BuildRecipe = z.infer<typeof buildRecipeSchema>;
 
@@ -28,11 +29,6 @@ export interface BuildTrackMappingPreviewRow {
   mkvTrackId: number | null;
   /** ffmpeg `-map` selector for transcode step, e.g. `0:a:0`. */
   ffmpegMap: string | null;
-}
-
-function normalizeTitle(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed.toLocaleLowerCase("ru") : null;
 }
 
 function actionLabelForTrack(
@@ -153,8 +149,8 @@ export function mappingPreviewValidationErrors(
     const recipeTrack = recipe.tracks[row.trackIndex];
     if (!recipeTrack) continue;
 
-    const expectedTitle = normalizeTitle(recipeTrack.label);
-    const resolvedTitle = normalizeTitle(row.resolvedTitle);
+    const expectedTitle = normalizeComparableTitle(recipeTrack.label);
+    const resolvedTitle = normalizeComparableTitle(row.resolvedTitle);
     if (
       expectedTitle &&
       resolvedTitle &&
