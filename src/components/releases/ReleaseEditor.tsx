@@ -292,13 +292,14 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     setActionLoading(true);
     setError(null);
     try {
-      await apiFetch(
+      const result = await apiFetch<{ movieDeleted?: boolean }>(
         `/api/movies/${movieId}/releases/${release.id}`,
         { method: "DELETE" },
         "Не удалось удалить релиз",
       );
       setConfirmDelete(false);
-      router.push(`/movies/${movieSlug}`);
+      router.push(result.movieDeleted ? "/" : `/movies/${movieSlug}`);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {

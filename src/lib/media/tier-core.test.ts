@@ -119,6 +119,30 @@ describe("inferTierFrom4kHdrAndAudioTracks", () => {
     ]);
     expect(tier).toBe("ruby");
   });
+
+  it("returns ruby for default Russian author spatial track", () => {
+    const videoRelease = release({
+      id: 2,
+      videoTrack: video("HDR10"),
+    });
+    const tier = inferTierFrom4kHdrAndAudioTracks(videoRelease, [
+      {
+        id: 1,
+        releaseId: 2,
+        streamIndex: 0,
+        language: "rus",
+        isDefault: true,
+        codec: "dts-hd",
+        profile: "DTS:X MA",
+        channels: 8,
+        channelLayout: "7.1",
+        translationType: "author",
+        title: null,
+        bitrate: 4900,
+      },
+    ]);
+    expect(tier).toBe("ruby");
+  });
 });
 
 describe("buildSpotlightFromVisual", () => {

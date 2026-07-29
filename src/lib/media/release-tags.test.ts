@@ -151,6 +151,38 @@ describe("secondaryTags", () => {
     expect(kinds).toContain("release");
     expect(kinds).toContain("channel");
   });
+
+  it("показывает каналы главной русской дорожки, а не лучшего оригинала", () => {
+    const tags = secondaryTags(
+      release({
+        id: 20,
+        releaseType: "bdremux",
+        videoTrack: video("HDR10"),
+        audioTracks: [
+          audio({
+            isDefault: true,
+            codec: "ac3",
+            profile: null,
+            channels: 6,
+            channelLayout: "5.1",
+            translationType: "dub",
+          }),
+          audio({
+            language: "eng",
+            codec: "truehd",
+            profile: "Atmos",
+            channels: 8,
+            channelLayout: "7.1",
+            isDefault: false,
+            translationType: "original",
+          }),
+        ],
+      }),
+    );
+
+    const channelTag = tags.find((t) => t.kind === "channel");
+    expect(channelTag?.label).toBe("звук 5.1");
+  });
 });
 
 describe("catalogCardTech", () => {
@@ -436,6 +468,27 @@ describe("releaseTier", () => {
         }),
       ),
     ).toBe("gold");
+  });
+
+  it("ruby, если главная русская авторская — DTS:X 7.1", () => {
+    expect(
+      releaseTier(
+        release({
+          id: 21,
+          videoTrack: video("HDR10"),
+          audioTracks: [
+            audio({
+              codec: "dts-hd",
+              profile: "DTS:X MA",
+              channels: 8,
+              channelLayout: "7.1",
+              isDefault: true,
+              translationType: "author",
+            }),
+          ],
+        }),
+      ),
+    ).toBe("ruby");
   });
 
   it("null, если нет 4K", () => {

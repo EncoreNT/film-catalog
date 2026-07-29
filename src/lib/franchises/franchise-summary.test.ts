@@ -121,6 +121,7 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
     watchedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    primaryReleaseId: null,
     releases: [makeRelease(opts)],
     movieGenres: [],
   } as MovieWithTracks;

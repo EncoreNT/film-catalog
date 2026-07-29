@@ -30,6 +30,10 @@ describe("detectTranslationType", () => {
   it("detects two-voice and single-voice variants", () => {
     expect(detectTranslationType("DVO, LostFilm")).toBe("pro_two");
     expect(detectTranslationType("Двухголосое")).toBe("pro_two");
+    expect(
+      detectTranslationType("Любительский двухголосный (RAIM & GUGU)"),
+    ).toBe("amateur_two");
+    expect(detectTranslationType("Люб. двухголосный")).toBe("amateur_two");
     expect(detectTranslationType("PVO, Alex")).toBe("pro_single");
     expect(detectTranslationType("VO, HDRezka Studio")).toBe("pro_single");
     expect(detectTranslationType("Voice-over by Studio")).toBe("pro_single");

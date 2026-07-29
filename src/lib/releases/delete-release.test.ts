@@ -40,6 +40,7 @@ describe("deleteRelease", () => {
     const result = await deleteRelease(movie.id, releaseId);
 
     expect(result.fileDeleted).toBe(false);
+    expect(result.movieDeleted).toBe(false);
     expect(await fileExists(filePath)).toBe(true);
     expect(
       await prisma.release.findUnique({ where: { id: releaseId } }),
@@ -72,8 +73,35 @@ describe("deleteRelease", () => {
     const result = await deleteRelease(movie.id, releaseId, { deleteFile: true });
 
     expect(result.fileDeleted).toBe(true);
+    expect(result.movieDeleted).toBe(false);
     expect(await fileExists(filePath)).toBe(false);
 
     await prisma.movie.delete({ where: { id: movie.id } });
+  });
+
+  it("deletes the movie when removing the only release", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "fc-delete-last-"));
+    const filePath = path.join(dir, "only.mkv");
+    await writeFile(filePath, "payload");
+
+    const movie = await prisma.movie.create({
+      data: {
+        slug: `delete-last-${Date.now()}`,
+        title: "Delete Last Release",
+        matchKey: `delete-last-${Date.now()}`,
+        releases: {
+          create: [{ filePath }],
+        },
+      },
+      include: { releases: true },
+    });
+
+    const releaseId = movie.releases[0]!.id;
+    const result = await deleteRelease(movie.id, releaseId);
+
+    expect(result.movieDeleted).toBe(true);
+    expect(await prisma.movie.findUnique({ where: { id: movie.id } })).toBeNull();
+    expect(await prisma.release.findUnique({ where: { id: releaseId } })).toBeNull();
+    expect(await fileExists(filePath)).toBe(true);
   });
 });

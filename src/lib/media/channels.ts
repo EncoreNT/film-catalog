@@ -165,6 +165,12 @@ export function detectTranslationType(title?: string | null): string | null {
     return "dub";
   }
   if (t.includes("многоголос") || /\bmvo\b/.test(t)) return "pro_multi";
+  if (
+    t.includes("двухголос") &&
+    (t.includes("любитель") || t.includes("люб."))
+  ) {
+    return "amateur_two";
+  }
   if (t.includes("двухголос") || /\bdvo\b/.test(t)) return "pro_two";
   if (t.includes("авторск") || /\bavo\b/.test(t)) return "author";
   if (/\bpvo\b/.test(t)) return "pro_single";

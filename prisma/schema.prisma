@@ -63,6 +63,9 @@ model Movie {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
+  primaryReleaseId Int?
+  primaryRelease   Release? @relation("MoviePrimaryRelease", fields: [primaryReleaseId], references: [id], onDelete: SetNull)
+
   movieGenres MovieGenre[]
   slots       FranchiseSlot[]
   releases    Release[]
@@ -91,6 +94,7 @@ model Release {
   updatedAt       DateTime    @updatedAt
 
   movie            Movie             @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  primaryForMovies Movie[]           @relation("MoviePrimaryRelease")
   externalStorage  ExternalStorage?  @relation(fields: [externalStorageId], references: [id], onDelete: SetNull)
   videoTrack     VideoTrack?
   audioTracks    AudioTrack[]

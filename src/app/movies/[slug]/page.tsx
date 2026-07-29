@@ -35,6 +35,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
     displayDuration,
     franchiseMemberships,
     activeReleaseId,
+    catalogPrimaryReleaseId,
   } = data;
 
   return (
@@ -96,6 +97,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
               initialActiveReleaseId={
                 activeReleaseId ?? releaseViews[0].id
               }
+              primaryReleaseId={catalogPrimaryReleaseId}
             />
           ) : (
             <EmptyReleasesCard movieSlug={movie.slug} />

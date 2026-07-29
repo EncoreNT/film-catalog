@@ -71,16 +71,63 @@ export interface PremiumAudio {
   channelLayout: string | null;
 }
 
-export function mainAudioTrack(
-  release: ReleaseWithTracks,
-): ReleaseWithTracks["audioTracks"][number] | null {
-  if (release.audioTracks.length === 0) return null;
-  const sorted = [...release.audioTracks].sort((a, b) => {
+type AudioTrack = ReleaseWithTracks["audioTracks"][number];
+
+function trackChannelCount(track: AudioTrack): number {
+  if (track.channels != null) return track.channels;
+  if (track.channelLayout && track.channelLayout !== "other") {
+    const [wide, high] = track.channelLayout.split(".");
+    const w = Number(wide);
+    const h = Number(high);
+    if (Number.isFinite(w) && Number.isFinite(h)) return w + h;
+  }
+  return 0;
+}
+
+/** Лучшая дорожка среди кандидатов: object-sound → каналы → isDefault → streamIndex. */
+function pickBestAudioTrack(tracks: AudioTrack[]): AudioTrack | null {
+  if (tracks.length === 0) return null;
+  const sorted = [...tracks].sort((a, b) => {
+    const aSpatial = isSpatialAudioProfile(a.profile) ? 1 : 0;
+    const bSpatial = isSpatialAudioProfile(b.profile) ? 1 : 0;
+    if (bSpatial !== aSpatial) return bSpatial - aSpatial;
+    const channelDiff = trackChannelCount(b) - trackChannelCount(a);
+    if (channelDiff !== 0) return channelDiff;
     if (a.isDefault && !b.isDefault) return -1;
     if (!a.isDefault && b.isDefault) return 1;
-    return 0;
+    return a.streamIndex - b.streamIndex;
   });
   return sorted[0];
+}
+
+/**
+ * «Основная» аудиодорожка релиза для бейджей, карточек и gold-тира.
+ *
+ * Приоритет: (1) главная дорожка (`isDefault`), (2) русский дубляж,
+ * (3) русский проф. многоголосный, (4) лучшая по качеству среди всех.
+ */
+export function mainAudioTrack(
+  release: ReleaseWithTracks,
+): AudioTrack | null {
+  const tracks = release.audioTracks;
+  if (tracks.length === 0) return null;
+
+  const defaultTrack = tracks.find((t) => t.isDefault);
+  if (defaultTrack) return defaultTrack;
+
+  const dub = pickBestAudioTrack(
+    tracks.filter((t) => t.language === "rus" && t.translationType === "dub"),
+  );
+  if (dub) return dub;
+
+  const proMulti = pickBestAudioTrack(
+    tracks.filter(
+      (t) => t.language === "rus" && t.translationType === "pro_multi",
+    ),
+  );
+  if (proMulti) return proMulti;
+
+  return pickBestAudioTrack(tracks);
 }
 
 export function premiumAudio(release: ReleaseWithTracks): PremiumAudio | null {
@@ -104,6 +151,7 @@ const TRANSLATION_SHORT: Record<string, string> = {
   pro_two: "проф. двухгол.",
   amateur_multi: "люб. многогол.",
   amateur_single: "люб. одногол.",
+  amateur_two: "люб. двухгол.",
   author: "авторский",
   commentary: "комментарии",
   original: "оригинал",

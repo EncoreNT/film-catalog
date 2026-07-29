@@ -30,7 +30,7 @@ import {
 
 function primaryRelease(movie: MovieWithTracks | null) {
   if (!movie) return null;
-  return pickPrimaryRelease(movie.releases);
+  return pickPrimaryRelease(movie.releases, movie.primaryReleaseId);
 }
 
 /**

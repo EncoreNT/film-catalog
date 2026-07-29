@@ -79,8 +79,13 @@ export function sortReleasesByQuality<T extends ReleaseWithTracks>(
 /** Pick the best release for catalog badges and card display. */
 export function pickPrimaryRelease<T extends ReleaseWithTracks>(
   releases: T[],
+  preferredReleaseId?: number | null,
 ): T | null {
   if (releases.length === 0) return null;
+  if (preferredReleaseId != null) {
+    const preferred = releases.find((r) => r.id === preferredReleaseId);
+    if (preferred) return preferred;
+  }
   return sortReleasesByQuality(releases)[0] ?? null;
 }
 

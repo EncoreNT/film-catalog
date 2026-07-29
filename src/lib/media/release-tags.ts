@@ -97,28 +97,23 @@ function heroTags(release: ReleaseWithTracks): HeroTag[] {
     }
   }
 
-  const bestAudio = [...release.audioTracks]
-    .map((t) => ({ t, ...audioTrackTag(t) }))
-    .sort((a, b) => {
-      if (a.is3D && !b.is3D) return -1;
-      if (!a.is3D && b.is3D) return 1;
-      return 0;
-    })[0];
+  const main = mainAudioTrack(release);
+  const mainTag = main ? audioTrackTag(main) : null;
 
-  if (bestAudio) {
-    const label = formatAudioLabel(bestAudio.t);
+  if (main && mainTag) {
+    const label = formatAudioLabel(main);
     if (label) {
       tags.push({
-        kind: bestAudio.is3D ? "audio-3d" : "audio",
+        kind: mainTag.is3D ? "audio-3d" : "audio",
         label,
-        note: codecFull(bestAudio.t.codec) ?? undefined,
+        note: codecFull(main.codec) ?? undefined,
       });
     }
 
-    if (bestAudio.t.channelLayout && bestAudio.t.channelLayout !== "other") {
+    if (main.channelLayout && main.channelLayout !== "other") {
       tags.push({
         kind: "channel",
-        label: `звук ${bestAudio.t.channelLayout}`,
+        label: `звук ${main.channelLayout}`,
       });
     }
   }
@@ -251,8 +246,8 @@ export function releaseTabLabel(release: ReleaseWithTracks): string {
 
 /**
  * Каталожные тиры релиза (логика, не цвет): Ruby — 4K + любой HDR +
- * Atmos или DTS:X ≥ 7.1 на лучшей русской дубляжной дорожке; Gold — 4K + любой HDR +
- * surround ≥ 5.1 (6+ каналов) на основном треке. Ruby имеет приоритет над Gold.
+ * Atmos или DTS:X ≥ 7.1 на лучшем русском дубляже **или** главной русской
+ * дорожке; Gold — 4K + любой HDR + surround ≥ 5.1 на основном треке.
  */
 export type ReleaseTier = "ruby" | "gold" | null;
 
@@ -262,8 +257,8 @@ export const RUBY_TIER_RIBBON_GENERIC = "4K | HDR | РУС. ATMOS · DTS:X";
 function rubySpatialRibbonSuffix(
   release: ReleaseWithTracks,
 ): "ATMOS" | "DTS:X" {
-  const bestRusDub = bestRussianDubTrack(release);
-  if (nullifyAudioProfile(bestRusDub?.profile) === "DTS:X MA") {
+  const spatial = rubySpatialAudioTrack(release);
+  if (nullifyAudioProfile(spatial?.profile) === "DTS:X MA") {
     return "DTS:X";
   }
   return "ATMOS";
@@ -306,7 +301,7 @@ export function audioTrackChannelCount(
  * DTS:X MA), затем больше каналов, затем isDefault.
  */
 export function bestRussianDubTrack(
-  release: ReleaseWithTracks,
+  release: Pick<ReleaseWithTracks, "audioTracks">,
 ): ReleaseWithTracks["audioTracks"][number] | null {
   const dubTracks = release.audioTracks.filter(
     (t) => t.language === "rus" && t.translationType === "dub",
@@ -326,25 +321,46 @@ export function bestRussianDubTrack(
   return sorted[0];
 }
 
+function qualifiesRubySpatialTrack(
+  track: ReleaseWithTracks["audioTracks"][number] | null | undefined,
+): boolean {
+  if (!track) return false;
+  return (
+    isSpatialAudioProfile(track.profile) &&
+    audioTrackChannelCount(track) >= 8
+  );
+}
+
+/**
+ * Дорожка, дающая ruby по звуку: лучший рус. дубляж с Atmos/DTS:X ≥ 7.1,
+ * иначе главная (`isDefault`) русская с Atmos/DTS:X ≥ 7.1 (любой тип перевода).
+ */
+export function rubySpatialAudioTrack(
+  release: Pick<ReleaseWithTracks, "audioTracks">,
+): ReleaseWithTracks["audioTracks"][number] | null {
+  const bestRusDub = bestRussianDubTrack(release);
+  if (qualifiesRubySpatialTrack(bestRusDub)) return bestRusDub;
+
+  const main = release.audioTracks.find((t) => t.isDefault);
+  if (main?.language === "rus" && qualifiesRubySpatialTrack(main)) {
+    return main;
+  }
+
+  return null;
+}
+
 /**
  * Каталожные тиеры релиза (логика, не цвет).
  *
- * **Ruby** — 4K + любой HDR + Atmos или DTS:X ≥ 7.1 на {@link bestRussianDubTrack}
- * (только дубляж). Object-sound оригинал при русской AC3-дубляже не даёт ruby.
+ * **Ruby** — 4K + любой HDR + Atmos или DTS:X ≥ 7.1 на {@link rubySpatialAudioTrack}:
+ * лучший русский дубляж **или** главная русская дорожка (любой перевод).
  *
- * **Gold** — 4K + любой HDR + surround ≥ 5.1 на {@link mainAudioTrack}
- * (AC3, DTS, TrueHD и др. — главное 6+ каналов на основной дорожке).
+ * **Gold** — 4K + любой HDR + surround ≥ 5.1 на {@link mainAudioTrack}.
  */
 export function releaseTier(release: ReleaseWithTracks): ReleaseTier {
   if (!is4K(release) || !isAnyHDR(release)) return null;
 
-  const bestRusDub = bestRussianDubTrack(release);
-  if (bestRusDub) {
-    const channels = audioTrackChannelCount(bestRusDub);
-    if (isSpatialAudioProfile(bestRusDub.profile) && channels >= 8) {
-      return "ruby";
-    }
-  }
+  if (rubySpatialAudioTrack(release)) return "ruby";
 
   const main = mainAudioTrack(release);
   if (!main) return null;
@@ -359,8 +375,8 @@ export function releaseQuickSpecHints(release: ReleaseWithTracks): string[] {
   const hints: string[] = [];
   if (is4K(release)) hints.push("4K");
   if (isAnyHDR(release)) hints.push("HDR");
-  const bestRusDub = bestRussianDubTrack(release);
-  const profile = nullifyAudioProfile(bestRusDub?.profile);
+  const spatial = rubySpatialAudioTrack(release);
+  const profile = nullifyAudioProfile(spatial?.profile);
   if (profile === "Atmos") hints.push("Atmos");
   else if (profile === "DTS:X MA") hints.push("DTS:X");
   return hints;

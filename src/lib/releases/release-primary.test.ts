@@ -108,6 +108,43 @@ describe("pickPrimaryRelease", () => {
     expect(pickPrimaryRelease([])).toBeNull();
   });
 
+  it("prefers manually selected release over auto ranking", () => {
+    const fourK = release({
+      id: 1,
+      releaseType: "bdremux",
+      videoTrack: {
+        id: 1,
+        releaseId: 1,
+        streamIndex: 0,
+        width: 3840,
+        height: 2160,
+        resolutionLabel: "4K",
+        codec: "hevc",
+        hdr: "HDR10",
+        fps: "24",
+        bitrate: 50000000,
+      },
+    });
+    const bdrip = release({
+      id: 2,
+      releaseType: "bdrip",
+      videoTrack: {
+        id: 2,
+        releaseId: 2,
+        streamIndex: 0,
+        width: 3840,
+        height: 2160,
+        resolutionLabel: "4K",
+        codec: "hevc",
+        hdr: "HDR10",
+        fps: "24",
+        bitrate: 8000000,
+      },
+    });
+    expect(pickPrimaryRelease([bdrip, fourK], bdrip.id)?.id).toBe(2);
+    expect(pickPrimaryRelease([bdrip, fourK])?.id).toBe(1);
+  });
+
   it("sorts releases best quality first", () => {
     const fourK = release({
       id: 1,

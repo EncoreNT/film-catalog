@@ -2,11 +2,14 @@ import { unlink } from "node:fs/promises";
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { prisma } from "@/lib/db/prisma";
+import { deleteMovie } from "@/lib/movies/delete-movie";
 import { findReleaseForMovie } from "@/lib/releases/probe-release";
 
 export interface DeleteReleaseResult {
   fileDeleted: boolean;
   fileMissing: boolean;
+  /** True when the last release was removed and the movie row was deleted too. */
+  movieDeleted: boolean;
   warning?: string;
 }
 
@@ -21,9 +24,7 @@ export async function deleteRelease(
   }
 
   const count = await prisma.release.count({ where: { movieId } });
-  if (count <= 1) {
-    throw new Error("Нельзя удалить единственный релиз фильма");
-  }
+  const isLastRelease = count <= 1;
 
   let fileDeleted = false;
   let fileMissing = false;
@@ -40,7 +41,18 @@ export async function deleteRelease(
     }
   }
 
-  await prisma.release.delete({ where: { id: releaseId } });
+  if (isLastRelease) {
+    await deleteMovie(movieId);
+    return { fileDeleted, fileMissing, movieDeleted: true, warning };
+  }
 
-  return { fileDeleted, fileMissing, warning };
+  await prisma.$transaction(async (tx) => {
+    await tx.movie.updateMany({
+      where: { id: movieId, primaryReleaseId: releaseId },
+      data: { primaryReleaseId: null },
+    });
+    await tx.release.delete({ where: { id: releaseId } });
+  });
+
+  return { fileDeleted, fileMissing, movieDeleted: false, warning };
 }

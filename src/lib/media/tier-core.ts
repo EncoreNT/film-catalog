@@ -1,9 +1,9 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
-import { isSpatialAudioProfile } from "@/lib/media/quality-predicates";
 import {
   audioTrackChannelCount,
   is4K,
   isAnyHDR,
+  rubySpatialAudioTrack,
   type ReleaseTier,
 } from "@/lib/media/release-tags";
 
@@ -127,14 +127,8 @@ export function inferTierFrom4kHdrAndAudioTracks(
     return "standard";
   }
 
-  for (const audio of audioTracks) {
-    if (audio.language !== "rus" || audio.translationType !== "dub") continue;
-    if (
-      isSpatialAudioProfile(audio.profile) &&
-      audioTrackChannelCount(audio) >= 8
-    ) {
-      return "ruby";
-    }
+  if (rubySpatialAudioTrack({ audioTracks })) {
+    return "ruby";
   }
 
   for (const audio of audioTracks) {

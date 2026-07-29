@@ -52,6 +52,7 @@ interface MovieReleasePanelProps {
   movieSlug: string;
   releases: ReleaseDetailView[];
   initialActiveReleaseId: number;
+  primaryReleaseId: number | null;
 }
 
 export function MovieReleasePanel({
@@ -59,6 +60,7 @@ export function MovieReleasePanel({
   movieSlug,
   releases,
   initialActiveReleaseId,
+  primaryReleaseId,
 }: MovieReleasePanelProps) {
   const pathname = usePathname();
   const [activeId, setActiveId] = useState(initialActiveReleaseId);
@@ -216,6 +218,7 @@ export function MovieReleasePanel({
             movieSlug={movieSlug}
             activeRelease={activeRelease}
             releaseCount={releases.length}
+            primaryReleaseId={primaryReleaseId}
             exportJobState={exportJobState}
             exportDialogOpen={exportDialogOpen}
             onExportDialogOpenChange={setExportDialogOpen}

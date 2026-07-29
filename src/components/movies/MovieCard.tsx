@@ -138,7 +138,7 @@ function AudioTracksPopover({ release }: { release: ReleaseWithTracks }) {
 }
 
 export function MovieCard({ movie, index = 0 }: MovieCardProps) {
-  const primary = pickPrimaryRelease(movie.releases);
+  const primary = pickPrimaryRelease(movie.releases, movie.primaryReleaseId);
   const primaryId = primary?.id ?? null;
   const coverUrl = movieCoverUrlFromMovie(movie);
   const premiumHdr = primary ? premiumHdrView(primary) : null;
@@ -241,6 +241,7 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
                         <MovieReleasesTooltip
                           releases={sortReleasesByQuality(movie.releases)}
                           movieSlug={movie.slug}
+                          movieId={movie.id}
                           primaryReleaseId={primaryId}
                         />
                       }

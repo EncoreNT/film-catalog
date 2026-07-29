@@ -276,6 +276,7 @@ export const AUDIO_TRANSLATION_TYPES: DictOption[] = [
   { value: "pro_two", label: "Проф. двухголосый" },
   { value: "amateur_multi", label: "Люб. многоголосый" },
   { value: "amateur_single", label: "Люб. одноголосый" },
+  { value: "amateur_two", label: "Люб. двухголосый" },
   { value: "author", label: "Авторский" },
   { value: "commentary", label: "С комментариями" },
   { value: "original", label: "Оригинал" },

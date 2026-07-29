@@ -21,6 +21,7 @@ export {
   releaseTabLabel,
   releaseTier,
   bestRussianDubTrack,
+  rubySpatialAudioTrack,
   catalogTierRibbon,
   audioTrackChannelCount,
   releaseQuickSpecHints,

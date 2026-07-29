@@ -6,7 +6,10 @@ import { orderedMovieGenres } from "@/lib/movies/movie-genres";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { resolveActiveRelease } from "@/lib/releases/resolve-active-release";
 import { buildReleaseDetailViews } from "@/lib/releases/release-detail-view";
-import { sortReleasesByQuality } from "@/lib/releases/release-primary";
+import {
+  pickPrimaryRelease,
+  sortReleasesByQuality,
+} from "@/lib/releases/release-primary";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 export interface MovieDetailFranchiseMembershipView {
@@ -26,7 +29,11 @@ export async function loadMovieDetailPage(
   if (!movie) return null;
 
   const releases = sortReleasesByQuality(movie.releases as ReleaseWithTracks[]);
-  const activeRelease = resolveActiveRelease(releases, releaseIdParam);
+  const activeRelease = resolveActiveRelease(
+    releases,
+    releaseIdParam,
+    movie.primaryReleaseId,
+  );
 
   const memberships = await getMovieFranchiseMemberships(prisma, movie.id);
   const franchiseMemberships: MovieDetailFranchiseMembershipView[] = memberships.map(
@@ -44,6 +51,8 @@ export async function loadMovieDetailPage(
   const coverUrl = movieCoverUrlFromMovie(movie);
   const genres = orderedMovieGenres(movie);
   const releaseViews = buildReleaseDetailViews(releases);
+  const catalogPrimaryReleaseId =
+    pickPrimaryRelease(releases, movie.primaryReleaseId)?.id ?? null;
   const displayDuration =
     activeRelease?.durationSeconds ?? releases[0]?.durationSeconds ?? null;
 
@@ -56,5 +65,6 @@ export async function loadMovieDetailPage(
     displayDuration,
     franchiseMemberships,
     activeReleaseId: activeRelease?.id ?? releaseViews[0]?.id ?? null,
+    catalogPrimaryReleaseId,
   };
 }

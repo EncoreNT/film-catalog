@@ -131,8 +131,10 @@ function MoviePickerDialogContent({
                       <span className="font-mono-tech mt-0.5 block text-xs text-muted">
                         {movie.year ?? "—"}
                         {(() => {
-                          const duration =
-                            pickPrimaryRelease(movie.releases)?.durationSeconds;
+                          const duration = pickPrimaryRelease(
+                            movie.releases,
+                            movie.primaryReleaseId,
+                          )?.durationSeconds;
                           return duration
                             ? ` · ${Math.round(duration / 60)} мин`
                             : "";

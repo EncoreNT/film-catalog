@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   ScanSearch,
+  Star,
   Trash2,
   Wand2,
 } from "lucide-react";
@@ -98,6 +99,7 @@ export function ReleasePanelActions({
   movieSlug,
   activeRelease,
   releaseCount,
+  primaryReleaseId,
   exportJobState,
   exportDialogOpen,
   onExportDialogOpenChange,
@@ -110,6 +112,7 @@ export function ReleasePanelActions({
   movieSlug: string;
   activeRelease: ReleaseDetailView;
   releaseCount: number;
+  primaryReleaseId: number | null;
   exportJobState: ReleaseExportJobState;
   exportDialogOpen: boolean;
   onExportDialogOpenChange: (open: boolean) => void;
@@ -147,6 +150,29 @@ export function ReleasePanelActions({
     activeBuild: moveJobState.activeBuild,
   });
   const canMove = moveBlockReason == null;
+  const isPrimaryRelease = activeRelease.id === primaryReleaseId;
+  const canSetPrimary = releaseCount > 1 && !isPrimaryRelease;
+
+  const handleSetPrimary = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiFetch(
+        `/api/movies/${movieId}/primary-release`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ releaseId: activeRelease.id }),
+        },
+        "Не удалось назначить основной релиз",
+      );
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRescan = async () => {
     setLoading(true);
@@ -170,12 +196,17 @@ export function ReleasePanelActions({
     setLoading(true);
     setError(null);
     try {
-      await apiFetch(
+      const result = await apiFetch<{ movieDeleted?: boolean }>(
         `/api/movies/${movieId}/releases/${activeRelease.id}?deleteFile=${deleteFile ? "true" : "false"}`,
         { method: "DELETE" },
         "Не удалось удалить релиз",
       );
       setConfirmKind(null);
+      if (result.movieDeleted) {
+        router.push("/");
+        router.refresh();
+        return;
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
@@ -234,6 +265,14 @@ export function ReleasePanelActions({
                 onClick={() => void openExportDialog()}
               />
             ) : null}
+            {canSetPrimary ? (
+              <ReleaseActionsMenuItem
+                label="Сделать основным для каталога"
+                icon={<Star className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+                disabled={actionsBusy}
+                onClick={() => void handleSetPrimary()}
+              />
+            ) : null}
             <ReleaseActionsMenuItem
               label="Собрать релиз"
               href={`/movies/${movieSlug}/builds/new`}
@@ -247,7 +286,7 @@ export function ReleasePanelActions({
             <ReleaseActionsMenuItem
               label="Удалить"
               icon={<Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-              disabled={releaseCount <= 1 || actionsBusy}
+              disabled={actionsBusy}
               danger
               onClick={() => setConfirmKind("delete")}
             />
@@ -297,8 +336,9 @@ export function ReleasePanelActions({
               id="delete-release-dialog-desc"
               className="mt-2 text-sm leading-relaxed text-muted"
             >
-              Запись исчезнет из каталога. Файл MKV можно оставить на диске или
-              удалить вместе с записью.
+              {releaseCount <= 1
+                ? "Это единственный релиз — вместе с ним из каталога удалится и сам фильм. Файл MKV можно оставить на диске или удалить вместе с записью."
+                : "Запись исчезнет из каталога. Файл MKV можно оставить на диске или удалить вместе с записью."}
             </p>
           </div>
         </div>
