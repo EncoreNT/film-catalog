@@ -9,7 +9,8 @@ interface EntityEditLayoutProps {
   title: string;
   titleClassName?: string;
   children: ReactNode;
-  /** Pin page chrome; let children manage internal scroll (franchise edit). */
+  /** Pin page chrome; let children manage internal scroll (franchise / movie edit).
+   *  10.25rem ≈ header + main top padding + fixed FormActionBar. */
   fillViewport?: boolean;
 }
 
@@ -24,7 +25,7 @@ export function EntityEditLayout({
 }: EntityEditLayoutProps) {
   if (fillViewport) {
     return (
-      <div className="flex flex-col gap-6 lg:h-[calc(100dvh-5rem)] lg:min-h-0 lg:overflow-hidden lg:gap-8">
+      <div className="flex flex-col gap-6 lg:-mb-10 lg:h-[calc(100dvh-10.25rem)] lg:min-h-0 lg:overflow-hidden lg:gap-8">
         <div className="shrink-0 space-y-6 lg:space-y-8">
           <BackLink href={backHref}>{backLabel}</BackLink>
           <PageHeader

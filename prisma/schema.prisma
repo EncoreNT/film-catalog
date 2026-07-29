@@ -68,6 +68,7 @@ model Movie {
 
   movieGenres MovieGenre[]
   slots       FranchiseSlot[]
+  remakeMemberships RemakeMember[]
   releases    Release[]
   builds      ReleaseBuild[]
   exports     ReleaseExport[]
@@ -369,4 +370,38 @@ model FranchiseSlot {
   @@unique([franchiseId, movieId])
   @@index([franchiseId, storyOrder])
   @@index([franchiseId])
+}
+
+enum RemakeRole {
+  ORIGINAL
+  REMAKE
+  REIMAGINING
+  REBOOT
+  ADAPTATION
+}
+
+model RemakeGroup {
+  id          Int           @id @default(autoincrement())
+  slug        String        @unique
+  name        String
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  members     RemakeMember[]
+
+  @@index([name])
+}
+
+model RemakeMember {
+  id        Int         @id @default(autoincrement())
+  groupId   Int
+  movieId   Int
+  role      RemakeRole
+  createdAt DateTime    @default(now())
+  group     RemakeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  movie     Movie       @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, movieId])
+  @@index([groupId])
+  @@index([movieId])
 }

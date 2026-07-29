@@ -6,6 +6,7 @@ import {
   loadMovieBySlug,
 } from "@/lib/movies/load-movie-by-slug";
 import { getMovieFranchiseMemberships } from "@/lib/movies/movie-franchise-memberships";
+import { getMovieRemakeMemberships } from "@/lib/remakes/remake-membership";
 import { prisma } from "@/lib/db/prisma";
 import type { Metadata } from "next";
 
@@ -29,6 +30,7 @@ export default async function EditMoviePage({ params }: PageProps) {
     prisma,
     movie.id,
   );
+  const remakeMemberships = await getMovieRemakeMemberships(prisma, movie.id);
 
   return (
     <EntityEditLayout
@@ -38,7 +40,11 @@ export default async function EditMoviePage({ params }: PageProps) {
       title={movie.title}
       fillViewport
     >
-      <MovieEditor movie={movie} franchiseMemberships={franchiseMemberships} />
+      <MovieEditor
+        movie={movie}
+        franchiseMemberships={franchiseMemberships}
+        remakeMemberships={remakeMemberships}
+      />
     </EntityEditLayout>
   );
 }

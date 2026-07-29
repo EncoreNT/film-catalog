@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Field, TextAreaField } from "@/components/primitives/Field";
 import { Button } from "@/components/primitives/Button";
+import { FormActionBar } from "@/components/primitives/FormActionBar";
 import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { FranchiseCoverUpload } from "@/components/franchises/FranchiseCoverUpload";
 import type { FranchiseWithSlots } from "@/lib/franchises/franchise-include";
@@ -102,30 +103,6 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
     );
   };
 
-  const editFooter = (
-    <>
-      {mode === "edit" && franchise ? (
-        <FranchiseDeleteButton
-          franchiseId={franchise.id}
-          name={franchise.name}
-        />
-      ) : null}
-      <div className="ml-auto flex items-center gap-3">
-        {onCancel ? (
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Отмена
-          </Button>
-        ) : null}
-        <Button type="button" variant="primary" onClick={() => void submit()} disabled={loading}>
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          ) : null}
-          {mode === "create" ? "Создать франшизу" : "Сохранить"}
-        </Button>
-      </div>
-    </>
-  );
-
   const createFooter = (
     <>
       <Button type="button" variant="primary" onClick={() => void submit()} disabled={loading}>
@@ -209,10 +186,12 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
 
   if (mode === "edit") {
     return (
-      <div className="flex h-full min-h-0 flex-col gap-4">
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-          <div className="lg:col-span-1 lg:min-h-0">{paramsCard}</div>
-          <div className="flex min-h-0 flex-col lg:col-span-2">
+      <div className="flex h-full min-h-0 flex-col pb-28 lg:pb-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3 lg:gap-8">
+          <div className="flex flex-col gap-6 lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+            {paramsCard}
+          </div>
+          <div className="flex h-full min-h-0 flex-col overflow-hidden lg:col-span-2">
             <FranchiseSlotsEditor
               layout="panel"
               slots={slots}
@@ -221,15 +200,30 @@ export function FranchiseForm({ mode, franchise, onCancel }: FranchiseFormProps)
           </div>
         </div>
 
-        {error ? (
-          <p className="shrink-0 text-sm text-danger" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-border pt-4">
-          {editFooter}
-        </div>
+        <FormActionBar saving={loading} error={error}>
+          {franchise ? (
+            <FranchiseDeleteButton
+              franchiseId={franchise.id}
+              name={franchise.name}
+            />
+          ) : null}
+          {onCancel ? (
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Отмена
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => void submit()}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : null}
+            Сохранить
+          </Button>
+        </FormActionBar>
       </div>
     );
   }

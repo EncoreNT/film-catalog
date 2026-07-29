@@ -8,6 +8,11 @@ const COVER_IMAGE_EXTENSIONS = new Set([
   ".bmp",
 ]);
 
+/** All allowed cover file extensions (for stale-file cleanup on re-upload). */
+export const COVER_IMAGE_EXTENSION_LIST = [
+  ...COVER_IMAGE_EXTENSIONS,
+] as const;
+
 const COVER_IMAGE_MIMES = new Set([
   "image/jpeg",
   "image/jpg",

@@ -8,6 +8,9 @@ export type ReleaseRouteContext = {
 export type MovieFranchiseRouteContext = {
   params: Promise<{ id: string; franchiseId: string }>;
 };
+export type MovieRemakeRouteContext = {
+  params: Promise<{ id: string; groupId: string }>;
+};
 
 export function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -45,6 +48,18 @@ export async function parseMovieFranchiseIds(
     return jsonError("Некорректный идентификатор", 400);
   }
   return { movieId, franchiseId };
+}
+
+export async function parseMovieRemakeIds(
+  params: Promise<{ id: string; groupId: string }>,
+): Promise<{ movieId: number; groupId: number } | NextResponse> {
+  const resolved = await params;
+  const movieId = parseInt(resolved.id, 10);
+  const groupId = parseInt(resolved.groupId, 10);
+  if (Number.isNaN(movieId) || Number.isNaN(groupId)) {
+    return jsonError("Некорректный идентификатор", 400);
+  }
+  return { movieId, groupId };
 }
 
 export function isErrorResponse(value: unknown): value is NextResponse {

@@ -25,6 +25,10 @@ alwaysApply: false
 | POST | `/api/movies/[id]/franchises` | Привязать к франшизе |
 | PATCH | `/api/movies/[id]/franchises/[franchiseId]` | Переместить/заполнить слот (`target`: end/before/fill) |
 | DELETE | `/api/movies/[id]/franchises/[franchiseId]` | Отвязать |
+| GET | `/api/movies/[id]/remakes` | Членства фильма в группах ремейков |
+| POST | `/api/movies/[id]/remakes` | Привязать к группе (создать по name или groupId + role) |
+| PATCH | `/api/movies/[id]/remakes/[groupId]` | Сменить role |
+| DELETE | `/api/movies/[id]/remakes/[groupId]` | Отвязать (+ auto-delete пустой группы) |
 
 Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-fatal).
 
@@ -44,6 +48,14 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | DELETE | `/api/franchises/[id]` | Удаление |
 | GET | `/api/franchises/[id]/slots` | Слоты |
 | GET/POST | `/api/franchises/[id]/cover` | Serve / upload обложки франшизы |
+
+## Remake groups
+
+| Method | Path | Назначение |
+|-----|---|---|
+| GET | `/api/remake-groups` | Список (`?lite=1&q=` для picker) |
+| PATCH | `/api/remake-groups/[id]` | Обновление name/description/members |
+| DELETE | `/api/remake-groups/[id]` | Удаление |
 
 ## Scan & Storage
 

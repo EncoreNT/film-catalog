@@ -60,5 +60,6 @@ docs/adr/0002-franchise-slots-model.md
 | [0010](0010-unified-media-jobs-worker.md) | Unified media jobs worker | Accepted |
 | [0011](0011-franchise-slot-full-replace-sync.md) | Franchise slot full-replace sync | Accepted |
 | [0012](0012-scan-hash-prefix-move-detection.md) | Scan hash prefix + move detection | Accepted |
+| [0013](0013-remake-groups.md) | Remake groups without dedicated pages | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

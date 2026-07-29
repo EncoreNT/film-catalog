@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { fetchMergeCandidatesForGroup } from "@/lib/merge/merge-preview";
 import { loadMovieBySlug } from "@/lib/movies/load-movie-by-slug";
 import { getMovieFranchiseMemberships } from "@/lib/movies/movie-franchise-memberships";
+import { getMovieRemakeMemberships } from "@/lib/remakes/remake-membership";
 import { orderedMovieGenres } from "@/lib/movies/movie-genres";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { resolveActiveRelease } from "@/lib/releases/resolve-active-release";
@@ -47,6 +48,8 @@ export async function loadMovieDetailPage(
     }),
   );
 
+  const remakeMemberships = await getMovieRemakeMemberships(prisma, movie.id);
+
   const mergeCandidates = await fetchMergeCandidatesForGroup(movie);
   const coverUrl = movieCoverUrlFromMovie(movie);
   const genres = orderedMovieGenres(movie);
@@ -64,6 +67,7 @@ export async function loadMovieDetailPage(
     releaseViews,
     displayDuration,
     franchiseMemberships,
+    remakeMemberships,
     activeReleaseId: activeRelease?.id ?? releaseViews[0]?.id ?? null,
     catalogPrimaryReleaseId,
   };

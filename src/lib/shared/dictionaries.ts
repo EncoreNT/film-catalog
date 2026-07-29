@@ -269,6 +269,19 @@ export function displayMovieVersionLabel(
   return movieVersionLabel(value) ?? value ?? null;
 }
 
+export const REMAKE_ROLES: DictOption[] = [
+  { value: "ORIGINAL", label: "Оригинал" },
+  { value: "REMAKE", label: "Ремейк" },
+  { value: "REIMAGINING", label: "Переосмысление" },
+  { value: "REBOOT", label: "Перезапуск" },
+  { value: "ADAPTATION", label: "Адаптация" },
+];
+
+export function remakeRoleLabel(value?: string | null): string | null {
+  if (!value) return null;
+  return REMAKE_ROLES.find((r) => r.value === value)?.label ?? null;
+}
+
 export const AUDIO_TRANSLATION_TYPES: DictOption[] = [
   { value: "dub", label: "Дубляж" },
   { value: "pro_multi", label: "Проф. многоголосый" },

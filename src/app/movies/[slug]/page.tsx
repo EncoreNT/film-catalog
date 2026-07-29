@@ -5,6 +5,7 @@ import { DuplicateMergeBanner } from "@/components/movies/DuplicateMergeBanner";
 import { MovieCoverHero } from "@/components/movies/MovieCoverHero";
 import { MovieDetailHeader } from "@/components/movies/MovieDetailHeader";
 import { MovieFranchises } from "@/components/movies/MovieFranchises";
+import { MovieRemakes } from "@/components/movies/MovieRemakes";
 import { MovieRatingWatchedSection } from "@/components/movies/MovieRatingWatchedSection";
 import { EmptyReleasesCard } from "@/components/movies/EmptyReleasesCard";
 import { SpotlightTarget } from "@/components/layout/SpotlightTarget";
@@ -34,6 +35,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
     releaseViews,
     displayDuration,
     franchiseMemberships,
+    remakeMemberships,
     activeReleaseId,
     catalogPrimaryReleaseId,
   } = data;
@@ -77,6 +79,8 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
           ) : null}
 
           <MovieFranchises memberships={franchiseMemberships} />
+
+          <MovieRemakes memberships={remakeMemberships} />
 
           <MovieRatingWatchedSection
             movieId={movie.id}

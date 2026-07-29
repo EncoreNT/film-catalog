@@ -120,7 +120,7 @@ export function FranchiseSlotsView({ franchiseId, slots }: FranchiseSlotsViewPro
           padding (-mx) and pads content back (px) so the grid left-edge
           aligns with the hero cover, and card box-shadows paint into the
           gutter instead of being clipped by overflow-y. */}
-      <div className="-mx-6 min-h-0 flex-1 px-6 pt-1 lg:-mx-10 lg:overflow-y-auto lg:px-10 lg:pb-10 xl:-mx-14 xl:px-14 2xl:-mx-20 2xl:px-20 3xl:-mx-24 3xl:px-24">
+      <div className="scroll-subtle -mx-6 min-h-0 flex-1 px-6 pt-1 lg:-mx-10 lg:overflow-y-auto lg:overscroll-contain lg:px-10 lg:pb-10 lg:pr-1 xl:-mx-14 xl:px-14 2xl:-mx-20 2xl:px-20 3xl:-mx-24 3xl:px-24">
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {sorted.map((slot, index) => {
             const rank = storyRank.get(slot.id) ?? index + 1;

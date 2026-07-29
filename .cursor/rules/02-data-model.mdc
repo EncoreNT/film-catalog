@@ -29,7 +29,7 @@ ADR: `docs/adr/0002-external-storage-only.md`.
 - `coverPath` — относительный путь `covers/<id>.ext`
 - `rating` (1–10), `watchedAt`
 
-Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot), `builds[]` (ReleaseBuild)
+Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
 
 ### Release (файл / релиз)
 
@@ -78,6 +78,13 @@ Many-to-many через `MovieGenre` с `sortOrder`. Жанры на уровн�
 ### Franchise + FranchiseSlot
 
 - `FranchiseSlot.movieId` → Movie (не Release)
+
+### RemakeGroup + RemakeMember (ADR-0013)
+
+- `RemakeMember.movieId` → Movie (обязателен, не Release)
+- `RemakeRole`: ORIGINAL, REMAKE, REIMAGINING, REBOOT, ADAPTATION
+- Без отдельных страниц `/remakes` — группа видна на странице фильма и бейджем в каталоге
+- Авто-удаление группы при 0 участников
 
 ## Индексы (важные для фильтров)
 

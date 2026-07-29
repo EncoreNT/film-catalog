@@ -11,7 +11,9 @@ import { Field, TextAreaField } from "@/components/primitives/Field";
 import { DatePicker } from "@/components/primitives/DatePicker";
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { MovieFranchisePicker } from "@/components/franchises/MovieFranchisePicker";
+import { MovieRemakePicker } from "@/components/remakes/MovieRemakePicker";
 import type { MovieFranchiseMembership } from "@/lib/movies/movie-franchise-memberships";
+import type { MovieRemakeMembership } from "@/lib/remakes/remake-membership";
 import { orderedMovieGenres } from "@/lib/movies/movie-genres";
 import { GenrePicker } from "@/components/movies/GenrePicker";
 import { YearInput } from "@/components/primitives/YearInput";
@@ -23,9 +25,14 @@ import { apiFetch, approveMovie } from "@/lib/api/client";
 interface MovieEditorProps {
   movie: MovieWithTracks;
   franchiseMemberships?: MovieFranchiseMembership[];
+  remakeMemberships?: MovieRemakeMembership[];
 }
 
-export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
+export function MovieEditor({
+  movie,
+  franchiseMemberships,
+  remakeMemberships,
+}: MovieEditorProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -232,6 +239,23 @@ export function MovieEditor({ movie, franchiseMemberships }: MovieEditorProps) {
                   movieId={movie.id}
                   movieTitle={movie.title}
                   initialMemberships={franchiseMemberships ?? []}
+                />
+              </div>
+              <div className="space-y-4 border-t border-border pt-6">
+                <CardSectionHeader
+                  label="связи"
+                  title="Ремейки"
+                  trailing={
+                    <InfoHint
+                      label="Ремейки"
+                      text="Объедините фильм с другими версиями одного произведения и укажите роль: оригинал, ремейк, переосмысление. Новую группу можно создать прямо отсюда."
+                    />
+                  }
+                />
+                <MovieRemakePicker
+                  embedded
+                  movieId={movie.id}
+                  initialMemberships={remakeMemberships ?? []}
                 />
               </div>
             </div>

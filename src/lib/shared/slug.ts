@@ -51,12 +51,18 @@ type DbClient = Prisma.TransactionClient | {
       select: { id: true };
     }) => Promise<{ id: number } | null>;
   };
+  remakeGroup: {
+    findFirst: (args: {
+      where: { slug: string; NOT?: { id: number } };
+      select: { id: true };
+    }) => Promise<{ id: number } | null>;
+  };
 };
 
 export async function resolveEntitySlug(
   db: DbClient,
   options: {
-    table: "movie" | "franchise";
+    table: "movie" | "franchise" | "remakeGroup";
     text: string;
     excludeId?: number;
   },
@@ -74,7 +80,9 @@ export async function resolveEntitySlug(
     const existing =
       table === "movie"
         ? await db.movie.findFirst({ where, select: { id: true } })
-        : await db.franchise.findFirst({ where, select: { id: true } });
+        : table === "franchise"
+          ? await db.franchise.findFirst({ where, select: { id: true } })
+          : await db.remakeGroup.findFirst({ where, select: { id: true } });
 
     if (!existing) return candidate;
 

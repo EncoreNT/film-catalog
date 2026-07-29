@@ -11,6 +11,7 @@ import {
   getCatalogGenreFacets,
 } from "@/lib/catalog/catalog-facets";
 import { MovieStatus } from "@/generated/prisma/client";
+import { getCatalogRemakeBadges } from "@/lib/remakes/remake-catalog-badges";
 
 const getCachedArchiveMetrics = unstable_cache(
   getArchiveMetrics,
@@ -68,12 +69,16 @@ export async function loadCatalogPage(
     getCachedCatalogGenreFacets(statuses),
   ]);
 
+  const remakeBadges = await getCatalogRemakeBadges(movies.map((m) => m.id));
+  const remakeBadgeRecord = Object.fromEntries(remakeBadges);
+
   return {
     movies,
     total,
     totalCount,
     page,
     limit,
+    remakeBadges: remakeBadgeRecord,
     facets: {
       ...facets,
       genres: genreFacets,

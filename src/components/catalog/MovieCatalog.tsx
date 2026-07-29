@@ -21,6 +21,7 @@ import {
   formatArchiveTotalSize,
 } from "@/lib/shared/format";
 import { pluralRu } from "@/lib/shared/russian-plural";
+import type { CatalogRemakeBadge } from "@/lib/remakes/remake-catalog-badges";
 
 const SORT_OPTIONS = [
   { value: "title", label: "Название" },
@@ -245,6 +246,7 @@ interface MovieCatalogProps {
   excludedCount?: number;
   archiveMetrics?: ArchiveMetrics;
   archiveTotals?: ArchiveTotals;
+  remakeBadges?: Record<number, CatalogRemakeBadge>;
 }
 
 export function MovieCatalog({
@@ -259,6 +261,7 @@ export function MovieCatalog({
   excludedCount = 0,
   archiveMetrics = { gold: 0, hdr10: 0, elite: 0 },
   archiveTotals = { durationSeconds: 0, fileSizeBytes: 0 },
+  remakeBadges = {},
 }: MovieCatalogProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -715,7 +718,11 @@ export function MovieCatalog({
                         transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
                       }}
                     >
-                      <MovieCard movie={movie} index={index} />
+                      <MovieCard
+                        movie={movie}
+                        index={index}
+                        remakeBadge={remakeBadges[movie.id]}
+                      />
                     </motion.div>
                   ))}
                 </AnimatePresence>

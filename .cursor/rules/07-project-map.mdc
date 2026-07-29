@@ -20,7 +20,8 @@ alwaysApply: false
 | Covers | `lib/covers/cover-url.ts`, `lib/covers/cover-storage.ts` |
 | Merge / duplicates | `lib/merge/movie-merge.ts`, `lib/merge/duplicate-groups.ts` |
 | Franchises | `lib/franchises/franchise-slots.ts`, `franchise-summary.ts` |
-| Prisma includes | `lib/movies/movie-include.ts`, `lib/franchises/franchise-include.ts` |
+| Remakes | `lib/remakes/remake-members.ts`, `remake-membership.ts`, `remake-catalog-badges.ts` |
+| Prisma includes | `lib/movies/movie-include.ts`, `lib/franchises/franchise-include.ts`, `lib/remakes/remake-include.ts` |
 | API validators | `lib/api/validators.ts` + split files in `validators/` |
 | UI primitives | `components/primitives/`; domain cards → `components/{movies,builds,…}/` |
 
@@ -68,6 +69,6 @@ alwaysApply: false
 | `05-domain-pipelines` | Scanner, ffprobe, filters |
 | `06-engineering-standards` | ADR, tests, DB checklist |
 
-## ADR index (0001–0012)
+## ADR index (0001–0013)
 
 See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0009** tier computation, **0010** media-jobs, **0011** franchise slots, **0012** scan hash.

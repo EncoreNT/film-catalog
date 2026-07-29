@@ -1,5 +1,19 @@
 export type ResolutionLabel = "4K" | "1080p" | "720p" | "480p" | "other";
 
+/** BDRip/WebRip often crop a few pixels off 1080p/4K — treat near-standard sizes as the tier. */
+const RESOLUTION_TOLERANCE = 0.98;
+
+const RESOLUTION_TIERS: ReadonlyArray<{
+  label: ResolutionLabel;
+  minHeight: number;
+  minWidth: number;
+}> = [
+  { label: "4K", minHeight: 2160, minWidth: 3840 },
+  { label: "1080p", minHeight: 1080, minWidth: 1920 },
+  { label: "720p", minHeight: 720, minWidth: 1280 },
+  { label: "480p", minHeight: 480, minWidth: 640 },
+];
+
 export function getResolutionLabel(
   width?: number | null,
   height?: number | null,
@@ -7,10 +21,12 @@ export function getResolutionLabel(
   const h = height ?? 0;
   const w = width ?? 0;
 
-  if (h >= 2160 || w >= 3840) return "4K";
-  if (h >= 1080 || w >= 1920) return "1080p";
-  if (h >= 720 || w >= 1280) return "720p";
-  if (h >= 480 || w >= 640) return "480p";
+  for (const tier of RESOLUTION_TIERS) {
+    const minH = tier.minHeight * RESOLUTION_TOLERANCE;
+    const minW = tier.minWidth * RESOLUTION_TOLERANCE;
+    if (h >= minH || w >= minW) return tier.label;
+  }
+
   return "other";
 }
 
