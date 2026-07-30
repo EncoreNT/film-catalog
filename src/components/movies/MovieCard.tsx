@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { AudioLines, GitFork, Layers, Star } from "lucide-react";
+import { AudioLines, Layers, Star } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { formatDuration } from "@/lib/shared/format";
 import { formatBitrateKbps } from "@/lib/shared/resolution";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { orderedMovieGenres } from "@/lib/movies/movie-genres";
-import { displayGenreName } from "@/lib/shared/dictionaries";
+import { displayGenreName, remakeRoleLabel } from "@/lib/shared/dictionaries";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 import { MovieReleasesTooltip } from "@/components/movies/MovieReleasesTooltip";
 import { MovieRemakesTooltip } from "@/components/movies/MovieRemakesTooltip";
+import { RemakeRoleMark } from "@/components/remakes/RemakeRoleMark";
 import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
 import {
   catalogCardTech,
@@ -31,7 +32,6 @@ import {
   sortReleasesByQuality,
 } from "@/lib/releases/release-primary";
 import { pluralRu } from "@/lib/shared/russian-plural";
-import { remakeRoleLabel } from "@/lib/shared/dictionaries";
 import type { CatalogRemakeBadge } from "@/lib/remakes/remake-catalog-badges";
 import {
   tierCardGlow,
@@ -172,11 +172,17 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
     "релиза",
     "релизов",
   )}`;
-  const remakeRoleText = remakeBadge
-    ? remakeRoleLabel(remakeBadge.role)
-    : null;
   const hasRemakeLink =
     remakeBadge != null && remakeBadge.coMembers.length > 0;
+  const remakeLinkAria =
+    hasRemakeLink && remakeBadge
+      ? `${remakeRoleLabel(remakeBadge.role) ?? "Версия"}. ${remakeBadge.coMembers.length} ${pluralRu(
+          remakeBadge.coMembers.length,
+          "связанная версия",
+          "связанные версии",
+          "связанных версий",
+        )}. Наведите для списка.`
+      : undefined;
 
   const cardGlow = tierCardGlow(tier);
 
@@ -228,7 +234,7 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
                 <span />
               )}
 
-              {movie.rating != null || releaseCount > 1 || hasRemakeLink ? (
+              {movie.rating != null || releaseCount > 1 ? (
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   {movie.rating != null ? (
                     <span
@@ -242,26 +248,6 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
                         aria-hidden
                       />
                     </span>
-                  ) : null}
-                  {hasRemakeLink && remakeBadge ? (
-                    <HoverTooltip
-                      interactive
-                      content={
-                        <MovieRemakesTooltip
-                          role={remakeBadge.role}
-                          coMembers={remakeBadge.coMembers}
-                        />
-                      }
-                    >
-                      <span
-                        className="font-mono-tech inline-flex cursor-pointer items-center gap-1 rounded-full border border-neural/45 bg-bg-deep/90 px-2 py-[2px] text-[0.55rem] text-neural transition-colors duration-200 group-hover/laser:border-neural/70"
-                        title={`${remakeRoleText}. Есть связанные версии`}
-                        aria-label={`${remakeRoleText}. Связанные версии: ${remakeBadge.coMembers.length}. Наведите для списка.`}
-                      >
-                        <GitFork className="h-2.5 w-2.5" aria-hidden />
-                        {remakeRoleText}
-                      </span>
-                    </HoverTooltip>
                   ) : null}
                   {releaseCount > 1 ? (
                     <HoverTooltip
@@ -363,6 +349,24 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
                   <ExternalStorageMark storageNames={externalStorageNames} />
                 ) : null}
                 {tvReady ? <TvReadyMark /> : null}
+                {hasRemakeLink && remakeBadge ? (
+                  <HoverTooltip
+                    interactive
+                    content={
+                      <MovieRemakesTooltip
+                        role={remakeBadge.role}
+                        coMembers={remakeBadge.coMembers}
+                      />
+                    }
+                  >
+                    <span
+                      className="inline-flex shrink-0"
+                      aria-label={remakeLinkAria}
+                    >
+                      <RemakeRoleMark role={remakeBadge.role} ariaHidden />
+                    </span>
+                  </HoverTooltip>
+                ) : null}
                 {!hasFile ? (
                   <span
                     className="shrink-0 text-faint"
