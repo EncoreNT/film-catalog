@@ -6,6 +6,7 @@ function release(partial: Partial<ReleaseWithTracks> & { id: number }): ReleaseW
   return {
     id: partial.id,
     movieId: 1,
+    moviePartId: null,
     externalStorageId: null,
     filePath: null,
     fileSize: null,

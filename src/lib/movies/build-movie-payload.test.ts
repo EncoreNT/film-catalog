@@ -143,6 +143,9 @@ describe("buildMovieUpdatePayload", () => {
       genres: [],
       rating: 8,
       watchedAt: "2024-01-15T10:00:00.000Z",
+      partCount: null,
+      parts: [],
+      partReleaseLinks: [],
     });
     expect(payload.watchedAt).toBe("2024-01-15T10:00:00.000Z");
   });

@@ -100,7 +100,8 @@ interface MultiReleaseFilterProps {
 
 const MULTI_RELEASE_TOOLTIP = {
   label: "Несколько релизов",
-  description: "Показать только фильмы с двумя и более версиями файла",
+  description:
+    "Фильмы с двумя и более версиями файла (другое качество или источник). Многосерийный фильм, где у каждой серии один файл, сюда не попадает.",
 };
 
 interface MinRatingFilterProps {

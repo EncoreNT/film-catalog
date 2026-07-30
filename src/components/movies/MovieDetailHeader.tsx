@@ -4,6 +4,7 @@ import { DetailMetaLine } from "@/components/primitives/DetailMetaLine";
 import { TagPill } from "@/components/primitives/TagPill";
 import { formatDuration } from "@/lib/shared/format";
 import { displayGenreName } from "@/lib/shared/dictionaries";
+import { formatSeriesCountLabel } from "@/lib/movies/multipart-duration";
 import type { MovieStatus } from "@/generated/prisma/client";
 
 export interface MovieDetailGenre {
@@ -21,12 +22,14 @@ interface MovieDetailHeaderProps {
   };
   genres: MovieDetailGenre[];
   displayDuration: number | null;
+  partCount?: number | null;
 }
 
 export function MovieDetailHeader({
   movie,
   genres,
   displayDuration,
+  partCount,
 }: MovieDetailHeaderProps) {
   return (
     <header>
@@ -46,6 +49,14 @@ export function MovieDetailHeader({
               title={movie.title}
             />
           ) : null}
+          {movie.status === "EXCLUDED" ? (
+            <MovieApproveButton
+              compact
+              restoreFromExcluded
+              movieId={movie.id}
+              title={movie.title}
+            />
+          ) : null}
         </div>
         <EditEntityLink
           href={`/movies/${movie.slug}/edit`}
@@ -59,6 +70,13 @@ export function MovieDetailHeader({
         className="mt-3"
         items={[
           { key: "year", node: movie.year ? <span>{movie.year}</span> : null },
+          {
+            key: "series",
+            node:
+              partCount != null && partCount > 1 ? (
+                <span>{formatSeriesCountLabel(partCount)}</span>
+              ) : null,
+          },
           {
             key: "duration",
             node: displayDuration ? (

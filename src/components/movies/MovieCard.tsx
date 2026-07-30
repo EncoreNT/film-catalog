@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AudioLines, Layers, Star } from "lucide-react";
+import { AudioLines, Clapperboard, Layers, Star } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { formatDuration } from "@/lib/shared/format";
@@ -32,6 +32,11 @@ import {
   sortReleasesByQuality,
 } from "@/lib/releases/release-primary";
 import { pluralRu } from "@/lib/shared/russian-plural";
+import {
+  catalogDisplayDurationSeconds,
+  formatSeriesCountLabel,
+  shouldShowCatalogReleaseCountBadge,
+} from "@/lib/movies/multipart-duration";
 import type { CatalogRemakeBadge } from "@/lib/remakes/remake-catalog-badges";
 import {
   tierCardGlow,
@@ -160,9 +165,24 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
   // Audio chip label = spatial profile or codec + channels (e.g. "DTS:X 7.1", "TrueHD 7.1").
   const audioChipLabel = primary ? catalogAudioChipLabel(primary) : null;
 
-  const duration = formatDuration(primary?.durationSeconds ?? null);
+  const duration = formatDuration(
+    catalogDisplayDurationSeconds(
+      movie.releases,
+      movie.partCount,
+      movie.primaryReleaseId,
+    ),
+  );
+  const seriesLabel =
+    movie.partCount != null && movie.partCount > 1
+      ? formatSeriesCountLabel(movie.partCount)
+      : null;
   const genres = orderedMovieGenres(movie).slice(0, 2);
   const releaseCount = movie.releases.length;
+  const showReleaseCountBadge = shouldShowCatalogReleaseCountBadge(
+    releaseCount,
+    movie.partCount,
+    movie.releases,
+  );
   const hasExternal = movieHasExternalStorage(movie.releases);
   const externalStorageNames = movieExternalStorageNames(movie.releases);
   const hasFile = movieHasFile(movie.releases);
@@ -234,8 +254,23 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
                 <span />
               )}
 
-              {movie.rating != null || releaseCount > 1 ? (
+              {movie.rating != null ||
+              showReleaseCountBadge ||
+              seriesLabel != null ? (
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  {seriesLabel ? (
+                    <span
+                      className="font-mono-tech inline-flex items-center gap-1 rounded-full border border-ember/45 bg-bg-deep/90 px-2 py-[2px] text-[0.55rem] tabular-nums text-ember-bright"
+                      title={seriesLabel}
+                      aria-label={seriesLabel}
+                    >
+                      <Clapperboard className="h-2.5 w-2.5" aria-hidden />
+                      {movie.partCount}
+                      <span className="text-[0.5rem] uppercase tracking-wide opacity-90">
+                        сер.
+                      </span>
+                    </span>
+                  ) : null}
                   {movie.rating != null ? (
                     <span
                       className="font-mono-tech inline-flex items-center gap-1 rounded-full border border-accent/50 bg-bg-deep/90 px-2 py-[3px] text-[0.62rem] font-semibold tabular-nums text-accent-bright"
@@ -249,7 +284,7 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
                       />
                     </span>
                   ) : null}
-                  {releaseCount > 1 ? (
+                  {showReleaseCountBadge ? (
                     <HoverTooltip
                       interactive
                       content={

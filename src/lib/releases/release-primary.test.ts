@@ -13,6 +13,7 @@ function release(
   return {
     id: partial.id,
     movieId: 1,
+    moviePartId: null,
     externalStorageId: partial.externalStorageId ?? null,
     filePath: partial.filePath ?? null,
     fileSize: partial.fileSize ?? null,

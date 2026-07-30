@@ -38,6 +38,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
     remakeMemberships,
     activeReleaseId,
     catalogPrimaryReleaseId,
+    partReleaseGroups,
   } = data;
 
   return (
@@ -59,6 +60,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
         movie={movie}
         genres={genres}
         displayDuration={displayDuration}
+        partCount={movie.partCount}
       />
 
       {/* Body. Left: identity rail (poster, synopsis, franchises,
@@ -98,6 +100,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
               movieId={movie.id}
               movieSlug={movie.slug}
               releases={releaseViews}
+              partGroups={partReleaseGroups}
               initialActiveReleaseId={
                 activeReleaseId ?? releaseViews[0].id
               }

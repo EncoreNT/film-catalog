@@ -60,6 +60,8 @@ model Movie {
   coverPath   String?
   rating      Int?
   watchedAt   DateTime?
+  /** Denormalized series count for catalog badge; null = single-part or unknown. */
+  partCount   Int?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -67,6 +69,7 @@ model Movie {
   primaryRelease   Release? @relation("MoviePrimaryRelease", fields: [primaryReleaseId], references: [id], onDelete: SetNull)
 
   movieGenres MovieGenre[]
+  parts       MoviePart[]
   slots       FranchiseSlot[]
   remakeMemberships RemakeMember[]
   releases    Release[]
@@ -80,9 +83,25 @@ model Movie {
   @@index([watchedAt])
 }
 
+model MoviePart {
+  id         Int      @id @default(autoincrement())
+  movieId    Int
+  partNumber Int
+  title      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  movie    Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  releases Release[]
+
+  @@unique([movieId, partNumber])
+  @@index([movieId, partNumber])
+}
+
 model Release {
   id                  Int         @id @default(autoincrement())
   movieId             Int
+  moviePartId         Int?
   externalStorageId   Int?
   filePath            String?     @unique
   fileSize        Int?
@@ -95,6 +114,7 @@ model Release {
   updatedAt       DateTime    @updatedAt
 
   movie            Movie             @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  moviePart        MoviePart?        @relation(fields: [moviePartId], references: [id], onDelete: SetNull)
   primaryForMovies Movie[]           @relation("MoviePrimaryRelease")
   externalStorage  ExternalStorage?  @relation(fields: [externalStorageId], references: [id], onDelete: SetNull)
   videoTrack     VideoTrack?
@@ -107,6 +127,7 @@ model Release {
   moves          ReleaseMove[]
 
   @@index([movieId])
+  @@index([moviePartId])
   @@index([fileHash])
   @@index([externalStorageId])
   @@index([releaseType])

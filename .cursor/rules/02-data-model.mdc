@@ -28,8 +28,17 @@ ADR: `docs/adr/0002-external-storage-only.md`.
 - `status` — lifecycle (скан создаёт DRAFT)
 - `coverPath` — относительный путь `covers/<id>.ext`
 - `rating` (1–10), `watchedAt`
+- `partCount` — число серий для многосерийного фильма (>1), иначе null (ADR-0014)
 
-Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
+Relations: `releases[]`, `parts[]` (MoviePart), `movieGenres[]`, `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
+
+### MoviePart (серия многосерийного фильма, ADR-0014)
+
+- `partNumber`, optional `title`
+- `movieId` → Movie
+- `releases[]` — релизы, привязанные к этой серии (`Release.moviePartId`)
+
+Обычный фильм: parts пусто, `Release.moviePartId = null`.
 
 ### Release (файл / релиз)
 
@@ -37,6 +46,7 @@ Relations: `releases[]`, `movieGenres[]`, `slots[]` (FranchiseSlot), `remakeMemb
 - `releaseType`, `version`, `durationSeconds`
 - `externalStorageId` → `ExternalStorage` (null = локальный диск)
 - `movieId` → Movie
+- `moviePartId` → MoviePart (optional, многосерийность)
 
 Relations: `videoTrack` (1:1), `audioTracks[]`, `subtitleTracks[]`, `buildSources[]`, `buildTracks[]`, `outputBuilds[]`
 

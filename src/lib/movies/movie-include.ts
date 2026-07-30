@@ -18,10 +18,27 @@ export const movieInclude = {
   },
 } satisfies Prisma.MovieInclude;
 
+export const movieDetailInclude = {
+  ...movieInclude,
+  parts: {
+    orderBy: { partNumber: "asc" as const },
+    include: {
+      releases: {
+        include: releaseInclude,
+        orderBy: { createdAt: "asc" as const },
+      },
+    },
+  },
+} satisfies Prisma.MovieInclude;
+
 export type ReleaseWithTracks = Prisma.ReleaseGetPayload<{
   include: typeof releaseInclude;
 }>;
 
 export type MovieWithTracks = Prisma.MovieGetPayload<{
   include: typeof movieInclude;
+}>;
+
+export type MovieWithTracksAndParts = Prisma.MovieGetPayload<{
+  include: typeof movieDetailInclude;
 }>;

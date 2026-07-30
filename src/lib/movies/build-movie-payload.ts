@@ -72,6 +72,26 @@ export interface MovieUpdatePayloadInput {
   genres: string[];
   rating: number | null;
   watchedAt: string;
+  partCount: number | null;
+  parts: { partNumber: number; title: string | null }[];
+  partReleaseLinks: { partNumber: number; releaseIds: number[] }[];
+}
+
+export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
+  const multipart = input.partCount != null && input.partCount > 1;
+  return {
+    title: trimInput(input.title),
+    year: input.year,
+    description: trimMultilineOptional(input.description),
+    genres: input.genres,
+    rating: input.rating,
+    watchedAt: input.watchedAt
+      ? new Date(input.watchedAt).toISOString()
+      : null,
+    partCount: multipart ? input.partCount : null,
+    parts: multipart ? input.parts : [],
+    partReleaseLinks: multipart ? input.partReleaseLinks : [],
+  };
 }
 
 export interface ReleaseUpdatePayloadInput {
@@ -84,17 +104,6 @@ export interface ReleaseUpdatePayloadInput {
   video: VideoFieldState;
   audioRows: AudioFormRow[];
   subtitleRows: SubtitleFormRow[];
-}
-
-export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
-  return {
-    title: trimInput(input.title),
-    year: input.year,
-    description: trimMultilineOptional(input.description),
-    genres: input.genres,
-    rating: input.rating,
-    watchedAt: input.watchedAt ? new Date(input.watchedAt).toISOString() : null,
-  };
 }
 
 export function buildReleaseUpdatePayload(input: ReleaseUpdatePayloadInput) {

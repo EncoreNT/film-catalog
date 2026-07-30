@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
+import type { ReleasePartGroup } from "@/lib/movies/build-part-release-groups";
 import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
@@ -51,6 +52,7 @@ interface MovieReleasePanelProps {
   movieId: number;
   movieSlug: string;
   releases: ReleaseDetailView[];
+  partGroups?: ReleasePartGroup[] | null;
   initialActiveReleaseId: number;
   primaryReleaseId: number | null;
 }
@@ -59,10 +61,25 @@ export function MovieReleasePanel({
   movieId,
   movieSlug,
   releases,
+  partGroups = null,
   initialActiveReleaseId,
   primaryReleaseId,
 }: MovieReleasePanelProps) {
   const pathname = usePathname();
+  const grouped =
+    partGroups != null && partGroups.length > 1 ? partGroups : null;
+  const initialPart =
+    grouped?.find((group) =>
+      group.releases.some((r) => r.id === initialActiveReleaseId),
+    )?.partNumber ?? grouped?.[0]?.partNumber ?? null;
+  const [activePartNumber, setActivePartNumber] = useState<number | null>(
+    initialPart,
+  );
+  const panelReleases =
+    grouped && activePartNumber != null
+      ? (grouped.find((g) => g.partNumber === activePartNumber)?.releases ??
+        releases)
+      : releases;
   const [activeId, setActiveId] = useState(initialActiveReleaseId);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -72,10 +89,14 @@ export function MovieReleasePanel({
   const [moveSuccessMessage, setMoveSuccessMessage] = useState<string | null>(
     null,
   );
-  const showTabs = releases.length > 1;
+  const showTabs = panelReleases.length > 1;
 
   const activeRelease =
-    releases.find((r) => r.id === activeId) ?? releases[0] ?? null;
+    panelReleases.find((r) => r.id === activeId) ??
+    panelReleases[0] ??
+    releases.find((r) => r.id === activeId) ??
+    releases[0] ??
+    null;
 
   const handleExportSucceeded = useCallback(
     (job: { targetPathDisplay: string }) => {
@@ -139,12 +160,29 @@ export function MovieReleasePanel({
         const parsed = Number(id);
         if (releases.some((r) => r.id === parsed)) {
           setActiveId(parsed);
+          const part = grouped?.find((group) =>
+            group.releases.some((r) => r.id === parsed),
+          );
+          if (part) setActivePartNumber(part.partNumber);
         }
       }
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [releases]);
+  }, [releases, grouped]);
+
+  const selectPart = useCallback(
+    (partNumber: number) => {
+      setActivePartNumber(partNumber);
+      const group = grouped?.find((g) => g.partNumber === partNumber);
+      const first = group?.releases[0];
+      if (first) {
+        setActiveId(first.id);
+        syncUrl(first.id);
+      }
+    },
+    [grouped, syncUrl],
+  );
 
   if (!activeRelease) {
     return (
@@ -170,6 +208,39 @@ export function MovieReleasePanel({
     <section className="surface-release-panel overflow-hidden">
       <SpotlightTier tier={activeTier} />
       <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/85">
+        {grouped ? (
+          <div
+            className="flex flex-wrap gap-1 border-b border-border/60 px-2 py-2 sm:px-3"
+            role="tablist"
+            aria-label="Серии фильма"
+          >
+            {grouped.map((group) => {
+              const active = group.partNumber === activePartNumber;
+              const label =
+                group.partNumber === 0
+                  ? "Без серии"
+                  : group.title?.trim()
+                    ? `Серия ${group.partNumber}: ${group.title.trim()}`
+                    : `Серия ${group.partNumber}`;
+              return (
+                <button
+                  key={group.partNumber}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => selectPart(group.partNumber)}
+                  className={`focus-ring font-mono-tech rounded-full px-3 py-1.5 text-[0.65rem] transition-colors ${
+                    active
+                      ? "bg-accent/15 text-accent-bright"
+                      : "text-muted hover:text-text"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         <div className="flex flex-col gap-0 sm:flex-row sm:items-stretch sm:justify-between">
           {showTabs ? (
             <div
@@ -177,7 +248,7 @@ export function MovieReleasePanel({
               role="tablist"
               aria-label="Релизы"
             >
-              {releases.map((release) => {
+              {panelReleases.map((release) => {
                 const active = release.id === activeId;
                 const tierTab = tierTabStyles(releaseToTabTier(release.tier));
                 return (
@@ -200,7 +271,7 @@ export function MovieReleasePanel({
             </div>
           ) : (
             <div className="flex flex-wrap gap-0 px-1 pt-1">
-              {releases.map((release) => {
+              {panelReleases.map((release) => {
                 const tierTab = tierTabStyles(releaseToTabTier(release.tier));
                 return (
                   <div
@@ -217,7 +288,7 @@ export function MovieReleasePanel({
             movieId={movieId}
             movieSlug={movieSlug}
             activeRelease={activeRelease}
-            releaseCount={releases.length}
+            releaseCount={panelReleases.length}
             primaryReleaseId={primaryReleaseId}
             exportJobState={exportJobState}
             exportDialogOpen={exportDialogOpen}

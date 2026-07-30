@@ -8,6 +8,10 @@ import { computeFileHashPrefix } from "@/lib/media/file-hash";
 import { syncReleaseTracksFromProbe } from "@/lib/releases/release-tracks";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
+import {
+  ensureMoviePart,
+  recomputeMoviePartCount,
+} from "@/lib/movies/movie-parts";
 import { MovieStatus } from "@/generated/prisma/client";
 
 const VIDEO_EXTENSIONS = new Set([
@@ -78,6 +82,21 @@ async function walkVideoFiles(dir: string): Promise<string[]> {
     }
   }
   return results;
+}
+
+async function linkReleaseToSeriesPart(
+  releaseId: number,
+  movieId: number,
+  partNumber: number | null,
+  partTotal: number | null,
+) {
+  if (partNumber == null) return;
+  const part = await ensureMoviePart(prisma, movieId, partNumber);
+  await prisma.release.update({
+    where: { id: releaseId },
+    data: { moviePartId: part.id },
+  });
+  await recomputeMoviePartCount(prisma, movieId, partTotal);
 }
 
 export async function scanDirectory(
@@ -198,6 +217,12 @@ export async function scanDirectory(
           },
         });
         await syncReleaseTracksFromProbe(prisma, existing.id, probe);
+        await linkReleaseToSeriesPart(
+          existing.id,
+          existing.movieId,
+          parsed.partNumber,
+          parsed.partTotal,
+        );
         await maybeExtractCover(
           existing.movieId,
           filePath,
@@ -221,6 +246,12 @@ export async function scanDirectory(
           },
         });
         await syncReleaseTracksFromProbe(prisma, movedRelease.id, probe);
+        await linkReleaseToSeriesPart(
+          movedRelease.id,
+          movedRelease.movieId,
+          parsed.partNumber,
+          parsed.partTotal,
+        );
         await maybeExtractCover(
           movedRelease.movieId,
           filePath,
@@ -236,8 +267,57 @@ export async function scanDirectory(
         break;
       }
 
-      const slug = await resolveMovieSlug(prisma, parsed.title);
       const matchKey = computeMatchKey(parsed.title, parsed.year);
+
+      if (parsed.partNumber != null) {
+        let movie = await prisma.movie.findFirst({ where: { matchKey } });
+        let createdNewMovie = false;
+        if (!movie) {
+          const slug = await resolveMovieSlug(prisma, parsed.title);
+          movie = await prisma.movie.create({
+            data: {
+              slug,
+              title: parsed.title,
+              year: parsed.year,
+              matchKey,
+              status: MovieStatus.DRAFT,
+            },
+          });
+          createdNewMovie = true;
+        }
+
+        const part = await ensureMoviePart(
+          prisma,
+          movie.id,
+          parsed.partNumber,
+        );
+        const release = await prisma.release.create({
+          data: {
+            movieId: movie.id,
+            moviePartId: part.id,
+            releaseType: parsed.releaseType,
+            durationSeconds: probe.durationSeconds,
+            filePath,
+            fileSize,
+            fileMtime,
+            fileHash,
+            ...(externalStorageId != null ? { externalStorageId } : {}),
+          },
+        });
+        await syncReleaseTracksFromProbe(prisma, release.id, probe);
+        await maybeExtractCover(
+          movie.id,
+          filePath,
+          !!movie.coverPath,
+          signal,
+        );
+        await recomputeMoviePartCount(prisma, movie.id, parsed.partTotal);
+        if (createdNewMovie) summary.newDrafts++;
+        else summary.updated++;
+        continue;
+      }
+
+      const slug = await resolveMovieSlug(prisma, parsed.title);
 
       const movie = await prisma.movie.create({
         data: {

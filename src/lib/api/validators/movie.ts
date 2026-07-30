@@ -39,6 +39,16 @@ export const subtitleInputSchema = z.object({
 });
 
 /** Work-level movie fields (title, year, rating, genres, status). */
+export const moviePartInputSchema = z.object({
+  partNumber: z.number().int().min(1),
+  title: z.string().nullable().optional(),
+});
+
+export const moviePartReleaseLinkSchema = z.object({
+  partNumber: z.number().int().min(1),
+  releaseIds: z.array(z.number().int()),
+});
+
 export const movieUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
@@ -47,6 +57,9 @@ export const movieUpdateSchema = z.object({
   watchedAt: z.string().datetime().nullable().optional(),
   status: movieStatusSchema.optional(),
   genres: z.array(z.string().min(1)).optional(),
+  partCount: z.number().int().min(1).nullable().optional(),
+  parts: z.array(moviePartInputSchema).optional(),
+  partReleaseLinks: z.array(moviePartReleaseLinkSchema).optional(),
 });
 
 /** File-level release fields (path, tracks, releaseType, version). */
@@ -92,6 +105,8 @@ export const movieCreateSchema = z.object({
   description: z.string().nullable().optional(),
   genres: z.array(z.string().min(1)).optional(),
   status: movieStatusSchema.optional(),
+  partCount: z.number().int().min(1).nullable().optional(),
+  parts: z.array(moviePartInputSchema).optional(),
   release: releaseCreateSchema.optional(),
   // Legacy flat fields — mapped to release on create
   filePath: z.string().nullable().optional(),

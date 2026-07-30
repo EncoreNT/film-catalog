@@ -15,6 +15,7 @@ function mkRelease(
   return {
     id: 10,
     movieId: 1,
+    moviePartId: null,
     filePath: "/in.mkv",
     releaseType: "bdremux",
     version: "theatrical",

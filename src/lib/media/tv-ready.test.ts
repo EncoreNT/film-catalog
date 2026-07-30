@@ -15,6 +15,7 @@ function release(
   return {
     id: partial.id,
     movieId: 1,
+    moviePartId: null,
     externalStorageId: null,
     filePath: partial.filePath ?? "/mnt/d/Movies/film.mkv",
     fileSize: null,

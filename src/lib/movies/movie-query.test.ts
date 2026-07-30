@@ -45,7 +45,7 @@ describe("buildMovieWhere", () => {
     ]);
   });
 
-  it("filters movies with multiple releases", () => {
+  it("filters movies with multiple release variants", () => {
     const where = buildMovieWhere(queryFrom({ multiRelease: "true" }), {
       multiReleaseMovieIds: [10, 20],
     });

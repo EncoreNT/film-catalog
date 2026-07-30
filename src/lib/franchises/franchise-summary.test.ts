@@ -76,6 +76,7 @@ function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
   return {
     id: releaseId,
     movieId: opts.id ?? 1,
+    moviePartId: null,
     externalStorageId: null,
     filePath: null,
     fileSize: null,
@@ -119,6 +120,7 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
     coverPath: null,
     rating: opts.rating ?? null,
     watchedAt: null,
+    partCount: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     primaryReleaseId: null,

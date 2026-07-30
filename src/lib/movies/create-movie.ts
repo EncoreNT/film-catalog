@@ -4,6 +4,7 @@ import { MovieStatus } from "@/generated/prisma/client";
 import { maybeExtractCover } from "@/lib/covers/cover-storage";
 import { movieInclude } from "@/lib/movies/movie-include";
 import { syncMovieGenres } from "@/lib/movies/sync-movie-genres";
+import { syncMovieParts } from "@/lib/movies/movie-parts";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
 import {
@@ -59,8 +60,14 @@ export async function createMovie(data: MovieCreateInput) {
         description: data.description ?? null,
         matchKey,
         status: data.status ?? MovieStatus.CATALOG,
+        partCount:
+          data.partCount != null && data.partCount > 1 ? data.partCount : null,
       },
     });
+
+    if (data.parts && data.parts.length > 0) {
+      await syncMovieParts(tx, created.id, data.parts, data.partCount);
+    }
 
     if (releaseInput) {
       await createReleaseWithTracks(tx, created.id, releaseInput);

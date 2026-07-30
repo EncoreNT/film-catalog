@@ -12,6 +12,7 @@ function sampleRelease(overrides?: Partial<ReleaseWithTracks>): ReleaseWithTrack
   return {
     id: 10,
     movieId: 1,
+    moviePartId: null,
     externalStorageId: null,
     filePath: "/a.mkv",
     fileSize: 50_000_000_000,

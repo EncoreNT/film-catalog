@@ -8,6 +8,11 @@ import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { resolveActiveRelease } from "@/lib/releases/resolve-active-release";
 import { buildReleaseDetailViews } from "@/lib/releases/release-detail-view";
 import {
+  buildPartReleaseGroups,
+  type ReleasePartGroup,
+} from "@/lib/movies/build-part-release-groups";
+import { detailDisplayDurationSeconds } from "@/lib/movies/multipart-duration";
+import {
   pickPrimaryRelease,
   sortReleasesByQuality,
 } from "@/lib/releases/release-primary";
@@ -54,10 +59,14 @@ export async function loadMovieDetailPage(
   const coverUrl = movieCoverUrlFromMovie(movie);
   const genres = orderedMovieGenres(movie);
   const releaseViews = buildReleaseDetailViews(releases);
+  const partReleaseGroups = buildPartReleaseGroups(movie, releaseViews);
   const catalogPrimaryReleaseId =
     pickPrimaryRelease(releases, movie.primaryReleaseId)?.id ?? null;
-  const displayDuration =
-    activeRelease?.durationSeconds ?? releases[0]?.durationSeconds ?? null;
+  const displayDuration = detailDisplayDurationSeconds(
+    releases,
+    movie.partCount,
+    activeRelease,
+  );
 
   return {
     movie,
@@ -65,6 +74,7 @@ export async function loadMovieDetailPage(
     coverUrl,
     genres,
     releaseViews,
+    partReleaseGroups,
     displayDuration,
     franchiseMemberships,
     remakeMemberships,

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import {
   movieInclude,
-  type MovieWithTracks,
+  movieDetailInclude,
+  type MovieWithTracksAndParts,
 } from "@/lib/movies/movie-include";
 
 export const movieStubSelect = {
@@ -25,10 +26,10 @@ export type MovieStub = {
 
 export async function loadMovieBySlug(
   slug: string,
-): Promise<MovieWithTracks | null> {
+): Promise<MovieWithTracksAndParts | null> {
   return prisma.movie.findUnique({
     where: { slug },
-    include: movieInclude,
+    include: movieDetailInclude,
   });
 }
 

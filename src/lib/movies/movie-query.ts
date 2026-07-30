@@ -6,6 +6,7 @@ import { normalizeSearchQuery } from "@/lib/movies/movie-match-key";
 import { premiumOriginalSpatialAudioTrackWhere, premiumRussianAtmosAudioTrackWhere } from "@/lib/media/quality-predicates";
 import { tvReadyReleaseWhere } from "@/lib/media/tv-ready";
 import { prisma } from "@/lib/db/prisma";
+import { movieHasMultipleReleaseVariants } from "@/lib/movies/multipart-duration";
 
 export type { MovieWithTracks } from "@/lib/movies/movie-include";
 
@@ -35,20 +36,28 @@ interface BuildMovieWhereContext {
   multiReleaseMovieIds?: number[];
 }
 
-/** Movie ids with 2+ releases (for multiRelease catalog filter). */
+/** Movie ids with multiple release variants (excludes multi-part «one file per series»). */
 export async function fetchMultiReleaseMovieIds(): Promise<number[]> {
-  const groups = await prisma.release.groupBy({
-    by: ["movieId"],
-    _count: { _all: true },
-    having: {
-      movieId: {
-        _count: {
-          gte: 2,
-        },
-      },
+  const movies = await prisma.movie.findMany({
+    where: {
+      releases: { some: {} },
+    },
+    select: {
+      id: true,
+      partCount: true,
+      releases: { select: { moviePartId: true } },
     },
   });
-  return groups.map((g) => g.movieId);
+
+  return movies
+    .filter((movie) =>
+      movieHasMultipleReleaseVariants(
+        movie.releases.length,
+        movie.partCount,
+        movie.releases,
+      ),
+    )
+    .map((movie) => movie.id);
 }
 
 export async function buildMovieListWhere(

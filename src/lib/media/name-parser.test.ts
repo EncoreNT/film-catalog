@@ -9,6 +9,7 @@ describe("parseMovieName", () => {
   it("extracts title from release file name", () => {
     const result = parseMovieName("Inception.2010.1080p.BluRay.x264.mkv");
     expect(result.title).toContain("Inception");
+    expect(result.partNumber).toBeNull();
   });
 
   it("prefers parent folder when file name is mostly tags", () => {
@@ -18,6 +19,27 @@ describe("parseMovieName", () => {
     );
     expect(result.title).toContain("Matrix");
     expect(result.year).toBe(1999);
+  });
+
+  it("detects Cyrillic series marker and strips from title", () => {
+    const result = parseMovieName(
+      "Мастер и Маргарита - 1 серия.2005.1080p.mkv",
+    );
+    expect(result.partNumber).toBe(1);
+    expect(result.title).toMatch(/Мастер/i);
+    expect(result.title).not.toMatch(/серия/i);
+  });
+
+  it("detects part N before label", () => {
+    const result = parseMovieName("Экипаж.1979.Часть.2.1080p.mkv");
+    expect(result.partNumber).toBe(2);
+    expect(result.title).toContain("Экипаж");
+  });
+
+  it("detects N of M total", () => {
+    const result = parseMovieName("12 стульев 1 из 2 1971.mkv");
+    expect(result.partNumber).toBe(1);
+    expect(result.partTotal).toBe(2);
   });
 });
 

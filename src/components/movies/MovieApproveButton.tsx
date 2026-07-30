@@ -11,12 +11,15 @@ interface MovieApproveButtonProps {
   title: string;
   /** Компактный вид для шапки карточки фильма. */
   compact?: boolean;
+  /** Вернуть из «Исключённых», а не опубликовать черновик. */
+  restoreFromExcluded?: boolean;
 }
 
 export function MovieApproveButton({
   movieId,
   title,
   compact = false,
+  restoreFromExcluded = false,
 }: MovieApproveButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -37,6 +40,8 @@ export function MovieApproveButton({
     }
   };
 
+  const actionLabel = restoreFromExcluded ? "Вернуть в каталог" : "В каталог";
+
   return (
     <>
       <Button
@@ -49,7 +54,7 @@ export function MovieApproveButton({
             : undefined
         }
       >
-        В каталог
+        {actionLabel}
       </Button>
 
       <ConfirmDialog
@@ -61,10 +66,20 @@ export function MovieApproveButton({
         onConfirm={handleApprove}
         loading={loading}
         tone="accent"
-        title="Опубликовать в каталоге?"
+        title={
+          restoreFromExcluded
+            ? "Вернуть фильм в каталог?"
+            : "Опубликовать в каталоге?"
+        }
         description={
           <>
-            «{title}» появится в каталоге и будет виден на главной.
+            {restoreFromExcluded ? (
+              <>
+                «{title}» снова появится в основном каталоге на главной.
+              </>
+            ) : (
+              <>«{title}» появится в каталоге и будет виден на главной.</>
+            )}
             {error ? (
               <span className="mt-2 block text-danger" role="alert">
                 {error}
@@ -72,7 +87,7 @@ export function MovieApproveButton({
             ) : null}
           </>
         }
-        confirmLabel="В каталог"
+        confirmLabel={actionLabel}
       />
     </>
   );

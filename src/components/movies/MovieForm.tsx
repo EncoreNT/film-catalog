@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { EyeOff, Trash2 } from "lucide-react";
-import type { MovieWithTracks } from "@/lib/movies/movie-query";
+import type { MovieWithTracksAndParts } from "@/lib/movies/movie-include";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
@@ -17,13 +17,22 @@ import type { MovieRemakeMembership } from "@/lib/remakes/remake-membership";
 import { orderedMovieGenres } from "@/lib/movies/movie-genres";
 import { GenrePicker } from "@/components/movies/GenrePicker";
 import { YearInput } from "@/components/primitives/YearInput";
+import {
+  MovieMultipartSection,
+  initialMultipartPartCount,
+  initialPartReleaseSlots,
+  isMultipartMovie,
+  partsPayloadFromSlots,
+  partReleaseLinksPayload,
+  type PartReleaseSlot,
+} from "@/components/movies/MoviePartsEditor";
 import { CoverUpload } from "@/components/primitives/CoverUpload";
 import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { buildMovieUpdatePayload } from "@/lib/movies/build-movie-payload";
 import { apiFetch, approveMovie } from "@/lib/api/client";
 
 interface MovieEditorProps {
-  movie: MovieWithTracks;
+  movie: MovieWithTracksAndParts;
   franchiseMemberships?: MovieFranchiseMembership[];
   remakeMemberships?: MovieRemakeMembership[];
 }
@@ -51,6 +60,15 @@ export function MovieEditor({
       ? new Date(movie.watchedAt).toISOString().slice(0, 10)
       : "",
   );
+  const [multipartEnabled, setMultipartEnabled] = useState(() =>
+    isMultipartMovie(movie),
+  );
+  const [partCount, setPartCount] = useState(() =>
+    initialMultipartPartCount(movie),
+  );
+  const [releaseSlots, setReleaseSlots] = useState<PartReleaseSlot[]>(() =>
+    isMultipartMovie(movie) ? initialPartReleaseSlots(movie) : [],
+  );
 
   const markDirty = () => setIsDirty(true);
 
@@ -59,7 +77,7 @@ export function MovieEditor({
     setError(null);
     setLoading(true);
     try {
-      const updated = await apiFetch<MovieWithTracks>(
+      const updated = await apiFetch<MovieWithTracksAndParts>(
         `/api/movies/${movie.id}`,
         {
           method: "PATCH",
@@ -72,6 +90,13 @@ export function MovieEditor({
               genres,
               rating: movie.rating,
               watchedAt,
+              partCount: multipartEnabled ? partCount : null,
+              parts: multipartEnabled
+                ? partsPayloadFromSlots(releaseSlots)
+                : [],
+              partReleaseLinks: multipartEnabled
+                ? partReleaseLinksPayload(releaseSlots)
+                : [],
             }),
           ),
         },
@@ -224,6 +249,46 @@ export function MovieEditor({
                 rows={6}
               />
               <div className="space-y-4 border-t border-border pt-6">
+                <CardSectionHeader label="структура" title="Серийность" />
+                <MovieMultipartSection
+                  enabled={multipartEnabled}
+                  onEnabledChange={(next) => {
+                    setMultipartEnabled(next);
+                    if (next) {
+                      const count = Math.max(partCount, 2);
+                      setPartCount(count);
+                      if (releaseSlots.length < count) {
+                        setReleaseSlots(
+                          Array.from({ length: count }, (_, i) => {
+                            const partNumber = i + 1;
+                            const existing = releaseSlots.find(
+                              (s) => s.partNumber === partNumber,
+                            );
+                            return (
+                              existing ?? { partNumber, releaseIds: [] }
+                            );
+                          }),
+                        );
+                      }
+                    } else {
+                      setReleaseSlots([]);
+                    }
+                    markDirty();
+                  }}
+                  partCount={partCount}
+                  onPartCountChange={(count) => {
+                    setPartCount(count);
+                    markDirty();
+                  }}
+                  releaseSlots={releaseSlots}
+                  onReleaseSlotsChange={(slots) => {
+                    setReleaseSlots(slots);
+                    markDirty();
+                  }}
+                  releases={movie.releases}
+                />
+              </div>
+              <div className="space-y-4 border-t border-border pt-6">
                 <CardSectionHeader
                   label="связи"
                   title="Франшизы"
@@ -277,6 +342,16 @@ export function MovieEditor({
             onClick={handleApprove}
           >
             В каталог
+          </Button>
+        ) : null}
+        {movie.status === "EXCLUDED" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            loading={loading}
+            onClick={handleApprove}
+          >
+            Вернуть в каталог
           </Button>
         ) : null}
         {movie.status !== "EXCLUDED" ? (

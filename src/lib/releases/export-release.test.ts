@@ -6,6 +6,7 @@ function release(partial: Partial<ReleaseWithTracks>): ReleaseWithTracks {
   return {
     id: 1,
     movieId: 1,
+    moviePartId: null,
     externalStorageId: null,
     filePath: partial.filePath ?? "/mnt/d/Movies/sample.mkv",
     fileSize: null,
