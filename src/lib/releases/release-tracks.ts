@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { ProbeResult } from "@/lib/media/ffprobe";
+import { normalizeAudioTrackDefaultsInPlace } from "@/lib/media/ffprobe-parse";
 
 type Db = Pick<
   Prisma.TransactionClient,
@@ -69,8 +70,13 @@ export async function syncReleaseTracks(
     if (audioTracks !== undefined) {
       await db.audioTrack.deleteMany({ where: { releaseId } });
       if (audioTracks && audioTracks.length > 0) {
+        const prepared = audioTracks.map((track) => ({
+          ...track,
+          isDefault: track.isDefault ?? false,
+        }));
+        normalizeAudioTrackDefaultsInPlace(prepared);
         await db.audioTrack.createMany({
-          data: audioTracks.map((track) => ({
+          data: prepared.map((track) => ({
             releaseId,
             streamIndex: track.streamIndex,
             codec: track.codec ?? null,
@@ -81,7 +87,7 @@ export async function syncReleaseTracks(
             language: track.language ?? null,
             translationType: track.translationType ?? null,
             title: track.title ?? null,
-            isDefault: track.isDefault ?? false,
+            isDefault: track.isDefault,
           })),
         });
       }

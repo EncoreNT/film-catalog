@@ -62,19 +62,19 @@ describe("buildMovieWhere", () => {
   it("combines premium audio and language filters with AND", () => {
     const where = buildMovieWhere(
       queryFrom({
+        hasLang: "rus",
         premiumAudio: "true",
         language: "rus,eng",
       }),
     );
     expect(where.AND).toEqual([
+      { releases: { some: { audioTracks: { some: { language: "rus" } } } } },
       {
         releases: {
           some: {
             audioTracks: {
               some: {
-                isDefault: true,
-                language: "rus",
-                profile: { in: ["Atmos", "DTS:X MA"] },
+                OR: expect.any(Array),
               },
             },
           },
@@ -92,20 +92,47 @@ describe("buildMovieWhere", () => {
     ]);
   });
 
-  it("filters original Atmos when audioScope is original", () => {
+  it("filters original Atmos via hasLang=original + premium", () => {
     const where = buildMovieWhere(
       queryFrom({
+        hasLang: "original",
         premiumAudio: "true",
-        audioScope: "original",
       }),
     );
+    expect(where.AND).toEqual([
+      { releases: { some: { audioTracks: { some: { translationType: "original" } } } } },
+      {
+        releases: {
+          some: {
+            audioTracks: {
+              some: { OR: expect.any(Array) },
+            },
+          },
+        },
+      },
+    ]);
+  });
+
+  it("requires rus and original tracks on the same release via hasLang", () => {
+    const where = buildMovieWhere(
+      queryFrom({ hasLang: "rus,original" }),
+    );
+    expect(where.AND).toEqual([
+      { releases: { some: { audioTracks: { some: { language: "rus" } } } } },
+      {
+        releases: {
+          some: { audioTracks: { some: { translationType: "original" } } },
+        },
+      },
+    ]);
+  });
+
+  it("filters by russian track presence alone via hasLang=rus", () => {
+    const where = buildMovieWhere(queryFrom({ hasLang: "rus" }));
     expect(where.releases).toEqual({
       some: {
         audioTracks: {
-          some: {
-            translationType: "original",
-            profile: { in: ["Atmos", "DTS:X MA"] },
-          },
+          some: { language: "rus" },
         },
       },
     });

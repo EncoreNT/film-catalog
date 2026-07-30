@@ -113,7 +113,7 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
       ) : null}
 
       {release.tvReady ? (
-        <div className="mb-6">
+        <div className="mb-4">
           <TvReadyReleaseNotice />
         </div>
       ) : null}

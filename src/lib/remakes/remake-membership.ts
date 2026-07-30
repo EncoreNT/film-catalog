@@ -9,6 +9,8 @@ export interface RemakeCoMember {
   movieSlug: string;
   movieYear: number | null;
   role: RemakeRole;
+  /** Franchises this co-member belongs to (used for affinity grouping). */
+  franchises: { id: number; name: string; slug: string }[];
 }
 
 export interface MovieRemakeMembership {
@@ -44,6 +46,12 @@ export async function getMovieRemakeMemberships(
                   title: true,
                   slug: true,
                   year: true,
+                  slots: {
+                    select: {
+                      franchise: { select: { id: true, name: true, slug: true } },
+                    },
+                    orderBy: { franchise: { name: "asc" } },
+                  },
                 },
               },
             },
@@ -64,6 +72,7 @@ export async function getMovieRemakeMemberships(
         movieSlug: m.movie.slug,
         movieYear: m.movie.year,
         role: m.role,
+        franchises: m.movie.slots.map((s) => s.franchise),
       }));
 
     return {

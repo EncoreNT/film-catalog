@@ -28,7 +28,7 @@ export function DraftQueueGrid({
             href="/?status=DRAFT"
             className="focus-ring font-mono-tech text-xs text-accent hover:underline"
           >
-            все в каталоге
+            открыть в каталоге
           </Link>
         ) : null}
       </div>

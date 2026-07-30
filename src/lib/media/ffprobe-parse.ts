@@ -373,11 +373,21 @@ export function parseSubtitleStream(s: FfprobeStream): ProbedSubtitleTrack {
   };
 }
 
-export function dedupeDefaultAudioTracks(audio: ProbedAudioTrack[]): void {
+export function normalizeAudioTrackDefaultsInPlace(
+  audio: Array<{ isDefault: boolean }>,
+): void {
+  if (audio.length === 1) {
+    audio[0]!.isDefault = true;
+    return;
+  }
   const firstDefaultAudio = audio.findIndex((a) => a.isDefault);
   if (firstDefaultAudio !== -1) {
     for (let i = 0; i < audio.length; i++) {
-      if (i !== firstDefaultAudio) audio[i].isDefault = false;
+      if (i !== firstDefaultAudio) audio[i]!.isDefault = false;
     }
   }
+}
+
+export function dedupeDefaultAudioTracks(audio: ProbedAudioTrack[]): void {
+  normalizeAudioTrackDefaultsInPlace(audio);
 }

@@ -153,54 +153,32 @@ describe("buildCatalogFacetsFromRows", () => {
   });
 });
 
-describe("buildMovieWhere audioScope alignment", () => {
-  it("filters original scope by translationType, not language", () => {
+describe("buildMovieWhere audio alignment (flat model)", () => {
+  it("filters original presence + channels as separate AND filters", () => {
     const where = buildMovieWhere(
       queryFrom({
-        audioScope: "original",
-        audioChannels: "2.0",
+        hasLang: "original",
+        channels: "2.0",
       }),
     );
-    expect(where.releases).toEqual({
-      some: {
-        audioTracks: {
-          some: {
-            translationType: "original",
-            channelLayout: { in: ["2.0"] },
-          },
-        },
-      },
-    });
+    expect(where.AND).toEqual([
+      { releases: { some: { audioTracks: { some: { translationType: "original" } } } } },
+      { releases: { some: { audioTracks: { some: { channelLayout: { in: ["2.0"] } } } } } },
+    ]);
   });
 
-  it("does not match author English when filtering original 2.0", () => {
+  it("combines original presence + channels + resolution as AND at release level", () => {
     const where = buildMovieWhere(
       queryFrom({
-        audioScope: "original",
-        audioChannels: "2.0",
+        hasLang: "original",
+        channels: "2.0",
         resolution: "4K",
       }),
     );
     expect(where.AND).toEqual([
-      {
-        releases: {
-          some: {
-            videoTrack: { resolutionLabel: { in: ["4K"] } },
-          },
-        },
-      },
-      {
-        releases: {
-          some: {
-            audioTracks: {
-              some: {
-                translationType: "original",
-                channelLayout: { in: ["2.0"] },
-              },
-            },
-          },
-        },
-      },
+      { releases: { some: { videoTrack: { resolutionLabel: { in: ["4K"] } } } } },
+      { releases: { some: { audioTracks: { some: { translationType: "original" } } } } },
+      { releases: { some: { audioTracks: { some: { channelLayout: { in: ["2.0"] } } } } } },
     ]);
   });
 });

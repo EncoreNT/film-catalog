@@ -33,19 +33,6 @@ const SORT_OPTIONS = [
   { value: "fileSize", label: "Размер файла" },
 ] as const;
 
-const STATUS_TAB_CLASS = {
-  active:
-    "border-accent/55 bg-accent/12 text-accent shadow-[0_0_16px_rgba(232,176,90,0.55)]",
-  inactive:
-    "border-border bg-bg-surface/70 text-muted hover:border-border-strong hover:text-text hover:bg-bg-surface-hover",
-} as const;
-
-function statusTabClass(active: boolean): string {
-  return `font-mono-tech inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors ${
-    active ? STATUS_TAB_CLASS.active : STATUS_TAB_CLASS.inactive
-  }`;
-}
-
 interface RailStatProps {
   icon: ReactNode;
   value: ReactNode;
@@ -236,6 +223,10 @@ interface MovieCatalogProps {
     originalAudioFormats: Facet[];
     genres: Facet[];
     tvReady: number;
+    languages: Facet[];
+    channelLayouts: Facet[];
+    audioFormats: Facet[];
+    translationTypes: Facet[];
   };
   total: number;
   totalCount: number;
@@ -455,10 +446,8 @@ export function MovieCatalog({
   const anyFacets =
     hasFacets(facets.resolutions) ||
     hasFacets(facets.genres) ||
-    hasFacets(facets.russianChannelLayouts) ||
-    hasFacets(facets.originalChannelLayouts) ||
-    facets.russianAudioFormats.some((f) => f.count > 0) ||
-    facets.originalAudioFormats.some((f) => f.count > 0);
+    hasFacets(facets.channelLayouts) ||
+    facets.audioFormats.some((f) => f.count > 0);
 
   // The property sidebar steals ~340px on lg+, so the grid drops one column
   // per tier when it's open to keep cards comfortably sized. Below lg the
@@ -471,13 +460,7 @@ export function MovieCatalog({
     <MotionConfig reducedMotion="user">
       <SpotlightTier tier={catalogSpotlight} />
       {isPending ? <div className="catalog-loading-bar" aria-hidden /> : null}
-      {/* Archive console - compact integrated top. The page-level "Каталог /
-          Личный архив" labels were dropped on purpose: the SiteHeader already
-          carries the brand and the active status tab already carries the view,
-          so repeating them here only burned vertical space. What stays is what
-          the user actually reads here: the status tabs, the primary actions,
-          and the archive quality index rendered as a hairline instrument rail
-          instead of two rows of heavy cards. */}
+      {/* Archive console — primary actions + quality index rail on catalog view. */}
       <motion.section
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -486,19 +469,8 @@ export function MovieCatalog({
       >
         <div className="relative rounded-[var(--radius)] p-1 ring-1 ring-border-strong/60 bg-gradient-to-b from-white/[0.05] via-transparent to-transparent">
           <div className="glass-frame-top-glow relative overflow-hidden rounded-[calc(var(--radius)-4px)] border border-border/60 bg-bg-glass/70 backdrop-blur-md">
-            {/* Row 1 - status tabs (left) + primary actions (right) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Link href="/?status=CATALOG" className={statusTabClass(isCatalog)}>
-                  каталог · <span className="tabular-nums">{catalogCount}</span>
-                </Link>
-                <Link href="/?status=DRAFT" className={statusTabClass(isDraftView)}>
-                  черновики · <span className="tabular-nums">{draftCount}</span>
-                </Link>
-                <Link href="/?status=EXCLUDED" className={statusTabClass(isExcludedView)}>
-                  скрытые · <span className="tabular-nums">{excludedCount}</span>
-                </Link>
-              </div>
+            {/* Row 1 — primary actions */}
+            <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-2.5">
               <div className="flex items-center gap-2">
                 <Link
                   href="/movies/new"
@@ -628,6 +600,9 @@ export function MovieCatalog({
               anyFacets={anyFacets}
               facetsOpen={facetsOpen}
               onToggleFacets={() => setFacetsOpen((open) => !open)}
+              draftCount={draftCount}
+              excludedCount={excludedCount}
+              status={status}
               className="mb-2"
             />
 
@@ -643,7 +618,11 @@ export function MovieCatalog({
                   {total}
                 </span>
                 <span className="font-mono-tech text-sm text-muted">
-                  {pluralRu(total, "фильм", "фильма", "фильмов")}
+                  {isDraftView
+                    ? pluralRu(total, "черновик", "черновика", "черновиков")
+                    : isExcludedView
+                      ? pluralRu(total, "скрытый", "скрытых", "скрытых")
+                      : pluralRu(total, "фильм", "фильма", "фильмов")}
                 </span>
               </div>
 

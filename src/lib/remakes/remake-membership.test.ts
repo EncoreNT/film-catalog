@@ -23,6 +23,7 @@ describe("getMovieRemakeMemberships", () => {
                 title: "Виновный (2018)",
                 slug: "vinovnyj-2018",
                 year: 2018,
+                slots: [],
               },
             },
             {
@@ -33,6 +34,7 @@ describe("getMovieRemakeMemberships", () => {
                 title: "Виновный (2021)",
                 slug: "vinovnyj-2021",
                 year: 2021,
+                slots: [],
               },
             },
           ],
@@ -55,6 +57,7 @@ describe("getMovieRemakeMemberships", () => {
         movieSlug: "vinovnyj-2021",
         movieYear: 2021,
         role: "REMAKE",
+        franchises: [],
       },
     ]);
     expect(result[0].groupSize).toBe(2);
@@ -85,6 +88,7 @@ describe("getCatalogRemakeBadges", () => {
                 title: "Король Лев",
                 slug: "korol-lev",
                 year: 1994,
+                slots: [],
               },
             },
             {
@@ -95,6 +99,7 @@ describe("getCatalogRemakeBadges", () => {
                 title: "Король Лев",
                 slug: "korol-lev-2",
                 year: 2019,
+                slots: [],
               },
             },
           ],

@@ -20,6 +20,11 @@ export interface CatalogFacets {
   russianAudioFormats: FacetOption[];
   originalAudioFormats: FacetOption[];
   tvReady: number;
+  // Flat (any-track) facets for the new audio filter model.
+  languages: FacetOption[];
+  channelLayouts: FacetOption[];
+  audioFormats: FacetOption[];
+  translationTypes: FacetOption[];
 }
 
 export interface CatalogGenreFacet {
@@ -80,6 +85,38 @@ function formatMovieCounts(rows: AudioFacetRow[], scope: Scope): FacetOption[] {
   });
 }
 
+function distinctMovieCountsAny(
+  rows: AudioFacetRow[],
+  pick: (row: AudioFacetRow) => string | null,
+): FacetOption[] {
+  const buckets = new Map<string, Set<number>>();
+  for (const row of rows) {
+    const key = pick(row);
+    if (!key) continue;
+    const set = buckets.get(key);
+    if (set) set.add(row.movieId);
+    else buckets.set(key, new Set([row.movieId]));
+  }
+  return [...buckets.entries()].map(([value, set]) => ({
+    value,
+    count: set.size,
+  }));
+}
+
+function formatMovieCountsAny(rows: AudioFacetRow[]): FacetOption[] {
+  return RUS_AUDIO_FORMATS.map((fmt) => {
+    const w = fmt.where as FormatWhere;
+    const movies = new Set<number>();
+    for (const row of rows) {
+      if (row.codec == null) continue;
+      if (w.codec !== undefined && row.codec !== w.codec) continue;
+      if (w.profile !== undefined && row.profile !== w.profile) continue;
+      movies.add(row.movieId);
+    }
+    return { value: fmt.value, count: movies.size };
+  });
+}
+
 export function buildCatalogFacetsFromRows(
   audioRows: AudioFacetRow[],
   videoRows: VideoFacetRow[],
@@ -116,6 +153,13 @@ export function buildCatalogFacetsFromRows(
     russianAudioFormats: formatMovieCounts(audioRows, "rus"),
     originalAudioFormats: formatMovieCounts(audioRows, "original"),
     tvReady: tvReadyCount,
+    // Flat (any-track) facets.
+    languages: distinctMovieCountsAny(audioRows, (r) => r.language),
+    channelLayouts: distinctMovieCountsAny(audioRows, (r) => r.channelLayout),
+    audioFormats: formatMovieCountsAny(audioRows),
+    translationTypes: distinctMovieCountsAny(audioRows, (r) =>
+      r.translationType,
+    ),
   };
 }
 

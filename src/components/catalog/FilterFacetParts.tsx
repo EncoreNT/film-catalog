@@ -70,7 +70,7 @@ export function FacetSection({
   headerActions,
   children,
 }: {
-  index: string;
+  index?: string;
   icon: React.ReactNode;
   title: string;
   hint?: string;
@@ -78,11 +78,13 @@ export function FacetSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-2.5">
+    <section className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-[0.6rem] uppercase tracking-wider text-faint/70 tabular-nums">
-          {index}
-        </span>
+        {index ? (
+          <span className="font-mono text-[0.6rem] uppercase tracking-wider text-faint/70 tabular-nums">
+            {index}
+          </span>
+        ) : null}
         <span className="text-accent/80" aria-hidden>
           {icon}
         </span>

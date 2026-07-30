@@ -1,9 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { movieListQuerySchema } from "@/lib/api/validators";
-import { RUS_AUDIO_FORMATS } from "@/lib/catalog/russian-audio-formats";
-import { audioTrackScopeWhere } from "@/lib/catalog/audio-track-scope";
+import { buildCatalogAudioReleaseFilters } from "@/lib/catalog/catalog-audio-query";
 import { normalizeSearchQuery } from "@/lib/movies/movie-match-key";
-import { premiumOriginalSpatialAudioTrackWhere, premiumRussianAtmosAudioTrackWhere } from "@/lib/media/quality-predicates";
 import { tvReadyReleaseWhere } from "@/lib/media/tv-ready";
 import { prisma } from "@/lib/db/prisma";
 import { movieHasMultipleReleaseVariants } from "@/lib/movies/multipart-duration";
@@ -169,17 +167,7 @@ export function buildMovieWhere(
     });
   }
 
-  if (query.premiumAudio === "true") {
-    const premiumScope = query.audioScope === "original" ? "original" : "rus";
-    releaseFilters.push({
-      audioTracks: {
-        some:
-          premiumScope === "original"
-            ? premiumOriginalSpatialAudioTrackWhere
-            : premiumRussianAtmosAudioTrackWhere,
-      },
-    });
-  }
+  releaseFilters.push(...buildCatalogAudioReleaseFilters(query));
 
   if (query.tvReady === "true") {
     releaseFilters.push(tvReadyReleaseWhere());
@@ -193,50 +181,6 @@ export function buildMovieWhere(
         some: {
           ...(langs?.length ? { language: { in: langs } } : {}),
           ...(layouts?.length ? { channelLayout: { in: layouts } } : {}),
-        },
-      },
-    });
-  }
-
-  const audioScope = query.audioScope === "original" ? "original" : "rus";
-  const audioChannels = query.audioChannels?.split(",").filter(Boolean) ?? [];
-  const audioFormats = query.audioFormat?.split(",").filter(Boolean) ?? [];
-  const audioTranslations =
-    query.audioTranslation?.split(",").filter(Boolean) ?? [];
-  const formatWhere = audioFormats
-    .map((v) => RUS_AUDIO_FORMATS.find((f) => f.value === v)?.where)
-    .filter((w): w is Prisma.AudioTrackWhereInput => Boolean(w));
-
-  if (audioScope === "rus") {
-    if (
-      audioChannels.length ||
-      formatWhere.length ||
-      audioTranslations.length
-    ) {
-      releaseFilters.push({
-        audioTracks: {
-          some: {
-            ...audioTrackScopeWhere("rus"),
-            ...(audioTranslations.length
-              ? { translationType: { in: audioTranslations } }
-              : {}),
-            ...(audioChannels.length
-              ? { channelLayout: { in: audioChannels } }
-              : {}),
-            ...(formatWhere.length ? { OR: formatWhere } : {}),
-          },
-        },
-      });
-    }
-  } else if (audioChannels.length || formatWhere.length) {
-    releaseFilters.push({
-      audioTracks: {
-        some: {
-          ...audioTrackScopeWhere("original"),
-          ...(audioChannels.length
-            ? { channelLayout: { in: audioChannels } }
-            : {}),
-          ...(formatWhere.length ? { OR: formatWhere } : {}),
         },
       },
     });

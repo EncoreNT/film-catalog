@@ -74,14 +74,19 @@ export async function saveCoverBuffer(
  * AbortSignal lets a scan cancellation interrupt the extraction. Failures are
  * non-fatal: a missing cover just means no poster, not a broken operation.
  */
+/** Extracts the first MKV attachment as a cover when the movie has none.
+ *  Returns `true` when a cover was actually saved, `false` when skipped
+ *  (already had one) or no attachment was found. Callers that ignore the
+ *  return value keep working. */
 export async function maybeExtractCover(
   movieId: number,
   filePath: string,
   hasCover: boolean,
   signal?: AbortSignal,
-): Promise<void> {
-  if (hasCover) return;
+): Promise<boolean> {
+  if (hasCover) return false;
   const extracted = await extractFirstMkvAttachment(filePath, signal);
-  if (!extracted) return;
+  if (!extracted) return false;
   await saveCoverBuffer(movieId, extracted.buffer, extracted.ext);
+  return true;
 }

@@ -7,15 +7,14 @@ import {
   MonitorPlay,
   Search,
   SlidersHorizontal,
-  Sparkles,
   Sun,
-  Waves,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Chip } from "@/components/primitives/Chip";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 import {
+  ArchiveStatusAccess,
   MinRatingFilter,
   MultiReleaseFilter,
   parseMinRating,
@@ -23,13 +22,9 @@ import {
   WatchedFilter,
 } from "@/components/catalog/FilterToolbarControls";
 import {
-  AUDIO_TRANSLATION_TYPES,
-  CHANNEL_LAYOUTS,
   RESOLUTIONS,
   displayGenreName,
 } from "@/lib/shared/dictionaries";
-import { RUS_AUDIO_FORMATS } from "@/lib/catalog/russian-audio-formats";
-import { tvReadyFilterChipLabel } from "@/lib/media/tv-ready";
 import { trimInput } from "@/lib/shared/text-trim";
 import {
   sortGenreFacets,
@@ -47,6 +42,7 @@ import {
   toggleMulti,
   type FilterBarFacets,
 } from "@/lib/catalog/filter-bar-utils";
+import { FilterAudioSection } from "@/components/catalog/FilterAudioSection";
 import {
   Divider,
   FacetSection,
@@ -55,7 +51,6 @@ import {
   HDR_OPTIONS,
   QualityLadder,
   SEGMENT_SHELL,
-  translationLabel,
 } from "@/components/catalog/FilterFacetParts";
 
 interface FilterToolbarProps {
@@ -64,6 +59,9 @@ interface FilterToolbarProps {
   facetsOpen: boolean;
   onToggleFacets: () => void;
   className?: string;
+  draftCount?: number;
+  excludedCount?: number;
+  status?: string;
 }
 
 export function FilterToolbar({
@@ -72,6 +70,9 @@ export function FilterToolbar({
   facetsOpen,
   onToggleFacets,
   className = "",
+  draftCount = 0,
+  excludedCount = 0,
+  status = "CATALOG",
 }: FilterToolbarProps) {
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") ?? "");
@@ -169,6 +170,11 @@ export function FilterToolbar({
           value={parseMinRating(searchParams.get("minRating"))}
           onChange={(v) => updateParams({ minRating: v?.toString() ?? null })}
         />
+        <ArchiveStatusAccess
+          draftCount={draftCount}
+          excludedCount={excludedCount}
+          status={status}
+        />
         <AnimatePresence>
           {activeCount > 0 ? (
             <motion.button
@@ -215,27 +221,11 @@ export function FilterSidebar({
     () => parseMulti(searchParams.get("genre")),
     [searchParams],
   );
-  const audioScope =
-    searchParams.get("audioScope") === "original" ? "original" : "rus";
-  const activeAudioChannels = useMemo(
-    () => parseMulti(searchParams.get("audioChannels")),
-    [searchParams],
-  );
-  const activeAudioFormats = useMemo(
-    () => parseMulti(searchParams.get("audioFormat")),
-    [searchParams],
-  );
-  const activeAudioTranslations = useMemo(
-    () => parseMulti(searchParams.get("audioTranslation")),
-    [searchParams],
-  );
   const activeHdr = useMemo(
     () => parseMulti(searchParams.get("hdr")),
     [searchParams],
   );
   const hdrAnyActive = activeHdr.includes(HDR_ANY);
-  const premiumAudioActive = searchParams.get("premiumAudio") === "true";
-  const tvReadyActive = searchParams.get("tvReady") === "true";
 
   const showResolution = hasFacets(facets.resolutions);
   const showGenres = hasFacets(facets.genres);
@@ -244,51 +234,9 @@ export function FilterSidebar({
     [facets.genres, genreSort],
   );
 
-  // Audio facets are scope-aware: channels + codec constrain whichever track
-  // the user is targeting (Russian dub or original), so the options and counts
-  // swap with the toggle. Translation type only exists for the Russian scope.
-  const channelLayoutFacets =
-    audioScope === "rus"
-      ? facets.russianChannelLayouts
-      : facets.originalChannelLayouts;
-  const audioFormatFacets =
-    audioScope === "rus"
-      ? facets.russianAudioFormats
-      : facets.originalAudioFormats;
-  const showChannelLayouts = hasFacets(channelLayoutFacets);
-  const channelCounts = useMemo(
-    () => facetCountMap(channelLayoutFacets),
-    [channelLayoutFacets],
-  );
-  const channelOptions = useMemo(
-    () =>
-      sortByDict(channelLayoutFacets, CHANNEL_LAYOUTS).map((f) => ({
-        value: f.value!,
-        label: f.value!,
-      })),
-    [channelLayoutFacets],
-  );
-  const audioFormatCounts = useMemo(
-    () => facetCountMap(audioFormatFacets),
-    [audioFormatFacets],
-  );
-  const audioFormatOptions = useMemo(
-    () =>
-      RUS_AUDIO_FORMATS.filter((f) => (audioFormatCounts.get(f.value) ?? 0) > 0),
-    [audioFormatCounts],
-  );
-  const showAudioFormats = audioFormatOptions.length > 0;
-  const translationOptions = useMemo(
-    () => sortByDict(facets.russianTranslationTypes, AUDIO_TRANSLATION_TYPES),
-    [facets.russianTranslationTypes],
-  );
-  const showTranslationTypes =
-    audioScope === "rus" && translationOptions.length > 0;
   const showAudio =
-    hasFacets(facets.russianChannelLayouts) ||
-    hasFacets(facets.originalChannelLayouts) ||
-    facets.russianAudioFormats.some((f) => f.count > 0) ||
-    facets.originalAudioFormats.some((f) => f.count > 0);
+    hasFacets(facets.channelLayouts) ||
+    facets.audioFormats.some((f) => f.count > 0);
 
   const facetActiveCount = countFacetFilters(searchParams);
 
@@ -321,13 +269,6 @@ export function FilterSidebar({
   };
 
   if (!anyFacets) return null;
-
-  const scopeButtonClass = (active: boolean) =>
-    `focus-ring inline-flex min-h-8 items-center rounded-full px-2.5 py-1 text-[0.72rem] transition-all duration-200 ${
-      active
-        ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
-        : "text-muted hover:bg-bg-surface hover:text-text"
-    }`;
 
   return (
     <div
@@ -364,11 +305,9 @@ export function FilterSidebar({
         </div>
       </div>
 
-      <div className="mt-4 min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain scroll-subtle pr-1">
-        {/* 01 — Genres */}
+      <div className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain scroll-subtle pr-1">
         {showGenres ? (
           <FacetSection
-            index="01"
             icon={<Clapperboard className="h-3.5 w-3.5" />}
             title="жанры"
             hint="можно несколько"
@@ -399,10 +338,8 @@ export function FilterSidebar({
 
         {showGenres && showResolution ? <Divider /> : null}
 
-        {/* 02 — Resolution */}
         {showResolution ? (
           <FacetSection
-            index="02"
             icon={<MonitorPlay className="h-3.5 w-3.5" />}
             title="разрешение"
           >
@@ -422,9 +359,7 @@ export function FilterSidebar({
 
         {showResolution ? <Divider /> : null}
 
-        {/* 03 — Dynamic range */}
         <FacetSection
-          index="03"
           icon={<Sun className="h-3.5 w-3.5" />}
           title="динамический диапазон"
           hint="HDR"
@@ -450,159 +385,15 @@ export function FilterSidebar({
           </div>
         </FacetSection>
 
-        {showAudio ? <Divider /> : null}
-
-        {/* 04 — Audio (Russian dub vs original, with translation type) */}
         {showAudio ? (
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[0.6rem] uppercase tracking-wider text-faint/70 tabular-nums">
-                04
-              </span>
-              <span className="text-accent/80" aria-hidden>
-                <Waves className="h-3.5 w-3.5" />
-              </span>
-              <h3 className="font-mono-tech text-faint">звук</h3>
-            </div>
-
-            <div className={`${SEGMENT_SHELL} p-0.5`}>
-              <button
-                type="button"
-                onClick={() =>
-                  updateParams({
-                    audioScope: "rus",
-                    audioChannels: null,
-                    audioFormat: null,
-                    audioTranslation: null,
-                  })
-                }
-                aria-pressed={audioScope === "rus"}
-                className={scopeButtonClass(audioScope === "rus")}
-              >
-                Русская дорожка
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  updateParams({
-                    audioScope: "original",
-                    audioChannels: null,
-                    audioFormat: null,
-                    audioTranslation: null,
-                  })
-                }
-                aria-pressed={audioScope === "original"}
-                className={`ml-0.5 ${scopeButtonClass(audioScope === "original")}`}
-              >
-                Оригинал
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {showTranslationTypes ? (
-                <div className="space-y-2">
-                  <p className="font-micro text-faint/70">тип озвучки</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {translationOptions.map((f) => (
-                      <Chip
-                        key={f.value}
-                        size="sm"
-                        active={activeAudioTranslations.includes(f.value!)}
-                        count={f.count}
-                        onClick={() =>
-                          updateParams({
-                            audioTranslation:
-                              toggleMulti(
-                                activeAudioTranslations,
-                                f.value!,
-                              ).join(",") || null,
-                          })
-                        }
-                      >
-                        {translationLabel(f.value!)}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {showChannelLayouts ? (
-                <div className="space-y-2">
-                  <p className="font-micro text-faint/70">каналы</p>
-                  <QualityLadder
-                    options={channelOptions}
-                    active={activeAudioChannels}
-                    counts={channelCounts}
-                    onToggle={(v) =>
-                      updateParams({
-                        audioChannels:
-                          toggleMulti(activeAudioChannels, v).join(",") || null,
-                      })
-                    }
-                  />
-                </div>
-              ) : null}
-
-              {showAudioFormats ? (
-                <div className="space-y-2">
-                  <p className="font-micro text-faint/70">кодек</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {audioFormatOptions.map((fmt) => (
-                      <Chip
-                        key={fmt.value}
-                        size="sm"
-                        active={activeAudioFormats.includes(fmt.value)}
-                        count={audioFormatCounts.get(fmt.value)}
-                        onClick={() =>
-                          updateParams({
-                            audioFormat:
-                              toggleMulti(activeAudioFormats, fmt.value).join(
-                                ",",
-                              ) || null,
-                          })
-                        }
-                      >
-                        {fmt.label}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="space-y-2">
-                <p className="font-micro text-faint/70">объектный звук</p>
-                <Chip
-                  size="sm"
-                  active={premiumAudioActive}
-                  onClick={() =>
-                    updateParams({
-                      premiumAudio: premiumAudioActive ? null : "true",
-                    })
-                  }
-                >
-                  <Sparkles className="h-3 w-3" aria-hidden />
-                  {audioScope === "rus" ? "Рус. Atmos · DTS:X" : "Atmos · DTS:X"}
-                </Chip>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-micro text-faint/70">TV</p>
-                <Chip
-                  size="sm"
-                  active={tvReadyActive}
-                  count={facets.tvReady > 0 ? facets.tvReady : undefined}
-                  onClick={() =>
-                    updateParams({
-                      tvReady: tvReadyActive ? null : "true",
-                    })
-                  }
-                >
-                  <MonitorPlay className="h-3 w-3" aria-hidden />
-                  {tvReadyFilterChipLabel()}
-                </Chip>
-              </div>
-            </div>
-          </section>
+          <>
+            <Divider />
+            <FilterAudioSection
+              facets={facets}
+              searchParams={searchParams}
+              updateParams={updateParams}
+            />
+          </>
         ) : null}
       </div>
     </div>

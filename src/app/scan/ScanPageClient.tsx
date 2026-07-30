@@ -15,7 +15,6 @@ import { parseNdjsonStream } from "@/lib/api/ndjson-stream";
 import { approveMovie, parseApiError } from "@/lib/api/client";
 import type { ScanStreamEvent, ScanSummary } from "@/lib/media/scanner";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
-import { commitFilePathInput } from "@/lib/shared/display-path";
 
 interface Stats {
   draft: number;
@@ -76,12 +75,11 @@ export function ScanPageClient({
     }
   };
 
-  const handleScanRootBlur = () => {
-    const trimmed = scanRoot.trim();
-    if (!trimmed) return;
-    const { display } = commitFilePathInput(trimmed);
-    setScanRoot(display);
-    void persistScanRoot(display);
+  const handleScanRootChange = (runtimePath: string, displayPath: string) => {
+    setScanRoot(displayPath);
+    if (runtimePath.trim()) {
+      void persistScanRoot(runtimePath);
+    }
   };
 
   const refreshAfterScan = async () => {
@@ -220,8 +218,7 @@ export function ScanPageClient({
 
       <ScanToolbar
         scanRoot={scanRoot}
-        onScanRootChange={setScanRoot}
-        onScanRootBlur={handleScanRootBlur}
+        onScanRootChange={handleScanRootChange}
         scanning={scanning}
         error={error}
         storageKind={storageKind}

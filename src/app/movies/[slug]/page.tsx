@@ -82,7 +82,14 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
 
           <MovieFranchises memberships={franchiseMemberships} />
 
-          <MovieRemakes memberships={remakeMemberships} />
+          <MovieRemakes
+            memberships={remakeMemberships}
+            currentMovieFranchises={franchiseMemberships.map((m) => ({
+              id: m.franchise.id,
+              name: m.franchise.name,
+              slug: m.franchise.slug,
+            }))}
+          />
 
           <MovieRatingWatchedSection
             movieId={movie.id}

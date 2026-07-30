@@ -7,11 +7,29 @@ export const FILTER_DEFAULTS: Record<string, string> = {
 export const FACET_KEYS = [
   "resolution",
   "genre",
+  "hasLang",
+  "channels",
+  "codec",
+  "translation",
+  // Legacy audio keys (cleared on reset).
+  "hasRus",
+  "hasOrig",
+  "rusChannels",
+  "rusFormat",
+  "rusTranslation",
+  "origChannels",
+  "origFormat",
   "audioChannels",
   "audioFormat",
   "audioTranslation",
 ] as const;
-export const SCALAR_FACET_KEYS = ["hdr", "premiumAudio", "tvReady"] as const;
+export const SCALAR_FACET_KEYS = [
+  "hdr",
+  "premiumAudio",
+  "premiumRus",
+  "premiumOrig",
+  "tvReady",
+] as const;
 export const SCALAR_KEYS = [
   "q",
   "minRating",
@@ -55,6 +73,11 @@ export interface FilterBarFacets {
   originalAudioFormats: Facet[];
   genres: Facet[];
   tvReady: number;
+  // Flat (any-track) facets for the new audio filter model.
+  languages: Facet[];
+  channelLayouts: Facet[];
+  audioFormats: Facet[];
+  translationTypes: Facet[];
 }
 
 export function facetCountMap(facets: Facet[]): Map<string, number> {

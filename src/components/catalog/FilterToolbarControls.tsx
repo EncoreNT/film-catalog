@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { Eye, EyeOff, Layers2, ListVideo, Star } from "lucide-react";
+import { Archive, Eye, EyeOff, Inbox, Layers2, Library, ListVideo, Star } from "lucide-react";
 import { SEGMENT_SHELL } from "@/components/catalog/FilterFacetParts";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 
@@ -244,6 +245,119 @@ export function MultiReleaseFilter({
           <Layers2 className="h-4 w-4" aria-hidden />
         </button>
       </HoverTooltip>
+    </div>
+  );
+}
+
+interface ArchiveStatusAccessProps {
+  draftCount: number;
+  excludedCount: number;
+  status: string;
+}
+
+const segmentLinkClass = (active: boolean) =>
+  `focus-ring inline-flex min-h-8 min-w-8 items-center justify-center rounded-[calc(var(--radius-sm)-2px)] transition-colors ${
+    active
+      ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
+      : "text-muted hover:bg-bg-surface hover:text-text"
+  }`;
+
+/** Draft / hidden catalog views — compact icon access in the filter toolbar. */
+export function ArchiveStatusAccess({
+  draftCount,
+  excludedCount,
+  status,
+}: ArchiveStatusAccessProps) {
+  const isDraft = status === "DRAFT";
+  const isExcluded = status === "EXCLUDED";
+  const isCatalog = !isDraft && !isExcluded;
+
+  const showDraft = draftCount > 0 || isDraft;
+  const showExcluded = excludedCount > 0 || isExcluded;
+
+  if (isCatalog && !showDraft && !showExcluded) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`${SEGMENT_SHELL} p-0.5`}
+      role="group"
+      aria-label="Черновики и скрытые"
+    >
+      {!isCatalog ? (
+        <HoverTooltip
+          className="inline-flex"
+          content={
+            <FilterTooltipContent
+              title="Каталог"
+              description="Вернуться к основному списку фильмов"
+            />
+          }
+        >
+          <Link
+            href="/?status=CATALOG"
+            className={segmentLinkClass(false)}
+            aria-label="Каталог"
+          >
+            <Library className="h-4 w-4" aria-hidden />
+          </Link>
+        </HoverTooltip>
+      ) : null}
+      {showDraft ? (
+        <HoverTooltip
+          className="inline-flex"
+          content={
+            <FilterTooltipContent
+              title="Черновики"
+              description="Новые находки после скана — проверка перед каталогом"
+            />
+          }
+        >
+          <Link
+            href="/?status=DRAFT"
+            className={segmentLinkClass(isDraft)}
+            aria-label={`Черновики${draftCount > 0 ? `, ${draftCount}` : ""}`}
+            aria-current={isDraft ? "page" : undefined}
+          >
+            <span className="relative inline-flex">
+              <Inbox className="h-4 w-4" aria-hidden />
+              {draftCount > 0 ? (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[0.55rem] font-medium tabular-nums text-bg-deep">
+                  {draftCount}
+                </span>
+              ) : null}
+            </span>
+          </Link>
+        </HoverTooltip>
+      ) : null}
+      {showExcluded ? (
+        <HoverTooltip
+          className="inline-flex"
+          content={
+            <FilterTooltipContent
+              title="Скрытые"
+              description="Фильмы, убранные из каталога — можно вернуть"
+            />
+          }
+        >
+          <Link
+            href="/?status=EXCLUDED"
+            className={segmentLinkClass(isExcluded)}
+            aria-label={`Скрытые${excludedCount > 0 ? `, ${excludedCount}` : ""}`}
+            aria-current={isExcluded ? "page" : undefined}
+          >
+            <span className="relative inline-flex">
+              <Archive className="h-4 w-4" aria-hidden />
+              {excludedCount > 0 ? (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[0.55rem] font-medium tabular-nums text-bg-deep">
+                  {excludedCount}
+                </span>
+              ) : null}
+            </span>
+          </Link>
+        </HoverTooltip>
+      ) : null}
     </div>
   );
 }

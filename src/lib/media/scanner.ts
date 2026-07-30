@@ -29,13 +29,65 @@ const VIDEO_EXTENSIONS = new Set([
   ".m2ts",
 ]);
 
+export interface ScanCreatedEntry {
+  movieId: number;
+  slug: string;
+  title: string;
+  year: number | null;
+  releaseType: string | null;
+  filePath: string;
+}
+
+/** What changed in an updated release. Honest, observable diffs only. */
+export type ScanChangeFlag =
+  | "size" // file size differs
+  | "content" // file hash differs (content actually changed)
+  | "duration" // duration differs
+  | "cover" // a cover was newly extracted
+  | "storage" // external storage assignment changed
+  | "touched" // only mtime changed (file touched, content identical)
+  | "added"; // a new release/episode was added to an existing movie
+
+export interface ScanUpdatedEntry {
+  movieId: number;
+  slug: string;
+  title: string;
+  year: number | null;
+  releaseType: string | null;
+  filePath: string;
+  changes: ScanChangeFlag[];
+}
+
+export interface ScanMovedEntry {
+  movieId: number;
+  slug: string;
+  title: string;
+  year: number | null;
+  releaseType: string | null;
+  fromPath: string;
+  toPath: string;
+}
+
+export type ScanErrorStage = "ffprobe" | "io" | "unknown";
+
+export interface ScanErrorEntry {
+  fileName: string;
+  filePath: string;
+  message: string;
+  stage: ScanErrorStage;
+}
+
 export interface ScanSummary {
   found: number;
   newDrafts: number;
   updated: number;
   moved: number;
   skipped: number;
-  errors: string[];
+  /** Structured per-file detail. Counters above stay for headline + back-compat. */
+  created: ScanCreatedEntry[];
+  updatedFiles: ScanUpdatedEntry[];
+  movedFiles: ScanMovedEntry[];
+  errors: ScanErrorEntry[];
   cancelled: boolean;
 }
 
@@ -110,6 +162,9 @@ export async function scanDirectory(
     updated: 0,
     moved: 0,
     skipped: 0,
+    created: [],
+    updatedFiles: [],
+    movedFiles: [],
     errors: [],
     cancelled: false,
   };
@@ -194,9 +249,12 @@ export async function scanDirectory(
           summary.cancelled = true;
           break;
         }
-        summary.errors.push(
-          `${fileName}: ffprobe failed — ${err instanceof Error ? err.message : "unknown"}`,
-        );
+        summary.errors.push({
+          fileName,
+          filePath,
+          message: err instanceof Error ? err.message : "неизвестная ошибка",
+          stage: "ffprobe",
+        });
         probe = {
           durationSeconds: null,
           video: null,
@@ -206,6 +264,17 @@ export async function scanDirectory(
       }
 
       if (existing) {
+        const sizeChanged = existing.fileSize !== fileSize;
+        const mtimeChanged =
+          existing.fileMtime?.getTime() !== fileMtime.getTime();
+        const contentChanged =
+          fileHash != null && existing.fileHash !== fileHash;
+        const durationChanged =
+          existing.durationSeconds !== probe.durationSeconds;
+        const storageChanged =
+          externalStorageId != null &&
+          existing.externalStorageId !== externalStorageId;
+
         await prisma.release.update({
           where: { id: existing.id },
           data: {
@@ -223,13 +292,34 @@ export async function scanDirectory(
           parsed.partNumber,
           parsed.partTotal,
         );
-        await maybeExtractCover(
+        const coverAdded = await maybeExtractCover(
           existing.movieId,
           filePath,
           !!existing.movie.coverPath,
           signal,
         );
+
+        const changes: ScanChangeFlag[] = [];
+        if (sizeChanged) changes.push("size");
+        if (contentChanged) changes.push("content");
+        if (durationChanged) changes.push("duration");
+        if (coverAdded) changes.push("cover");
+        if (storageChanged) changes.push("storage");
+        // File was touched (mtime) but content identical and nothing else moved.
+        if (mtimeChanged && !sizeChanged && !contentChanged && changes.length === 0) {
+          changes.push("touched");
+        }
+
         summary.updated++;
+        summary.updatedFiles.push({
+          movieId: existing.movieId,
+          slug: existing.movie.slug,
+          title: existing.movie.title,
+          year: existing.movie.year,
+          releaseType: existing.releaseType,
+          filePath,
+          changes,
+        });
         continue;
       }
 
@@ -259,6 +349,17 @@ export async function scanDirectory(
           signal,
         );
         summary.moved++;
+        summary.movedFiles.push({
+          movieId: movedRelease.movieId,
+          slug: movedRelease.movie.slug,
+          title: movedRelease.movie.title,
+          year: movedRelease.movie.year,
+          releaseType: movedRelease.releaseType,
+          // filePath is @unique but typed nullable; the NOT:{filePath} filter
+          // guarantees a non-null previous path at runtime.
+          fromPath: movedRelease.filePath ?? "",
+          toPath: filePath,
+        });
         continue;
       }
 
@@ -312,8 +413,28 @@ export async function scanDirectory(
           signal,
         );
         await recomputeMoviePartCount(prisma, movie.id, parsed.partTotal);
-        if (createdNewMovie) summary.newDrafts++;
-        else summary.updated++;
+        if (createdNewMovie) {
+          summary.newDrafts++;
+          summary.created.push({
+            movieId: movie.id,
+            slug: movie.slug,
+            title: movie.title,
+            year: movie.year,
+            releaseType: parsed.releaseType,
+            filePath,
+          });
+        } else {
+          summary.updated++;
+          summary.updatedFiles.push({
+            movieId: movie.id,
+            slug: movie.slug,
+            title: movie.title,
+            year: movie.year,
+            releaseType: parsed.releaseType,
+            filePath,
+            changes: ["added"],
+          });
+        }
         continue;
       }
 
@@ -345,14 +466,25 @@ export async function scanDirectory(
       await syncReleaseTracksFromProbe(prisma, release.id, probe);
       await maybeExtractCover(movie.id, filePath, false, signal);
       summary.newDrafts++;
+      summary.created.push({
+        movieId: movie.id,
+        slug: movie.slug,
+        title: movie.title,
+        year: movie.year,
+        releaseType: parsed.releaseType,
+        filePath,
+      });
     } catch (err) {
       if (signal?.aborted) {
         summary.cancelled = true;
         break;
       }
-      summary.errors.push(
-        `${filePath}: ${err instanceof Error ? err.message : "unknown error"}`,
-      );
+      summary.errors.push({
+        fileName,
+        filePath,
+        message: err instanceof Error ? err.message : "неизвестная ошибка",
+        stage: "io",
+      });
     }
   }
 
