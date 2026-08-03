@@ -3,6 +3,8 @@ import { movieListQuerySchema } from "@/lib/api/validators";
 import { buildCatalogAudioReleaseFilters } from "@/lib/catalog/catalog-audio-query";
 import { normalizeSearchQuery } from "@/lib/movies/movie-match-key";
 import { tvReadyReleaseWhere } from "@/lib/media/tv-ready";
+import { archiveEliteTierWhere } from "@/lib/media/quality-predicates";
+import { matchesCatalogRubyFilter } from "@/lib/media/tier-core";
 import { prisma } from "@/lib/db/prisma";
 import { movieHasMultipleReleaseVariants } from "@/lib/movies/multipart-duration";
 
@@ -24,14 +26,43 @@ export function parseListQuery(searchParams: URLSearchParams) {
   });
 }
 
-function releaseSome(
-  releaseWhere: Prisma.ReleaseWhereInput,
-): Prisma.MovieWhereInput {
-  return { releases: { some: releaseWhere } };
+function appendMovieAnd(
+  where: Prisma.MovieWhereInput,
+  clause: Prisma.MovieWhereInput,
+): void {
+  const existingAnd = Array.isArray(where.AND)
+    ? where.AND
+    : where.AND
+      ? [where.AND]
+      : [];
+  where.AND = [...existingAnd, clause];
+}
+
+function isCatalogOnlyQuery(
+  query: ReturnType<typeof parseListQuery>,
+): boolean {
+  const statuses = (query.status ?? "CATALOG").split(",").filter(Boolean);
+  return statuses.length === 1 && statuses[0] === "CATALOG";
+}
+
+function catalogQualityFilterParams(
+  query: ReturnType<typeof parseListQuery>,
+): Parameters<typeof matchesCatalogRubyFilter>[0] {
+  return {
+    resolution: query.resolution ?? null,
+    hdr: query.hdr ?? null,
+    premiumAudio: query.premiumAudio ?? null,
+  };
 }
 
 interface BuildMovieWhereContext {
   multiReleaseMovieIds?: number[];
+}
+
+function releaseSome(
+  releaseWhere: Prisma.ReleaseWhereInput,
+): Prisma.MovieWhereInput {
+  return { releases: { some: releaseWhere } };
 }
 
 /** Movie ids with multiple release variants (excludes multi-part «one file per series»). */
@@ -148,7 +179,15 @@ export function buildMovieWhere(
 
   const releaseFilters: Prisma.ReleaseWhereInput[] = [];
 
-  if (query.resolution || query.hdr) {
+  const rubyTierPreset =
+    isCatalogOnlyQuery(query) &&
+    matchesCatalogRubyFilter(catalogQualityFilterParams(query), true);
+
+  if (rubyTierPreset) {
+    appendMovieAnd(where, archiveEliteTierWhere);
+  }
+
+  if ((query.resolution || query.hdr) && !rubyTierPreset) {
     const resolutions = query.resolution?.split(",").filter(Boolean);
     const hdrValues = query.hdr?.split(",").filter(Boolean);
     const anyHdr = hdrValues?.includes("HDR_ANY");
@@ -167,7 +206,10 @@ export function buildMovieWhere(
     });
   }
 
-  releaseFilters.push(...buildCatalogAudioReleaseFilters(query));
+  const audioListQuery = rubyTierPreset
+    ? { ...query, premiumAudio: undefined }
+    : query;
+  releaseFilters.push(...buildCatalogAudioReleaseFilters(audioListQuery));
 
   if (query.tvReady === "true") {
     releaseFilters.push(tvReadyReleaseWhere());

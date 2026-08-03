@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { archiveEliteTierWhere } from "@/lib/media/quality-predicates";
 import { buildMovieOrder, buildMovieWhere, parseListQuery } from "@/lib/movies/movie-query";
 
 function queryFrom(params: Record<string, string>) {
@@ -111,6 +112,18 @@ describe("buildMovieWhere", () => {
         },
       },
     ]);
+  });
+
+  it("uses archive elite tier predicate for ruby rail preset", () => {
+    const where = buildMovieWhere(
+      queryFrom({
+        resolution: "4K",
+        hdr: "HDR_ANY",
+        premiumAudio: "true",
+      }),
+    );
+    expect(where.AND).toContainEqual(archiveEliteTierWhere);
+    expect(where.releases).toBeUndefined();
   });
 
   it("requires rus and original tracks on the same release via hasLang", () => {

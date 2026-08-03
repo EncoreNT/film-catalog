@@ -79,6 +79,48 @@ describe("deleteRelease", () => {
     await prisma.movie.delete({ where: { id: movie.id } });
   });
 
+  it("deletes release when cancelled move job exists", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "fc-delete-move-"));
+    const filePath = path.join(dir, "moved.mkv");
+    await writeFile(filePath, "payload");
+
+    const movie = await prisma.movie.create({
+      data: {
+        slug: `delete-move-${Date.now()}`,
+        title: "Delete With Move History",
+        matchKey: `delete-move-${Date.now()}`,
+        releases: {
+          create: [
+            { filePath: path.join(dir, "other.mkv") },
+            { filePath },
+          ],
+        },
+      },
+      include: { releases: true },
+    });
+
+    const releaseId = movie.releases.find((r) => r.filePath === filePath)!.id;
+    await prisma.releaseMove.create({
+      data: {
+        movieId: movie.id,
+        releaseId,
+        status: "CANCELLED",
+        sourceFilePath: filePath,
+        targetPath: path.join(dir, "dest"),
+        targetFilename: "dest.mkv",
+      },
+    });
+
+    const result = await deleteRelease(movie.id, releaseId);
+    expect(result.movieDeleted).toBe(false);
+    expect(
+      await prisma.release.findUnique({ where: { id: releaseId } }),
+    ).toBeNull();
+    expect(await prisma.releaseMove.count({ where: { releaseId } })).toBe(0);
+
+    await prisma.movie.delete({ where: { id: movie.id } });
+  });
+
   it("deletes the movie when removing the only release", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "fc-delete-last-"));
     const filePath = path.join(dir, "only.mkv");
