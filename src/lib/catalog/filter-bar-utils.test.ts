@@ -64,8 +64,13 @@ describe("filter-bar-utils", () => {
     });
 
     it("ignores default sort and watched", () => {
-      const params = new URLSearchParams("sort=title&watched=all");
+      const params = new URLSearchParams("watched=all");
       expect(countActiveFilters(params)).toBe(0);
+    });
+
+    it("counts non-default sort", () => {
+      const params = new URLSearchParams("sort=title");
+      expect(countActiveFilters(params)).toBe(1);
     });
   });
 

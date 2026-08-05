@@ -6,6 +6,8 @@ import {
   TRANSCODE_CODECS,
 } from "@/lib/builds/build-presets";
 
+export const buildAudioSyncModeSchema = z.enum(["none", "shift", "fit"]);
+
 export const buildTrackKindSchema = z.enum(["video", "audio", "subtitle"]);
 
 export const buildAudioModeSchema = z.enum(["copy", "transcode"]);
@@ -24,10 +26,13 @@ export const buildRecipeTrackSchema = z
     transcodeBitrate: z.number().int().positive().optional(),
     channelTarget: buildChannelTargetSchema.optional(),
     offsetMs: z.number().int().min(MIN_OFFSET_MS).max(MAX_OFFSET_MS).optional(),
+    audioSyncMode: buildAudioSyncModeSchema.optional(),
     isDefault: z.boolean().optional(),
     forced: z.boolean().optional(),
     keepOriginal: z.boolean().optional(),
     label: z.string().max(200).optional(),
+    /** Source file title at pick time; used for stream mapping checks when label is customized. */
+    sourceLabel: z.string().max(200).optional(),
   })
   .superRefine((track, ctx) => {
     if (track.kind === "video") {
@@ -46,6 +51,13 @@ export const buildRecipeTrackSchema = z
     }
     if (track.kind === "audio") {
       const mode = track.audioMode ?? "copy";
+      const syncMode = track.audioSyncMode ?? (track.offsetMs ? "shift" : "none");
+      if (syncMode === "fit" && mode !== "transcode") {
+        ctx.addIssue({
+          code: "custom",
+          message: "Подгонка под видео требует перекодирования",
+        });
+      }
       if (mode === "transcode") {
         if (!track.transcodeCodec) {
           ctx.addIssue({

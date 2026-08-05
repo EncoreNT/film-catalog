@@ -1,5 +1,22 @@
 import path from "path";
 
+export interface MkvMergeTrackSync {
+  /** Matroska track ID within this input file. */
+  trackId: number;
+  /** Delay in milliseconds (mkvmerge `--sync TID:delay`). */
+  offsetMs: number;
+}
+
+export interface MkvMergeTrackName {
+  trackId: number;
+  name: string;
+}
+
+/** mkvmerge `--track-name` argument (`TID:name`; name may contain colons). */
+export function formatMkvmergeTrackNameArg(trackId: number, name: string): string {
+  return `${trackId}:${name}`;
+}
+
 export interface MkvMergeInputFile {
   filePath: string;
   videoTrackIds?: number[];
@@ -9,6 +26,12 @@ export interface MkvMergeInputFile {
   noAttachments?: boolean;
   /** mkvmerge `--default-track-flag` entries for this input (e.g. `2`, `2:0`). */
   defaultTrackFlags?: string[];
+  /** Per-track timestamp adjustments for stream-copy audio/subtitle from this input. */
+  trackSync?: MkvMergeTrackSync[];
+  /** Matroska track titles embedded in the output file (`--track-name`). */
+  trackNames?: MkvMergeTrackName[];
+  /** Omit copied Matroska track tags so `--track-name` is not overridden. */
+  noTrackTags?: boolean;
 }
 
 export interface MkvMergePlan {
@@ -51,6 +74,10 @@ export function buildMkvmergeArgs(plan: MkvMergePlan): string[] {
       args.push("--default-track-flag", flag);
     }
 
+    if (input.noTrackTags) {
+      args.push("--no-track-tags");
+    }
+
     args.push("--no-global-tags");
     if (input.noChapters) args.push("--no-chapters");
     if (input.noAttachments) args.push("--no-attachments");
@@ -71,6 +98,17 @@ export function buildMkvmergeArgs(plan: MkvMergePlan): string[] {
       args.push("--subtitle-tracks", input.subtitleTrackIds.join(","));
     } else {
       args.push("--no-subtitles");
+    }
+
+    for (const sync of input.trackSync ?? []) {
+      if (sync.offsetMs === 0) continue;
+      args.push("--sync", `${sync.trackId}:${sync.offsetMs}`);
+    }
+
+    for (const named of input.trackNames ?? []) {
+      const trimmed = named.name.trim();
+      if (!trimmed) continue;
+      args.push("--track-name", formatMkvmergeTrackNameArg(named.trackId, trimmed));
     }
 
     args.push(input.filePath);

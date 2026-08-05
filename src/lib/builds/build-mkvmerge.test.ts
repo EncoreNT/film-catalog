@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMkvmergeArgs,
   buildMkvmergeOutputPlan,
+  formatMkvmergeTrackNameArg,
 } from "@/lib/builds/build-mkvmerge";
 
 describe("build-mkvmerge", () => {
@@ -78,5 +79,60 @@ describe("build-mkvmerge", () => {
     expect(args).toContain("--default-track-flag");
     expect(args).toContain("3:0");
     expect(args).toContain("1");
+  });
+
+  it("applies per-track sync delay before each input path", () => {
+    const args = buildMkvmergeArgs({
+      outputPath: "/out.mkv",
+      inputs: [
+        {
+          filePath: "/main.mkv",
+          videoTrackIds: [1],
+          audioTrackIds: [4],
+          trackSync: [{ trackId: 4, offsetMs: -3450 }],
+        },
+      ],
+    });
+
+    const syncIndex = args.indexOf("--sync");
+    expect(syncIndex).toBeGreaterThan(-1);
+    expect(args[syncIndex + 1]).toBe("4:-3450");
+    expect(args[syncIndex + 2]).toBe("/main.mkv");
+  });
+
+  it("applies track names before each input path", () => {
+    const args = buildMkvmergeArgs({
+      outputPath: "/out.mkv",
+      inputs: [
+        {
+          filePath: "/main.mkv",
+          audioTrackIds: [2],
+          trackNames: [{ trackId: 2, name: "MVO | Pazl Voice" }],
+        },
+      ],
+    });
+
+    const nameIndex = args.indexOf("--track-name");
+    expect(nameIndex).toBeGreaterThan(-1);
+    expect(args[nameIndex + 1]).toBe("2:MVO | Pazl Voice");
+  });
+
+  it("strips source track tags when custom names are set", () => {
+    const args = buildMkvmergeArgs({
+      outputPath: "/out.mkv",
+      inputs: [
+        {
+          filePath: "/main.mkv",
+          audioTrackIds: [2],
+          trackNames: [{ trackId: 2, name: "Custom" }],
+          noTrackTags: true,
+        },
+      ],
+    });
+    expect(args).toContain("--no-track-tags");
+  });
+
+  it("preserves colons inside track title", () => {
+    expect(formatMkvmergeTrackNameArg(3, "Dub: Blu-Ray")).toBe("3:Dub: Blu-Ray");
   });
 });

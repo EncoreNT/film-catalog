@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Trash2, ArrowUp, ArrowDown, Clock } from "lucide-react";
+import { Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { releaseTabLabel } from "@/lib/media/spec-tags";
 import {
@@ -16,6 +16,7 @@ import type { ChannelTarget, TranscodeCodec } from "@/lib/builds/build-presets";
 import type {
   BuildRecipeTrackState,
 } from "@/lib/builds/build-recipe-state";
+import { normalizeAudioSyncMode } from "@/lib/builds/build-audio-sync";
 import { resolveCatalogTrack } from "@/lib/builds/build-track-source";
 import {
   BuildInlineHint,
@@ -27,19 +28,14 @@ import {
   TrackCheckboxOption,
   TrackRadioOption,
 } from "@/components/builds/BuildAtoms";
+import { BuildAudioSyncControls } from "@/components/builds/BuildAudioSyncControls";
 import {
   sourceTierTone,
   trackSpecTags,
   transcodeQualityHint,
   TIER_TONE,
 } from "@/lib/builds/build-display";
-import {
-  durationMismatchInlineLabel,
-  durationMismatchTooltipLines,
-  DURATION_MISMATCH_SEVERITY_TONE,
-  type DurationMismatchInfo,
-} from "@/lib/builds/build-duration-hint";
-import { HoverTooltip } from "@/components/primitives/HoverTooltip";
+import type { DurationMismatchInfo } from "@/lib/builds/build-duration-hint";
 
 function resolveSourceTrack(
   releases: ReleaseWithTracks[],
@@ -101,7 +97,9 @@ export function BuildReelTrackCard({
   const sourceCodec = sourceAudio?.codec ?? null;
   const sourceBitrate = sourceAudio?.bitrate ?? null;
   const sourceChannelLayout = sourceAudio?.channelLayout ?? null;
-  const transcodeHint = transcodeQualityHint(sourceCodec);
+  const transcodeHint = transcodeQualityHint(sourceCodec, {
+    syncMode: normalizeAudioSyncMode(track),
+  });
 
   const transcodeCodec = track.transcodeCodec ?? "eac3";
   const bitrates = transcodeCodec === "ac3" ? AC3_BITRATES : EAC3_BITRATES;
@@ -136,8 +134,6 @@ export function BuildReelTrackCard({
   };
 
   const handleChannel = (target: ChannelTarget) => onChange({ channelTarget: target });
-  const bumpOffset = (delta: number) =>
-    onChange({ offsetMs: Math.max(-60_000, Math.min(60_000, (track.offsetMs ?? 0) + delta)) });
 
   return (
     <div
@@ -148,8 +144,25 @@ export function BuildReelTrackCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-sm text-text">{track.label}</p>
+            <div className="min-w-0 flex-1">
+              {track.kind === "video" ? (
+                <p className="truncate text-sm text-text">{track.label}</p>
+              ) : (
+                <div className="space-y-1">
+                  <label className="font-mono-tech block text-[10px] uppercase tracking-[0.18em] text-faint">
+                    подпись в MKV
+                  </label>
+                  <input
+                    type="text"
+                    value={track.label}
+                    onChange={(e) => onChange({ label: e.target.value })}
+                    maxLength={200}
+                    placeholder="Название дорожки в плеере"
+                    className="focus-ring w-full rounded-[var(--radius-sm)] border border-border bg-bg-deep/60 px-2.5 py-1.5 text-sm text-text placeholder:text-faint"
+                    aria-label="Подпись дорожки в MKV"
+                  />
+                </div>
+              )}
               <p className="font-mono-tech mt-0.5 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-muted">
                 <TierDot tone={tone} />
                 <span className="truncate">
@@ -201,7 +214,13 @@ export function BuildReelTrackCard({
             </span>
             <ChipButton
               selected={track.audioMode !== "transcode"}
-              onClick={() => onChange({ audioMode: "copy" })}
+              onClick={() => {
+                const patch: Partial<BuildRecipeTrackState> = { audioMode: "copy" };
+                if (track.audioSyncMode === "fit") {
+                  patch.audioSyncMode = "none";
+                }
+                onChange(patch);
+              }}
             >
               Копировать
             </ChipButton>
@@ -211,38 +230,16 @@ export function BuildReelTrackCard({
             >
               Перекодировать
             </ChipButton>
-
-            <div className="ml-auto flex items-center gap-1">
-              <span className="font-mono-tech text-[10px] uppercase tracking-[0.18em] text-faint">
-                <Clock className="mr-1 inline h-3 w-3" strokeWidth={1.5} aria-hidden />
-                сдвиг
-              </span>
-              <button
-                type="button"
-                onClick={() => bumpOffset(-10)}
-                className="focus-ring flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-border text-muted hover:text-text"
-                aria-label="Уменьшить сдвиг на 10 мс"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                value={track.offsetMs ?? 0}
-                onChange={(e) => onChange({ offsetMs: Number(e.target.value) })}
-                className="focus-ring font-mono-tech h-7 w-16 rounded-[var(--radius-sm)] border border-border bg-bg-deep/60 px-2 text-center text-xs text-text"
-                aria-label="Сдвиг в миллисекундах"
-              />
-              <button
-                type="button"
-                onClick={() => bumpOffset(10)}
-                className="focus-ring flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-border text-muted hover:text-text"
-                aria-label="Увеличить сдвиг на 10 мс"
-              >
-                +
-              </button>
-              <span className="font-mono-tech text-[10px] text-faint">мс</span>
-            </div>
           </div>
+
+          <BuildAudioSyncControls
+            track={track}
+            durationMismatch={durationMismatch}
+            sourceChannels={sourceAudio?.channels}
+            sourceChannelLayout={sourceChannelLayout}
+            sourceBitrate={sourceBitrate}
+            onChange={onChange}
+          />
 
           {track.audioMode === "transcode" ? (
             <div className="space-y-3">
@@ -336,9 +333,6 @@ export function BuildReelTrackCard({
               onChange={(v) => onChange({ isDefault: v })}
               label="по умолчанию"
             />
-            {durationMismatch ? (
-              <DurationMismatchHint info={durationMismatch} />
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -358,27 +352,5 @@ export function BuildReelTrackCard({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function DurationMismatchHint({ info }: { info: DurationMismatchInfo }) {
-  const tooltip = durationMismatchTooltipLines(info);
-  return (
-    <HoverTooltip
-      className={`font-mono-tech inline-flex cursor-help items-center gap-1 text-[10px] uppercase tracking-[0.14em] ${DURATION_MISMATCH_SEVERITY_TONE[info.severity]}`}
-      content={
-        <div className="px-3 py-2">
-          <p className="text-xs font-medium text-text">{tooltip.headline}</p>
-          <p className="mt-0.5 font-mono-tech text-[0.6rem] leading-snug text-muted">
-            {tooltip.detail}
-          </p>
-        </div>
-      }
-    >
-      <span className="inline-flex items-center gap-1" aria-label={`${tooltip.headline}. ${tooltip.detail}`}>
-        <Clock className="h-3 w-3 shrink-0" strokeWidth={1.5} aria-hidden />
-        {durationMismatchInlineLabel(info)}
-      </span>
-    </HoverTooltip>
   );
 }

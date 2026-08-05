@@ -5,6 +5,8 @@ import { probeMediaFile } from "@/lib/media/ffprobe";
 import { maybeExtractCover } from "@/lib/covers/cover-storage";
 import { parseMovieName } from "@/lib/media/name-parser";
 import { computeFileHashPrefix } from "@/lib/media/file-hash";
+import { fileDownloadedAtFromStat } from "@/lib/shared/file-downloaded-at";
+import { resolveReleaseFileDownloadedAt } from "@/lib/releases/release-file-downloaded-at";
 import { syncReleaseTracksFromProbe } from "@/lib/releases/release-tracks";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
@@ -192,6 +194,7 @@ export async function scanDirectory(
       const fileStat = await stat(filePath);
       const fileSize = fileStat.size;
       const fileMtime = fileStat.mtime;
+      const downloadedFromStat = fileDownloadedAtFromStat(fileStat);
 
       const existing = await prisma.release.findFirst({
         where: { filePath },
@@ -275,11 +278,23 @@ export async function scanDirectory(
           externalStorageId != null &&
           existing.externalStorageId !== externalStorageId;
 
+        const nextFileDownloadedAt = resolveReleaseFileDownloadedAt(
+          {
+            fileDownloadedAt: existing.fileDownloadedAt,
+            fileHash: existing.fileHash,
+            fileSize: existing.fileSize,
+          },
+          downloadedFromStat,
+          fileHash,
+          fileSize,
+        );
+
         await prisma.release.update({
           where: { id: existing.id },
           data: {
             fileSize,
             fileMtime,
+            fileDownloadedAt: nextFileDownloadedAt,
             fileHash,
             durationSeconds: probe.durationSeconds,
             ...(externalStorageId != null ? { externalStorageId } : {}),
@@ -324,12 +339,24 @@ export async function scanDirectory(
       }
 
       if (movedRelease) {
+        const nextFileDownloadedAt = resolveReleaseFileDownloadedAt(
+          {
+            fileDownloadedAt: movedRelease.fileDownloadedAt,
+            fileHash: movedRelease.fileHash,
+            fileSize: movedRelease.fileSize,
+          },
+          downloadedFromStat,
+          fileHash,
+          fileSize,
+        );
+
         await prisma.release.update({
           where: { id: movedRelease.id },
           data: {
             filePath,
             fileSize,
             fileMtime,
+            fileDownloadedAt: nextFileDownloadedAt,
             fileHash,
             durationSeconds: probe.durationSeconds,
             ...(externalStorageId != null ? { externalStorageId } : {}),
@@ -401,6 +428,7 @@ export async function scanDirectory(
             filePath,
             fileSize,
             fileMtime,
+            fileDownloadedAt: downloadedFromStat,
             fileHash,
             ...(externalStorageId != null ? { externalStorageId } : {}),
           },
@@ -454,6 +482,7 @@ export async function scanDirectory(
               filePath,
               fileSize,
               fileMtime,
+              fileDownloadedAt: downloadedFromStat,
               fileHash,
               ...(externalStorageId != null ? { externalStorageId } : {}),
             },

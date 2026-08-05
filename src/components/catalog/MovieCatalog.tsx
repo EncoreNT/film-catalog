@@ -22,11 +22,16 @@ import {
 } from "@/lib/shared/format";
 import { pluralRu } from "@/lib/shared/russian-plural";
 import type { CatalogRemakeBadge } from "@/lib/remakes/remake-catalog-badges";
+import {
+  DEFAULT_MOVIE_LIST_ORDER,
+  DEFAULT_MOVIE_LIST_SORT,
+} from "@/lib/movies/movie-list-defaults";
 
 const SORT_OPTIONS = [
   { value: "title", label: "Название" },
   { value: "year", label: "Год" },
-  { value: "createdAt", label: "Добавлено" },
+  { value: "createdAt", label: "Добавлен в каталог" },
+  { value: "fileDownloadedAt", label: "Скачан" },
   { value: "rating", label: "Оценка" },
   { value: "watchedAt", label: "Дата просмотра" },
   { value: "durationSeconds", label: "Продолжительность" },
@@ -366,14 +371,14 @@ export function MovieCatalog({
     [navigate],
   );
 
-  const sort = searchParams.get("sort") ?? "title";
-  const order = searchParams.get("order") ?? "asc";
+  const sort = searchParams.get("sort") ?? DEFAULT_MOVIE_LIST_SORT;
+  const order = searchParams.get("order") ?? DEFAULT_MOVIE_LIST_ORDER;
 
   const applySort = (nextSort: string, nextOrder: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (nextSort === "title") params.delete("sort");
+    if (nextSort === DEFAULT_MOVIE_LIST_SORT) params.delete("sort");
     else params.set("sort", nextSort);
-    if (nextOrder === "asc") params.delete("order");
+    if (nextOrder === DEFAULT_MOVIE_LIST_ORDER) params.delete("order");
     else params.set("order", nextOrder);
     params.delete("page");
     params.delete("mode");

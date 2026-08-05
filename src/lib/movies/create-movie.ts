@@ -41,6 +41,7 @@ export async function probeOnlyMovie(data: MovieCreateInput) {
     subtitles: probe.subtitles,
     fileSize: meta.fileSize,
     fileMtime: meta.fileMtime?.toISOString(),
+    fileDownloadedAt: meta.fileDownloadedAt?.toISOString(),
     fileHash: meta.fileHash,
   };
 }

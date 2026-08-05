@@ -65,6 +65,8 @@ interface ReleaseBuildEditorProps {
   movieTitle: string;
   movieYear: number | null;
   releases: ReleaseWithTracks[];
+  /** Release tab the user opened the builder from (video + initial tracks). */
+  baseReleaseId?: number | null;
 }
 
 interface ValidationResult {
@@ -100,10 +102,11 @@ export function ReleaseBuildEditor({
   movieTitle,
   movieYear,
   releases,
+  baseReleaseId = null,
 }: ReleaseBuildEditorProps) {
   const router = useRouter();
   const [state, setState] = useState<BuildRecipeFormState>(() =>
-    createInitialBuildState(releases),
+    createInitialBuildState(releases, baseReleaseId),
   );
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [ackWarnings, setAckWarnings] = useState(false);

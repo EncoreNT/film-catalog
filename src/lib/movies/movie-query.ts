@@ -7,11 +7,19 @@ import { archiveEliteTierWhere } from "@/lib/media/quality-predicates";
 import { matchesCatalogRubyFilter } from "@/lib/media/tier-core";
 import { prisma } from "@/lib/db/prisma";
 import { movieHasMultipleReleaseVariants } from "@/lib/movies/multipart-duration";
+import {
+  DEFAULT_MOVIE_LIST_LIMIT,
+  DEFAULT_MOVIE_LIST_ORDER,
+  DEFAULT_MOVIE_LIST_SORT,
+} from "@/lib/movies/movie-list-defaults";
 
 export type { MovieWithTracks } from "@/lib/movies/movie-include";
 
-/** Default page size for movie catalog and /api/movies list. */
-export const DEFAULT_MOVIE_LIST_LIMIT = 70;
+export {
+  DEFAULT_MOVIE_LIST_LIMIT,
+  DEFAULT_MOVIE_LIST_ORDER,
+  DEFAULT_MOVIE_LIST_SORT,
+} from "@/lib/movies/movie-list-defaults";
 
 export function parseListQuery(searchParams: URLSearchParams) {
   const raw = Object.fromEntries(searchParams.entries());
@@ -19,8 +27,8 @@ export function parseListQuery(searchParams: URLSearchParams) {
     ...raw,
     page: raw.page ?? "1",
     limit: raw.limit ?? String(DEFAULT_MOVIE_LIST_LIMIT),
-    sort: raw.sort ?? "title",
-    order: raw.order ?? "asc",
+    sort: raw.sort ?? DEFAULT_MOVIE_LIST_SORT,
+    order: raw.order ?? DEFAULT_MOVIE_LIST_ORDER,
     status: raw.status ?? "CATALOG",
     watched: raw.watched ?? "all",
   });
@@ -269,6 +277,7 @@ export function buildMovieOrder(
       return [{ watchedAt: order }, { id: order }];
     case "durationSeconds":
     case "fileSize":
+    case "fileDownloadedAt":
       throw new Error(
         `Sort "${query.sort}" is handled by fetchMovieList release aggregate ordering`,
       );

@@ -20,6 +20,7 @@ function release(
     filePath: partial.filePath ?? "/mnt/d/Movies/film.mkv",
     fileSize: null,
     fileMtime: null,
+    fileDownloadedAt: null,
     fileHash: null,
     releaseType: partial.releaseType ?? null,
     version: "theatrical",

@@ -67,6 +67,7 @@ export const releaseUpdateSchema = z.object({
   filePath: z.string().nullable().optional(),
   fileSize: z.number().int().min(0).nullable().optional(),
   fileMtime: z.string().datetime().nullable().optional(),
+  fileDownloadedAt: z.string().datetime().nullable().optional(),
   fileHash: z.string().nullable().optional(),
   externalStorageId: z.number().int().nullable().optional(),
   releaseType: z.string().nullable().optional(),
@@ -177,6 +178,7 @@ export const movieListQuerySchema = z.object({
       "watchedAt",
       "durationSeconds",
       "fileSize",
+      "fileDownloadedAt",
     ])
     .optional(),
   order: z.enum(["asc", "desc"]).optional(),

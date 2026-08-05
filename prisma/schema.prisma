@@ -37,6 +37,12 @@ enum ReleaseBuildChannelTarget {
   UP_TO_51
 }
 
+enum ReleaseBuildAudioSyncMode {
+  NONE
+  SHIFT
+  FIT
+}
+
 /** Named external drive; null externalStorageId on Release means local disk. */
 model ExternalStorage {
   id        Int      @id @default(autoincrement())
@@ -106,6 +112,7 @@ model Release {
   filePath            String?     @unique
   fileSize        Int?
   fileMtime       DateTime?
+  fileDownloadedAt DateTime?
   fileHash        String?
   releaseType     String?
   version         String      @default("theatrical")
@@ -350,6 +357,7 @@ model ReleaseBuildTrack {
   transcodeBitrate  Int?
   channelTarget     ReleaseBuildChannelTarget?
   offsetMs          Int                        @default(0)
+  audioSyncMode     ReleaseBuildAudioSyncMode  @default(NONE)
   isDefault         Boolean                    @default(false)
   forced            Boolean                    @default(false)
   keepOriginal      Boolean                    @default(false)

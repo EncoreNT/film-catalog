@@ -17,6 +17,7 @@ function sampleRelease(overrides?: Partial<ReleaseWithTracks>): ReleaseWithTrack
     filePath: "/a.mkv",
     fileSize: 50_000_000_000,
     fileMtime: new Date(),
+    fileDownloadedAt: new Date(),
     fileHash: "x",
     releaseType: "bdremux",
     version: "theatrical",

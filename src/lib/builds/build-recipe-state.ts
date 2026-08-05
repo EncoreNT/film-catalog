@@ -1,5 +1,8 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import type { ChannelTarget, TranscodeCodec } from "@/lib/builds/build-presets";
+import type { BuildAudioSyncMode } from "@/lib/builds/build-audio-sync";
+import { normalizeAudioSyncMode } from "@/lib/builds/build-audio-sync";
+import { pickPrimaryRelease } from "@/lib/releases/release-primary";
 
 export type BuildTrackKind = "video" | "audio" | "subtitle";
 export type BuildAudioMode = "copy" | "transcode";
@@ -10,11 +13,14 @@ export interface BuildRecipeTrackState {
   sourceReleaseId: number;
   sourceStreamIndex: number;
   label: string;
+  /** Title from source/catalog when the track was added (mapping validation). */
+  sourceLabel?: string;
   audioMode?: BuildAudioMode;
   transcodeCodec?: TranscodeCodec;
   transcodeBitrate?: number;
   channelTarget?: ChannelTarget;
   offsetMs?: number;
+  audioSyncMode?: BuildAudioSyncMode;
   isDefault?: boolean;
   forced?: boolean;
   /** Для аудио-перекодирования: сохранить оригинальную дорожку (true) или заменить (false). */
@@ -31,40 +37,59 @@ export interface BuildRecipeFormState {
 
 export function createInitialBuildState(
   releases: ReleaseWithTracks[],
+  baseReleaseId?: number | null,
 ): BuildRecipeFormState {
-  const primary = releases[0];
+  const primary =
+    pickPrimaryRelease(releases, baseReleaseId) ?? releases[0] ?? null;
   const tracks: BuildRecipeTrackState[] = [];
 
-  if (primary?.videoTrack) {
+  if (!primary) {
+    return {
+      tracks: [],
+      outputPath: "",
+      outputReleaseType: "",
+      outputVersion: "theatrical",
+      externalStorageId: null,
+    };
+  }
+
+  if (primary.videoTrack) {
     tracks.push({
       key: crypto.randomUUID(),
       kind: "video",
       sourceReleaseId: primary.id,
       sourceStreamIndex: primary.videoTrack.streamIndex,
       label: "Видео",
+      sourceLabel: "Видео",
     });
   }
 
-  for (const audio of primary?.audioTracks ?? []) {
+  for (const audio of primary.audioTracks ?? []) {
+    const audioLabel =
+      audio.title || audio.language || `Audio ${audio.streamIndex}`;
     tracks.push({
       key: crypto.randomUUID(),
       kind: "audio",
       sourceReleaseId: primary.id,
       sourceStreamIndex: audio.streamIndex,
-      label: audio.title || audio.language || `Audio ${audio.streamIndex}`,
+      label: audioLabel,
+      sourceLabel: audioLabel,
       audioMode: "copy",
       offsetMs: 0,
+      audioSyncMode: "none",
       isDefault: audio.isDefault,
     });
   }
 
-  for (const sub of primary?.subtitleTracks ?? []) {
+  for (const sub of primary.subtitleTracks ?? []) {
+    const subLabel = sub.title || sub.language || `Sub ${sub.streamIndex}`;
     tracks.push({
       key: crypto.randomUUID(),
       kind: "subtitle",
       sourceReleaseId: primary.id,
       sourceStreamIndex: sub.streamIndex,
-      label: sub.title || sub.language || `Sub ${sub.streamIndex}`,
+      label: subLabel,
+      sourceLabel: subLabel,
       forced: sub.forced,
       isDefault: sub.isDefault,
     });
@@ -86,6 +111,7 @@ export function serializeBuildRecipe(state: BuildRecipeFormState) {
       sourceReleaseId: track.sourceReleaseId,
       sourceStreamIndex: track.sourceStreamIndex,
       label: track.label,
+      sourceLabel: track.sourceLabel ?? track.label,
       audioMode: track.kind === "audio" ? track.audioMode ?? "copy" : undefined,
       transcodeCodec:
         track.kind === "audio" && track.audioMode === "transcode"
@@ -99,7 +125,14 @@ export function serializeBuildRecipe(state: BuildRecipeFormState) {
         track.kind === "audio" && track.audioMode === "transcode"
           ? track.channelTarget
           : undefined,
-      offsetMs: track.kind === "audio" ? track.offsetMs ?? 0 : undefined,
+      offsetMs:
+        track.kind === "audio" && normalizeAudioSyncMode(track) === "shift"
+          ? track.offsetMs ?? 0
+          : track.kind === "audio"
+            ? 0
+            : undefined,
+      audioSyncMode:
+        track.kind === "audio" ? normalizeAudioSyncMode(track) : undefined,
       isDefault: track.isDefault,
       forced: track.forced,
       keepOriginal:

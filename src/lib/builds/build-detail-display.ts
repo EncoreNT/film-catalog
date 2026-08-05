@@ -19,6 +19,10 @@ import {
   RELEASE_TYPES,
 } from "@/lib/shared/dictionaries";
 import { formatOffset } from "@/lib/builds/build-display";
+import {
+  audioSyncModeLabel,
+  prismaSyncModeToClient,
+} from "@/lib/builds/build-audio-sync";
 import { formatBitrateKbps } from "@/lib/shared/resolution";
 import { buildOutputBasename } from "@/lib/builds/build-queue-display";
 
@@ -161,8 +165,13 @@ export function buildTrackDetailTags(track: SerializedTrack): SpecTag[] {
     }
   }
 
-  if (track.offsetMs !== 0) {
-    tags.push({ label: formatOffset(track.offsetMs), tone: "ember" });
+  if (kind === "audio") {
+    const syncMode = prismaSyncModeToClient(track.audioSyncMode, track.offsetMs);
+    if (syncMode === "fit") {
+      tags.push({ label: audioSyncModeLabel("fit"), tone: "ember" });
+    } else if (syncMode === "shift" && track.offsetMs !== 0) {
+      tags.push({ label: formatOffset(track.offsetMs), tone: "ember" });
+    }
   }
 
   if (track.isDefault) {
@@ -194,7 +203,12 @@ export function buildTrackFlags(track: SerializedTrack): string[] {
   if (track.keepOriginal && track.audioMode === "TRANSCODE") {
     flags.push("+ оригинал");
   }
-  if (track.offsetMs !== 0) flags.push(formatOffset(track.offsetMs));
+  const syncMode = prismaSyncModeToClient(track.audioSyncMode, track.offsetMs);
+  if (syncMode === "fit") {
+    flags.push(audioSyncModeLabel("fit"));
+  } else if (syncMode === "shift" && track.offsetMs !== 0) {
+    flags.push(formatOffset(track.offsetMs));
+  }
   return flags;
 }
 

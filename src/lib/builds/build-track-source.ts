@@ -111,25 +111,30 @@ export function buildRecipeTrackFromCatalogPick(
   if (!source) return null;
 
   if (kind === "video") {
+    const videoLabel = sourceTrackLabel(source, "video");
     return {
       key: crypto.randomUUID(),
       kind: "video",
       sourceReleaseId: release.id,
       sourceStreamIndex,
-      label: sourceTrackLabel(source, "video"),
+      label: videoLabel,
+      sourceLabel: videoLabel,
     };
   }
 
   if (kind === "audio") {
     const audio = source as ReleaseWithTracks["audioTracks"][number];
+    const audioLabel = sourceTrackLabel(audio, "audio");
     return {
       key: crypto.randomUUID(),
       kind: "audio",
       sourceReleaseId: release.id,
       sourceStreamIndex,
-      label: sourceTrackLabel(audio, "audio"),
+      label: audioLabel,
+      sourceLabel: audioLabel,
       audioMode: "copy",
       offsetMs: 0,
+      audioSyncMode: "none",
       transcodeCodec: "eac3",
       transcodeBitrate: 768,
       channelTarget: "up_to_51",
@@ -138,12 +143,14 @@ export function buildRecipeTrackFromCatalogPick(
   }
 
   const subtitle = source as ReleaseWithTracks["subtitleTracks"][number];
+  const subtitleLabel = sourceTrackLabel(subtitle, "subtitle");
   return {
     key: crypto.randomUUID(),
     kind: "subtitle",
     sourceReleaseId: release.id,
     sourceStreamIndex,
-    label: sourceTrackLabel(subtitle, "subtitle"),
+    label: subtitleLabel,
+    sourceLabel: subtitleLabel,
     forced: subtitle.forced,
     isDefault: subtitle.isDefault,
   };

@@ -17,6 +17,7 @@ function sampleRelease(): ReleaseWithTracks {
     filePath: "/a.mkv",
     fileSize: 1,
     fileMtime: new Date(),
+    fileDownloadedAt: new Date(),
     fileHash: "x",
     releaseType: "bdremux",
     version: "theatrical",
@@ -57,6 +58,30 @@ function sampleRelease(): ReleaseWithTracks {
 }
 
 describe("build-recipe-state", () => {
+  it("uses preferred release when baseReleaseId is set", () => {
+    const first = sampleRelease();
+    const second: ReleaseWithTracks = {
+      ...sampleRelease(),
+      id: 20,
+      releaseType: "web-dl",
+      videoTrack: first.videoTrack
+        ? { ...first.videoTrack, id: 2, releaseId: 20 }
+        : null,
+      audioTracks: [
+        {
+          ...first.audioTracks[0]!,
+          id: 3,
+          releaseId: 20,
+          streamIndex: 2,
+          title: "ENG",
+        },
+      ],
+    };
+    const state = createInitialBuildState([first, second], 20);
+    expect(state.tracks.find((t) => t.kind === "video")?.sourceReleaseId).toBe(20);
+    expect(state.outputReleaseType).toBe("web-dl");
+  });
+
   it("creates initial recipe from primary release", () => {
     const state = createInitialBuildState([sampleRelease()]);
     expect(state.tracks.some((t) => t.kind === "video")).toBe(true);

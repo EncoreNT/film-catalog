@@ -87,8 +87,8 @@ export type ReleaseDetailView = {
   storageExternal: boolean;
   externalStorageId: number | null;
   tvReady: boolean;
-  createdAtLabel: string;
-  updatedAtLabel: string;
+  fileDownloadedAtLabel: string | null;
+  catalogAddedAtLabel: string;
 };
 
 function buildAudioTrack(
@@ -194,8 +194,10 @@ export function buildReleaseDetailView(
     storageExternal: releaseStorageIsExternal(release),
     externalStorageId: release.externalStorageId,
     tvReady: isTvReadyRelease(release),
-    createdAtLabel: formatDate(release.createdAt),
-    updatedAtLabel: formatDate(release.updatedAt),
+    fileDownloadedAtLabel: release.fileDownloadedAt
+      ? formatDate(release.fileDownloadedAt)
+      : null,
+    catalogAddedAtLabel: formatDate(release.createdAt),
   };
 }
 

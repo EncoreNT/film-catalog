@@ -76,6 +76,7 @@ export function serializeBuild(build: BuildWithRelations) {
       transcodeBitrate: t.transcodeBitrate,
       channelTarget: t.channelTarget,
       offsetMs: t.offsetMs,
+      audioSyncMode: t.audioSyncMode,
       isDefault: t.isDefault,
       forced: t.forced,
       keepOriginal: t.keepOriginal,

@@ -149,7 +149,9 @@ export function mappingPreviewValidationErrors(
     const recipeTrack = recipe.tracks[row.trackIndex];
     if (!recipeTrack) continue;
 
-    const expectedTitle = normalizeComparableTitle(recipeTrack.label);
+    const expectedTitle = normalizeComparableTitle(
+      recipeTrack.sourceLabel?.trim() || recipeTrack.label,
+    );
     const resolvedTitle = normalizeComparableTitle(row.resolvedTitle);
     if (
       expectedTitle &&

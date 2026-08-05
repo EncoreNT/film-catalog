@@ -7,6 +7,7 @@ import {
   isBuildCancelRequested,
   startHeartbeat,
   updateBuildProgress,
+  buildInclude,
 } from "@/lib/builds/build-queue";
 import { registerBuildOutput } from "@/lib/builds/build-register";
 import {
@@ -22,18 +23,32 @@ import {
   type MkvMergeInputFile,
   type MkvResolvedTrack,
 } from "@/lib/builds/build-mkvmerge";
-import { buildPartPath } from "@/lib/builds/build-inspection";
+import { buildPartPath, resolveSoleMkvTrackId } from "@/lib/builds/build-inspection";
 import { inspectReleaseFile } from "@/lib/builds/build-inspect-runtime";
 import {
   resolveFfmpegAudioOrdinal,
   resolveInspectedMkvTrackId,
 } from "@/lib/builds/build-track-inspect";
 import type { ChannelTarget, TranscodeCodec } from "@/lib/builds/build-presets";
-import { buildInclude } from "@/lib/builds/build-queue";
+import {
+  computeFitTempoRatio,
+  prismaSyncModeToClient,
+} from "@/lib/builds/build-audio-sync";
 
 interface ResolvedTrack extends MkvResolvedTrack {
   filePath: string;
   offsetMs: number;
+  trackName?: string;
+}
+
+function mkvOutputTrackName(
+  label: string | null | undefined,
+  variant?: "original",
+): string | undefined {
+  const base = label?.trim();
+  if (!base) return undefined;
+  if (variant === "original") return `${base} · оригинал`;
+  return base;
 }
 
 interface FfmpegProgressContext {
@@ -147,6 +162,7 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       mkvTrackId: number,
       isDefault: boolean,
       offsetMs: number,
+      trackName?: string,
     ) => {
       let syncFileIndex = filePathToIndex.get(filePath);
       if (syncFileIndex == null) {
@@ -172,6 +188,7 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         isDefault,
         offsetMs,
         syncFileIndex,
+        trackName,
       });
     };
 
@@ -194,6 +211,27 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         track.sourceStreamIndex,
       );
 
+      const syncMode = prismaSyncModeToClient(track.audioSyncMode, track.offsetMs);
+      const effectiveOffsetMs = syncMode === "shift" ? track.offsetMs : 0;
+
+      const videoDurationSeconds =
+        videoInspected.exactDurationSeconds ?? videoInspected.durationSeconds;
+      const audioDurationSeconds =
+        inspected.exactDurationSeconds ?? inspected.durationSeconds;
+      let tempoRatio: number | undefined;
+      if (syncMode === "fit") {
+        const ratio = computeFitTempoRatio(
+          videoDurationSeconds ?? 0,
+          audioDurationSeconds ?? 0,
+        );
+        if (ratio == null) {
+          throw new Error(
+            `Не удалось вычислить подгонку для аудио ${track.sourceStreamIndex}`,
+          );
+        }
+        tempoRatio = ratio;
+      }
+
       if (track.audioMode === "TRANSCODE") {
         await updateBuildProgress(buildId, {
           phase: "transcode",
@@ -208,6 +246,8 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         const tempPath = tempTranscodedAudioPath(buildId, track.sortOrder, outDir);
         tempFiles.push(tempPath);
 
+        const outputTitle = mkvOutputTrackName(track.sourceTrackLabel);
+
         const args = buildFfmpegAudioOrdinalArgs(
           {
             inputPath: inspected.filePath,
@@ -218,7 +258,9 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
             channelTarget: (track.channelTarget === "STEREO"
               ? "stereo"
               : "up_to_51") as ChannelTarget,
-            offsetMs: track.offsetMs,
+            offsetMs: effectiveOffsetMs,
+            tempoRatio,
+            trackTitle: outputTitle,
           },
           audioOrdinal,
         );
@@ -233,14 +275,23 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         transcodeStepIndex += 1;
 
         const tempInspected = await inspectReleaseFile(releaseId, tempPath, signal);
-        const tempMkvId = resolveInspectedMkvTrackId(
-          tempInspected,
-          "audio",
-          tempInspected.probe.audio[0]?.streamIndex ?? 0,
-        );
+        const tempMkvId =
+          resolveSoleMkvTrackId(tempInspected.mkv?.tracks ?? [], "audio") ??
+          resolveInspectedMkvTrackId(
+            tempInspected,
+            "audio",
+            tempInspected.probe.audio[0]?.streamIndex ?? 0,
+          );
         if (tempMkvId == null) throw new Error("Не удалось прочитать перекодированное аудио");
 
-        addAudioTrack(track.sortOrder, tempPath, tempMkvId, track.isDefault, 0);
+        addAudioTrack(
+          track.sortOrder,
+          tempPath,
+          tempMkvId,
+          track.isDefault,
+          0,
+          mkvOutputTrackName(track.sourceTrackLabel),
+        );
 
         if (track.keepOriginal) {
           if (originalMkvId == null) {
@@ -251,7 +302,8 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
             inspected.filePath,
             originalMkvId,
             false,
-            track.offsetMs,
+            effectiveOffsetMs,
+            mkvOutputTrackName(track.sourceTrackLabel, "original"),
           );
         }
       } else {
@@ -263,7 +315,8 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
           inspected.filePath,
           originalMkvId,
           track.isDefault,
-          track.offsetMs,
+          effectiveOffsetMs,
+          mkvOutputTrackName(track.sourceTrackLabel),
         );
       }
     }
@@ -303,9 +356,10 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
         kind: "subtitle",
         filePath: inspected.filePath,
         mkvTrackId: mkvId,
-        isDefault: false,
+        isDefault: track.isDefault,
         offsetMs: 0,
         syncFileIndex,
+        trackName: mkvOutputTrackName(track.sourceTrackLabel),
       });
     }
 
@@ -327,6 +381,29 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       progressStepIndex: null,
       progressStepTotal: null,
     });
+
+    for (const track of resolvedTracks) {
+      if (track.kind !== "audio" || track.offsetMs === 0) continue;
+      const input = inputFiles[track.syncFileIndex];
+      if (!input) continue;
+      input.trackSync = input.trackSync ?? [];
+      input.trackSync.push({
+        trackId: track.mkvTrackId,
+        offsetMs: track.offsetMs,
+      });
+    }
+
+    for (const track of resolvedTracks) {
+      if (!track.trackName) continue;
+      const input = inputFiles[track.syncFileIndex];
+      if (!input) continue;
+      input.trackNames = input.trackNames ?? [];
+      input.trackNames.push({
+        trackId: track.mkvTrackId,
+        name: track.trackName,
+      });
+      input.noTrackTags = true;
+    }
 
     const muxPlan = buildMkvmergeOutputPlan(resolvedTracks);
     for (const [fileIndex, flags] of muxPlan.defaultFlagsByFileIndex) {

@@ -1,8 +1,10 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { releaseInclude } from "@/lib/movies/movie-include";
+import { loadMovieFileMeta } from "@/lib/releases/load-movie-file-meta";
 import { syncReleaseTracksFromProbe } from "@/lib/releases/release-tracks";
 import { probeMediaFile } from "@/lib/media/ffprobe";
+import { normalizeFilePathInput } from "@/lib/shared/display-path";
 
 type ReleaseDb = Pick<PrismaClient, "release" | "$transaction">;
 
@@ -26,11 +28,19 @@ export async function probeRelease(
   if (!release) {
     throw new Error("Релиз не найден");
   }
-  if (!release.filePath) {
+  const filePath = normalizeFilePathInput(release.filePath);
+  if (!filePath) {
     throw new Error("У релиза не указан путь к файлу");
   }
 
-  const probe = await probeMediaFile(release.filePath);
+  try {
+    const { assertMovieFileReadable } = await loadMovieFileMeta();
+    await assertMovieFileReadable(filePath);
+  } catch {
+    throw new Error("Файл не найден по указанному пути");
+  }
+
+  const probe = await probeMediaFile(filePath);
   await db.$transaction(async (tx) => {
     await tx.release.update({
       where: { id: releaseId },

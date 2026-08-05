@@ -94,12 +94,14 @@ export function applyProbeToTrackEditor(
   if (
     data.fileSize != null &&
     data.fileMtime != null &&
+    data.fileDownloadedAt != null &&
     data.fileHash != null &&
     editor.setPendingFileMeta
   ) {
     editor.setPendingFileMeta({
       fileSize: data.fileSize,
       fileMtime: data.fileMtime,
+      fileDownloadedAt: data.fileDownloadedAt,
       fileHash: data.fileHash,
     });
   }

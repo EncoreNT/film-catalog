@@ -1,5 +1,11 @@
+import {
+  DEFAULT_MOVIE_LIST_ORDER,
+  DEFAULT_MOVIE_LIST_SORT,
+} from "@/lib/movies/movie-list-defaults";
+
 export const FILTER_DEFAULTS: Record<string, string> = {
-  sort: "title",
+  sort: DEFAULT_MOVIE_LIST_SORT,
+  order: DEFAULT_MOVIE_LIST_ORDER,
   watched: "all",
 };
 

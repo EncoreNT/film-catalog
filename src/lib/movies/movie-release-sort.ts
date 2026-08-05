@@ -3,6 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 export const RELEASE_AGGREGATE_SORT_FIELDS = [
   "durationSeconds",
   "fileSize",
+  "fileDownloadedAt",
 ] as const;
 
 export type ReleaseAggregateSortField =
@@ -11,6 +12,7 @@ export type ReleaseAggregateSortField =
 type ReleaseSortSlice = {
   durationSeconds: number | null;
   fileSize: number | null;
+  fileDownloadedAt: Date | null;
 };
 
 type MovieSortCandidate = {
@@ -54,6 +56,21 @@ export function movieFileSizeSortKey(
   return hasValue ? sum : null;
 }
 
+/** Latest «скачан» among releases (max fileDownloadedAt). */
+export function movieFileDownloadedAtSortKey(
+  releases: ReleaseSortSlice[],
+): number | null {
+  let max: number | null = null;
+  for (const release of releases) {
+    if (!release.fileDownloadedAt) continue;
+    const ms = release.fileDownloadedAt.getTime();
+    if (max == null || ms > max) {
+      max = ms;
+    }
+  }
+  return max;
+}
+
 export function releaseAggregateSortKey(
   sort: ReleaseAggregateSortField,
   releases: ReleaseSortSlice[],
@@ -63,6 +80,8 @@ export function releaseAggregateSortKey(
       return movieDurationSortKey(releases);
     case "fileSize":
       return movieFileSizeSortKey(releases);
+    case "fileDownloadedAt":
+      return movieFileDownloadedAtSortKey(releases);
   }
 }
 
@@ -100,6 +119,7 @@ export const releaseAggregateSortSelect = {
     select: {
       durationSeconds: true,
       fileSize: true,
+      fileDownloadedAt: true,
     },
   },
 } satisfies Prisma.MovieSelect;

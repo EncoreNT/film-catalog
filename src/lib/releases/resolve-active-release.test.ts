@@ -13,6 +13,7 @@ function release(
     filePath: null,
     fileSize: null,
     fileMtime: null,
+    fileDownloadedAt: null,
     fileHash: null,
     releaseType: partial.releaseType ?? "bdrip",
     version: "theatrical",

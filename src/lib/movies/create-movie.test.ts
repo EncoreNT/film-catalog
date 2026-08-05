@@ -80,6 +80,7 @@ describe("probeOnlyMovie", () => {
     readReleaseFileMetaMock.mockResolvedValue({
       fileSize: 42_000_000_000,
       fileMtime: new Date("2024-06-01T12:00:00.000Z"),
+      fileDownloadedAt: new Date("2024-05-15T08:00:00.000Z"),
       fileHash: "deadbeef",
       trimmedPath: filePath,
     });
@@ -101,6 +102,7 @@ describe("probeOnlyMovie", () => {
     expect(data.fileSize).toBe(42_000_000_000);
     expect(data.fileHash).toBe("deadbeef");
     expect(data.fileMtime).toBe("2024-06-01T12:00:00.000Z");
+    expect(data.fileDownloadedAt).toBe("2024-05-15T08:00:00.000Z");
 
     const rows = probeToAudioRows(data.audio);
     expect(data.audio).toHaveLength(2);

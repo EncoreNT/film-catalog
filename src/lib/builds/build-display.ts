@@ -11,6 +11,7 @@ import { formatBitrateKbps } from "@/lib/shared/resolution";
 import { releaseTier } from "@/lib/media/release-tags";
 import type { ReleaseTier } from "@/lib/media/release-tags";
 import type { BuildTrackKind } from "@/lib/builds/build-recipe-state";
+import type { BuildAudioSyncMode } from "@/lib/builds/build-audio-sync";
 import {
   isAc3FamilyCodec,
   isHigherThanAc3Codec,
@@ -24,7 +25,9 @@ export type TranscodeQualityHint = {
 /** Inline hint when transcode mode is unlikely to improve audio quality. */
 export function transcodeQualityHint(
   sourceCodec: string | null | undefined,
+  options?: { syncMode?: BuildAudioSyncMode },
 ): TranscodeQualityHint | null {
+  if (options?.syncMode === "fit") return null;
   if (isAc3FamilyCodec(sourceCodec)) {
     return {
       title: "Уже AC-3 или E-AC3",

@@ -10,6 +10,12 @@ describe("parseListQuery", () => {
   it("defaults catalog page size to 70", () => {
     expect(queryFrom({}).limit).toBe(70);
   });
+
+  it("defaults sort to fileDownloadedAt desc", () => {
+    const q = queryFrom({});
+    expect(q.sort).toBe("fileDownloadedAt");
+    expect(q.order).toBe("desc");
+  });
 });
 
 describe("buildMovieWhere", () => {
@@ -176,7 +182,7 @@ describe("buildMovieWhere", () => {
 
 describe("buildMovieOrder", () => {
   it("always adds id as a stable tiebreaker for pagination (v7 array form)", () => {
-    expect(buildMovieOrder(queryFrom({ sort: "title" }))).toEqual([
+    expect(buildMovieOrder(queryFrom({ sort: "title", order: "asc" }))).toEqual([
       { title: "asc" },
       { id: "asc" },
     ]);
@@ -184,11 +190,11 @@ describe("buildMovieOrder", () => {
       { year: "desc" },
       { id: "desc" },
     ]);
-    expect(buildMovieOrder(queryFrom({ sort: "rating" }))).toEqual([
+    expect(buildMovieOrder(queryFrom({ sort: "rating", order: "asc" }))).toEqual([
       { rating: "asc" },
       { id: "asc" },
     ]);
-    expect(buildMovieOrder(queryFrom({ sort: "watchedAt" }))).toEqual([
+    expect(buildMovieOrder(queryFrom({ sort: "watchedAt", order: "asc" }))).toEqual([
       { watchedAt: "asc" },
       { id: "asc" },
     ]);
@@ -196,7 +202,10 @@ describe("buildMovieOrder", () => {
       buildMovieOrder(queryFrom({ sort: "durationSeconds" })),
     ).toThrow();
     expect(() => buildMovieOrder(queryFrom({ sort: "fileSize" }))).toThrow();
-    expect(buildMovieOrder(queryFrom({ sort: "createdAt" }))).toEqual([
+    expect(() =>
+      buildMovieOrder(queryFrom({ sort: "fileDownloadedAt" })),
+    ).toThrow();
+    expect(buildMovieOrder(queryFrom({ sort: "createdAt", order: "asc" }))).toEqual([
       { createdAt: "asc" },
       { id: "asc" },
     ]);

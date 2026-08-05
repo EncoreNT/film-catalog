@@ -1,5 +1,6 @@
 import type { ChannelTarget, TranscodeCodec } from "@/lib/builds/build-presets";
 import { channelTargetToLayout } from "@/lib/builds/build-presets";
+import { buildAtempoFilterChain } from "@/lib/builds/build-audio-sync";
 
 export interface FfmpegTranscodeInput {
   inputPath: string;
@@ -9,6 +10,10 @@ export interface FfmpegTranscodeInput {
   bitrateKbps: number;
   channelTarget: ChannelTarget;
   offsetMs: number;
+  /** ffmpeg atempo factor (audio duration / video duration). */
+  tempoRatio?: number;
+  /** Matroska / player track title on the transcoded output stream. */
+  trackTitle?: string;
 }
 
 export function buildFfmpegTranscodeArgs(input: FfmpegTranscodeInput): string[] {
@@ -74,6 +79,13 @@ export function buildFfmpegAudioOrdinalArgs(
     `0:a:${audioOrdinal}`,
     "-vn",
     "-sn",
+  );
+
+  if (input.tempoRatio != null && input.tempoRatio > 0 && Math.abs(input.tempoRatio - 1) > 1e-4) {
+    args.push("-af", buildAtempoFilterChain(input.tempoRatio));
+  }
+
+  args.push(
     "-c:a",
     input.codec,
     "-b:a",
@@ -84,6 +96,11 @@ export function buildFfmpegAudioOrdinalArgs(
     args.push("-ac", "2");
   } else {
     args.push("-ac", "6");
+  }
+
+  const title = input.trackTitle?.trim();
+  if (title) {
+    args.push("-metadata:s:a:0", `title=${title}`);
   }
 
   args.push("-progress", "pipe:1", "-nostats", input.outputPath);

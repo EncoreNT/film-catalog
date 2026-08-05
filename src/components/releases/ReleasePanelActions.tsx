@@ -125,6 +125,7 @@ export function ReleasePanelActions({
   const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [probeError, setProbeError] = useState<string | null>(null);
 
   const { exportActive, loading: exportActionLoading } = exportJobState;
 
@@ -176,7 +177,7 @@ export function ReleasePanelActions({
 
   const handleRescan = async () => {
     setLoading(true);
-    setError(null);
+    setProbeError(null);
     try {
       await apiFetch(
         `/api/movies/${movieId}/releases/${activeRelease.id}/probe`,
@@ -184,12 +185,18 @@ export function ReleasePanelActions({
         "Не удалось проанализировать файл",
       );
       setConfirmKind(null);
+      setProbeError(null);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
+      setProbeError(err instanceof Error ? err.message : "Ошибка");
     } finally {
       setLoading(false);
     }
+  };
+
+  const closeProbeDialog = () => {
+    setConfirmKind(null);
+    setProbeError(null);
   };
 
   const handleDelete = async (deleteFile: boolean) => {
@@ -247,7 +254,10 @@ export function ReleasePanelActions({
               label="Пересканировать"
               icon={<ScanSearch className="h-3.5 w-3.5 shrink-0" aria-hidden />}
               disabled={!activeRelease.filePath || actionsBusy}
-              onClick={() => setConfirmKind("probe")}
+              onClick={() => {
+                setProbeError(null);
+                setConfirmKind("probe");
+              }}
             />
             <ReleaseActionsMenuItem
               label={MOVE_RELEASE_MENU_LABEL}
@@ -275,7 +285,7 @@ export function ReleasePanelActions({
             ) : null}
             <ReleaseActionsMenuItem
               label="Собрать релиз"
-              href={`/movies/${movieSlug}/builds/new`}
+              href={`/movies/${movieSlug}/builds/new?release=${activeRelease.id}`}
               icon={<Wand2 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
             />
             <ReleaseActionsMenuItem
@@ -301,11 +311,20 @@ export function ReleasePanelActions({
       </div>
       <ConfirmDialog
         open={confirmKind === "probe"}
-        onClose={() => setConfirmKind(null)}
+        onClose={closeProbeDialog}
         onConfirm={handleRescan}
         loading={loading}
         title="Пересканировать файл?"
-        description="Дорожки и длительность будут перезаписаны данными из ffprobe."
+        description={
+          <>
+            Дорожки и длительность будут перезаписаны данными из ffprobe.
+            {probeError ? (
+              <span className="mt-2 block text-danger" role="alert">
+                {probeError}
+              </span>
+            ) : null}
+          </>
+        }
         confirmLabel="Пересканировать"
         tone="accent"
       />

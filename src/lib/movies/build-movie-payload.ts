@@ -62,6 +62,7 @@ export function buildMovieCreatePayload(input: MovieCreatePayloadInput) {
 export interface MovieFileMetaPayload {
   fileSize: number;
   fileMtime: string;
+  fileDownloadedAt: string;
   fileHash: string;
 }
 
@@ -115,6 +116,7 @@ export function buildReleaseUpdatePayload(input: ReleaseUpdatePayloadInput) {
       ? {
           fileSize: input.fileMeta.fileSize,
           fileMtime: input.fileMeta.fileMtime,
+          fileDownloadedAt: input.fileMeta.fileDownloadedAt,
           fileHash: input.fileMeta.fileHash,
         }
       : {}),

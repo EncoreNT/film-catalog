@@ -18,6 +18,7 @@ function release(
     filePath: partial.filePath ?? null,
     fileSize: partial.fileSize ?? null,
     fileMtime: partial.fileMtime ?? null,
+    fileDownloadedAt: partial.fileDownloadedAt ?? null,
     fileHash: partial.fileHash ?? null,
     releaseType: partial.releaseType ?? null,
     version: "theatrical",

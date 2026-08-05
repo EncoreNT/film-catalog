@@ -159,6 +159,7 @@ describe("buildReleaseUpdatePayload", () => {
       fileMeta: {
         fileSize: 100,
         fileMtime: "2024-01-01T00:00:00.000Z",
+        fileDownloadedAt: "2023-12-20T00:00:00.000Z",
         fileHash: "abc",
       },
       externalStorageId: 2,
@@ -168,6 +169,7 @@ describe("buildReleaseUpdatePayload", () => {
       subtitleRows: [subtitleRow],
     });
     expect(payload.fileSize).toBe(100);
+    expect(payload.fileDownloadedAt).toBe("2023-12-20T00:00:00.000Z");
     expect(payload.fileHash).toBe("abc");
     expect(payload.externalStorageId).toBe(2);
   });

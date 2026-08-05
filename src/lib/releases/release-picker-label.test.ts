@@ -11,6 +11,7 @@ function stubRelease(overrides: Partial<ReleaseWithTracks>): ReleaseWithTracks {
     filePath: null,
     fileSize: null,
     fileMtime: null,
+    fileDownloadedAt: null,
     fileHash: null,
     releaseType: "dvdrip",
     version: "theatrical",

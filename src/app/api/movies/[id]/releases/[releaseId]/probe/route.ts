@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { probeRelease } from "@/lib/releases/probe-release";
 import {
   isErrorResponse,
-  jsonError,
+  mapDomainError,
   parseReleaseId,
   parseRouteId,
   type ReleaseRouteContext,
@@ -19,14 +19,6 @@ export async function POST(_request: Request, context: ReleaseRouteContext) {
     const updated = await probeRelease(movieId, releaseId);
     return NextResponse.json(updated);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Не удалось проанализировать файл";
-    const status =
-      message === "Релиз не найден"
-        ? 404
-        : message === "У релиза не указан путь к файлу"
-          ? 400
-          : 400;
-    return jsonError(message, status);
+    return mapDomainError(err, "Не удалось проанализировать файл");
   }
 }

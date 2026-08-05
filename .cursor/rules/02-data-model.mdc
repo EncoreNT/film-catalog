@@ -42,7 +42,7 @@ Relations: `releases[]`, `parts[]` (MoviePart), `movieGenres[]`, `slots[]` (Fran
 
 ### Release (файл / релиз)
 
-- `filePath` (@unique), `fileSize`, `fileMtime`, `fileHash` — дедуп и move detection
+- `filePath` (@unique), `fileSize`, `fileMtime`, `fileDownloadedAt` (дата «скачан» на **Release**; фиксируется, пересчёт с диска только при смене size+hash), `fileHash` — дедуп и move detection
 - `releaseType`, `version`, `durationSeconds`
 - `externalStorageId` → `ExternalStorage` (null = локальный диск)
 - `movieId` → Movie

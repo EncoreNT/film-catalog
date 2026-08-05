@@ -85,6 +85,17 @@ export function resolveMkvTrackIdByOrdinal(
   return ofType[ordinalAmongType]?.id ?? null;
 }
 
+/** Matroska track id when the file contains exactly one track of the given kind (e.g. ffmpeg .mka). */
+export function resolveSoleMkvTrackId(
+  tracks: MkvTrackInfo[],
+  kind: "video" | "audio" | "subtitle",
+): number | null {
+  const mkvType = kind === "subtitle" ? "subtitles" : kind;
+  const ofType = tracks.filter((t) => t.type === mkvType);
+  if (ofType.length !== 1) return null;
+  return ofType[0]!.id;
+}
+
 export function ffprobeOrdinalAmongType(
   streams: { index: number; codec_type?: string }[],
   streamIndex: number,

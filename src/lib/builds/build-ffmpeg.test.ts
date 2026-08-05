@@ -24,6 +24,42 @@ describe("build-ffmpeg", () => {
     expect(args).toContain("0.25");
   });
 
+  it("applies atempo when tempoRatio is set", () => {
+    const args = buildFfmpegAudioOrdinalArgs(
+      {
+        inputPath: "/in.mkv",
+        streamIndex: 1,
+        outputPath: "/tmp/out.mka",
+        codec: "eac3",
+        bitrateKbps: 768,
+        channelTarget: "stereo",
+        offsetMs: 0,
+        tempoRatio: 1.003,
+      },
+      0,
+    );
+    expect(args).toContain("-af");
+    expect(args.some((a) => String(a).includes("atempo"))).toBe(true);
+  });
+
+  it("embeds track title in transcoded output metadata", () => {
+    const args = buildFfmpegAudioOrdinalArgs(
+      {
+        inputPath: "/in.mkv",
+        streamIndex: 1,
+        outputPath: "/tmp/out.mka",
+        codec: "eac3",
+        bitrateKbps: 768,
+        channelTarget: "up_to_51",
+        offsetMs: 0,
+        trackTitle: "English Original",
+      },
+      0,
+    );
+    expect(args).toContain("-metadata:s:a:0");
+    expect(args).toContain("title=English Original");
+  });
+
   it("parses ffmpeg speed values", () => {
     expect(parseFfmpegSpeed("1.05x")).toBe(1.05);
     expect(parseFfmpegSpeed("N/A")).toBeNull();

@@ -9,6 +9,7 @@ import { mediaJobFileExists } from "@/lib/media-jobs/file-exists";
 import { mediaJobProgressMessage } from "@/lib/media-jobs/job-progress-message";
 import { exportPartPath } from "@/lib/releases/export-part-path";
 import { readMovieFileMeta } from "@/lib/releases/movie-file-meta";
+import { resolveReleaseFileDownloadedAt } from "@/lib/releases/release-file-downloaded-at";
 import {
   finishMove,
   isMoveCancelRequested,
@@ -126,6 +127,24 @@ export async function runMoveJob(moveId: number, signal?: AbortSignal) {
 
     const meta = await readMovieFileMeta(job.targetPath);
 
+    const releaseBefore = await prisma.release.findUnique({
+      where: { id: job.releaseId },
+      select: {
+        fileDownloadedAt: true,
+        fileHash: true,
+        fileSize: true,
+      },
+    });
+
+    const nextFileDownloadedAt = releaseBefore
+      ? resolveReleaseFileDownloadedAt(
+          releaseBefore,
+          meta.fileDownloadedAt,
+          meta.fileHash,
+          meta.fileSize,
+        )
+      : meta.fileDownloadedAt;
+
     await prisma.$transaction(async (tx) => {
       await tx.release.update({
         where: { id: job.releaseId },
@@ -133,6 +152,7 @@ export async function runMoveJob(moveId: number, signal?: AbortSignal) {
           filePath: job.targetPath,
           fileSize: meta.fileSize,
           fileMtime: meta.fileMtime,
+          fileDownloadedAt: nextFileDownloadedAt,
           fileHash: meta.fileHash,
           ...(job.externalStorageId != null
             ? { externalStorage: { connect: { id: job.externalStorageId } } }

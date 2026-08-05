@@ -347,8 +347,8 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
           <h2 className="font-mono-tech mb-4 text-muted">файл</h2>
           {release.storageLabel ||
           release.fileSizeLabel ||
-          release.createdAtLabel ||
-          release.updatedAtLabel ? (
+          release.fileDownloadedAtLabel ||
+          release.catalogAddedAtLabel ? (
             <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
               {release.storageLabel ? (
                 <ReleaseStorageBadge
@@ -364,19 +364,19 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
                   </span>
                 </span>
               ) : null}
-              {release.createdAtLabel ? (
+              {release.fileDownloadedAtLabel ? (
                 <span className="font-mono-tech text-faint">
-                  добавлен{" "}
+                  скачан{" "}
                   <span className="font-mono text-sm text-muted">
-                    {release.createdAtLabel}
+                    {release.fileDownloadedAtLabel}
                   </span>
                 </span>
               ) : null}
-              {release.updatedAtLabel ? (
+              {release.catalogAddedAtLabel ? (
                 <span className="font-mono-tech text-faint">
-                  обновлён{" "}
+                  добавлен в каталог{" "}
                   <span className="font-mono text-sm text-muted">
-                    {release.updatedAtLabel}
+                    {release.catalogAddedAtLabel}
                   </span>
                 </span>
               ) : null}

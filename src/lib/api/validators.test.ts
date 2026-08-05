@@ -22,6 +22,12 @@ describe("movieListQuerySchema", () => {
     );
   });
 
+  it("accepts fileDownloadedAt sort", () => {
+    expect(
+      movieListQuerySchema.parse({ sort: "fileDownloadedAt" }).sort,
+    ).toBe("fileDownloadedAt");
+  });
+
   it("rejects invalid sort field", () => {
     expect(() =>
       movieListQuerySchema.parse({ sort: "unknown" }),

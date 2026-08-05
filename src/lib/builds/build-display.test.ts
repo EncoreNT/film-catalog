@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { transcodeQualityHint } from "@/lib/builds/build-display";
 
 describe("transcodeQualityHint", () => {
+  it("returns null when transcode is for fit-to-video sync", () => {
+    expect(transcodeQualityHint("ac3", { syncMode: "fit" })).toBeNull();
+    expect(transcodeQualityHint("aac", { syncMode: "fit" })).toBeNull();
+  });
+
   it("returns AC-3 family hint", () => {
     expect(transcodeQualityHint("ac3")).toEqual({
       title: "Уже AC-3 или E-AC3",

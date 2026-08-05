@@ -3,6 +3,7 @@ import { normalizeFilePathInput } from "@/lib/shared/display-path";
 import { probeMediaFile } from "@/lib/media/ffprobe";
 import { loadMovieFileMeta } from "@/lib/releases/load-movie-file-meta";
 import { syncReleaseTracks } from "@/lib/releases/release-tracks";
+import { resolveReleaseFileDownloadedAt } from "@/lib/releases/release-file-downloaded-at";
 import type { z } from "zod";
 import type { movieCreateSchema, releaseCreateSchema, releaseUpdateSchema } from "@/lib/api/validators";
 
@@ -72,13 +73,20 @@ export async function resolveReleaseProbeData(input: ReleaseCreateInput) {
 export async function readReleaseFileMeta(filePath: string | null | undefined) {
   const trimmedPath = normalizeFilePathInput(filePath);
   if (!trimmedPath) {
-    return { fileSize: null, fileMtime: null, fileHash: null, trimmedPath: null };
+    return {
+      fileSize: null,
+      fileMtime: null,
+      fileDownloadedAt: null,
+      fileHash: null,
+      trimmedPath: null,
+    };
   }
   const { readMovieFileMeta } = await loadMovieFileMeta();
   const meta = await readMovieFileMeta(trimmedPath);
   return {
     fileSize: meta.fileSize,
     fileMtime: meta.fileMtime,
+    fileDownloadedAt: meta.fileDownloadedAt,
     fileHash: meta.fileHash,
     trimmedPath,
   };
@@ -91,7 +99,7 @@ export async function createReleaseWithTracks(
 ) {
   const { video, audio, subtitles, durationSeconds } =
     await resolveReleaseProbeData(input);
-  const { fileSize, fileMtime, fileHash, trimmedPath } =
+  const { fileSize, fileMtime, fileDownloadedAt, fileHash, trimmedPath } =
     await readReleaseFileMeta(input.filePath);
 
   const release = await db.release.create({
@@ -103,6 +111,7 @@ export async function createReleaseWithTracks(
       filePath: trimmedPath,
       fileSize,
       fileMtime,
+      fileDownloadedAt,
       fileHash,
       externalStorageId: input.externalStorageId ?? null,
     },
@@ -129,6 +138,7 @@ export async function updateReleaseWithTracks(
     filePath,
     fileSize,
     fileMtime,
+    fileDownloadedAt,
     fileHash,
     externalStorageId,
     version,
@@ -137,13 +147,46 @@ export async function updateReleaseWithTracks(
 
   let nextFileSize = fileSize;
   let nextFileMtime = fileMtime ? new Date(fileMtime) : fileMtime;
+  let nextFileDownloadedAt = fileDownloadedAt
+    ? new Date(fileDownloadedAt)
+    : fileDownloadedAt;
   let nextFileHash = fileHash;
+
+  const fileMetaTouched =
+    fileSize !== undefined ||
+    fileMtime !== undefined ||
+    fileHash !== undefined ||
+    fileDownloadedAt !== undefined;
+
+  if (fileMetaTouched) {
+    const existing = await db.release.findUnique({
+      where: { id: releaseId },
+      select: {
+        fileDownloadedAt: true,
+        fileHash: true,
+        fileSize: true,
+      },
+    });
+    if (existing && nextFileDownloadedAt != null) {
+      const nextFromStat =
+        nextFileDownloadedAt instanceof Date
+          ? nextFileDownloadedAt
+          : new Date(nextFileDownloadedAt);
+      nextFileDownloadedAt = resolveReleaseFileDownloadedAt(
+        existing,
+        nextFromStat,
+        nextFileHash ?? existing.fileHash,
+        nextFileSize ?? existing.fileSize,
+      );
+    }
+  }
 
   if (filePath !== undefined) {
     const trimmed = normalizeFilePathInput(filePath);
     if (!trimmed) {
       nextFileSize = null;
       nextFileMtime = null;
+      nextFileDownloadedAt = null;
       nextFileHash = null;
     }
   }
@@ -159,6 +202,8 @@ export async function updateReleaseWithTracks(
           : normalizeFilePathInput(filePath),
       fileSize: nextFileSize,
       fileMtime: nextFileMtime === undefined ? undefined : nextFileMtime,
+      fileDownloadedAt:
+        nextFileDownloadedAt === undefined ? undefined : nextFileDownloadedAt,
       fileHash: nextFileHash,
       ...(externalStorageId === undefined
         ? {}

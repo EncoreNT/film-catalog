@@ -179,4 +179,26 @@ describe("buildRecipeMappingPreview", () => {
     const errors = mappingPreviewValidationErrors(preview, recipe);
     expect(errors.some((e) => e.code === "mapping_title_mismatch")).toBe(true);
   });
+
+  it("allows customized MKV label when sourceLabel matches the file", () => {
+    const recipe = {
+      outputPath: "/out.mkv",
+      outputReleaseType: null,
+      outputVersion: "theatrical",
+      externalStorageId: null,
+      tracks: [
+        {
+          kind: "audio" as const,
+          sourceReleaseId: 4,
+          sourceStreamIndex: 7,
+          label: "English · Atmos",
+          sourceLabel: "Original",
+          audioMode: "copy" as const,
+        },
+      ],
+    };
+
+    const preview = buildRecipeMappingPreview(recipe, inspected);
+    expect(mappingPreviewValidationErrors(preview, recipe)).toEqual([]);
+  });
 });

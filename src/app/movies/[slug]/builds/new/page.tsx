@@ -8,6 +8,7 @@ import { generateMovieMetadata } from "@/lib/movies/load-movie-by-slug";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ release?: string }>;
 }
 
 export async function generateMetadata({
@@ -17,8 +18,16 @@ export async function generateMetadata({
   return generateMovieMetadata(slug, "Сборка релиза");
 }
 
-export default async function NewReleaseBuildPage({ params }: PageProps) {
+export default async function NewReleaseBuildPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { release: releaseParam } = await searchParams;
+  const baseReleaseId = releaseParam ? Number.parseInt(releaseParam, 10) : null;
+  const validBaseReleaseId =
+    baseReleaseId != null &&
+    Number.isFinite(baseReleaseId) &&
+    baseReleaseId > 0
+      ? baseReleaseId
+      : null;
 
   const movie = await prisma.movie.findUnique({
     where: { slug },
@@ -34,6 +43,7 @@ export default async function NewReleaseBuildPage({ params }: PageProps) {
         movieTitle={movie.title}
         movieYear={movie.year}
         releases={movie.releases}
+        baseReleaseId={validBaseReleaseId}
       />
     </ReleaseEditPageLayout>
   );

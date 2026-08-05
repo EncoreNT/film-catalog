@@ -10,6 +10,10 @@ import { releaseInclude } from "@/lib/movies/movie-include";
 import { serializeBuild } from "@/lib/builds/build-serialize";
 import { sortBuildsForQueue } from "@/lib/builds/build-queue-display";
 import { recipeRequiresTranscode, buildTracksRequireTranscode } from "@/lib/builds/build-requires-transcode";
+import {
+  clientSyncModeToPrisma,
+  normalizeAudioSyncMode,
+} from "@/lib/builds/build-audio-sync";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
@@ -74,7 +78,14 @@ export async function enqueueBuild(
               ? "STEREO"
               : "UP_TO_51"
             : null,
-          offsetMs: track.offsetMs ?? 0,
+          offsetMs:
+            track.kind === "audio" && normalizeAudioSyncMode(track) === "shift"
+              ? track.offsetMs ?? 0
+              : 0,
+          audioSyncMode:
+            track.kind === "audio"
+              ? clientSyncModeToPrisma(normalizeAudioSyncMode(track))
+              : undefined,
           isDefault: track.isDefault ?? false,
           forced: track.forced ?? false,
           keepOriginal: track.keepOriginal ?? false,

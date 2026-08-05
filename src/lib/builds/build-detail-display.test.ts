@@ -33,6 +33,7 @@ function track(
     transcodeBitrate: null,
     channelTarget: null,
     offsetMs: 0,
+    audioSyncMode: "NONE",
     isDefault: false,
     forced: false,
     keepOriginal: false,

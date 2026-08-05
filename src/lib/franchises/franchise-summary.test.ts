@@ -81,6 +81,7 @@ function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
     filePath: null,
     fileSize: null,
     fileMtime: null,
+    fileDownloadedAt: null,
     fileHash: null,
     releaseType: null,
     version: "theatrical",

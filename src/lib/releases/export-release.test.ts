@@ -11,6 +11,7 @@ function release(partial: Partial<ReleaseWithTracks>): ReleaseWithTracks {
     filePath: partial.filePath ?? "/mnt/d/Movies/sample.mkv",
     fileSize: null,
     fileMtime: null,
+    fileDownloadedAt: null,
     fileHash: null,
     releaseType: null,
     version: "theatrical",

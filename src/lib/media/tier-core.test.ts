@@ -34,6 +34,7 @@ function release(partial: Partial<ReleaseWithTracks> & { id: number }): ReleaseW
     filePath: null,
     fileSize: null,
     fileMtime: null,
+    fileDownloadedAt: null,
     fileHash: null,
     releaseType: partial.releaseType ?? null,
     version: "theatrical",
