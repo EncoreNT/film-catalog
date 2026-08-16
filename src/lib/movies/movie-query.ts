@@ -12,6 +12,7 @@ import {
   DEFAULT_MOVIE_LIST_ORDER,
   DEFAULT_MOVIE_LIST_SORT,
 } from "@/lib/movies/movie-list-defaults";
+import { buildMovieWatchedFilter } from "@/lib/movies/movie-watched";
 
 export type { MovieWithTracks } from "@/lib/movies/movie-include";
 
@@ -140,10 +141,6 @@ export function buildMovieWhere(
     }
   }
 
-  if (query.minRating) {
-    where.rating = { gte: query.minRating };
-  }
-
   if (query.minDuration || query.maxDuration) {
     const minSec = query.minDuration ? query.minDuration * 60 : undefined;
     const maxSec = query.maxDuration ? query.maxDuration * 60 : undefined;
@@ -168,16 +165,15 @@ export function buildMovieWhere(
   }
 
   const hasWatchedRange = Boolean(query.watchedFrom || query.watchedTo);
-  if (query.watched === "unwatched" && hasWatchedRange) {
-    where.id = -1;
-  } else if (query.watched === "watched") {
-    where.watchedAt = {
-      not: null,
-      ...(query.watchedFrom ? { gte: new Date(query.watchedFrom) } : {}),
-      ...(query.watchedTo ? { lte: new Date(query.watchedTo) } : {}),
-    };
-  } else if (query.watched === "unwatched") {
-    where.watchedAt = null;
+  if (query.watched === "watched" || query.watched === "unwatched") {
+    appendMovieAnd(
+      where,
+      buildMovieWatchedFilter({
+        watched: query.watched,
+        watchedFrom: query.watchedFrom,
+        watchedTo: query.watchedTo,
+      }),
+    );
   } else if (hasWatchedRange) {
     where.watchedAt = {
       ...(query.watchedFrom ? { gte: new Date(query.watchedFrom) } : {}),
@@ -272,7 +268,9 @@ export function buildMovieOrder(
     case "createdAt":
       return [{ createdAt: order }, { id: order }];
     case "rating":
-      return [{ rating: order }, { id: order }];
+      throw new Error(
+        `Sort "${query.sort}" is handled by fetchMovieList rating aggregate ordering`,
+      );
     case "watchedAt":
       return [{ watchedAt: order }, { id: order }];
     case "durationSeconds":

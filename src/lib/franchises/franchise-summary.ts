@@ -27,6 +27,7 @@ import {
   FRANCHISE_SLOT_FUTURE_ARIA,
   FRANCHISE_SLOT_MISSING_ARIA,
 } from "@/lib/franchises/franchise-slot-copy";
+import { computeAverageRating } from "@/lib/movies/movie-rating";
 
 function primaryRelease(movie: MovieWithTracks | null) {
   if (!movie) return null;
@@ -273,7 +274,7 @@ export function computeFranchiseSummary(
       yearHint: slot.yearHint ?? null,
       isAnnounced: slot.isAnnounced,
       slug: movie?.slug ?? null,
-      rating: movie?.rating ?? null,
+      rating: movie ? computeAverageRating(movie.movieRatings) : null,
       durationLabel,
       genreLabels: movie
         ? orderedMovieGenres(movie).map((g) => displayGenreName(g.name))
@@ -312,8 +313,9 @@ export function computeFranchiseSummary(
       runtimeSeconds += release.durationSeconds;
       runtimeHas = true;
     }
-    if (movie.rating != null) {
-      ratingSum += movie.rating;
+    const avg = computeAverageRating(movie.movieRatings);
+    if (avg != null) {
+      ratingSum += avg;
       ratedCount += 1;
     }
   }

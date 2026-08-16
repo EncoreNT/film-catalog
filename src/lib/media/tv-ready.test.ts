@@ -137,12 +137,25 @@ describe("isTvReadyRelease", () => {
     ).toBe(true);
   });
 
-  it("returns false for non-MKV container", () => {
+  it("returns true for MP4 with HEVC and default Russian E-AC-3", () => {
     expect(
       isTvReadyRelease(
         release({
           id: 1,
           filePath: "/mnt/d/Movies/film.mp4",
+          videoTrack: video("hevc"),
+          audioTracks: [audio({ codec: "eac3", isDefault: true })],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("returns false for unsupported container", () => {
+    expect(
+      isTvReadyRelease(
+        release({
+          id: 1,
+          filePath: "/mnt/d/Movies/film.avi",
           videoTrack: video("h264"),
           audioTracks: [audio({ codec: "aac" })],
         }),
@@ -172,7 +185,7 @@ describe("tvReadyBadgeLabel", () => {
 describe("tvReadyMarkLabel", () => {
   it("returns catalog mark label", () => {
     expect(tvReadyMarkLabel()).toBe("Читается телевизором");
-    expect(tvReadyMarkDetail()).toContain("MKV");
+    expect(tvReadyMarkDetail()).toContain("MP4");
     expect(tvReadyFilterChipLabel()).toBe("Для телевизора");
   });
 });

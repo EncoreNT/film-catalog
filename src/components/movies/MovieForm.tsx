@@ -88,7 +88,6 @@ export function MovieEditor({
               year,
               description,
               genres,
-              rating: movie.rating,
               watchedAt,
               partCount: multipartEnabled ? partCount : null,
               parts: multipartEnabled

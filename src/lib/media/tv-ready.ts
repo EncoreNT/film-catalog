@@ -3,8 +3,17 @@ import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 export const TV_COMPATIBLE_AUDIO_CODECS = ["ac3", "eac3", "aac"] as const;
 export const TV_COMPATIBLE_VIDEO_CODECS = ["hevc", "h265", "h264", "avc"] as const;
+export const TV_COMPATIBLE_CONTAINER_EXTENSIONS = [".mkv", ".mp4"] as const;
 
 const RUS_LANGUAGE = "rus";
+
+export function isTvCompatibleContainer(
+  filePath: string | null | undefined,
+): boolean {
+  if (!filePath) return false;
+  const lower = filePath.toLowerCase();
+  return TV_COMPATIBLE_CONTAINER_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
 
 export function tvReadyBadgeLabel(): string {
   return "TV";
@@ -15,7 +24,7 @@ export function tvReadyMarkLabel(): string {
 }
 
 export function tvReadyMarkDetail(): string {
-  return "MKV · H.264/HEVC · русская AC-3/E-AC-3/AAC";
+  return "MKV/MP4 · H.264/HEVC · русская AC-3/E-AC-3/AAC";
 }
 
 /** Short label for catalog filter chip. */
@@ -65,7 +74,7 @@ export function hasTvCompatibleRussianAudioTrack(
 }
 
 export function isTvReadyRelease(release: ReleaseWithTracks): boolean {
-  if (!release.filePath?.toLowerCase().endsWith(".mkv")) return false;
+  if (!isTvCompatibleContainer(release.filePath)) return false;
   if (!hasTvCompatibleVideo(release)) return false;
   return hasTvCompatibleRussianAudioTrack(release);
 }
@@ -77,7 +86,10 @@ export function tvCompatibleTrackHint(): string {
 /** Prisma filter — approximate superset of {@link isTvReadyRelease}. */
 export function tvReadyReleaseWhere(): Prisma.ReleaseWhereInput {
   return {
-    filePath: { endsWith: ".mkv" },
+    OR: [
+      { filePath: { endsWith: ".mkv" } },
+      { filePath: { endsWith: ".mp4" } },
+    ],
     videoTrack: {
       codec: { in: [...TV_COMPATIBLE_VIDEO_CODECS] },
     },

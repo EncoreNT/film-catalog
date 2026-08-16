@@ -27,10 +27,16 @@ ADR: `docs/adr/0002-external-storage-only.md`.
 - `matchKey` — нормализованный `title|year` для поиска дублей (merge candidates)
 - `status` — lifecycle (скан создаёт DRAFT)
 - `coverPath` — относительный путь `covers/<id>.ext`
-- `rating` (1–10), `watchedAt`
+- `watchedAt` — дата просмотра (на уровне фильма; просмотрен = есть `watchedAt` или хотя бы одна оценка; оценка не проставляет дату автоматически)
 - `partCount` — число серий для многосерийного фильма (>1), иначе null (ADR-0014)
 
-Relations: `releases[]`, `parts[]` (MoviePart), `movieGenres[]`, `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
+Relations: `releases[]`, `parts[]` (MoviePart), `movieGenres[]`, `movieRatings[]`, `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
+
+### Rater / MovieRating (ADR-0015)
+
+- `Rater` — именованный оценщик (`name`, `sortOrder`)
+- `MovieRating` — оценка 1–10 per (movie, rater); `@@unique([movieId, raterId])`
+- Средняя оценка **не** хранится на Movie — `computeAverageRating()` в `lib/movies/movie-rating.ts`
 
 ### MoviePart (серия многосерийного фильма, ADR-0014)
 
@@ -98,7 +104,7 @@ Many-to-many через `MovieGenre` с `sortOrder`. Жанры на уровн�
 
 ## Индексы (важные для фильтров)
 
-Movie: status, matchKey, rating, watchedAt
+Movie: status, matchKey, watchedAt
 Release: movieId, fileHash, externalStorageId, releaseType, version, durationSeconds
 VideoTrack: resolutionLabel
 AudioTrack: language, channelLayout, translationType

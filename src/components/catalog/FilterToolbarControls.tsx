@@ -24,13 +24,13 @@ const WATCHED_OPTIONS = [
     value: "watched" as const,
     icon: Eye,
     label: "Просмотренные",
-    description: "Только фильмы с отметкой о просмотре",
+    description: "Только фильмы с оценкой или датой просмотра",
   },
   {
     value: "unwatched" as const,
     icon: EyeOff,
     label: "Непросмотренные",
-    description: "Фильмы без даты просмотра",
+    description: "Без оценок и без даты просмотра",
   },
 ];
 

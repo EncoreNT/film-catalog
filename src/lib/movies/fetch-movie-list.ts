@@ -11,6 +11,10 @@ import {
   releaseAggregateSortSelect,
   sortMovieCandidatesByReleaseAggregate,
 } from "@/lib/movies/movie-release-sort";
+import {
+  isRatingSortOrFilter,
+  fetchRatingSortedMovieIds,
+} from "@/lib/movies/movie-rating-sort";
 
 export async function fetchMovieList(
   query: ReturnType<typeof parseListQuery>,
@@ -19,6 +23,35 @@ export async function fetchMovieList(
   const page = query.page ?? 1;
   const limit = query.limit ?? DEFAULT_MOVIE_LIST_LIMIT;
   const skip = (page - 1) * limit;
+
+  if (isRatingSortOrFilter(query)) {
+    const { pageIds, total } = await fetchRatingSortedMovieIds(where, {
+      sort: query.sort,
+      order: query.order ?? "asc",
+      minRating: query.minRating,
+      skip,
+      take: limit,
+    });
+
+    if (pageIds.length === 0) {
+      return { items: [], total, page, limit };
+    }
+
+    const items = await prisma.movie.findMany({
+      where: { id: { in: pageIds } },
+      include: movieInclude,
+    });
+    const byId = new Map(items.map((movie) => [movie.id, movie]));
+
+    return {
+      items: pageIds
+        .map((id) => byId.get(id))
+        .filter((movie): movie is NonNullable<typeof movie> => movie != null),
+      total,
+      page,
+      limit,
+    };
+  }
 
   if (isReleaseAggregateSort(query.sort)) {
     const [candidates, total] = await Promise.all([

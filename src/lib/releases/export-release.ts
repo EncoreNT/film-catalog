@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { assertDirectoryWritable, resolveSavedExportTargetDir } from "@/lib/db/settings";
-import { isTvReadyRelease } from "@/lib/media/tv-ready";
+import { isTvReadyRelease, TV_COMPATIBLE_CONTAINER_EXTENSIONS } from "@/lib/media/tv-ready";
 import {
   displayFilePath,
   joinRuntimePath,
@@ -52,11 +52,16 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+function hasTvContainerExtension(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return TV_COMPATIBLE_CONTAINER_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
 function normalizeExportFilename(filename: string): string {
   const trimmed = filename.trim();
   if (!trimmed) return "release.mkv";
   return sanitizeFilename(
-    trimmed.toLowerCase().endsWith(".mkv") ? trimmed : `${trimmed}.mkv`,
+    hasTvContainerExtension(trimmed) ? trimmed : `${trimmed}.mkv`,
   );
 }
 

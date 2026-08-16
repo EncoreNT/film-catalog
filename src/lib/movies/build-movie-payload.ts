@@ -71,7 +71,6 @@ export interface MovieUpdatePayloadInput {
   year: number | null;
   description: string | null;
   genres: string[];
-  rating: number | null;
   watchedAt: string;
   partCount: number | null;
   parts: { partNumber: number; title: string | null }[];
@@ -85,7 +84,6 @@ export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
     year: input.year,
     description: trimMultilineOptional(input.description),
     genres: input.genres,
-    rating: input.rating,
     watchedAt: input.watchedAt
       ? new Date(input.watchedAt).toISOString()
       : null,

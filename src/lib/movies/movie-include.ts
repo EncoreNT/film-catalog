@@ -16,6 +16,10 @@ export const movieInclude = {
     orderBy: { sortOrder: "asc" as const },
     include: { genre: true },
   },
+  movieRatings: {
+    include: { rater: true },
+    orderBy: { rater: { sortOrder: "asc" as const } },
+  },
 } satisfies Prisma.MovieInclude;
 
 export const movieDetailInclude = {

@@ -119,7 +119,6 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
     matchKey: null,
     status: "CATALOG",
     coverPath: null,
-    rating: opts.rating ?? null,
     watchedAt: null,
     partCount: null,
     createdAt: new Date(),
@@ -127,6 +126,20 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
     primaryReleaseId: null,
     releases: [makeRelease(opts)],
     movieGenres: [],
+    movieRatings:
+      opts.rating != null
+        ? [
+            {
+              id: 1,
+              movieId: opts.id ?? 1,
+              raterId: 1,
+              rating: opts.rating,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              rater: { id: 1, name: "Я", sortOrder: 0, createdAt: new Date(), updatedAt: new Date() },
+            },
+          ]
+        : [],
   } as MovieWithTracks;
 }
 

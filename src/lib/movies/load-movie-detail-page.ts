@@ -17,6 +17,7 @@ import {
   sortReleasesByQuality,
 } from "@/lib/releases/release-primary";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
+import { buildMovieRatingRows } from "@/lib/movies/movie-rating-rows";
 
 export interface MovieDetailFranchiseMembershipView {
   id: number;
@@ -67,6 +68,7 @@ export async function loadMovieDetailPage(
     movie.partCount,
     activeRelease,
   );
+  const ratingRows = await buildMovieRatingRows(movie);
 
   return {
     movie,
@@ -78,6 +80,7 @@ export async function loadMovieDetailPage(
     displayDuration,
     franchiseMemberships,
     remakeMemberships,
+    ratingRows,
     activeReleaseId: activeRelease?.id ?? releaseViews[0]?.id ?? null,
     catalogPrimaryReleaseId,
   };

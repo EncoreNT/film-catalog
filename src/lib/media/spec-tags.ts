@@ -23,6 +23,7 @@ export {
   bestRussianDubTrack,
   rubySpatialAudioTrack,
   catalogTierRibbon,
+  catalogTierRibbonCompact,
   audioTrackChannelCount,
   releaseQuickSpecHints,
   type PremiumHDR,

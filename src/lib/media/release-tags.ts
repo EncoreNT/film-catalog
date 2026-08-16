@@ -281,6 +281,19 @@ export function catalogTierRibbon(
   return null;
 }
 
+/** Shorter ribbon for catalog card overlay — full text stays in `title`. */
+export function catalogTierRibbonCompact(
+  tier: ReleaseTier,
+  release?: ReleaseWithTracks | null,
+): string | null {
+  if (tier === "ruby") {
+    const suffix = release ? rubySpatialRibbonSuffix(release) : "ATMOS";
+    return `4K·HDR·${suffix}`;
+  }
+  if (tier === "gold") return "4K·HDR";
+  return null;
+}
+
 /** Эффективное число каналов трека: channels, иначе bed-ранг из layout. */
 export function audioTrackChannelCount(
   track: ReleaseWithTracks["audioTracks"][number],

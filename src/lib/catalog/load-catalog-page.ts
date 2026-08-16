@@ -12,6 +12,10 @@ import {
 } from "@/lib/catalog/catalog-facets";
 import { MovieStatus } from "@/generated/prisma/client";
 import { getCatalogRemakeBadges } from "@/lib/remakes/remake-catalog-badges";
+import {
+  getCatalogDefaultSort,
+  getCatalogPageSize,
+} from "@/lib/db/settings";
 
 const getCachedArchiveMetrics = unstable_cache(
   getArchiveMetrics,
@@ -43,6 +47,13 @@ export async function loadCatalogPage(
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams)) {
     if (typeof value === "string") params.set(key, value);
+  }
+
+  if (!params.has("limit")) {
+    params.set("limit", String(await getCatalogPageSize()));
+  }
+  if (!params.has("sort")) {
+    params.set("sort", await getCatalogDefaultSort());
   }
 
   const query = parseListQuery(params);

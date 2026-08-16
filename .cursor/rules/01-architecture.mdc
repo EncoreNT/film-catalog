@@ -97,6 +97,7 @@ film-catalog/
 | `/franchises/[slug]` | `app/franchises/[slug]/page.tsx` | Деталь: слоты, quality reel, completion |
 | `/franchises/[slug]/edit` | `app/franchises/[slug]/edit/page.tsx` | Редактор франшизы и слотов |
 | `/scan` | `app/scan/page.tsx` | Скан папки, прогресс NDJSON stream |
+| `/settings` | `app/settings/page.tsx` | Настройки: оценщики, каталог, сборки, экспорт |
 | `/movies/[slug]/builds/new` | `app/movies/[slug]/builds/new/page.tsx` | Конструктор пользовательского MKV |
 | `/builds` | `app/builds/page.tsx` | Очередь сборок |
 | `/builds/[id]` | `app/builds/[id]/page.tsx` | Деталь job |

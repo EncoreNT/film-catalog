@@ -10,7 +10,7 @@ interface TvReadyMarkProps {
   className?: string;
 }
 
-/** Compact catalog mark: primary release is TV-compatible (MKV, H.264/HEVC, rus AC-3/E-AC-3/AAC). */
+/** Compact catalog mark: primary release is TV-compatible (MKV/MP4, H.264/HEVC, rus AC-3/E-AC-3/AAC). */
 export function TvReadyMark({ className = "" }: TvReadyMarkProps) {
   return (
     <CatalogMark

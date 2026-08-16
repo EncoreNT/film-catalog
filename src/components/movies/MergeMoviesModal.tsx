@@ -274,14 +274,12 @@ export function MergeMoviesModal({
       return {
         description: false,
         coverPath: false,
-        rating: false,
         watchedAt: false,
       };
     }
     return {
       description: !!canonical.description && !!other.description,
       coverPath: !!canonical.coverUrl && !!other.coverUrl,
-      rating: canonical.rating != null && other.rating != null,
       watchedAt: canonical.watchedAt != null && other.watchedAt != null,
     };
   }, [canonical, other]);
@@ -305,9 +303,6 @@ export function MergeMoviesModal({
     }
     if (conflicts.coverPath) {
       payloadChoices.coverPath = choices.coverPath ?? "canonical";
-    }
-    if (conflicts.rating) {
-      payloadChoices.rating = choices.rating ?? "canonical";
     }
     if (conflicts.watchedAt) {
       payloadChoices.watchedAt = choices.watchedAt ?? "canonical";
@@ -341,7 +336,6 @@ export function MergeMoviesModal({
   const hasConflicts =
     conflicts.description ||
     conflicts.coverPath ||
-    conflicts.rating ||
     conflicts.watchedAt;
 
   return (
@@ -439,15 +433,6 @@ export function MergeMoviesModal({
             <p className="font-mono-tech text-xs text-muted">
               поля с разными значениями — выберите, что сохранить
             </p>
-            {conflicts.rating ? (
-              <ConflictPicker
-                label="оценка"
-                canonicalLabel={`★ ${canonical.rating!.toFixed(1)} (основная карточка)`}
-                otherLabel={`★ ${other.rating!.toFixed(1)} (удаляемая карточка)`}
-                value={choices.rating ?? "canonical"}
-                onChange={(v) => setChoices((c) => ({ ...c, rating: v }))}
-              />
-            ) : null}
             {conflicts.watchedAt ? (
               <ConflictPicker
                 label="дата просмотра"

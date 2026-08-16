@@ -141,7 +141,6 @@ describe("buildMovieUpdatePayload", () => {
       year: 2000,
       description: null,
       genres: [],
-      rating: 8,
       watchedAt: "2024-01-15T10:00:00.000Z",
       partCount: null,
       parts: [],

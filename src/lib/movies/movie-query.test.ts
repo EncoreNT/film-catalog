@@ -27,11 +27,33 @@ describe("buildMovieWhere", () => {
         watchedTo: "2024-12-31",
       }),
     );
-    expect(where.watchedAt).toEqual({
-      not: null,
-      gte: new Date("2024-01-01"),
-      lte: new Date("2024-12-31"),
-    });
+    expect(where.AND).toEqual([
+      {
+        watchedAt: {
+          not: null,
+          gte: new Date("2024-01-01"),
+          lte: new Date("2024-12-31"),
+        },
+      },
+    ]);
+  });
+
+  it("treats rated movies as watched", () => {
+    const where = buildMovieWhere(queryFrom({ watched: "watched" }));
+    expect(where.AND).toEqual([
+      {
+        OR: [{ watchedAt: { not: null } }, { movieRatings: { some: {} } }],
+      },
+    ]);
+  });
+
+  it("treats movies without ratings or date as unwatched", () => {
+    const where = buildMovieWhere(queryFrom({ watched: "unwatched" }));
+    expect(where.AND).toEqual([
+      {
+        AND: [{ watchedAt: null }, { movieRatings: { none: {} } }],
+      },
+    ]);
   });
 
   it("returns impossible filter for unwatched + date range", () => {
@@ -41,7 +63,7 @@ describe("buildMovieWhere", () => {
         watchedFrom: "2024-01-01",
       }),
     );
-    expect(where.id).toBe(-1);
+    expect(where.AND).toEqual([{ id: -1 }]);
   });
 
   it("searches case-insensitively via normalized matchKey", () => {
@@ -190,10 +212,9 @@ describe("buildMovieOrder", () => {
       { year: "desc" },
       { id: "desc" },
     ]);
-    expect(buildMovieOrder(queryFrom({ sort: "rating", order: "asc" }))).toEqual([
-      { rating: "asc" },
-      { id: "asc" },
-    ]);
+    expect(() =>
+      buildMovieOrder(queryFrom({ sort: "rating", order: "asc" })),
+    ).toThrow(/rating aggregate/);
     expect(buildMovieOrder(queryFrom({ sort: "watchedAt", order: "asc" }))).toEqual([
       { watchedAt: "asc" },
       { id: "asc" },

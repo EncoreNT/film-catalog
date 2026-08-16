@@ -70,6 +70,20 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | POST | `/api/pick-directory` | Нативный диалог выбора папки → runtime path |
 | GET | `/api/disk-space?path=` | Свободное место на томе для пути |
 
+## Settings & Raters (ADR-0015)
+
+| Method | Path | Назначение |
+|-----|---|---|
+| GET | `/api/settings` | Snapshot настроек (catalog, builds, paths) |
+| PATCH | `/api/settings` | Обновление настроек |
+| GET | `/api/raters` | Список оценщиков |
+| POST | `/api/raters` | Создать оценщика |
+| PATCH | `/api/raters/[id]` | Переименовать |
+| DELETE | `/api/raters/[id]` | Удалить (cascade MovieRating) |
+| POST | `/api/raters/reorder` | Изменить sortOrder |
+| PUT | `/api/movies/[id]/ratings` | Поставить оценку raterId |
+| DELETE | `/api/movies/[id]/ratings` | Снять оценку raterId |
+
 ## Releases (movie)
 
 | Method | Path | Назначение |

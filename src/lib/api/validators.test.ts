@@ -52,12 +52,10 @@ describe("movieUpdateSchema", () => {
     expect(() => movieUpdateSchema.parse({ title: "" })).toThrow();
   });
 
-  it("accepts null rating and ISO watchedAt", () => {
+  it("accepts ISO watchedAt", () => {
     const parsed = movieUpdateSchema.parse({
-      rating: null,
       watchedAt: "2024-06-01T12:00:00.000Z",
     });
-    expect(parsed.rating).toBeNull();
     expect(parsed.watchedAt).toBe("2024-06-01T12:00:00.000Z");
   });
 });
@@ -89,10 +87,10 @@ describe("mergeSchema", () => {
   it("requires otherId and optional choices", () => {
     const parsed = mergeSchema.parse({
       otherId: 5,
-      choices: { rating: "other" },
+      choices: { watchedAt: "other" },
     });
     expect(parsed.otherId).toBe(5);
-    expect(parsed.choices?.rating).toBe("other");
+    expect(parsed.choices?.watchedAt).toBe("other");
   });
 });
 

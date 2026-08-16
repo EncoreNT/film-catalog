@@ -4,6 +4,10 @@ import Link from "next/link";
 import { AudioLines, Clapperboard, Layers, Star } from "lucide-react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
+import {
+  computeAverageRating,
+  formatRatingDisplay,
+} from "@/lib/movies/movie-rating";
 import { formatDuration } from "@/lib/shared/format";
 import { formatBitrateKbps } from "@/lib/shared/resolution";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
@@ -19,6 +23,7 @@ import {
   catalogCardTech,
   catalogAudioChipLabel,
   catalogTierRibbon,
+  catalogTierRibbonCompact,
   premiumHdrView,
   releaseTier,
 } from "@/lib/media/spec-tags";
@@ -146,6 +151,92 @@ function AudioTracksPopover({ release }: { release: ReleaseWithTracks }) {
   );
 }
 
+type MovieCardRatedRow = MovieWithTracks["movieRatings"][number];
+
+function MovieCardRatingBadges({ ratings }: { ratings: MovieCardRatedRow[] }) {
+  const ratedRows = ratings.filter((row) => row.rater?.name);
+  if (ratedRows.length === 0) return null;
+
+  const badgeShell =
+    "font-mono-tech inline-flex max-w-full items-center gap-1 rounded-full border bg-bg-deep/90 tabular-nums";
+
+  if (ratedRows.length === 1) {
+    const row = ratedRows[0]!;
+    return (
+      <span
+        className={`${badgeShell} border-accent/50 px-2 py-[3px] text-[0.62rem] font-semibold text-accent-bright`}
+        title={`${row.rater.name}: ${row.rating}/10`}
+        aria-label={`${row.rater.name}: ${row.rating} из 10`}
+      >
+        <span className="max-w-[3.25rem] truncate text-[0.55rem] font-normal text-muted">
+          {row.rater.name}
+        </span>
+        {row.rating}
+        <Star className="h-2.5 w-2.5 shrink-0 fill-accent text-accent" aria-hidden />
+      </span>
+    );
+  }
+
+  const average = computeAverageRating(ratedRows);
+  const overflow = ratedRows.slice(2);
+
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      {average != null ? (
+        <span
+          className={`${badgeShell} border-accent/50 px-2 py-[3px] text-[0.62rem] font-semibold text-accent-bright`}
+          title={`Средняя оценка ${formatRatingDisplay(average)} из 10`}
+          aria-label={`Средняя оценка ${formatRatingDisplay(average)} из 10`}
+        >
+          {formatRatingDisplay(average)}
+          <Star className="h-2.5 w-2.5 shrink-0 fill-accent text-accent" aria-hidden />
+        </span>
+      ) : null}
+      {ratedRows.slice(0, 2).map((row) => (
+        <span
+          key={row.id}
+          className={`${badgeShell} border-accent/40 px-1.5 py-[2px] text-[0.55rem] text-muted`}
+          title={`${row.rater.name}: ${row.rating}/10`}
+          aria-label={`${row.rater.name}: ${row.rating} из 10`}
+        >
+          <span className="max-w-[3.25rem] truncate">{row.rater.name}</span>
+          <span className="shrink-0 font-semibold text-accent-bright">{row.rating}</span>
+        </span>
+      ))}
+      {overflow.length > 0 ? (
+        <HoverTooltip
+          content={
+            <ul className="space-y-1 text-xs">
+              {ratedRows.map((row) => (
+                <li key={row.id} className="flex justify-between gap-3">
+                  <span className="text-muted">{row.rater.name}</span>
+                  <span className="font-mono tabular-nums text-accent-bright">
+                    {row.rating}/10
+                  </span>
+                </li>
+              ))}
+              {average != null ? (
+                <li className="border-t border-border/60 pt-1 text-muted">
+                  средняя{" "}
+                  <span className="font-mono text-accent-bright">
+                    {formatRatingDisplay(average)}
+                  </span>
+                </li>
+              ) : null}
+            </ul>
+          }
+        >
+          <span
+            className={`${badgeShell} cursor-default border-border-strong px-1.5 py-[2px] text-[0.55rem] text-muted`}
+          >
+            +{overflow.length}
+          </span>
+        </HoverTooltip>
+      ) : null}
+    </div>
+  );
+}
+
 export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
   const primary = pickPrimaryRelease(movie.releases, movie.primaryReleaseId);
   const primaryId = primary?.id ?? null;
@@ -154,6 +245,9 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
   const tier = primary ? releaseTier(primary) : null;
   const tech = primary ? catalogCardTech(primary) : null;
   const tierRibbon = primary ? catalogTierRibbon(tier, primary) : catalogTierRibbon(tier);
+  const tierRibbonCompact = primary
+    ? catalogTierRibbonCompact(tier, primary)
+    : catalogTierRibbonCompact(tier);
   const chipTone = tierChipTone(tier);
   const tvReady = primary ? isTvReadyRelease(primary) : false;
 
@@ -204,6 +298,9 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
         )}. Наведите для списка.`
       : undefined;
 
+  const ratedRows = movie.movieRatings.filter((row) => row.rater?.name);
+  const hasTopRightMeta =
+    ratedRows.length > 0 || showReleaseCountBadge || seriesLabel != null;
   const cardGlow = tierCardGlow(tier);
 
   return (
@@ -242,72 +339,66 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
 
             <TierCoverOverlay tier={tier} />
 
-            {/* Top row — tier ribbon (left) + rating/releases (right).
-                Ribbon: 4K | HDR (gold) or 4K | HDR | РУС. ATMOS (ruby).
-                Regular cards have no ribbon — that absence is the signal. */}
-            <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2.5">
-              {tierRibbon != null ? (
-                <TierChip tone={chipTone} size="xs">
-                  {tierRibbon}
-                </TierChip>
-              ) : (
-                <span />
-              )}
+            {/* Top row — tier ribbon (left, truncates) + ratings/meta (right column).
+                Ruby ribbon uses compact label on card; full text in title. */}
+            <div className="absolute inset-x-0 top-0 z-10 p-2.5">
+              <div className="flex items-start gap-1.5">
+                {tierRibbon != null ? (
+                  <div className="min-w-0 flex-1">
+                    <TierChip
+                      tone={chipTone}
+                      size="xs"
+                      truncate
+                      title={tierRibbon}
+                    >
+                      {tierRibbonCompact ?? tierRibbon}
+                    </TierChip>
+                  </div>
+                ) : (
+                  <span className="min-w-0 flex-1" />
+                )}
 
-              {movie.rating != null ||
-              showReleaseCountBadge ||
-              seriesLabel != null ? (
-                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  {seriesLabel ? (
-                    <span
-                      className="font-mono-tech inline-flex items-center gap-1 rounded-full border border-ember/45 bg-bg-deep/90 px-2 py-[2px] text-[0.55rem] tabular-nums text-ember-bright"
-                      title={seriesLabel}
-                      aria-label={seriesLabel}
-                    >
-                      <Clapperboard className="h-2.5 w-2.5" aria-hidden />
-                      {movie.partCount}
-                      <span className="text-[0.5rem] uppercase tracking-wide opacity-90">
-                        сер.
-                      </span>
-                    </span>
-                  ) : null}
-                  {movie.rating != null ? (
-                    <span
-                      className="font-mono-tech inline-flex items-center gap-1 rounded-full border border-accent/50 bg-bg-deep/90 px-2 py-[3px] text-[0.62rem] font-semibold tabular-nums text-accent-bright"
-                      aria-label={`Оценка ${movie.rating} из 10`}
-                      title={`Оценка ${movie.rating} из 10`}
-                    >
-                      {movie.rating}
-                      <Star
-                        className="h-2.5 w-2.5 fill-accent text-accent"
-                        aria-hidden
-                      />
-                    </span>
-                  ) : null}
-                  {showReleaseCountBadge ? (
-                    <HoverTooltip
-                      interactive
-                      content={
-                        <MovieReleasesTooltip
-                          releases={sortReleasesByQuality(movie.releases)}
-                          movieSlug={movie.slug}
-                          movieId={movie.id}
-                          primaryReleaseId={primaryId}
-                        />
-                      }
-                    >
+                {hasTopRightMeta ? (
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {seriesLabel ? (
                       <span
-                        className="font-mono-tech inline-flex cursor-pointer items-center gap-1 rounded-full border border-ember/45 bg-bg-deep/90 px-2 py-[2px] text-[0.55rem] tabular-nums text-ember-bright transition-colors duration-200 group-hover/laser:border-ember/70"
-                        title={`${releaseCountLabel} у фильма`}
-                        aria-label={`${releaseCountLabel} у фильма. Наведите для списка.`}
+                        className="font-mono-tech inline-flex items-center gap-1 rounded-full border border-ember/45 bg-bg-deep/90 px-2 py-[2px] text-[0.55rem] tabular-nums text-ember-bright"
+                        title={seriesLabel}
+                        aria-label={seriesLabel}
                       >
-                        <Layers className="h-2.5 w-2.5" aria-hidden />
-                        {releaseCount}
+                        <Clapperboard className="h-2.5 w-2.5" aria-hidden />
+                        {movie.partCount}
+                        <span className="text-[0.5rem] uppercase tracking-wide opacity-90">
+                          сер.
+                        </span>
                       </span>
-                    </HoverTooltip>
-                  ) : null}
-                </div>
-              ) : null}
+                    ) : null}
+                    <MovieCardRatingBadges ratings={movie.movieRatings} />
+                    {showReleaseCountBadge ? (
+                      <HoverTooltip
+                        interactive
+                        content={
+                          <MovieReleasesTooltip
+                            releases={sortReleasesByQuality(movie.releases)}
+                            movieSlug={movie.slug}
+                            movieId={movie.id}
+                            primaryReleaseId={primaryId}
+                          />
+                        }
+                      >
+                        <span
+                          className="font-mono-tech inline-flex cursor-pointer items-center gap-1 rounded-full border border-ember/45 bg-bg-deep/90 px-2 py-[2px] text-[0.55rem] tabular-nums text-ember-bright transition-colors duration-200 group-hover/laser:border-ember/70"
+                          title={`${releaseCountLabel} у фильма`}
+                          aria-label={`${releaseCountLabel} у фильма. Наведите для списка.`}
+                        >
+                          <Layers className="h-2.5 w-2.5" aria-hidden />
+                          {releaseCount}
+                        </span>
+                      </HoverTooltip>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             {/* Bottom overlay — spec chips, then title (2-line reserve),
@@ -367,10 +458,10 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
                 {movie.title}
               </h3>
 
-              <div className="mt-1.5 flex items-center gap-2 font-mono-tech text-[0.55rem]">
+              <div className="mt-1.5 flex min-w-0 items-center gap-1.5 font-mono-tech text-[0.55rem]">
                 {genres.length > 0 ? (
                   <span
-                    className="truncate text-muted"
+                    className="min-w-0 flex-1 truncate text-muted"
                     title={genres
                       .map((g) => displayGenreName(g.name))
                       .join(", ")}
@@ -378,42 +469,44 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
                     {genres.map((g) => displayGenreName(g.name)).join(" · ")}
                   </span>
                 ) : (
-                  <span className="text-faint">Без жанра</span>
+                  <span className="min-w-0 flex-1 text-faint">Без жанра</span>
                 )}
-                {hasExternal ? (
-                  <ExternalStorageMark storageNames={externalStorageNames} />
-                ) : null}
-                {tvReady ? <TvReadyMark /> : null}
-                {hasRemakeLink && remakeBadge ? (
-                  <HoverTooltip
-                    interactive
-                    content={
-                      <MovieRemakesTooltip
-                        role={remakeBadge.role}
-                        coMembers={remakeBadge.coMembers}
-                      />
-                    }
-                  >
-                    <span
-                      className="inline-flex shrink-0"
-                      aria-label={remakeLinkAria}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {hasExternal ? (
+                    <ExternalStorageMark storageNames={externalStorageNames} />
+                  ) : null}
+                  {tvReady ? <TvReadyMark /> : null}
+                  {hasRemakeLink && remakeBadge ? (
+                    <HoverTooltip
+                      interactive
+                      content={
+                        <MovieRemakesTooltip
+                          role={remakeBadge.role}
+                          coMembers={remakeBadge.coMembers}
+                        />
+                      }
                     >
-                      <RemakeRoleMark role={remakeBadge.role} ariaHidden />
+                      <span
+                        className="inline-flex shrink-0"
+                        aria-label={remakeLinkAria}
+                      >
+                        <RemakeRoleMark role={remakeBadge.role} ariaHidden />
+                      </span>
+                    </HoverTooltip>
+                  ) : null}
+                  {!hasFile ? (
+                    <span
+                      className="shrink-0 text-faint"
+                      title="Файл не указан"
+                      aria-label="Файл не указан"
+                    >
+                      ◌
                     </span>
-                  </HoverTooltip>
-                ) : null}
-                {!hasFile ? (
-                  <span
-                    className="shrink-0 text-faint"
-                    title="Файл не указан"
-                    aria-label="Файл не указан"
-                  >
-                    ◌
-                  </span>
-                ) : null}
+                  ) : null}
+                </div>
                 {duration ? (
                   <span
-                    className="ml-auto shrink-0 tabular-nums text-accent/80"
+                    className="shrink-0 tabular-nums text-accent/80"
                     title="Длительность"
                   >
                     {duration}

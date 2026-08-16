@@ -38,7 +38,7 @@ export const subtitleInputSchema = z.object({
   forced: z.boolean().optional(),
 });
 
-/** Work-level movie fields (title, year, rating, genres, status). */
+/** Work-level movie fields (title, year, genres, status). */
 export const moviePartInputSchema = z.object({
   partNumber: z.number().int().min(1),
   title: z.string().nullable().optional(),
@@ -53,7 +53,6 @@ export const movieUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
   description: z.string().nullable().optional(),
-  rating: z.number().int().min(1).max(10).nullable().optional(),
   watchedAt: z.string().datetime().nullable().optional(),
   status: movieStatusSchema.optional(),
   genres: z.array(z.string().min(1)).optional(),
@@ -128,7 +127,6 @@ export const mergeSchema = z.object({
     .object({
       description: z.enum(["canonical", "other"]).optional(),
       coverPath: z.enum(["canonical", "other"]).optional(),
-      rating: z.enum(["canonical", "other"]).optional(),
       watchedAt: z.enum(["canonical", "other"]).optional(),
     })
     .optional(),

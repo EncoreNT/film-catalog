@@ -33,6 +33,15 @@ describe("suggestExportFilename", () => {
     ).toBe("sample.mkv");
   });
 
+  it("keeps mp4 extension from release path", () => {
+    expect(
+      suggestExportFilename(
+        release({ filePath: "/mnt/d/Movies/Elemental.mp4" }),
+        { title: "Ignored", year: 2023 },
+      ),
+    ).toBe("Elemental.mp4");
+  });
+
   it("falls back to movie title when path missing", () => {
     expect(
       suggestExportFilename(release({ filePath: null }), {

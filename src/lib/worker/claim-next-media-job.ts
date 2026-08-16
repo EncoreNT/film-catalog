@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
-import {
-  countRunningTranscodeBuilds,
-  recoverStaleBuilds,
-} from "@/lib/builds/build-queue";
-import { BUILD_TRANSCODE_MAX_CONCURRENCY } from "@/lib/builds/build-presets";
+import { countRunningTranscodeBuilds, recoverStaleBuilds } from "@/lib/builds/build-queue";
+import { getBuildTranscodeConcurrency } from "@/lib/db/settings";
 import { recoverStaleExports } from "@/lib/releases/export-queue";
 import { recoverStaleMoves } from "@/lib/releases/move-queue";
 
@@ -129,8 +126,9 @@ export async function claimAvailableMediaJobs(
   const jobs: MediaJob[] = [];
 
   if (includeBuilds) {
+    const transcodeLimit = await getBuildTranscodeConcurrency();
     let transcodeRunning = await countRunningTranscodeBuilds();
-    while (transcodeRunning < BUILD_TRANSCODE_MAX_CONCURRENCY) {
+    while (transcodeRunning < transcodeLimit) {
       const id = await claimNextQueuedBuild(workerId, true);
       if (id == null) break;
       jobs.push({ kind: "build", id, requiresTranscode: true });

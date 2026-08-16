@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { MovieStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getCatalogFacets } from "@/lib/catalog/catalog-facets";
+import { movieIsWatchedWhere } from "@/lib/movies/movie-watched";
 import {
   archiveEliteTierWhere,
   archiveGoldTierWhere,
@@ -111,10 +112,9 @@ export async function getStatsOverview() {
     prisma.movie.count({
       where: { coverPath: null, status: MovieStatus.CATALOG },
     }),
-    prisma.movie.count({ where: { watchedAt: { not: null } } }),
-    prisma.movie.aggregate({
+    prisma.movie.count({ where: movieIsWatchedWhere }),
+    prisma.movieRating.aggregate({
       _avg: { rating: true },
-      where: { rating: { not: null } },
     }),
     getCatalogFacets(),
   ]);

@@ -10,7 +10,6 @@ type Db = Prisma.TransactionClient | typeof prisma;
 export interface MergeFieldChoice {
   description?: "canonical" | "other";
   coverPath?: "canonical" | "other";
-  rating?: "canonical" | "other";
   watchedAt?: "canonical" | "other";
 }
 
@@ -22,7 +21,6 @@ export interface MergePlan {
   conflicts: {
     description: boolean;
     coverPath: boolean;
-    rating: boolean;
     watchedAt: boolean;
     franchiseSlots: boolean;
   };
@@ -33,7 +31,6 @@ export function planMerge(
     id: number;
     description: string | null;
     coverPath: string | null;
-    rating: number | null;
     watchedAt: Date | null;
     _count: { releases: number };
   },
@@ -41,7 +38,6 @@ export function planMerge(
     id: number;
     description: string | null;
     coverPath: string | null;
-    rating: number | null;
     watchedAt: Date | null;
     _count: { releases: number };
   },
@@ -60,7 +56,6 @@ export function planMerge(
     conflicts: {
       description: !!canonical.description && !!other.description,
       coverPath: !!canonical.coverPath && !!other.coverPath,
-      rating: canonical.rating != null && other.rating != null,
       watchedAt: canonical.watchedAt != null && other.watchedAt != null,
       franchiseSlots: slotOverlap,
     },
@@ -89,6 +84,33 @@ async function adoptCoverFromOther(
       where: { id: canonicalId },
       data: { coverPath: otherCoverPath },
     });
+  }
+}
+
+async function mergeMovieRatings(
+  tx: Prisma.TransactionClient,
+  canonicalId: number,
+  otherId: number,
+) {
+  const otherRatings = await tx.movieRating.findMany({
+    where: { movieId: otherId },
+  });
+
+  for (const row of otherRatings) {
+    const existing = await tx.movieRating.findUnique({
+      where: {
+        movieId_raterId: { movieId: canonicalId, raterId: row.raterId },
+      },
+    });
+
+    if (!existing) {
+      await tx.movieRating.update({
+        where: { id: row.id },
+        data: { movieId: canonicalId },
+      });
+    } else {
+      await tx.movieRating.delete({ where: { id: row.id } });
+    }
   }
 }
 
@@ -161,6 +183,8 @@ export async function mergeMovies(
       }
     }
 
+    await mergeMovieRatings(tx, canonicalId, otherId);
+
     const pick = <T>(
       field: keyof MergeFieldChoice,
       canonicalVal: T,
@@ -176,7 +200,6 @@ export async function mergeMovies(
       canonical.description,
       other.description,
     );
-    const nextRating = pick("rating", canonical.rating, other.rating);
     const nextWatchedAt = pick(
       "watchedAt",
       canonical.watchedAt,
@@ -200,7 +223,6 @@ export async function mergeMovies(
       where: { id: canonicalId },
       data: {
         description: nextDescription,
-        rating: nextRating,
         watchedAt: nextWatchedAt,
         coverPath: nextCoverPath,
       },

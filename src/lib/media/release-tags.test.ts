@@ -5,6 +5,7 @@ import {
   catalogAudioChipLabel,
   catalogCardTech,
   catalogTierRibbon,
+  catalogTierRibbonCompact,
   premiumHdrView,
   releaseTier,
   releaseQuickSpecHints,
@@ -692,6 +693,49 @@ describe("catalogTierRibbon", () => {
 
   it("null tier → null ribbon", () => {
     expect(catalogTierRibbon(null)).toBeNull();
+  });
+});
+
+describe("catalogTierRibbonCompact", () => {
+  it("gold → 4K·HDR", () => {
+    expect(catalogTierRibbonCompact("gold")).toBe("4K·HDR");
+  });
+
+  it("ruby с Atmos → 4K·HDR·ATMOS", () => {
+    expect(
+      catalogTierRibbonCompact(
+        "ruby",
+        release({
+          id: 1,
+          videoTrack: video("HDR10"),
+          audioTracks: [audio()],
+        }),
+      ),
+    ).toBe("4K·HDR·ATMOS");
+  });
+
+  it("ruby с DTS:X → 4K·HDR·DTS:X", () => {
+    expect(
+      catalogTierRibbonCompact(
+        "ruby",
+        release({
+          id: 2,
+          videoTrack: video("HDR10"),
+          audioTracks: [
+            audio({
+              codec: "dts-hd",
+              profile: "DTS:X MA",
+              channels: 8,
+              channelLayout: "7.1",
+            }),
+          ],
+        }),
+      ),
+    ).toBe("4K·HDR·DTS:X");
+  });
+
+  it("null tier → null compact ribbon", () => {
+    expect(catalogTierRibbonCompact(null)).toBeNull();
   });
 });
 

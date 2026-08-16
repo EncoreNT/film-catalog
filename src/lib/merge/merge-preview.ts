@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { releaseInclude } from "@/lib/movies/movie-include";
+import { computeAverageRating } from "@/lib/movies/movie-rating";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { orderedMovieGenres } from "@/lib/movies/movie-genres";
 import { displayGenreName } from "@/lib/shared/dictionaries";
@@ -22,6 +23,10 @@ export const mergeCandidateInclude = {
   movieGenres: {
     orderBy: { sortOrder: "asc" as const },
     include: { genre: true },
+  },
+  movieRatings: {
+    include: { rater: true },
+    orderBy: { rater: { sortOrder: "asc" as const } },
   },
   slots: {
     include: { franchise: { select: { name: true } } },
@@ -51,7 +56,7 @@ function toMergeCandidate(movie: MergeCandidateMovie): MergeCandidate {
     title: movie.title,
     year: movie.year,
     status: movie.status,
-    rating: movie.rating,
+    rating: computeAverageRating(movie.movieRatings),
     watchedAt: movie.watchedAt?.toISOString() ?? null,
     coverUrl: movieCoverUrlFromMovie(movie),
     description: movie.description,

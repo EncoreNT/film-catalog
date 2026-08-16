@@ -64,7 +64,6 @@ model Movie {
   matchKey    String?
   status      MovieStatus @default(DRAFT)
   coverPath   String?
-  rating      Int?
   watchedAt   DateTime?
   /** Denormalized series count for catalog badge; null = single-part or unknown. */
   partCount   Int?
@@ -75,6 +74,7 @@ model Movie {
   primaryRelease   Release? @relation("MoviePrimaryRelease", fields: [primaryReleaseId], references: [id], onDelete: SetNull)
 
   movieGenres MovieGenre[]
+  movieRatings MovieRating[]
   parts       MoviePart[]
   slots       FranchiseSlot[]
   remakeMemberships RemakeMember[]
@@ -85,8 +85,33 @@ model Movie {
 
   @@index([status])
   @@index([matchKey])
-  @@index([rating])
   @@index([watchedAt])
+}
+
+model Rater {
+  id        Int           @id @default(autoincrement())
+  name      String
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  ratings   MovieRating[]
+
+  @@index([sortOrder])
+}
+
+model MovieRating {
+  id        Int      @id @default(autoincrement())
+  movieId   Int
+  raterId   Int
+  rating    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  rater     Rater    @relation(fields: [raterId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, raterId])
+  @@index([movieId])
+  @@index([raterId])
 }
 
 model MoviePart {
