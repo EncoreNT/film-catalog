@@ -6,6 +6,7 @@ import {
 } from "@/lib/shared/copy-with-progress";
 import { displayFilePath } from "@/lib/shared/display-path";
 import { mediaJobFileExists } from "@/lib/media-jobs/file-exists";
+import { createCopySpeedWindow } from "@/lib/media-jobs/copy-speed-window";
 import { mediaJobProgressMessage } from "@/lib/media-jobs/job-progress-message";
 import { exportPartPath } from "@/lib/releases/export-part-path";
 import {
@@ -14,6 +15,7 @@ import {
   startExportHeartbeat,
   updateExportProgress,
 } from "@/lib/releases/export-queue";
+import { assertWslDriveMounted } from "@/lib/shared/wsl-drive-mount";
 
 const PROGRESS_DB_INTERVAL_MS = 2_000;
 
@@ -42,6 +44,8 @@ export async function runExportJob(exportId: number, signal?: AbortSignal) {
       return;
     }
 
+    await assertWslDriveMounted(job.targetPath);
+
     if (await fileExists(job.targetPath)) {
       await finishExport(exportId, "FAILED", {
         errorMessage: `Файл уже существует: ${displayFilePath(job.targetPath)}`,
@@ -61,8 +65,8 @@ export async function runExportJob(exportId: number, signal?: AbortSignal) {
     });
 
     let lastDbUpdate = 0;
-    let lastBytes = 0;
-    let lastTick = Date.now();
+    const speedWindow = createCopySpeedWindow();
+    speedWindow.observe(0);
 
     const copyAbort = new AbortController();
     const onParentAbort = () => copyAbort.abort();
@@ -79,14 +83,9 @@ export async function runExportJob(exportId: number, signal?: AbortSignal) {
         signal: copyAbort.signal,
         onProgress: ({ bytesCopied }) => {
           const now = Date.now();
+          const speed = speedWindow.observe(bytesCopied, now);
           if (now - lastDbUpdate < PROGRESS_DB_INTERVAL_MS) return;
           lastDbUpdate = now;
-
-          const elapsedSec = Math.max(0.001, (now - lastTick) / 1000);
-          const speed =
-            elapsedSec > 0 ? (bytesCopied - lastBytes) / elapsedSec : null;
-          lastBytes = bytesCopied;
-          lastTick = now;
 
           void updateExportProgress(exportId, {
             phase: "copying",
@@ -97,6 +96,7 @@ export async function runExportJob(exportId: number, signal?: AbortSignal) {
         },
       });
     } finally {
+      speedWindow.clear();
       clearInterval(cancelPoll);
       signal?.removeEventListener("abort", onParentAbort);
     }

@@ -11,6 +11,7 @@ export function ReleaseJobDialogProgress({
   progressPercent,
   progressMessage,
   speed,
+  etaLabel,
   defaultProgressMessage = "Копирование…",
 }: {
   accent?: ReleaseJobDialogAccent;
@@ -21,6 +22,7 @@ export function ReleaseJobDialogProgress({
   progressPercent?: number | null;
   progressMessage?: string | null;
   speed?: string | null;
+  etaLabel?: string | null;
   defaultProgressMessage?: string;
 }) {
   const percentClass = accent === "neural" ? "text-neural" : "text-accent";
@@ -47,6 +49,7 @@ export function ReleaseJobDialogProgress({
               {speed ? ` · ${speed}` : ""}
             </span>
             <span className={`shrink-0 tabular-nums ${percentClass}`}>
+              {etaLabel ? `${etaLabel} · ` : ""}
               {progressPercent}%
             </span>
           </div>

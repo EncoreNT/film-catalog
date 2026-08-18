@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Field } from "@/components/primitives/Field";
 import { DiskSpaceFeedback } from "@/components/shared/DiskSpaceFeedback";
 import { FolderPathField } from "@/components/shared/FolderPathField";
+import type { UnmountedWslDrive } from "@/lib/shared/disk-space-types";
 
 export function ReleaseTransferDestinationForm({
   storageSection,
@@ -24,6 +25,10 @@ export function ReleaseTransferDestinationForm({
   collision,
   sameAsSource,
   targetDisplay,
+  unmountedDrive,
+  mountingDrive,
+  mountError,
+  onMountDrive,
 }: {
   storageSection?: ReactNode;
   folderFieldId: string;
@@ -43,6 +48,10 @@ export function ReleaseTransferDestinationForm({
   collision?: boolean;
   sameAsSource?: boolean;
   targetDisplay?: string | null;
+  unmountedDrive?: UnmountedWslDrive | null;
+  mountingDrive?: boolean;
+  mountError?: string | null;
+  onMountDrive?: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -61,6 +70,11 @@ export function ReleaseTransferDestinationForm({
           statusLine={diskStatusLine}
           shortfall={diskShortfall}
           freeBytes={diskFreeBytes}
+          unmountedDrive={unmountedDrive}
+          mounting={mountingDrive}
+          mountError={mountError}
+          onMountDrive={onMountDrive}
+          disabled={disabled}
         />
       </div>
       <Field

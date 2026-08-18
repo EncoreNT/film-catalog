@@ -68,7 +68,8 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | POST | `/api/storages` | Создать внешний диск |
 | GET | `/api/stats` | Archive metrics JSON |
 | POST | `/api/pick-directory` | Нативный диалог выбора папки → runtime path |
-| GET | `/api/disk-space?path=` | Свободное место на томе для пути |
+| GET | `/api/disk-space?path=` | Свободное место; если `/mnt/x` не drvfs/9p — `{ unmounted: true, driveLetter }` |
+| POST | `/api/wsl-drive/mount` | Явно смонтировать Windows-диск из пути (`F:\\` / `/mnt/f/...`); без автомонтирования |
 
 ## Settings & Raters (ADR-0015)
 

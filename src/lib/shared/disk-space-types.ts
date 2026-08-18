@@ -3,3 +3,8 @@ export interface DiskSpaceInfo {
   freeBytes: number;
   path: string;
 }
+
+export interface UnmountedWslDrive {
+  letter: string;
+  mountPoint: string;
+}

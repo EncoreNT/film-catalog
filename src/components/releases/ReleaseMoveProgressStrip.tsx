@@ -2,6 +2,7 @@
 
 import { HardDrive, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import type { SerializedMove } from "@/lib/releases/move-serialize";
 import {
   MOVE_STATUS_META,
@@ -24,6 +25,7 @@ export function ReleaseMoveProgressStrip({
   const progress =
     job.progressPercent != null ? Math.round(job.progressPercent) : null;
   const speed = moveSpeedLabel(job.progressSpeed);
+  const etaLabel = useMediaJobEtaLabel(job);
   const sizeHint = moveSizeHint(job);
 
   return (
@@ -65,7 +67,10 @@ export function ReleaseMoveProgressStrip({
                     {job.progressMessage ?? "Перемещение…"}
                     {speed ? ` · ${speed}` : ""}
                   </span>
-                  <span className="shrink-0 tabular-nums text-neural">{progress}%</span>
+                  <span className="shrink-0 tabular-nums text-neural">
+                    {etaLabel ? `${etaLabel} · ` : ""}
+                    {progress}%
+                  </span>
                 </div>
                 <div className="h-1 overflow-hidden rounded-full bg-bg-deep/80 ring-1 ring-inset ring-border/60">
                   <div

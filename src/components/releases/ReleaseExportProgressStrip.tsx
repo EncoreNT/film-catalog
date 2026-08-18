@@ -2,6 +2,7 @@
 
 import { HardDriveDownload, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import type { SerializedExport } from "@/lib/releases/export-serialize";
 import {
   EXPORT_STATUS_META,
@@ -24,6 +25,7 @@ export function ReleaseExportProgressStrip({
   const progress =
     job.progressPercent != null ? Math.round(job.progressPercent) : null;
   const speed = exportSpeedLabel(job.progressSpeed);
+  const etaLabel = useMediaJobEtaLabel(job);
   const sizeHint = exportSizeHint(job);
 
   return (
@@ -65,7 +67,10 @@ export function ReleaseExportProgressStrip({
                     {job.progressMessage ?? "Копирование…"}
                     {speed ? ` · ${speed}` : ""}
                   </span>
-                  <span className="shrink-0 tabular-nums text-accent">{progress}%</span>
+                  <span className="shrink-0 tabular-nums text-accent">
+                    {etaLabel ? `${etaLabel} · ` : ""}
+                    {progress}%
+                  </span>
                 </div>
                 <div className="h-1 overflow-hidden rounded-full bg-bg-deep/80 ring-1 ring-inset ring-border/60">
                   <div

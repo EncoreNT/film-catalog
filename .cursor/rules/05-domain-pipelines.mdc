@@ -82,7 +82,7 @@ ADR: `0009`. `releaseTier()` остаётся в `release-tags.ts`; filter/spotl
 
 ## media-jobs/ — export/move shared
 
-ADR: `0010`. `job-display`, `job-progress-message`, `part-path`, `serialize-base`.
+ADR: `0010`. `job-display`, `job-progress-message`, `job-eta`, `copy-speed-window`, `part-path`, `serialize-base`.
 
 ## catalog/archive-metrics.ts
 

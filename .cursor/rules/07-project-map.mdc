@@ -39,7 +39,10 @@ alwaysApply: false
 | Tier profile nullify | `nullifyAudioProfile` in `quality-predicates.ts` |
 | Export/move UI labels | `lib/media-jobs/job-display.ts` |
 | Copy progress string | `lib/media-jobs/job-progress-message.ts` |
+| Export/move remaining time | `lib/media-jobs/job-eta.ts` |
+| Copy speed window | `lib/media-jobs/copy-speed-window.ts` |
 | Tier filter combos | `lib/media/tier-core.ts` |
+| WSL Windows-drive mount | `lib/shared/wsl-drive-mount.ts` |
 
 ## Anti-patterns
 
@@ -57,8 +60,9 @@ alwaysApply: false
 | Builds | `lib/builds/*.test.ts` (stream mapping, ffmpeg args) |
 | Parsers | `name-parser.test.ts`, `ffprobe.test.ts`, `ffprobe-parse.test.ts` |
 | Catalog query | `movie-query.test.ts`, `catalog-facets.test.ts` |
-| Media jobs | `lib/media-jobs/job-display.test.ts` |
+| Media jobs | `lib/media-jobs/job-display.test.ts`, `job-eta.test.ts`, `copy-speed-window.test.ts` |
 | Shared format | `format-bytes.test.ts`, `duration-format.test.ts` |
+| WSL drive mount | `lib/shared/wsl-drive-mount.test.ts` |
 
 ## When to read full rules
 
@@ -71,6 +75,6 @@ alwaysApply: false
 | `05-domain-pipelines` | Scanner, ffprobe, filters |
 | `06-engineering-standards` | ADR, tests, DB checklist |
 
-## ADR index (0001–0013)
+## ADR index (0001–0016)
 
-See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0009** tier computation, **0010** media-jobs, **0011** franchise slots, **0012** scan hash.
+See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0016** WSL drive mount, **0015** multi-rater, **0014** multipart films.

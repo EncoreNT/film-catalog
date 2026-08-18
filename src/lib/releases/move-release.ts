@@ -1,7 +1,7 @@
 import { access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
-import { assertDirectoryWritable } from "@/lib/db/settings";
+import { assertDirectoryWritableIfMounted } from "@/lib/db/settings";
 import {
   displayFilePath,
   joinRuntimePath,
@@ -46,7 +46,7 @@ function requireMovableRelease(release: ReleaseWithTracks): void {
 
 async function resolveTargetDir(targetDir: string): Promise<string> {
   const runtimeDir = resolveRuntimePath(targetDir);
-  await assertDirectoryWritable(runtimeDir);
+  await assertDirectoryWritableIfMounted(runtimeDir);
   return runtimeDir;
 }
 

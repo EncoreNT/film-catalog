@@ -2,6 +2,7 @@ import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { prisma } from "@/lib/db/prisma";
 import { displayFilePath, resolveRuntimePath } from "@/lib/shared/display-path";
+import { inspectHostWslDrive } from "@/lib/shared/wsl-drive-mount";
 import {
   DEFAULT_MOVIE_LIST_LIMIT,
   DEFAULT_MOVIE_LIST_ORDER,
@@ -58,6 +59,15 @@ export async function assertDirectoryWritable(dirPath: string): Promise<void> {
   } catch {
     throw new Error(`Папка недоступна или не существует: ${displayFilePath(dirPath)}`);
   }
+}
+
+/** Skip the writable check when the Windows drive is not mounted in WSL yet. */
+export async function assertDirectoryWritableIfMounted(
+  dirPath: string,
+): Promise<void> {
+  const status = await inspectHostWslDrive(dirPath);
+  if (status.kind === "unmounted") return;
+  await assertDirectoryWritable(dirPath);
 }
 
 export function scanRootDisplay(runtimePath: string | null): string | null {

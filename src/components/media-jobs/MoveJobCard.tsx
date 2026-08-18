@@ -3,6 +3,7 @@
 import { HardDrive } from "lucide-react";
 import { MediaJobCard } from "@/components/media-jobs/MediaJobCard";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import type { SerializedMove } from "@/lib/releases/move-serialize";
 import {
   MOVE_STATUS_META,
@@ -22,6 +23,7 @@ export function MoveJobCard({
   const isRunning = job.status === "RUNNING";
   const sizeHint = moveSizeHint(job);
   const speed = moveSpeedLabel(job.progressSpeed);
+  const etaLabel = useMediaJobEtaLabel(job);
 
   return (
     <MediaJobCard
@@ -49,6 +51,7 @@ export function MoveJobCard({
       progressPercent={job.progressPercent}
       progressMessage={job.progressMessage}
       progressSuffix={speed ?? undefined}
+      etaLabel={etaLabel}
       defaultProgressMessage="Перемещение…"
       accent="neural"
       compact={compact}

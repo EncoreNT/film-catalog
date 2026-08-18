@@ -3,8 +3,13 @@
 import { HardDriveDownload } from "lucide-react";
 import { MediaJobCard } from "@/components/media-jobs/MediaJobCard";
 import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import type { SerializedExport } from "@/lib/releases/export-serialize";
-import { EXPORT_STATUS_META, exportSizeHint } from "@/lib/releases/export-display";
+import {
+  EXPORT_STATUS_META,
+  exportSizeHint,
+  exportSpeedLabel,
+} from "@/lib/releases/export-display";
 
 export function ExportJobCard({
   job,
@@ -17,6 +22,8 @@ export function ExportJobCard({
   const coverUrl = movieCoverUrlFromMovie(job.movie);
   const isRunning = job.status === "RUNNING";
   const sizeHint = exportSizeHint(job);
+  const speed = exportSpeedLabel(job.progressSpeed);
+  const etaLabel = useMediaJobEtaLabel(job);
 
   return (
     <MediaJobCard
@@ -41,6 +48,8 @@ export function ExportJobCard({
       }
       progressPercent={job.progressPercent}
       progressMessage={job.progressMessage}
+      progressSuffix={speed ?? undefined}
+      etaLabel={etaLabel}
       defaultProgressMessage="Копирование…"
       accent="accent"
       compact={compact}

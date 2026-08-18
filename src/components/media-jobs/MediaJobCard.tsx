@@ -53,6 +53,7 @@ interface MediaJobCardProps {
   progressPercent?: number | null;
   progressMessage?: string | null;
   progressSuffix?: string;
+  etaLabel?: string | null;
   defaultProgressMessage?: string;
   accent?: MediaJobAccent;
   compact?: boolean;
@@ -73,6 +74,7 @@ export function MediaJobCard({
   progressPercent,
   progressMessage,
   progressSuffix,
+  etaLabel,
   defaultProgressMessage = "Обработка…",
   accent = "accent",
   compact = false,
@@ -195,6 +197,7 @@ export function MediaJobCard({
                       <span
                         className={`shrink-0 tabular-nums ${a.progressLabel}`}
                       >
+                        {etaLabel ? `${etaLabel} · ` : ""}
                         {progress}%
                       </span>
                     </div>

@@ -13,6 +13,7 @@ import {
   assertMoveTargetFits,
   moveReleaseDryRun,
 } from "@/lib/releases/move-release";
+import { assertWslDriveMounted } from "@/lib/shared/wsl-drive-mount";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
@@ -83,6 +84,7 @@ export async function enqueueMove(
   externalStorageId: number | null,
 ) {
   await assertReleaseCanMove(release.id);
+  await assertWslDriveMounted(targetDir);
 
   const dryRun = await moveReleaseDryRun(release, movie, targetDir, filename);
   if (dryRun.sameAsSource) {

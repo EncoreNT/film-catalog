@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assertDirectoryWritable } from "@/lib/db/settings";
+import { assertDirectoryWritableIfMounted } from "@/lib/db/settings";
 import { mapDomainError } from "@/lib/api/api-utils";
 import { displayFilePath, resolveRuntimePath } from "@/lib/shared/display-path";
 import {
@@ -17,7 +17,7 @@ export async function POST() {
     }
 
     const runtimePath = resolveRuntimePath(picked);
-    await assertDirectoryWritable(runtimePath);
+    await assertDirectoryWritableIfMounted(runtimePath);
 
     return NextResponse.json({
       path: runtimePath,

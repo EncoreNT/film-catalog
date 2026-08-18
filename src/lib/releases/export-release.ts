@@ -2,7 +2,7 @@ import { access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
-import { assertDirectoryWritable, resolveSavedExportTargetDir } from "@/lib/db/settings";
+import { assertDirectoryWritableIfMounted, resolveSavedExportTargetDir } from "@/lib/db/settings";
 import { isTvReadyRelease, TV_COMPATIBLE_CONTAINER_EXTENSIONS } from "@/lib/media/tv-ready";
 import {
   displayFilePath,
@@ -101,7 +101,7 @@ function requireExportableRelease(release: ReleaseWithTracks): void {
 
 async function resolveTargetDir(targetDir: string): Promise<string> {
   const runtimeDir = resolveRuntimePath(targetDir);
-  await assertDirectoryWritable(runtimeDir);
+  await assertDirectoryWritableIfMounted(runtimeDir);
   return runtimeDir;
 }
 

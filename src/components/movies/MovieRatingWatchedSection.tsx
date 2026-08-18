@@ -39,7 +39,14 @@ export function MovieRatingWatchedSection({
                 ) : null}
               </div>
             ) : (
-              <span className="font-mono text-sm text-text">да, дата не указана</span>
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-xl font-medium tracking-wide text-text">
+                  Смотрели
+                </span>
+                <span className="font-mono-tech text-faint">
+                  дату не записывали
+                </span>
+              </div>
             )
           ) : (
             <span className="font-mono text-sm text-faint">не отмечено</span>

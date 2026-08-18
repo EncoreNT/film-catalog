@@ -6,6 +6,7 @@ import { ReleaseTransferDialog } from "@/components/releases/ReleaseTransferDial
 import { ReleaseJobDialogProgress } from "@/components/releases/ReleaseJobDialogProgress";
 import { ReleasePathBlock } from "@/components/releases/ReleasePathBlock";
 import { ReleaseTransferDestinationForm } from "@/components/releases/ReleaseTransferDestinationForm";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import { useTargetDiskSpace } from "@/hooks/useTargetDiskSpace";
 import type { ReleaseExportJobState } from "@/hooks/useReleaseExportJob";
 import { apiFetch } from "@/lib/api/client";
@@ -61,6 +62,8 @@ export function ReleaseExportDialog({
     loadActiveExport,
     cancelExport,
   } = exportJobState;
+
+  const etaLabel = useMediaJobEtaLabel(exportJob);
 
   const diskSpace = useTargetDiskSpace({
     enabled: open,
@@ -227,9 +230,18 @@ export function ReleaseExportDialog({
         targetDirRuntime.trim() &&
           filename.trim() &&
           !diskSpace.shortfall &&
-          !diskSpace.loading,
+          !diskSpace.loading &&
+          !diskSpace.unmountedDrive &&
+          !diskSpace.mounting,
       ),
-    [targetDirRuntime, filename, diskSpace.shortfall, diskSpace.loading],
+    [
+      targetDirRuntime,
+      filename,
+      diskSpace.shortfall,
+      diskSpace.loading,
+      diskSpace.unmountedDrive,
+      diskSpace.mounting,
+    ],
   );
 
   const footerActions = exportActive
@@ -298,6 +310,7 @@ export function ReleaseExportDialog({
             }
             progressMessage={exportJob?.progressMessage}
             speed={speed}
+            etaLabel={etaLabel}
             defaultProgressMessage="Копирование…"
           />
         ) : exportJob?.status === "FAILED" ? (
@@ -346,6 +359,18 @@ export function ReleaseExportDialog({
               targetDirRuntime={targetDirRuntime}
               collision={collision}
               targetDisplay={targetDisplay}
+              unmountedDrive={diskSpace.unmountedDrive}
+              mountingDrive={diskSpace.mounting}
+              mountError={diskSpace.mountError}
+              onMountDrive={() => {
+                void diskSpace.mountDrive().then((mounted) => {
+                  if (mounted && filename.trim() && targetDirRuntime.trim()) {
+                    void refreshDryRun(filename, targetDirRuntime).catch((err) => {
+                      onError(err instanceof Error ? err.message : "Ошибка");
+                    });
+                  }
+                });
+              }}
             />
           </>
         )}

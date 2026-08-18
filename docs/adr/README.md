@@ -61,5 +61,8 @@ docs/adr/0002-franchise-slots-model.md
 | [0011](0011-franchise-slot-full-replace-sync.md) | Franchise slot full-replace sync | Accepted |
 | [0012](0012-scan-hash-prefix-move-detection.md) | Scan hash prefix + move detection | Accepted |
 | [0013](0013-remake-groups.md) | Remake groups without dedicated pages | Accepted |
+| [0014](0014-multipart-films.md) | Multipart films | Accepted |
+| [0015](0015-multi-rater-model.md) | Multi-rater model | Accepted |
+| [0016](0016-wsl-drive-mount-guard.md) | WSL drive mount guard for export/move | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

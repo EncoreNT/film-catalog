@@ -7,6 +7,7 @@ import { StoragePicker } from "@/components/shared/StoragePicker";
 import { ReleaseJobDialogProgress } from "@/components/releases/ReleaseJobDialogProgress";
 import { ReleasePathBlock } from "@/components/releases/ReleasePathBlock";
 import { ReleaseTransferDestinationForm } from "@/components/releases/ReleaseTransferDestinationForm";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
 import { useTargetDiskSpace } from "@/hooks/useTargetDiskSpace";
 import { moveTargetStorageKind } from "@/lib/shared/storage-picker-state";
@@ -78,6 +79,8 @@ export function ReleaseMoveDialog({
     loadActiveMove,
     cancelMove,
   } = moveJobState;
+
+  const etaLabel = useMediaJobEtaLabel(moveJob);
 
   const diskSpace = useTargetDiskSpace({
     enabled: open,
@@ -286,6 +289,8 @@ export function ReleaseMoveDialog({
     !sameAsSource &&
     !diskSpace.shortfall &&
     !diskSpace.loading &&
+    !diskSpace.unmountedDrive &&
+    !diskSpace.mounting &&
     validateStorage() == null;
 
   const footerActions = moveActive
@@ -354,6 +359,7 @@ export function ReleaseMoveDialog({
             progressPercent={moveJob?.status === "RUNNING" ? progress : null}
             progressMessage={moveJob?.progressMessage}
             speed={speed}
+            etaLabel={etaLabel}
             defaultProgressMessage="Перемещение…"
           />
         ) : moveJob?.status === "FAILED" ? (
@@ -425,6 +431,18 @@ export function ReleaseMoveDialog({
               collision={collision}
               sameAsSource={sameAsSource}
               targetDisplay={targetDisplay}
+              unmountedDrive={diskSpace.unmountedDrive}
+              mountingDrive={diskSpace.mounting}
+              mountError={diskSpace.mountError}
+              onMountDrive={() => {
+                void diskSpace.mountDrive().then((mounted) => {
+                  if (mounted && filename.trim() && targetDirRuntime.trim()) {
+                    void refreshDryRun(filename, targetDirRuntime).catch((err) => {
+                      onError(err instanceof Error ? err.message : "Ошибка");
+                    });
+                  }
+                });
+              }}
             />
           </>
         )}

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDiskSpaceForPath } from "@/lib/shared/disk-space";
+import { lookupDiskSpaceForPath } from "@/lib/shared/disk-space";
 import { displayFilePath } from "@/lib/shared/display-path";
 import { jsonError } from "@/lib/api/api-utils";
+import { wslDriveUnmountedMessage } from "@/lib/shared/wsl-drive-mount";
 
 export async function GET(request: NextRequest) {
   const rawPath = request.nextUrl.searchParams.get("path");
@@ -9,13 +10,24 @@ export async function GET(request: NextRequest) {
     return jsonError("Укажите path", 400);
   }
 
-  const info = await getDiskSpaceForPath(rawPath);
-  if (!info) {
+  const lookup = await lookupDiskSpaceForPath(rawPath);
+  if (lookup.kind === "unmounted") {
+    return NextResponse.json({
+      unmounted: true,
+      driveLetter: lookup.drive.letter,
+      mountPoint: lookup.drive.mountPoint,
+      path: lookup.path,
+      pathDisplay: displayFilePath(lookup.path),
+      error: wslDriveUnmountedMessage(lookup.drive.letter),
+    });
+  }
+
+  if (lookup.kind !== "ok") {
     return jsonError("Не удалось определить свободное место", 404);
   }
 
   return NextResponse.json({
-    ...info,
-    pathDisplay: displayFilePath(info.path),
+    ...lookup.info,
+    pathDisplay: displayFilePath(lookup.info.path),
   });
 }

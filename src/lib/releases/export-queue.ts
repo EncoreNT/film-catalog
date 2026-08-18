@@ -11,6 +11,7 @@ import {
   type ExportMovieInfo,
 } from "@/lib/releases/export-release";
 import { assertTargetDirFits } from "@/lib/shared/disk-space-fit";
+import { assertWslDriveMounted } from "@/lib/shared/wsl-drive-mount";
 
 const ACTIVE_STATUSES: ReleaseBuildStatus[] = ["QUEUED", "RUNNING"];
 
@@ -34,6 +35,7 @@ export async function enqueueExport(
   filename: string,
   targetDir: string,
 ) {
+  await assertWslDriveMounted(targetDir);
   const dryRun = await exportReleaseDryRun(release, movie, targetDir, filename);
   await assertTargetDirFits(targetDir, release.fileSize);
   const sourceFilePath = release.filePath!.trim();

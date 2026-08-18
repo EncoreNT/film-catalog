@@ -145,6 +145,7 @@ ADR: `docs/adr/0006-durable-release-build-worker.md`. Домен: `lib/builds/*`
 
 ```
 Release detail → POST /api/releases/[id]/export | /move
+         → assertWslDriveMounted (lib/shared/wsl-drive-mount.ts)
          → ReleaseExport | ReleaseMove QUEUED
 scripts/release-build-worker.ts → claimNextMediaJob
          → runExportJob | runMoveJob (lib/releases/*-runner.ts)
@@ -152,7 +153,7 @@ scripts/release-build-worker.ts → claimNextMediaJob
 Move success → update Release.filePath + externalStorage; unlink source (best-effort)
 ```
 
-ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib).
+ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib), `0016` (WSL drive mount).
 
 ## Поток: каталог и фильтры
 
