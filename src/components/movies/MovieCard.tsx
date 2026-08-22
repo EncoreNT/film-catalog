@@ -22,9 +22,9 @@ import { LaserCardFrame } from "@/components/primitives/LaserCardFrame";
 import {
   catalogCardTech,
   catalogAudioChipLabel,
+  catalogHdrBadgeLabel,
   catalogTierRibbon,
   catalogTierRibbonCompact,
-  premiumHdrView,
   releaseTier,
 } from "@/lib/media/spec-tags";
 import { isTvReadyRelease } from "@/lib/media/tv-ready";
@@ -64,12 +64,6 @@ interface MovieCardProps {
   movie: MovieWithTracks;
   index?: number;
   remakeBadge?: CatalogRemakeBadge;
-}
-
-/** Compact HDR label so the tier pill never overflows. */
-function shortHdrLabel(label: string): string {
-  if (label.startsWith("Dolby Vision")) return "DV";
-  return label; // HDR10, HDR10+, HLG
 }
 
 /**
@@ -241,7 +235,6 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
   const primary = pickPrimaryRelease(movie.releases, movie.primaryReleaseId);
   const primaryId = primary?.id ?? null;
   const coverUrl = movieCoverUrlFromMovie(movie);
-  const premiumHdr = primary ? premiumHdrView(primary) : null;
   const tier = primary ? releaseTier(primary) : null;
   const tech = primary ? catalogCardTech(primary) : null;
   const tierRibbon = primary ? catalogTierRibbon(tier, primary) : catalogTierRibbon(tier);
@@ -251,10 +244,8 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
   const chipTone = tierChipTone(tier);
   const tvReady = primary ? isTvReadyRelease(primary) : false;
 
-  const hdrChip =
-    premiumHdr != null
-      ? { short: shortHdrLabel(premiumHdr.label), full: premiumHdr.label }
-      : null;
+  const hdrBadge = primary ? catalogHdrBadgeLabel(primary) : null;
+  const hdrChip = hdrBadge != null ? { short: hdrBadge, full: hdrBadge } : null;
 
   // Audio chip label = spatial profile or codec + channels (e.g. "DTS:X 7.1", "TrueHD 7.1").
   const audioChipLabel = primary ? catalogAudioChipLabel(primary) : null;

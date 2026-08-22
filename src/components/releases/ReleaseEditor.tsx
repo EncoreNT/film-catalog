@@ -70,6 +70,7 @@ function releaseToVideoState(release: ReleaseWithTracks | null): VideoFieldState
   return {
     codec: v?.codec ?? "",
     hdr: v?.hdr ?? "SDR",
+    hasHdr10Plus: v?.hasHdr10Plus ?? false,
     resolutionLabel: v?.resolutionLabel ?? "",
     width: v?.width ?? null,
     height: v?.height ?? null,

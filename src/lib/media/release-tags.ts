@@ -185,50 +185,68 @@ export function premiumHDR(release: ReleaseWithTracks): PremiumHDR | null {
 export interface PremiumHdrView {
   label: string;
   isDolbyVision: boolean;
+  sublabel?: string;
+}
+
+export function releaseHasHdr10Plus(release: ReleaseWithTracks): boolean {
+  const v = release.videoTrack;
+  if (!v) return false;
+  if (v.hasHdr10Plus) return true;
+  return parseHdrValue(v.hdr).base === "HDR10+";
+}
+
+/** Catalog / franchise badge: HDR10+ or generic HDR. SDR → null. */
+export function catalogHdrBadgeLabel(
+  release: ReleaseWithTracks,
+): "HDR10+" | "HDR" | null {
+  if (!isAnyHDR(release)) return null;
+  return releaseHasHdr10Plus(release) ? "HDR10+" : "HDR";
+}
+
+function fileHdrPlaqueLabel(hdr: string): {
+  label: string;
+  isDolbyVision: boolean;
+} | null {
+  const { base, dvProfile } = parseHdrValue(hdr);
+  if (base === "SDR") return null;
+  if (base === "HDR10") return { label: "HDR10", isDolbyVision: false };
+  if (base === "HDR10+") return { label: "HDR10+", isDolbyVision: false };
+  const formatted = formatHdrLabel(hdr);
+  if (!formatted) return null;
+  const label =
+    formatted.startsWith("Dolby Vision") && dvProfile
+      ? `Dolby Vision · ${dvProfileLabel(dvProfile)}`
+      : formatted;
+  return { label, isDolbyVision: label.startsWith("Dolby Vision") };
 }
 
 /**
- * Единая HDR-сводка для spec-ribbon: покрывает Dolby Vision (с профилем),
- * HDR10 и HDR10+. В отличие от {@link premiumHDR}, не дробит HDR по разным
- * слоям отображения — ribbon владеет всем HDR, secondaryTags его не дублируют.
+ * Единая HDR-сводка для spec-ribbon. HDR10+ — заголовок, формат файла
+ * (DV / HDR10) уходит в подпись. В отличие от {@link premiumHDR}, не дробит
+ * HDR по разным слоям отображения — ribbon владеет всем HDR.
  */
 export function premiumHdrView(release: ReleaseWithTracks): PremiumHdrView | null {
   const v = release.videoTrack;
   if (!v?.hdr) return null;
-  const { base, dvProfile } = parseHdrValue(v.hdr);
-  if (base === "SDR") return null;
-  if (base === "HDR10") return { label: "HDR10", isDolbyVision: false };
-  if (base === "HDR10+") return { label: "HDR10+", isDolbyVision: false };
-  const formatted = formatHdrLabel(v.hdr);
-  if (!formatted) return null;
-  const label = formatted.startsWith("Dolby Vision") && dvProfile
-    ? `Dolby Vision · ${dvProfileLabel(dvProfile)}`
-    : formatted;
-  return { label, isDolbyVision: label.startsWith("Dolby Vision") };
+  const file = fileHdrPlaqueLabel(v.hdr);
+  if (!file) return null;
+
+  if (releaseHasHdr10Plus(release)) {
+    const fileIsPlusOnly = parseHdrValue(v.hdr).base === "HDR10+";
+    return {
+      label: "HDR10+",
+      isDolbyVision: false,
+      sublabel: fileIsPlusOnly ? "Dynamic Metadata" : file.label,
+    };
+  }
+
+  return file;
 }
 
 export function hdrCatalogTag(release: ReleaseWithTracks): CatalogCardTag | null {
-  const v = release.videoTrack;
-  const hdrLabel = formatHdrLabel(v?.hdr);
-  const { base, dvProfile } = parseHdrValue(v?.hdr);
-  if (!hdrLabel || base === "SDR") return null;
-
-  const hdrPremium = premiumHDR(release);
-  if (hdrPremium) {
-    return {
-      kind: "hdr",
-      label: hdrPremium.label === "HDR10" ? "HDR" : hdrPremium.label,
-    };
-  }
-  if (base === "DolbyVision") {
-    return {
-      kind: "hdr",
-      label: dvProfile
-        ? `DV · ${dvProfileLabel(dvProfile)}`
-        : "Dolby Vision",
-    };
-  }
-  return { kind: "hdr", label: hdrLabel };
+  const label = catalogHdrBadgeLabel(release);
+  if (!label) return null;
+  return { kind: "hdr", label };
 }
 
 /** Human-readable tab label for a release (e.g. "BDRemux · 4K"). */

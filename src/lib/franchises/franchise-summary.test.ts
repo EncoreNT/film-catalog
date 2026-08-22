@@ -100,6 +100,7 @@ function makeRelease(opts: MovieOpts, releaseId = 1): ReleaseWithTracks {
             resolutionLabel: opts.resolutionLabel ?? null,
             codec: null,
             hdr: opts.hdr ?? null,
+            hasHdr10Plus: false,
             fps: null,
             bitrate: null,
           }
@@ -194,10 +195,10 @@ describe("slotQualityLabel", () => {
       slotQualityLabel({
         filled: true,
         resolution: "4K",
-        dynamicRange: "HDR10",
+        dynamicRange: "HDR",
         audioFull: "TrueHD Atmos",
       } as FranchiseSlotSummary),
-    ).toBe("4K · HDR10 · TrueHD Atmos");
+    ).toBe("4K · HDR · TrueHD Atmos");
   });
 });
 
@@ -690,7 +691,7 @@ describe("computeFranchiseSummary reel and ratings", () => {
 
     expect(s.slots[0].audio).toBe("DTS");
     expect(s.slots[0].audioFull).toBe("DTS");
-    expect(s.slots[0].dynamicRange).toBe("DV");
+    expect(s.slots[0].dynamicRange).toBe("HDR");
   });
 
   it("rounds the average rating to one decimal", () => {

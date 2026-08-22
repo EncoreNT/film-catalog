@@ -3,6 +3,7 @@ import {
   normalizeComparableTitle,
   normalizeMatchKeyTitle,
   normalizeSearchText,
+  normalizeTitleSlash,
   searchTextEquals,
   searchTextIncludes,
 } from "@/lib/shared/text-normalize";
@@ -13,9 +14,11 @@ describe("normalizeSearchText", () => {
   });
 });
 
-describe("normalizeMatchKeyTitle", () => {
-  it("applies NFC and collapses whitespace", () => {
-    expect(normalizeMatchKeyTitle("  Foo   Bar  ")).toBe("foo bar");
+describe("normalizeTitleSlash", () => {
+  it("replaces bilingual backslash with a forward slash", () => {
+    expect(normalizeTitleSlash("Элементарно \\ Elemental")).toBe(
+      "Элементарно / Elemental",
+    );
   });
 });
 

@@ -5,6 +5,7 @@ import { Sun, Zap } from "lucide-react";
 import { SegmentedControl } from "./SegmentedControl";
 import { Select } from "./Select";
 import { InfoHint } from "./InfoHint";
+import { Checkbox } from "./Checkbox";
 import {
   HDR_BASE_FORMATS,
   DOLBY_VISION_PROFILES,
@@ -17,7 +18,9 @@ import {
 interface HdrInputProps {
   /** Stored hdr value: "SDR", a base format, or "DV:P8" for Dolby Vision + profile. */
   value: string;
+  hasHdr10Plus?: boolean;
   onChange: (value: string) => void;
+  onHdr10PlusChange?: (value: boolean) => void;
   baseOptions?: DictOption[];
   dolbyVisionProfiles?: DictOption[];
 }
@@ -30,7 +33,9 @@ function isHdr(value: string): boolean {
 
 export function HdrInput({
   value,
+  hasHdr10Plus = false,
   onChange,
+  onHdr10PlusChange,
   baseOptions = HDR_BASE_FORMATS,
   dolbyVisionProfiles = DOLBY_VISION_PROFILES,
 }: HdrInputProps) {
@@ -40,6 +45,7 @@ export function HdrInput({
   const handleToggle = (mode: "sdr" | "hdr") => {
     if (mode === "sdr") {
       onChange("SDR");
+      onHdr10PlusChange?.(false);
     } else if (!hdrOn) {
       onChange(DEFAULT_BASE);
     }
@@ -50,6 +56,8 @@ export function HdrInput({
       onChange(buildHdrValue(nextBase, dvProfile));
     } else {
       onChange(nextBase);
+      if (nextBase === "HDR10+") onHdr10PlusChange?.(true);
+      if (nextBase === "HDR10" || nextBase === "HLG") onHdr10PlusChange?.(false);
     }
   };
 
@@ -116,6 +124,25 @@ export function HdrInput({
               preserveOrder
               hint="P5/P7/P8 — способы кодирования DV. P7FEL — полный слой улучшения. Пусто — без профиля."
             />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
+        {hdrOn && base === DV_BASE && onHdr10PlusChange ? (
+          <motion.div
+            key="hdr10plus"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Checkbox
+              checked={hasHdr10Plus}
+              onChange={(e) => onHdr10PlusChange(e.target.checked)}
+            >
+              Есть HDR10+ (телевизор покажет HDR10+)
+            </Checkbox>
           </motion.div>
         ) : null}
       </AnimatePresence>

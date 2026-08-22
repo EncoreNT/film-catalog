@@ -51,6 +51,7 @@ function alitaInspected(): InspectedReleaseFile {
         height: 2160,
         resolutionLabel: "4K",
         hdr: "DV:P8",
+        hasHdr10Plus: false,
         fps: "23.976",
         bitrate: 41_400,
       },

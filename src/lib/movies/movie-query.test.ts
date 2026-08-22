@@ -191,10 +191,24 @@ describe("buildMovieWhere", () => {
     expect(where.AND).toBeUndefined();
   });
 
+  it("filters HDR10+ by overlay flag, not only hdr string", () => {
+    const where = buildMovieWhere(queryFrom({ hdr: "HDR10+" }));
+    expect(where.releases).toEqual({
+      some: {
+        videoTrack: {
+          OR: [{ hasHdr10Plus: true }, { hdr: "HDR10+" }],
+        },
+      },
+    });
+  });
+
   it("filters TV-ready releases", () => {
     const where = buildMovieWhere(queryFrom({ tvReady: "true" }));
     expect(where.releases?.some).toMatchObject({
-      filePath: { endsWith: ".mkv" },
+      OR: [
+        { filePath: { endsWith: ".mkv" } },
+        { filePath: { endsWith: ".mp4" } },
+      ],
       videoTrack: {
         codec: { in: ["hevc", "h265", "h264", "avc"] },
       },

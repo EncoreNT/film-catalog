@@ -16,6 +16,7 @@ import type {
 const video: VideoFieldState = {
   codec: " hevc ",
   hdr: "HDR10",
+  hasHdr10Plus: false,
   resolutionLabel: " 4K ",
   width: 3840,
   height: 2160,
@@ -64,6 +65,7 @@ describe("buildVideoTrackPayload", () => {
       resolutionLabel: "4K",
       codec: "hevc",
       hdr: "HDR10",
+      hasHdr10Plus: false,
       fps: "24",
       bitrate: 50000000,
     });
@@ -131,6 +133,23 @@ describe("buildMovieCreatePayload", () => {
     expect(payload.release?.skipProbe).toBe(true);
     expect(payload.release?.audioTracks).toHaveLength(1);
     expect(payload.release?.subtitleTracks).toHaveLength(1);
+  });
+
+  it("replaces a bilingual backslash in the title", () => {
+    const payload = buildMovieCreatePayload({
+      title: "Элементарно \\ Elemental",
+      year: 2023,
+      description: null,
+      externalStorageId: null,
+      releaseType: null,
+      genres: [],
+      durationSeconds: null,
+      filePath: null,
+      video,
+      audioRows: [],
+      subtitleRows: [],
+    });
+    expect(payload.title).toBe("Элементарно / Elemental");
   });
 });
 

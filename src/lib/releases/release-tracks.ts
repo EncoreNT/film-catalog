@@ -14,6 +14,7 @@ export interface VideoTrackInput {
   resolutionLabel?: string | null;
   codec?: string | null;
   hdr?: string | null;
+  hasHdr10Plus?: boolean;
   fps?: string | null;
   bitrate?: number | null;
 }
@@ -123,6 +124,7 @@ export async function syncReleaseTracks(
         resolutionLabel: videoTrack.resolutionLabel ?? null,
         codec: videoTrack.codec ?? null,
         hdr: videoTrack.hdr ?? null,
+        hasHdr10Plus: videoTrack.hasHdr10Plus ?? false,
         fps: videoTrack.fps ?? null,
         bitrate: videoTrack.bitrate ?? null,
       },
@@ -133,6 +135,7 @@ export async function syncReleaseTracks(
         resolutionLabel: videoTrack.resolutionLabel,
         codec: videoTrack.codec,
         hdr: videoTrack.hdr,
+        hasHdr10Plus: videoTrack.hasHdr10Plus ?? false,
         fps: videoTrack.fps,
         bitrate: videoTrack.bitrate,
       },

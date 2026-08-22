@@ -19,12 +19,14 @@ describe("probeToVideoFields", () => {
       resolutionLabel: "1080p",
       codec: "h264",
       hdr: null,
+      hasHdr10Plus: false,
       fps: "23.976",
       bitrate: 8000000,
     };
     expect(probeToVideoFields(video)).toEqual({
       codec: "h264",
       hdr: "SDR",
+      hasHdr10Plus: false,
       resolutionLabel: "1080p",
       width: 1920,
       height: 1080,

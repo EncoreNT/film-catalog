@@ -17,6 +17,7 @@ export function probeToVideoFields(
   return {
     codec: video.codec ?? "",
     hdr: video.hdr ?? "SDR",
+    hasHdr10Plus: video.hasHdr10Plus ?? video.hdr === "HDR10+",
     resolutionLabel: video.resolutionLabel ?? "",
     width: video.width,
     height: video.height,

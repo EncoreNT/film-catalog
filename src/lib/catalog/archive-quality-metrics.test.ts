@@ -3,6 +3,7 @@ import { ARCHIVE_QUALITY_METRIC_DEFS } from "@/lib/catalog/archive-quality-metri
 
 describe("ARCHIVE_QUALITY_METRIC_DEFS", () => {
   const gold = ARCHIVE_QUALITY_METRIC_DEFS.find((def) => def.key === "gold")!;
+  const hdr10 = ARCHIVE_QUALITY_METRIC_DEFS.find((def) => def.key === "hdr10")!;
 
   it("gold quick filter sets 4K + HDR_ANY preset", () => {
     expect(gold.toggleFilter(false)).toEqual({
@@ -24,9 +25,20 @@ describe("ARCHIVE_QUALITY_METRIC_DEFS", () => {
     ).toBe(false);
     expect(
       gold.isActive(
-        { resolution: "4K", hdr: "HDR10,HDR10+", premiumAudio: null },
+        { resolution: "4K", hdr: "HDR10+", premiumAudio: null },
         true,
       ),
     ).toBe(false);
+  });
+
+  it("HDR10+ rail filters by overlay flag", () => {
+    expect(hdr10.toggleFilter(false)).toEqual({
+      resolution: null,
+      hdr: "HDR10+",
+      premiumAudio: null,
+    });
+    expect(
+      hdr10.isActive({ resolution: null, hdr: "HDR10+", premiumAudio: null }, true),
+    ).toBe(true);
   });
 });

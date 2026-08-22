@@ -73,11 +73,13 @@ ADR: `docs/adr/0007-tv-export-and-runtime-paths.md`, `0008`, `0010`.
 - Shared job status enum with builds: QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED
 - `ReleaseExport` — copy release to user-chosen TV folder (stream copy)
 - `ReleaseMove` — copy + update Release path + optional external storage + delete source
-- Shared lib: `lib/media-jobs/*`; worker: `lib/worker/claim-next-media-job.ts`
+- Shared lib: `lib/media-jobs/*`; worker: `lib/worker/claim-next-media-job.ts` (one RUNNING export/move per destination disk, ADR-0018)
 
 ### VideoTrack (1:1 с Release)
 
-`streamIndex`, `width`, `height`, `resolutionLabel`, `codec`, `hdr`, `fps`, `bitrate`
+`streamIndex`, `width`, `height`, `resolutionLabel`, `codec`, `hdr`, `hasHdr10Plus`, `fps`, `bitrate`
+
+`hasHdr10Plus` — в файле есть динамическая метадата HDR10+ (SEI ST 2094-40), в том числе dual с Dolby Vision. `hdr` при этом остаётся форматом потока (`DV:P8`, `HDR10`, …). ADR-0017.
 
 ### AudioTrack / SubtitleTrack (1:N с Release)
 

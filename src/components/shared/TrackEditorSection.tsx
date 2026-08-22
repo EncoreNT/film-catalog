@@ -135,7 +135,9 @@ export function TrackEditorSection({
       </div>
       <HdrInput
         value={video.hdr}
+        hasHdr10Plus={video.hasHdr10Plus}
         onChange={(hdr) => onVideoChange({ hdr })}
+        onHdr10PlusChange={(hasHdr10Plus) => onVideoChange({ hasHdr10Plus })}
       />
       <SizeInput
         width={video.width}
@@ -178,7 +180,9 @@ export function TrackEditorSection({
           </div>
           <HdrInput
             value={video.hdr}
+            hasHdr10Plus={video.hasHdr10Plus}
             onChange={(hdr) => onVideoChange({ hdr })}
+            onHdr10PlusChange={(hasHdr10Plus) => onVideoChange({ hasHdr10Plus })}
           />
         </div>
         <div className={elevatedGap}>

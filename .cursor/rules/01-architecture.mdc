@@ -98,6 +98,7 @@ film-catalog/
 | `/franchises/[slug]/edit` | `app/franchises/[slug]/edit/page.tsx` | Редактор франшизы и слотов |
 | `/scan` | `app/scan/page.tsx` | Скан папки, прогресс NDJSON stream |
 | `/settings` | `app/settings/page.tsx` | Настройки: оценщики, каталог, сборки, экспорт |
+| `/dev` | `app/dev/page.tsx` | Инструменты: перепрогон HDR10+ по уже сканированным релизам |
 | `/movies/[slug]/builds/new` | `app/movies/[slug]/builds/new/page.tsx` | Конструктор пользовательского MKV |
 | `/builds` | `app/builds/page.tsx` | Очередь сборок |
 | `/builds/[id]` | `app/builds/[id]/page.tsx` | Деталь job |
@@ -147,13 +148,15 @@ ADR: `docs/adr/0006-durable-release-build-worker.md`. Домен: `lib/builds/*`
 Release detail → POST /api/releases/[id]/export | /move
          → assertWslDriveMounted (lib/shared/wsl-drive-mount.ts)
          → ReleaseExport | ReleaseMove QUEUED
-scripts/release-build-worker.ts → claimNextMediaJob
+scripts/release-build-worker.ts → claimAvailableMediaJobs
+         → 1 RUNNING export/move per destination disk (ADR-0018);
+           other jobs to the same disk stay QUEUED; different disks run in parallel
          → runExportJob | runMoveJob (lib/releases/*-runner.ts)
          → shared display/progress: lib/media-jobs/*
 Move success → update Release.filePath + externalStorage; unlink source (best-effort)
 ```
 
-ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib), `0016` (WSL drive mount).
+ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib), `0016` (WSL drive mount), `0018` (per-destination-disk lanes).
 
 ## Поток: каталог и фильтры
 

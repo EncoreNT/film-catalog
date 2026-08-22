@@ -14,6 +14,7 @@ export function buildVideoTrackPayload(video: VideoFieldState) {
     resolutionLabel: trimInputOptional(video.resolutionLabel),
     codec: trimInputOptional(video.codec),
     hdr: trimInputOptional(video.hdr),
+    hasHdr10Plus: video.hasHdr10Plus,
     fps: trimInputOptional(video.fps),
     bitrate: video.bitrate,
   };

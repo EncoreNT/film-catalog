@@ -7,6 +7,7 @@ import {
   catalogTierRibbon,
   catalogTierRibbonCompact,
   premiumHdrView,
+  catalogHdrBadgeLabel,
   releaseTier,
   releaseQuickSpecHints,
   secondaryTags,
@@ -38,7 +39,7 @@ function release(
   };
 }
 
-function video(hdr: string | null) {
+function video(hdr: string | null, hasHdr10Plus = false) {
   return {
     id: 1,
     releaseId: 1,
@@ -48,6 +49,7 @@ function video(hdr: string | null) {
     resolutionLabel: "4K",
     codec: "hevc",
     hdr,
+    hasHdr10Plus,
     fps: "24",
     bitrate: 50000000,
   };
@@ -101,7 +103,21 @@ describe("premiumHdrView", () => {
   it("сводит HDR10+ к плоскому лейблу", () => {
     expect(
       premiumHdrView(release({ id: 1, videoTrack: video("HDR10+") })),
-    ).toEqual({ label: "HDR10+", isDolbyVision: false });
+    ).toEqual({
+      label: "HDR10+",
+      isDolbyVision: false,
+      sublabel: "Dynamic Metadata",
+    });
+  });
+
+  it("ставит HDR10+ героем, а DV оставляет подписью", () => {
+    expect(
+      premiumHdrView(release({ id: 1, videoTrack: video("DV:P8", true) })),
+    ).toEqual({
+      label: "HDR10+",
+      isDolbyVision: false,
+      sublabel: "Dolby Vision · Profile 8.1",
+    });
   });
 
   it("форматирует Dolby Vision с профилем", () => {
@@ -117,6 +133,32 @@ describe("premiumHdrView", () => {
     expect(
       premiumHdrView(release({ id: 1, videoTrack: video("DV:") })),
     ).toEqual({ label: "Dolby Vision", isDolbyVision: true });
+  });
+});
+
+describe("catalogHdrBadgeLabel", () => {
+  it("сводит HDR10 и DV к HDR", () => {
+    expect(catalogHdrBadgeLabel(release({ id: 1, videoTrack: video("HDR10") }))).toBe(
+      "HDR",
+    );
+    expect(catalogHdrBadgeLabel(release({ id: 1, videoTrack: video("DV:P8") }))).toBe(
+      "HDR",
+    );
+  });
+
+  it("показывает HDR10+ при флаге или формате", () => {
+    expect(
+      catalogHdrBadgeLabel(release({ id: 1, videoTrack: video("DV:P8", true) })),
+    ).toBe("HDR10+");
+    expect(
+      catalogHdrBadgeLabel(release({ id: 1, videoTrack: video("HDR10+") })),
+    ).toBe("HDR10+");
+  });
+
+  it("скрывает SDR", () => {
+    expect(
+      catalogHdrBadgeLabel(release({ id: 1, videoTrack: video("SDR") })),
+    ).toBeNull();
   });
 });
 

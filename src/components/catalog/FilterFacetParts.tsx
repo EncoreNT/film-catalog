@@ -11,10 +11,7 @@ export const SEGMENT_SHELL =
   "inline-flex flex-wrap rounded-full border border-border bg-bg-elevated/50 backdrop-blur-md";
 
 export const HDR_OPTIONS = [
-  { value: "HDR10", label: "HDR10" },
   { value: "HDR10+", label: "HDR10+" },
-  { value: "DolbyVision", label: "Dolby Vision" },
-  { value: "HLG", label: "HLG" },
 ] as const;
 export const HDR_ANY = "HDR_ANY";
 

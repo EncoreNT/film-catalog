@@ -113,7 +113,7 @@ function slotResolution(movie: MovieWithTracks | null): string | null {
 
 function slotDynamicRange(movie: MovieWithTracks | null): string | null {
   const v = primaryRelease(movie)?.videoTrack;
-  return hdrShortLabel(v?.hdr ?? null);
+  return hdrShortLabel(v?.hdr ?? null, v?.hasHdr10Plus ?? false);
 }
 
 function slotAudioShort(movie: MovieWithTracks | null): string | null {

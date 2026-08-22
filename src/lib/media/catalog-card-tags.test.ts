@@ -39,6 +39,7 @@ describe("catalogCardTags", () => {
           resolutionLabel: "4K",
           codec: "hevc",
           hdr: "HDR10",
+          hasHdr10Plus: false,
           fps: "24",
           bitrate: null,
         },
@@ -86,6 +87,7 @@ describe("catalogCardTags", () => {
           resolutionLabel: "4K",
           codec: "hevc",
           hdr: "HDR10",
+          hasHdr10Plus: false,
           fps: "24",
           bitrate: null,
         },
@@ -94,5 +96,47 @@ describe("catalogCardTags", () => {
 
     const resolutionTags = tags.filter((t) => t.kind === "resolution");
     expect(resolutionTags).toHaveLength(0);
+  });
+
+  it("shows HDR vs HDR10+ catalog badges", () => {
+    const hdr10 = catalogCardTags(
+      release({
+        id: 3,
+        videoTrack: {
+          id: 1,
+          releaseId: 3,
+          streamIndex: 0,
+          width: 3840,
+          height: 2160,
+          resolutionLabel: "4K",
+          codec: "hevc",
+          hdr: "HDR10",
+          hasHdr10Plus: false,
+          fps: "24",
+          bitrate: null,
+        },
+      }),
+    );
+    expect(hdr10.find((t) => t.kind === "hdr")?.label).toBe("HDR");
+
+    const plus = catalogCardTags(
+      release({
+        id: 4,
+        videoTrack: {
+          id: 1,
+          releaseId: 4,
+          streamIndex: 0,
+          width: 3840,
+          height: 2160,
+          resolutionLabel: "4K",
+          codec: "hevc",
+          hdr: "DV:P8",
+          hasHdr10Plus: true,
+          fps: "24",
+          bitrate: null,
+        },
+      }),
+    );
+    expect(plus.find((t) => t.kind === "hdr")?.label).toBe("HDR10+");
   });
 });

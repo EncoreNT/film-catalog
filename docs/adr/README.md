@@ -64,5 +64,7 @@ docs/adr/0002-franchise-slots-model.md
 | [0014](0014-multipart-films.md) | Multipart films | Accepted |
 | [0015](0015-multi-rater-model.md) | Multi-rater model | Accepted |
 | [0016](0016-wsl-drive-mount-guard.md) | WSL drive mount guard for export/move | Accepted |
+| [0017](0017-hdr10plus-overlay.md) | HDR10+ as overlay flag | Accepted |
+| [0018](0018-copy-move-per-destination-disk.md) | Per-destination-disk copy/move lanes | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

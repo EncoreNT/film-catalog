@@ -15,6 +15,13 @@ export function normalizeMatchKeyTitle(title: string): string {
   return title.normalize("NFC").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Bilingual catalog titles use "RU / EN". Some folders use a backslash instead.
+ */
+export function normalizeTitleSlash(title: string): string {
+  return title.replaceAll("\\", "/");
+}
+
 /** Normalized query needle for case-insensitive catalog search via matchKey. */
 export function normalizeSearchQuery(q: string): string {
   return normalizeMatchKeyTitle(q);

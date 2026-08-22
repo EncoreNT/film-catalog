@@ -44,6 +44,7 @@ function video(codec = "hevc") {
     resolutionLabel: "4K",
     codec,
     hdr: "HDR10",
+    hasHdr10Plus: false,
     fps: "24",
     bitrate: 50000000,
   };

@@ -23,8 +23,11 @@ import { YearInput } from "@/components/primitives/YearInput";
 import { CoverUpload } from "@/components/primitives/CoverUpload";
 import { useFilePathCheck } from "@/hooks/useFilePathCheck";
 import { useTrackEditor } from "@/hooks/useTrackEditor";
-import type { VideoFieldState } from "@/lib/movies/movie-form-types";
-import { emptyAudioFormRow } from "@/lib/movies/movie-form-types";
+import {
+  emptyAudioFormRow,
+  emptyVideoFieldState,
+  type VideoFieldState,
+} from "@/lib/movies/movie-form-types";
 import {
   applyParsedFilePathFields,
   applyProbeToTrackEditor,
@@ -71,15 +74,7 @@ export function AddMovieForm() {
   const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [video, setVideo] = useState<VideoFieldState>({
-    codec: "",
-    hdr: "SDR",
-    resolutionLabel: "",
-    width: null,
-    height: null,
-    fps: "",
-    bitrate: null,
-  });
+  const [video, setVideo] = useState(emptyVideoFieldState());
 
   const {
     audioRows,

@@ -23,7 +23,9 @@ async function main() {
       `[${WORKER_ID}] инструменты сборки недоступны — экспорт работает; установите ffmpeg/ffprobe/mkvmerge`,
     );
   } else {
-    console.log(`[${WORKER_ID}] started (copy: unlimited, transcode: max 2 parallel)`);
+    console.log(
+      `[${WORKER_ID}] started (copy: 1 per destination disk, transcode: max 2 parallel)`,
+    );
   }
 
   const shutdown = { value: false };

@@ -1,11 +1,25 @@
 export interface VideoFieldState {
   codec: string;
   hdr: string;
+  hasHdr10Plus: boolean;
   resolutionLabel: string;
   width: number | null;
   height: number | null;
   fps: string;
   bitrate: number | null;
+}
+
+export function emptyVideoFieldState(): VideoFieldState {
+  return {
+    codec: "",
+    hdr: "SDR",
+    hasHdr10Plus: false,
+    resolutionLabel: "",
+    width: null,
+    height: null,
+    fps: "",
+    bitrate: null,
+  };
 }
 
 export interface AudioFormRow {

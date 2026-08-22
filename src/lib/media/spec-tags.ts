@@ -18,6 +18,8 @@ export {
   dvProfileLabel,
   premiumHDR,
   premiumHdrView,
+  catalogHdrBadgeLabel,
+  releaseHasHdr10Plus,
   releaseTabLabel,
   releaseTier,
   bestRussianDubTrack,

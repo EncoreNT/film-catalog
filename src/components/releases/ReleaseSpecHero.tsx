@@ -233,6 +233,7 @@ function HdrPlaque({
   if (!hdr) return null;
 
   const isDv = hdr.isDolbyVision;
+  const isHdr10Plus = hdr.label === "HDR10+";
   const accent: "neural" | "gold" = isDv ? "neural" : "gold";
   const holo: HoloKind = isDv ? "foil" : "gold";
 
@@ -240,7 +241,9 @@ function HdrPlaque({
   const main = mainPart ?? hdr.label;
   const profileSub = rest.length > 0 ? rest.join(" \u00b7 ") : null;
   const sub =
-    profileSub ?? (hdr.label === "HDR10+" ? "Dynamic Metadata" : "High Dynamic Range");
+    hdr.sublabel ??
+    profileSub ??
+    (isHdr10Plus ? "Dynamic Metadata" : "High Dynamic Range");
 
   return (
     <PlaqueShell index={index} accent={accent} holo={holo}>
@@ -253,10 +256,12 @@ function HdrPlaque({
           <Sun className="h-4 w-4" />
         </span>
         <span
-          className={`font-mono text-base font-semibold leading-none sm:text-lg ${
-            accent === "neural"
-              ? "text-neural-bright drop-glow-neural"
-              : "text-accent-bright drop-glow-accent"
+          className={`font-mono font-semibold leading-none ${
+            isHdr10Plus
+              ? "text-xl text-accent-bright drop-glow-accent sm:text-2xl"
+              : accent === "neural"
+                ? "text-base text-neural-bright drop-glow-neural sm:text-lg"
+                : "text-base text-accent-bright drop-glow-accent sm:text-lg"
           }`}
         >
           {main}

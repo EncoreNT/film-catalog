@@ -34,6 +34,7 @@ function sampleRelease(): ReleaseWithTracks {
       resolutionLabel: "1080p",
       codec: "hevc",
       hdr: "SDR",
+      hasHdr10Plus: false,
       fps: "24",
       bitrate: 1000,
     },

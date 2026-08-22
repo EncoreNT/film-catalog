@@ -6,6 +6,7 @@ import { movieIsWatchedWhere } from "@/lib/movies/movie-watched";
 import {
   archiveEliteTierWhere,
   archiveGoldTierWhere,
+  hdr10PlusMovieWhere,
 } from "@/lib/media/quality-predicates";
 import {
   movieDurationSortKey,
@@ -53,11 +54,7 @@ export async function countArchiveMetrics(
       where: mergeMovieWhere(scopedWhere, archiveGoldTierWhere),
     }),
     prisma.movie.count({
-      where: mergeMovieWhere(scopedWhere, {
-        releases: {
-          some: { videoTrack: { hdr: { in: ["HDR10", "HDR10+"] } } },
-        },
-      }),
+      where: mergeMovieWhere(scopedWhere, hdr10PlusMovieWhere),
     }),
     prisma.movie.count({
       where: mergeMovieWhere(scopedWhere, archiveEliteTierWhere),

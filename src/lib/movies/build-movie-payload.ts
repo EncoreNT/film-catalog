@@ -9,6 +9,7 @@ import {
   trimInputOptional,
   trimMultilineOptional,
 } from "@/lib/shared/text-trim";
+import { normalizeTitleSlash } from "@/lib/shared/text-normalize";
 import {
   buildAudioTracksPayload,
   buildSubtitleTracksPayload,
@@ -38,7 +39,7 @@ export interface MovieCreatePayloadInput {
 
 export function buildMovieCreatePayload(input: MovieCreatePayloadInput) {
   return {
-    title: trimInput(input.title),
+    title: normalizeTitleSlash(trimInput(input.title)),
     year: input.year,
     description: trimMultilineOptional(input.description),
     genres: input.genres,
@@ -80,7 +81,7 @@ export interface MovieUpdatePayloadInput {
 export function buildMovieUpdatePayload(input: MovieUpdatePayloadInput) {
   const multipart = input.partCount != null && input.partCount > 1;
   return {
-    title: trimInput(input.title),
+    title: normalizeTitleSlash(trimInput(input.title)),
     year: input.year,
     description: trimMultilineOptional(input.description),
     genres: input.genres,

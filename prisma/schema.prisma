@@ -196,11 +196,13 @@ model VideoTrack {
   resolutionLabel String?
   codec           String?
   hdr             String?
+  hasHdr10Plus    Boolean  @default(false)
   fps             String?
   bitrate         Int?
   release         Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
 
   @@index([resolutionLabel])
+  @@index([hasHdr10Plus])
 }
 
 model AudioTrack {

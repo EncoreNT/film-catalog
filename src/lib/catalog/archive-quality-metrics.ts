@@ -50,14 +50,14 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   },
   {
     key: "hdr10",
-    label: "HDR10 / HDR10+",
-    stackedLabel: ["HDR10", "HDR10+"],
-    caption: "расширенный динамический диапазон",
+    label: "HDR10+",
+    shortLabel: "HDR10+",
+    caption: "динамическая метадата, которую покажет телевизор",
     icon: Sun,
-    isActive: ({ hdr }, isCatalog) => isCatalog && hdr === "HDR10,HDR10+",
+    isActive: ({ hdr }, isCatalog) => isCatalog && hdr === "HDR10+",
     toggleFilter: (active) => ({
       ...CLEAR_QUALITY_FILTERS,
-      hdr: active ? null : "HDR10,HDR10+",
+      hdr: active ? null : "HDR10+",
     }),
   },
   {

@@ -64,7 +64,7 @@ export type ReleaseDetailView = {
   label: string;
   showRibbon: boolean;
   vPixels: string | null;
-  premiumHdr: { label: string; isDolbyVision: boolean } | null;
+  premiumHdr: { label: string; isDolbyVision: boolean; sublabel?: string } | null;
   premiumAtmos: { label: string; sublabel: string } | null;
   tier: ReleaseTier;
   tags: ReleaseDetailTag[];
@@ -144,7 +144,11 @@ export function buildReleaseDetailView(
     showRibbon,
     vPixels,
     premiumHdr: premiumHdr
-      ? { label: premiumHdr.label, isDolbyVision: premiumHdr.isDolbyVision }
+      ? {
+          label: premiumHdr.label,
+          isDolbyVision: premiumHdr.isDolbyVision,
+          sublabel: premiumHdr.sublabel,
+        }
       : null,
     premiumAtmos: premiumAtmos
       ? {

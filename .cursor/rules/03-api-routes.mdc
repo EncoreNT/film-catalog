@@ -63,6 +63,7 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 |--------|------|------------|
 | GET | `/api/scan` | Текущий scanRoot |
 | POST | `/api/scan` | Запуск скана → **NDJSON stream** |
+| POST | `/api/dev/hdr10plus-rescan` | Перепрогон HDR10+ по HDR/DV релизам → **NDJSON stream** |
 | PUT | `/api/scan` | Сохранить scanRoot (Win/WSL → runtime path) |
 | GET | `/api/storages` | Список внешних дисков (`ExternalStorage`) |
 | POST | `/api/storages` | Создать внешний диск |

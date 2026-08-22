@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db/prisma";
 import { countRunningTranscodeBuilds, recoverStaleBuilds } from "@/lib/builds/build-queue";
 import { getBuildTranscodeConcurrency } from "@/lib/db/settings";
+import {
+  destinationDiskKey,
+  selectClaimableCopyJobs,
+  type CopyJobCandidate,
+} from "@/lib/media-jobs/destination-disk";
 import { recoverStaleExports } from "@/lib/releases/export-queue";
 import { recoverStaleMoves } from "@/lib/releases/move-queue";
 
@@ -70,16 +75,6 @@ async function claimNextQueuedBuild(
   return claimBuildById(candidate.id, workerId);
 }
 
-async function claimNextQueuedExport(workerId: string): Promise<number | null> {
-  const candidate = await prisma.releaseExport.findFirst({
-    where: { status: "QUEUED", cancelRequested: false },
-    orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
-    select: { id: true },
-  });
-  if (!candidate) return null;
-  return claimExportById(candidate.id, workerId);
-}
-
 async function claimMoveById(
   moveId: number,
   workerId: string,
@@ -100,21 +95,64 @@ async function claimMoveById(
   return updated.count > 0 ? moveId : null;
 }
 
-async function claimNextQueuedMove(workerId: string): Promise<number | null> {
-  const candidate = await prisma.releaseMove.findFirst({
-    where: { status: "QUEUED", cancelRequested: false },
-    orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
-    select: { id: true },
-  });
-  if (!candidate) return null;
-  return claimMoveById(candidate.id, workerId);
+async function loadOccupiedCopyDisks(): Promise<Set<string>> {
+  const [runningExports, runningMoves] = await Promise.all([
+    prisma.releaseExport.findMany({
+      where: { status: "RUNNING" },
+      select: { targetPath: true },
+    }),
+    prisma.releaseMove.findMany({
+      where: { status: "RUNNING" },
+      select: { targetPath: true },
+    }),
+  ]);
+
+  return new Set(
+    [...runningExports, ...runningMoves].map((job) =>
+      destinationDiskKey(job.targetPath),
+    ),
+  );
+}
+
+async function loadQueuedCopyJobs(): Promise<CopyJobCandidate[]> {
+  const [queuedExports, queuedMoves] = await Promise.all([
+    prisma.releaseExport.findMany({
+      where: { status: "QUEUED", cancelRequested: false },
+      select: { id: true, targetPath: true, createdAt: true },
+    }),
+    prisma.releaseMove.findMany({
+      where: { status: "QUEUED", cancelRequested: false },
+      select: { id: true, targetPath: true, createdAt: true },
+    }),
+  ]);
+
+  return [
+    ...queuedExports.map((job) => ({ kind: "export" as const, ...job })),
+    ...queuedMoves.map((job) => ({ kind: "move" as const, ...job })),
+  ];
+}
+
+async function claimSelectedCopyJobs(
+  workerId: string,
+  selected: CopyJobCandidate[],
+): Promise<MediaJob[]> {
+  const jobs: MediaJob[] = [];
+  for (const candidate of selected) {
+    const id =
+      candidate.kind === "export"
+        ? await claimExportById(candidate.id, workerId)
+        : await claimMoveById(candidate.id, workerId);
+    if (id == null) continue;
+    jobs.push({ kind: candidate.kind, id });
+  }
+  return jobs;
 }
 
 /**
  * Claims every build/export/move slot available right now:
  * - copy-only builds: all queued (independent of transcode)
  * - transcode builds: up to BUILD_TRANSCODE_MAX_CONCURRENCY total RUNNING
- * - exports: all queued (copy-only)
+ * - export/move: one RUNNING job per destination disk (unlimited across disks)
  */
 export async function claimAvailableMediaJobs(
   workerId: string,
@@ -142,17 +180,12 @@ export async function claimAvailableMediaJobs(
     }
   }
 
-  while (true) {
-    const id = await claimNextQueuedExport(workerId);
-    if (id == null) break;
-    jobs.push({ kind: "export", id });
-  }
-
-  while (true) {
-    const id = await claimNextQueuedMove(workerId);
-    if (id == null) break;
-    jobs.push({ kind: "move", id });
-  }
+  const occupiedDisks = await loadOccupiedCopyDisks();
+  const claimableCopyJobs = selectClaimableCopyJobs(
+    await loadQueuedCopyJobs(),
+    occupiedDisks,
+  );
+  jobs.push(...(await claimSelectedCopyJobs(workerId, claimableCopyJobs)));
 
   return jobs;
 }

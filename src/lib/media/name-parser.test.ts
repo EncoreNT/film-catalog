@@ -74,6 +74,12 @@ describe("parseReleaseType", () => {
     expect(result.title).not.toMatch(/hybrid/i);
   });
 
+  it("uses a forward slash for bilingual folder titles", () => {
+    expect(parseMovieName("Элементарно \\ Elemental.2023.mkv").title).toBe(
+      "Элементарно / Elemental",
+    );
+  });
+
   it("still classifies a non-hybrid BDRemux as bdremux", () => {
     expect(parseReleaseType("Inception.2010.1080p.BDRemux.mkv")).toBe(
       "bdremux",

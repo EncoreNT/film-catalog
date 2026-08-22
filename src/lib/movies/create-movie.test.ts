@@ -36,6 +36,7 @@ const manualAddProbeFixture: ProbeResult = {
     resolutionLabel: "4K",
     codec: "hevc",
     hdr: "HDR10",
+    hasHdr10Plus: false,
     fps: "23.976",
     bitrate: 65_000_000,
   },

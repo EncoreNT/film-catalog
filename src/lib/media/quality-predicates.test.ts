@@ -55,7 +55,9 @@ describe("quality-predicates", () => {
 
   it("hdrShortLabel", () => {
     expect(hdrShortLabel(null)).toBe("SDR");
-    expect(hdrShortLabel("HDR10")).toBe("HDR10");
-    expect(hdrShortLabel("DV:Profile7")).toBe("DV");
+    expect(hdrShortLabel("HDR10")).toBe("HDR");
+    expect(hdrShortLabel("DV:Profile7")).toBe("HDR");
+    expect(hdrShortLabel("HDR10+")).toBe("HDR10+");
+    expect(hdrShortLabel("DV:P8", true)).toBe("HDR10+");
   });
 });

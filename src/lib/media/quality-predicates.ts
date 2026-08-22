@@ -110,13 +110,24 @@ export const archiveEliteTierWhere = {
   ],
 } satisfies Prisma.MovieWhereInput;
 
-/** Compact HDR badge for franchise reel / cards (HDR10 / DV / SDR …). */
-export function hdrShortLabel(hdr: string | null | undefined): string {
+export const hdr10PlusReleaseWhere = {
+  videoTrack: {
+    OR: [{ hasHdr10Plus: true }, { hdr: "HDR10+" }],
+  },
+} satisfies Prisma.ReleaseWhereInput;
+
+export const hdr10PlusMovieWhere = {
+  releases: { some: hdr10PlusReleaseWhere },
+} satisfies Prisma.MovieWhereInput;
+
+/** Compact HDR badge for franchise reel / cards (HDR / HDR10+ / SDR). */
+export function hdrShortLabel(
+  hdr: string | null | undefined,
+  hasHdr10Plus = false,
+): string {
   if (!hdr) return "SDR";
   const { base } = parseHdrValue(hdr);
   if (base === "SDR") return "SDR";
-  if (base === "HDR10") return "HDR10";
-  if (base === "HDR10+") return "HDR10+";
-  if (base === "DolbyVision") return "DV";
+  if (hasHdr10Plus || base === "HDR10+") return "HDR10+";
   return "HDR";
 }

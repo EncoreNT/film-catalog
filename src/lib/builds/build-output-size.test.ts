@@ -34,6 +34,7 @@ function sampleRelease(overrides?: Partial<ReleaseWithTracks>): ReleaseWithTrack
       resolutionLabel: "4K",
       codec: "hevc",
       hdr: "HDR10",
+      hasHdr10Plus: false,
       fps: "24",
       bitrate: 50_000,
     },

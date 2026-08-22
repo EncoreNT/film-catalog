@@ -8,6 +8,7 @@ import {
 } from "@/lib/movies/movie-parts";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
+import { normalizeTitleSlash } from "@/lib/shared/text-normalize";
 import type { z } from "zod";
 
 type MovieUpdateInput = z.infer<typeof movieUpdateSchema>;
@@ -25,7 +26,10 @@ export async function updateMovie(movieId: number, data: MovieUpdateInput) {
     throw new Error("Фильм не найден");
   }
 
-  const nextTitle = movieData.title ?? existing.title;
+  const nextTitle =
+    movieData.title !== undefined
+      ? normalizeTitleSlash(movieData.title)
+      : existing.title;
   const nextYear =
     movieData.year !== undefined ? movieData.year : existing.year;
   const matchKey = computeMatchKey(nextTitle, nextYear);
@@ -33,13 +37,14 @@ export async function updateMovie(movieId: number, data: MovieUpdateInput) {
   return prisma.$transaction(async (tx) => {
     const slug =
       movieData.title !== undefined
-        ? await resolveMovieSlug(tx, movieData.title, movieId)
+        ? await resolveMovieSlug(tx, nextTitle, movieId)
         : undefined;
 
     await tx.movie.update({
       where: { id: movieId },
       data: {
         ...movieData,
+        ...(movieData.title !== undefined ? { title: nextTitle } : {}),
         slug,
         matchKey,
         watchedAt:

@@ -15,6 +15,7 @@ alwaysApply: false
 | Spotlight / ambient color | ADR-0005; `lib/media/tier-presentation.ts`; `components/layout/SpotlightTier.tsx` |
 | Catalog filters / facets | `lib/movies/movie-query.ts`, `lib/catalog/catalog-facets.ts`, `lib/catalog/audio-track-scope.ts` |
 | Scan / import | `lib/media/scanner.ts`, `lib/media/name-parser.ts`, `lib/media/ffprobe.ts` |
+| HDR10+ overlay | `lib/media/ffprobe-parse.ts` → `resolveProbedHdr`; `VideoTrack.hasHdr10Plus`; `/dev` rescan |
 | Build MKV queue | `lib/builds/*`, `scripts/release-build-worker.ts`, ADR-0006 |
 | Export / move jobs | `lib/releases/export-*`, `lib/releases/move-*`, `lib/media-jobs/*`, ADR-0007/8/10 |
 | Covers | `lib/covers/cover-url.ts`, `lib/covers/cover-storage.ts` |
@@ -41,6 +42,7 @@ alwaysApply: false
 | Copy progress string | `lib/media-jobs/job-progress-message.ts` |
 | Export/move remaining time | `lib/media-jobs/job-eta.ts` |
 | Copy speed window | `lib/media-jobs/copy-speed-window.ts` |
+| Copy/move dest disk lanes | `lib/media-jobs/destination-disk.ts` |
 | Tier filter combos | `lib/media/tier-core.ts` |
 | WSL Windows-drive mount | `lib/shared/wsl-drive-mount.ts` |
 
@@ -60,7 +62,7 @@ alwaysApply: false
 | Builds | `lib/builds/*.test.ts` (stream mapping, ffmpeg args) |
 | Parsers | `name-parser.test.ts`, `ffprobe.test.ts`, `ffprobe-parse.test.ts` |
 | Catalog query | `movie-query.test.ts`, `catalog-facets.test.ts` |
-| Media jobs | `lib/media-jobs/job-display.test.ts`, `job-eta.test.ts`, `copy-speed-window.test.ts` |
+| Media jobs | `lib/media-jobs/job-display.test.ts`, `job-eta.test.ts`, `copy-speed-window.test.ts`, `destination-disk.test.ts` |
 | Shared format | `format-bytes.test.ts`, `duration-format.test.ts` |
 | WSL drive mount | `lib/shared/wsl-drive-mount.test.ts` |
 
@@ -75,6 +77,6 @@ alwaysApply: false
 | `05-domain-pipelines` | Scanner, ffprobe, filters |
 | `06-engineering-standards` | ADR, tests, DB checklist |
 
-## ADR index (0001–0016)
+## ADR index (0001–0018)
 
-See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0016** WSL drive mount, **0015** multi-rater, **0014** multipart films.
+See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0018** per-destination-disk copy/move, **0017** HDR10+ overlay, **0016** WSL drive mount.

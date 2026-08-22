@@ -195,17 +195,21 @@ export function buildMovieWhere(
     const resolutions = query.resolution?.split(",").filter(Boolean);
     const hdrValues = query.hdr?.split(",").filter(Boolean);
     const anyHdr = hdrValues?.includes("HDR_ANY");
-    const explicitHdr = hdrValues?.filter((v) => v !== "HDR_ANY");
+    const explicitHdr = hdrValues?.filter((v) => v !== "HDR_ANY") ?? [];
+    const plusOnly = explicitHdr.length === 1 && explicitHdr[0] === "HDR10+";
+    const hdrClause = anyHdr
+      ? { hdr: { notIn: ["SDR"] } }
+      : plusOnly
+        ? { OR: [{ hasHdr10Plus: true }, { hdr: "HDR10+" }] }
+        : explicitHdr.length
+          ? { hdr: { in: explicitHdr } }
+          : {};
     releaseFilters.push({
       videoTrack: {
         ...(resolutions?.length
           ? { resolutionLabel: { in: resolutions } }
           : {}),
-        ...(anyHdr
-          ? { hdr: { notIn: ["SDR"] } }
-          : explicitHdr?.length
-            ? { hdr: { in: explicitHdr } }
-            : {}),
+        ...hdrClause,
       },
     });
   }

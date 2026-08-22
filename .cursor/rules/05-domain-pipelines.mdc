@@ -20,7 +20,7 @@ alwaysApply: false
 ## media/ffprobe.ts — медиа-анализ
 
 - `probeMediaFile(path, signal?)` → duration, video, audio[], subtitles[]
-- Parses ffprobe JSON; HDR detection (HDR10, DV, HLG); resolution labels via `media/resolution.ts`
+- Parses ffprobe JSON; HDR detection (HDR10, DV, HLG) plus `hasHdr10Plus` from ST 2094-40 SEI (ADR-0017); resolution labels via `media/resolution.ts`
 - Audio: `media/channels.ts` — normalizeCodec, channelsToLayout, detectAudioProfile, detectTranslationType
 
 ## media/name-parser.ts
@@ -82,7 +82,7 @@ ADR: `0009`. `releaseTier()` остаётся в `release-tags.ts`; filter/spotl
 
 ## media-jobs/ — export/move shared
 
-ADR: `0010`. `job-display`, `job-progress-message`, `job-eta`, `copy-speed-window`, `part-path`, `serialize-base`.
+ADR: `0010`, `0018`. `job-display`, `job-progress-message`, `job-eta`, `copy-speed-window`, `part-path`, `serialize-base`, `destination-disk` (one RUNNING copy/move per destination drive).
 
 ## catalog/archive-metrics.ts
 

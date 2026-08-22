@@ -7,6 +7,7 @@ import { syncMovieGenres } from "@/lib/movies/sync-movie-genres";
 import { syncMovieParts } from "@/lib/movies/movie-parts";
 import { resolveMovieSlug } from "@/lib/movies/movie-slug";
 import { computeMatchKey } from "@/lib/movies/movie-match-key";
+import { normalizeTitleSlash } from "@/lib/shared/text-normalize";
 import {
   createReleaseWithTracks,
   extractReleaseInputFromMovieCreate,
@@ -47,16 +48,17 @@ export async function probeOnlyMovie(data: MovieCreateInput) {
 }
 
 export async function createMovie(data: MovieCreateInput) {
+  const title = normalizeTitleSlash(data.title);
   const releaseInput = extractReleaseInputFromMovieCreate(data);
   const genreNames = data.genres ?? [];
-  const slug = await resolveMovieSlug(prisma, data.title);
-  const matchKey = computeMatchKey(data.title, data.year ?? null);
+  const slug = await resolveMovieSlug(prisma, title);
+  const matchKey = computeMatchKey(title, data.year ?? null);
 
   const movie = await prisma.$transaction(async (tx) => {
     const created = await tx.movie.create({
       data: {
         slug,
-        title: data.title,
+        title,
         year: data.year ?? null,
         description: data.description ?? null,
         matchKey,

@@ -9,6 +9,7 @@ export const videoInputSchema = z.object({
   resolutionLabel: z.string().nullable().optional(),
   codec: z.string().nullable().optional(),
   hdr: z.string().nullable().optional(),
+  hasHdr10Plus: z.boolean().optional(),
   fps: z.string().nullable().optional(),
   bitrate: z.number().int().nullable().optional(),
 });

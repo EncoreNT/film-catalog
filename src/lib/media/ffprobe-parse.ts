@@ -12,6 +12,7 @@ export interface ProbedVideoTrack {
   resolutionLabel: string;
   codec: string | null;
   hdr: string | null;
+  hasHdr10Plus: boolean;
   fps: string | null;
   bitrate: number | null;
 }
@@ -206,6 +207,72 @@ function detectHdrFromDoviSideData(stream: FfprobeStream): string | null {
   if (!dovi) return null;
   const profile = mapDoviProfileFromSideData(dovi);
   return profile ? `DV:${profile}` : "DolbyVision";
+}
+
+function isHdr10PlusSideData(data: FfprobeSideData): boolean {
+  const type = (data.side_data_type ?? "").toLowerCase();
+  return (
+    type.includes("hdr10+") ||
+    type.includes("2094-40") ||
+    type.includes("smpte2094-40")
+  );
+}
+
+export interface FfprobeFrame {
+  side_data_list?: FfprobeSideData[];
+}
+
+/**
+ * Stream-level HDR10+ hints only. DOVI `dv_bl_signal_compatibility_id`
+ * is not HDR10+: 1 = CTA HDR10 BL, 4 = HLG, 6 = UHD Blu-ray HDR10 BL.
+ * Ground truth is ST 2094-40 SEI on frames.
+ */
+export function streamHasHdr10PlusSignal(stream: FfprobeStream): boolean {
+  if (stream.side_data_list?.some(isHdr10PlusSideData)) return true;
+
+  const haystack = [
+    stream.color_transfer,
+    stream.profile,
+    ...Object.values(stream.tags ?? {}),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes("hdr10+");
+}
+
+export function framesHaveHdr10Plus(frames: FfprobeFrame[]): boolean {
+  return frames.some((frame) => frame.side_data_list?.some(isHdr10PlusSideData));
+}
+
+export interface ProbedHdr {
+  hdr: string;
+  hasHdr10Plus: boolean;
+}
+
+/**
+ * Combine bitstream HDR format with HDR10+ overlay.
+ * DV wins for `hdr`; ST 2094-40 SEI (frames or stream) sets `hasHdr10Plus`
+ * without replacing the DV profile. Plain PQ + plus becomes HDR10+.
+ */
+export function resolveProbedHdr(
+  stream: FfprobeStream,
+  frameHasHdr10Plus = false,
+): ProbedHdr {
+  let hdr = detectVideoHdr(stream);
+  const hasHdr10Plus =
+    hdr === "HDR10+" ||
+    streamHasHdr10PlusSignal(stream) ||
+    frameHasHdr10Plus;
+  if (hdr === "HDR10" && hasHdr10Plus) hdr = "HDR10+";
+  return { hdr, hasHdr10Plus };
+}
+
+export function shouldProbeHdr10PlusFrames(stream: FfprobeStream): boolean {
+  const hdr = detectVideoHdr(stream);
+  if (hdr === "SDR") return false;
+  if (hdr === "HDR10+") return false;
+  return !streamHasHdr10PlusSignal(stream);
 }
 
 /** Detect HDR format from a probed video stream (exported for unit tests). */

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition, type Dispatch, type SetStateAction } from "react";
 import { PageHeader } from "@/components/primitives/PageHeader";
 import { SegmentedControl } from "@/components/primitives/SegmentedControl";
@@ -157,6 +158,12 @@ export function SettingsPageClient({
           </Button>
         </FormActionBar>
       ) : null}
+
+      <p className="mt-10 text-xs text-faint">
+        <Link href="/dev" className="hover:text-muted">
+          Перепрогон HDR10+
+        </Link>
+      </p>
     </div>
   );
 }
