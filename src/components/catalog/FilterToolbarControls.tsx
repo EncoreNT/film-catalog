@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Archive, Eye, EyeOff, Inbox, Layers2, Library, ListVideo, Star } from "lucide-react";
+import { Archive, CircleOff, Eye, EyeOff, Inbox, Layers2, Library, ListVideo, Star } from "lucide-react";
 import { SEGMENT_SHELL } from "@/components/catalog/FilterFacetParts";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 
@@ -243,6 +243,57 @@ export function MultiReleaseFilter({
           className={segmentButtonClass(active)}
         >
           <Layers2 className="h-4 w-4" aria-hidden />
+        </button>
+      </HoverTooltip>
+    </div>
+  );
+}
+
+interface EmptyReleasesFilterProps {
+  active: boolean;
+  count: number;
+  onChange: (active: boolean) => void;
+}
+
+const EMPTY_RELEASES_TOOLTIP = {
+  label: "Без релизов",
+  description:
+    "Карточки фильмов, к которым ещё не привязан файл. По умолчанию скрыты.",
+};
+
+export function EmptyReleasesFilter({
+  active,
+  count,
+  onChange,
+}: EmptyReleasesFilterProps) {
+  if (count <= 0 && !active) return null;
+
+  return (
+    <div className={`${SEGMENT_SHELL} p-0.5`}>
+      <HoverTooltip
+        className="inline-flex"
+        content={
+          <FilterTooltipContent
+            title={EMPTY_RELEASES_TOOLTIP.label}
+            description={EMPTY_RELEASES_TOOLTIP.description}
+          />
+        }
+      >
+        <button
+          type="button"
+          aria-label={EMPTY_RELEASES_TOOLTIP.label}
+          aria-pressed={active}
+          onClick={() => onChange(!active)}
+          className={segmentButtonClass(active)}
+        >
+          <span className="relative inline-flex">
+            <CircleOff className="h-4 w-4" aria-hidden />
+            {count > 0 ? (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[0.55rem] font-medium tabular-nums text-bg-deep">
+                {count}
+              </span>
+            ) : null}
+          </span>
         </button>
       </HoverTooltip>
     </div>

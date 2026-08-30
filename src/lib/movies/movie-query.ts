@@ -132,7 +132,13 @@ export function buildMovieWhere(
     }
   }
 
-  if (query.multiRelease === "true") {
+  const emptyOnly = query.emptyReleases === "true";
+  appendMovieAnd(
+    where,
+    emptyOnly ? { releases: { none: {} } } : { releases: { some: {} } },
+  );
+
+  if (!emptyOnly && query.multiRelease === "true") {
     const ids = ctx.multiReleaseMovieIds;
     if (!ids?.length) {
       where.id = -1;
@@ -141,7 +147,7 @@ export function buildMovieWhere(
     }
   }
 
-  if (query.minDuration || query.maxDuration) {
+  if (!emptyOnly && (query.minDuration || query.maxDuration)) {
     const minSec = query.minDuration ? query.minDuration * 60 : undefined;
     const maxSec = query.maxDuration ? query.maxDuration * 60 : undefined;
     Object.assign(
@@ -179,6 +185,10 @@ export function buildMovieWhere(
       ...(query.watchedFrom ? { gte: new Date(query.watchedFrom) } : {}),
       ...(query.watchedTo ? { lte: new Date(query.watchedTo) } : {}),
     };
+  }
+
+  if (emptyOnly) {
+    return where;
   }
 
   const releaseFilters: Prisma.ReleaseWhereInput[] = [];

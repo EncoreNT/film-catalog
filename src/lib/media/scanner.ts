@@ -15,6 +15,7 @@ import {
   recomputeMoviePartCount,
 } from "@/lib/movies/movie-parts";
 import { MovieStatus } from "@/generated/prisma/client";
+import { shouldSkipScanDir } from "@/lib/media/scan-skip-dirs";
 
 const VIDEO_EXTENSIONS = new Set([
   ".mkv",
@@ -126,7 +127,7 @@ async function walkVideoFiles(dir: string): Promise<string[]> {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name.startsWith(".")) continue;
+      if (shouldSkipScanDir(entry.name)) continue;
       results.push(...(await walkVideoFiles(fullPath)));
     } else if (entry.isFile()) {
       const ext = path.extname(entry.name).toLowerCase();

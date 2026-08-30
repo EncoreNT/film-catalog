@@ -105,6 +105,8 @@ export function buildRecipeFilenameTokens(
   return dedupeTokens(tokens);
 }
 
+export { suggestBdmvOutputPath } from "@/lib/builds/bdmv-output-path";
+
 export function appendRecipeTokensToStem(stem: string, tokens: string[]): string {
   if (tokens.length === 0) return stem;
   const stemLower = stem.toLowerCase();

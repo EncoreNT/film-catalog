@@ -162,6 +162,7 @@ describe("buildMovieWhere audio alignment (flat model)", () => {
       }),
     );
     expect(where.AND).toEqual([
+      { releases: { some: {} } },
       { releases: { some: { audioTracks: { some: { translationType: "original" } } } } },
       { releases: { some: { audioTracks: { some: { channelLayout: { in: ["2.0"] } } } } } },
     ]);
@@ -176,6 +177,7 @@ describe("buildMovieWhere audio alignment (flat model)", () => {
       }),
     );
     expect(where.AND).toEqual([
+      { releases: { some: {} } },
       { releases: { some: { videoTrack: { resolutionLabel: { in: ["4K"] } } } } },
       { releases: { some: { audioTracks: { some: { translationType: "original" } } } } },
       { releases: { some: { audioTracks: { some: { channelLayout: { in: ["2.0"] } } } } } },

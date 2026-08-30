@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   destinationDiskKey,
+  isSameDestinationDisk,
   selectClaimableCopyJobs,
   type CopyJobCandidate,
 } from "@/lib/media-jobs/destination-disk";
@@ -29,6 +30,29 @@ describe("destinationDiskKey", () => {
   it("collapses non-Windows destinations onto a local lane", () => {
     expect(destinationDiskKey("/home/encore/tv/a.mkv")).toBe("local");
     expect(destinationDiskKey("/mnt/data/movies/a.mkv")).toBe("local");
+  });
+});
+
+describe("isSameDestinationDisk", () => {
+  it("is true for two folders on the same Windows drive", () => {
+    expect(
+      isSameDestinationDisk(
+        "/mnt/d/Фильмы/a.mkv",
+        "D:\\Archive\\b.mkv",
+      ),
+    ).toBe(true);
+  });
+
+  it("is false across Windows drive letters", () => {
+    expect(
+      isSameDestinationDisk("/mnt/d/Films/a.mkv", "/mnt/f/Movies/a.mkv"),
+    ).toBe(false);
+  });
+
+  it("is true for two non-Windows local paths", () => {
+    expect(
+      isSameDestinationDisk("/home/encore/films/a.mkv", "/home/encore/keep/b.mkv"),
+    ).toBe(true);
   });
 });
 

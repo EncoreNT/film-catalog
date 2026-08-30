@@ -1,12 +1,35 @@
 import Link from "next/link";
-import { ScanSearch, Film, Sparkles } from "lucide-react";
+import { ScanSearch, Film, Plus, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/primitives/EmptyState";
+import { buttonClassName } from "@/components/primitives/Button";
 
 interface EmptyCatalogProps {
   isDraftView?: boolean;
+  variant?: "default" | "emptyReleases";
 }
 
-export function EmptyCatalog({ isDraftView }: EmptyCatalogProps) {
+export function EmptyCatalog({
+  isDraftView,
+  variant = "default",
+}: EmptyCatalogProps) {
+  if (variant === "emptyReleases") {
+    return (
+      <EmptyState
+        glowVariant="accent"
+        icon={<Film className="h-9 w-9" />}
+        eyebrow="без файлов"
+        title="Нет карточек без релизов"
+        description="Создайте карточку фильма, затем соберите MKV из BDMV или добавьте готовый файл."
+        action={
+          <Link href="/movies/new" className={buttonClassName("primary")}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Добавить фильм
+          </Link>
+        }
+      />
+    );
+  }
+
   return (
     <EmptyState
       glowVariant="accent"

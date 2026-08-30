@@ -93,7 +93,9 @@ export async function enqueueMove(
 
   const sourceFilePath = release.filePath!.trim();
   await assertMoveTargetAvailable(dryRun.targetPath, sourceFilePath);
-  await assertMoveTargetFits(targetDir, release.fileSize);
+  if (!dryRun.sameDisk) {
+    await assertMoveTargetFits(targetDir, release.fileSize);
+  }
 
   return prisma.releaseMove.create({
     data: {

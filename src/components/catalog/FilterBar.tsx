@@ -15,6 +15,7 @@ import { Chip } from "@/components/primitives/Chip";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 import {
   ArchiveStatusAccess,
+  EmptyReleasesFilter,
   MinRatingFilter,
   MultiReleaseFilter,
   parseMinRating,
@@ -61,6 +62,7 @@ interface FilterToolbarProps {
   className?: string;
   draftCount?: number;
   excludedCount?: number;
+  emptyReleaseCount?: number;
   status?: string;
 }
 
@@ -72,6 +74,7 @@ export function FilterToolbar({
   className = "",
   draftCount = 0,
   excludedCount = 0,
+  emptyReleaseCount = 0,
   status = "CATALOG",
 }: FilterToolbarProps) {
   const searchParams = useSearchParams();
@@ -164,6 +167,13 @@ export function FilterToolbar({
           active={searchParams.get("multiRelease") === "true"}
           onChange={(on) =>
             updateParams({ multiRelease: on ? "true" : null })
+          }
+        />
+        <EmptyReleasesFilter
+          active={searchParams.get("emptyReleases") === "true"}
+          count={emptyReleaseCount}
+          onChange={(on) =>
+            updateParams({ emptyReleases: on ? "true" : null })
           }
         />
         <MinRatingFilter

@@ -16,6 +16,7 @@ export async function registerBuildOutput(
       outputVersion: true,
       externalStorageId: true,
       outputReleaseId: true,
+      moviePartId: true,
     },
   });
   if (!build) throw new Error("Сборка не найдена");
@@ -35,6 +36,13 @@ export async function registerBuildOutput(
       subtitleTracks: probe.subtitles,
       skipProbe: true,
     });
+
+    if (build.moviePartId != null) {
+      await tx.release.update({
+        where: { id: created.id },
+        data: { moviePartId: build.moviePartId },
+      });
+    }
 
     await tx.releaseBuild.update({
       where: { id: buildId },

@@ -2,7 +2,6 @@ import { unlink } from "node:fs/promises";
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { prisma } from "@/lib/db/prisma";
-import { deleteMovie } from "@/lib/movies/delete-movie";
 import { findActiveExportForRelease } from "@/lib/releases/export-queue";
 import {
   findActiveBuildForRelease,
@@ -31,7 +30,7 @@ async function assertReleaseCanDelete(releaseId: number): Promise<void> {
 export interface DeleteReleaseResult {
   fileDeleted: boolean;
   fileMissing: boolean;
-  /** True when the last release was removed and the movie row was deleted too. */
+  /** Always false: deleting a release never deletes the movie (ADR-0019). */
   movieDeleted: boolean;
   warning?: string;
 }
@@ -45,9 +44,6 @@ export async function deleteRelease(
   if (!release) {
     throw new Error("Релиз не найден");
   }
-
-  const count = await prisma.release.count({ where: { movieId } });
-  const isLastRelease = count <= 1;
 
   let fileDeleted = false;
   let fileMissing = false;
@@ -65,19 +61,6 @@ export async function deleteRelease(
   }
 
   await assertReleaseCanDelete(releaseId);
-
-  if (isLastRelease) {
-    await prisma.$transaction(async (tx) => {
-      await tx.releaseExport.deleteMany({ where: { releaseId } });
-      await tx.releaseMove.deleteMany({ where: { releaseId } });
-      await tx.movie.updateMany({
-        where: { id: movieId, primaryReleaseId: releaseId },
-        data: { primaryReleaseId: null },
-      });
-    });
-    await deleteMovie(movieId);
-    return { fileDeleted, fileMissing, movieDeleted: true, warning };
-  }
 
   await prisma.$transaction(async (tx) => {
     await tx.releaseExport.deleteMany({ where: { releaseId } });

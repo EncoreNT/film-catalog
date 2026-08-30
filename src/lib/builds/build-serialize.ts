@@ -34,6 +34,8 @@ export function serializeBuild(build: BuildWithRelations) {
   return {
     id: build.id,
     movieId: build.movieId,
+    kind: build.kind,
+    moviePartId: build.moviePartId,
     movie: build.movie,
     status: build.status,
     phase: build.phase,

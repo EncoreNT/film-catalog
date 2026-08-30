@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## media/scanner.ts — сканирование
 
-- `walkVideoFiles` — рекурсия, skip `.*` dirs, extensions: mkv, mp4, avi, mov, webm, …
+- `walkVideoFiles` — рекурсия; skip `.*` dirs и Blu-ray: `BDMV`, `STREAM`, `PLAYLIST`, `CLIPINF`, `BACKUP`, `CERTIFICATE`, `AACS` (`media/scan-skip-dirs.ts`); extensions: mkv, mp4, avi, mov, webm, …; одиночный `.m2ts` вне этой структуры сканируется как раньше
 - Skip fast path: same `filePath` + `fileSize` + `fileMtime`
 - Hash: `computeFileHashPrefix` — первые 16MB (`media/file-hash.ts`)
 - Move detection: same `fileHash` + `fileSize`, different path → update path in place
@@ -30,7 +30,7 @@ Strips release group tags, quality, codecs from filename. Extracts year, release
 ## movies/movie-query.ts — фильтрация каталога
 
 - `parseListQuery` → zod
-- `buildMovieListWhere` / `buildMovieWhere` — status tabs, genre, resolution, hdr, audio scope/channels/format/translation, watched range, duration, premium audio, multiRelease (minRating → `movie-rating-sort`)
+- `buildMovieListWhere` / `buildMovieWhere` — status tabs, genre, resolution, hdr, audio scope/channels/format/translation, watched range, duration, premium audio, multiRelease, emptyReleases (minRating → `movie-rating-sort`). По умолчанию `releases: { some: {} }`; `emptyReleases=true` → только карточки без релизов (ADR-0019)
 - `fetchMultiReleaseMovieIds` — фильмы с несколькими **вариантами** релиза (`movieHasMultipleReleaseVariants`); многосерийные «1 файл = 1 серия» исключаются
 - `buildMovieOrder` — title, year, watchedAt, createdAt; rating/duration/fileSize via `fetchMovieList` aggregate paths
 - Audio scope: `catalog/audio-track-scope.ts` + `catalog/russian-audio-formats.ts`
@@ -82,7 +82,7 @@ ADR: `0009`. `releaseTier()` остаётся в `release-tags.ts`; filter/spotl
 
 ## media-jobs/ — export/move shared
 
-ADR: `0010`, `0018`. `job-display`, `job-progress-message`, `job-eta`, `copy-speed-window`, `part-path`, `serialize-base`, `destination-disk` (one RUNNING copy/move per destination drive).
+ADR: `0010`, `0018`, `0021`. `job-display`, `job-progress-message`, `job-eta`, `copy-speed-window`, `part-path`, `serialize-base`, `destination-disk` (one RUNNING copy/move per destination drive; same-disk move is `fs.rename`).
 
 ## catalog/archive-metrics.ts
 
@@ -124,9 +124,11 @@ Pure helpers для позиционирования floating UI (`HoverTooltip`
 
 - `build-validation.ts` — recipe zod + fresh ffprobe/mkvmerge inspection
 - `build-queue.ts` — enqueue, claim, heartbeat, cancel, retry, stale recovery
-- `build-runner.ts` — ffmpeg transcode + mkvmerge mux + register output
+- `build-runner.ts` — ffmpeg transcode + mkvmerge mux + register output; `kind=bdmv` → `bdmv-runner.ts`
+- `bdmv-queue.ts` / `bdmv-mux.ts` / `bdmv-output-path.ts` — очередь и mux плейлиста BDMV
+- `media/bdmv/` — резолв корня, парсер `.mpls`, inspect (`mkvmerge -J`)
 - `build-capabilities.ts` — CLI tool availability
-- Worker: `scripts/release-build-worker.ts`; dev: `npm run dev` (web+worker)
+- Worker: `scripts/release-build-worker.ts`; dev: `npm run dev` (web+worker); не больше одного RUNNING `kind=bdmv`
 
 ## db/prisma.ts
 

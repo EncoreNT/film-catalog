@@ -17,6 +17,10 @@ const variants: Record<Variant, string> = {
     "border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20",
 };
 
+export function buttonClassName(variant: Variant = "secondary", className = "") {
+  return `focus-ring inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius)] px-4 py-2 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]} ${className}`;
+}
+
 export function Button({
   variant = "secondary",
   loading,
@@ -27,7 +31,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`focus-ring inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius)] px-4 py-2 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]} ${className}`}
+      className={buttonClassName(variant, className)}
       disabled={disabled || loading}
       {...props}
     >

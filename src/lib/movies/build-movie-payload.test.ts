@@ -12,6 +12,10 @@ import type {
   SubtitleFormRow,
   VideoFieldState,
 } from "@/lib/movies/movie-form-types";
+import {
+  emptyAudioFormRow,
+  emptyVideoFieldState,
+} from "@/lib/movies/movie-form-types";
 
 const video: VideoFieldState = {
   codec: " hevc ",
@@ -150,6 +154,23 @@ describe("buildMovieCreatePayload", () => {
       subtitleRows: [],
     });
     expect(payload.title).toBe("Элементарно / Elemental");
+  });
+
+  it("omits release when file path is empty", () => {
+    const payload = buildMovieCreatePayload({
+      title: "The Foreigner",
+      year: 2017,
+      description: null,
+      externalStorageId: null,
+      releaseType: null,
+      genres: ["action"],
+      durationSeconds: null,
+      filePath: null,
+      video: emptyVideoFieldState(),
+      audioRows: [emptyAudioFormRow({ isDefault: true })],
+      subtitleRows: [],
+    });
+    expect(payload.release).toBeUndefined();
   });
 });
 

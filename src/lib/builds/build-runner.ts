@@ -34,6 +34,7 @@ import {
   computeFitTempoRatio,
   prismaSyncModeToClient,
 } from "@/lib/builds/build-audio-sync";
+import { runBdmvBuildJob } from "@/lib/builds/bdmv-runner";
 
 interface ResolvedTrack extends MkvResolvedTrack {
   filePath: string;
@@ -86,6 +87,12 @@ export async function runBuildJob(buildId: number, signal?: AbortSignal) {
       include: { tracks: { orderBy: { sortOrder: "asc" } } },
     });
     if (!build) throw new Error("Сборка не найдена");
+
+    if (build.kind === "bdmv") {
+      stopHeartbeat();
+      await runBdmvBuildJob(buildId, signal);
+      return;
+    }
 
     await updateBuildProgress(buildId, {
       phase: "prepare",
@@ -508,7 +515,7 @@ async function runFfmpegWithProgress(
   await child;
 }
 
-async function runMkvmergeWithProgress(
+export async function runMkvmergeWithProgress(
   buildId: number,
   args: string[],
   signal: AbortSignal | undefined,

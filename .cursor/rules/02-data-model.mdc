@@ -13,6 +13,7 @@ alwaysApply: false
 | Enum | Значения | Смысл |
 |------|----------|-------|
 | `MovieStatus` | DRAFT, CATALOG, EXCLUDED | Черновик → в каталоге → скрыт |
+| `ReleaseBuildKind` | recipe, bdmv | Сборка из релизов или copy-only remux BDMV |
 
 ADR: `docs/adr/0002-external-storage-only.md`.
 
@@ -29,6 +30,8 @@ ADR: `docs/adr/0002-external-storage-only.md`.
 - `coverPath` — относительный путь `covers/<id>.ext`
 - `watchedAt` — дата просмотра (на уровне фильма; просмотрен = есть `watchedAt` или хотя бы одна оценка; оценка не проставляет дату автоматически)
 - `partCount` — число серий для многосерийного фильма (>1), иначе null (ADR-0014)
+
+Может существовать **без релизов** (ADR-0019): каталог прячет (`releases: { some: {} }`), фильтр `?emptyReleases=true` показывает только такие карточки. Удаление последнего релиза не удаляет Movie.
 
 Relations: `releases[]`, `parts[]` (MoviePart), `movieGenres[]`, `movieRatings[]`, `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
 
@@ -58,21 +61,23 @@ Relations: `videoTrack` (1:1), `audioTracks[]`, `subtitleTracks[]`, `buildSource
 
 ### ReleaseBuild (очередь сборки MKV)
 
-ADR: `docs/adr/0006-durable-release-build-worker.md`.
+ADR: `docs/adr/0006-durable-release-build-worker.md`, `0020-bdmv-remux-builds.md`.
 
+- `kind`: `recipe` (из существующих релизов) | `bdmv` (плейлист Blu-ray); default `recipe`
 - `status`: QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED
 - `outputPath`, `outputReleaseId` → новый Release после успеха
-- `tracks[]` — ordered recipe (VIDEO/AUDIO/SUBTITLE, copy/transcode, offsetMs)
-- `sources[]` — snapshot исходных Release/filePath
-- Worker: `scripts/release-build-worker.ts`, concurrency 1, SQLite queue
+- `moviePartId` — опциональная серия многосерийного фильма
+- `tracks[]` — ordered recipe (VIDEO/AUDIO/SUBTITLE, copy/transcode, offsetMs); у BDMV `sourceReleaseId` null, `sourceFilePath` = `.mpls`, `audioMode = COPY`
+- `sources[]` — snapshot исходных Release/filePath; BDMV: `bdmv-root` + `bdmv-playlist`
+- Worker: `scripts/release-build-worker.ts`; copy-recipe unbounded, **не больше одного RUNNING bdmv**
 
 ### ReleaseExport / ReleaseMove (TV export & file move)
 
-ADR: `docs/adr/0007-tv-export-and-runtime-paths.md`, `0008`, `0010`.
+ADR: `docs/adr/0007-tv-export-and-runtime-paths.md`, `0008`, `0010`, `0021`.
 
 - Shared job status enum with builds: QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED
 - `ReleaseExport` — copy release to user-chosen TV folder (stream copy)
-- `ReleaseMove` — copy + update Release path + optional external storage + delete source
+- `ReleaseMove` — same disk: `fs.rename`; other disk: copy + update `Release.filePath` / `externalStorageId` + delete source (ADR-0021)
 - Shared lib: `lib/media-jobs/*`; worker: `lib/worker/claim-next-media-job.ts` (one RUNNING export/move per destination disk, ADR-0018)
 
 ### VideoTrack (1:1 с Release)

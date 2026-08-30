@@ -11,8 +11,8 @@ export default function NewMoviePage() {
     <EntityEditLayout
       backHref="/"
       backLabel="Назад к каталогу"
-      eyebrow="новый фильм"
-      title="Добавить вручную"
+      eyebrow="карточка фильма"
+      title="Добавить фильм"
       fillViewport
     >
       <AddMovieForm />

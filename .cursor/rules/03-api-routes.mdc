@@ -15,7 +15,7 @@ alwaysApply: false
 | Method | Path | Назначение |
 |--------|------|------------|
 | GET | `/api/movies` | Список с фильтрами (query = movieListQuerySchema) |
-| POST | `/api/movies` | Создание; `probeOnly: true` — только ffprobe preview |
+| POST | `/api/movies` | Создание; карточка может быть без `release` (ADR-0019); `probeOnly: true` — только ffprobe preview |
 | HEAD | `/api/movies?path=` | Проверка существования файла |
 | PATCH | `/api/movies/[id]` | Обновление (movieUpdateSchema) |
 | DELETE | `/api/movies/[id]` | Удаление |
@@ -108,6 +108,8 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 |--------|------|------------|
 | POST | `/api/movies/[id]/builds/validate` | Проверка recipe + warnings |
 | POST | `/api/movies/[id]/builds` | Постановка в очередь (`acknowledgeWarnings`) |
+| POST | `/api/movies/[id]/bdmv/inspect` | Плейлисты BDMV + `mkvmerge -J` выбранного |
+| POST | `/api/movies/[id]/bdmv/builds` | Очередь remux (`kind: bdmv`, copy-only) |
 | GET | `/api/builds` | Список jobs (query: movieId, status, page) |
 | GET | `/api/builds/[id]` | Деталь job |
 | POST | `/api/builds/[id]/cancel` | Отмена |

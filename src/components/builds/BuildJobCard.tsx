@@ -11,6 +11,7 @@ import type { SerializedBuild } from "@/lib/builds/build-serialize";
 import { buildLaserTier } from "@/lib/builds/build-visual-tier";
 import {
   BUILD_STATUS_META,
+  buildJobKindLabel,
   buildOutputBasename,
   buildTimeCaption,
   queuedPosition,
@@ -202,6 +203,14 @@ export function BuildJobCard({
                 </div>
 
                 <p className={`mt-1.5 truncate text-muted ${compact ? "text-xs" : "text-sm"}`}>
+                  {build.kind === "bdmv" ? (
+                    <span className="font-mono-tech text-[10px] uppercase tracking-[0.12em] text-accent">
+                      {buildJobKindLabel(build.kind)}
+                      <span className="px-1.5 text-faint" aria-hidden>
+                        ·
+                      </span>
+                    </span>
+                  ) : null}
                   <span className="text-text/85">{basename}</span>
                   {trackCount > 0 ? (
                     <span className="text-faint">

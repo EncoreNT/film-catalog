@@ -37,6 +37,8 @@ function stubBuild(
     cancelRequested: false,
     queueOrder: 0,
     requiresTranscode: false,
+    kind: "recipe",
+    moviePartId: null,
     warnings: [],
     startedAt: null,
     finishedAt: null,

@@ -8,6 +8,7 @@ import type { ReleasePartGroup } from "@/lib/movies/build-part-release-groups";
 import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
+import { AddReleaseMenu } from "@/components/releases/AddReleaseMenu";
 import { ReleaseExportProgressStrip } from "@/components/releases/ReleaseExportProgressStrip";
 import { ReleaseMoveProgressStrip } from "@/components/releases/ReleaseMoveProgressStrip";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
@@ -242,15 +243,25 @@ export function MovieReleasePanel({
           </div>
         ) : null}
         <div className="flex flex-col gap-0 sm:flex-row sm:items-stretch sm:justify-between">
-          {showTabs ? (
+          <div className="flex min-w-0 flex-1 flex-wrap items-stretch px-1 pt-1">
             <div
-              className="flex flex-wrap gap-0 px-1 pt-1"
-              role="tablist"
-              aria-label="Релизы"
+              className="flex flex-wrap gap-0"
+              role={showTabs ? "tablist" : undefined}
+              aria-label={showTabs ? "Релизы" : undefined}
             >
               {panelReleases.map((release) => {
                 const active = release.id === activeId;
                 const tierTab = tierTabStyles(releaseToTabTier(release.tier));
+                const className = `font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs ${
+                  showTabs && !active ? tierTab.inactiveText : tierTab.text
+                }`;
+                if (!showTabs) {
+                  return (
+                    <div key={release.id} className={className}>
+                      {releaseTabInner(release, true, tierTab)}
+                    </div>
+                  );
+                }
                 return (
                   <button
                     key={release.id}
@@ -260,30 +271,18 @@ export function MovieReleasePanel({
                     aria-selected={active}
                     aria-controls={`release-panel-${release.id}`}
                     onClick={() => selectRelease(release.id)}
-                    className={`focus-ring font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs transition-colors ${
-                      active ? tierTab.text : tierTab.inactiveText
-                    }`}
+                    className={`focus-ring transition-colors ${className}`}
                   >
                     {releaseTabInner(release, active, tierTab)}
                   </button>
                 );
               })}
             </div>
-          ) : (
-            <div className="flex flex-wrap gap-0 px-1 pt-1">
-              {panelReleases.map((release) => {
-                const tierTab = tierTabStyles(releaseToTabTier(release.tier));
-                return (
-                  <div
-                    key={release.id}
-                    className={`font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs ${tierTab.text}`}
-                  >
-                    {releaseTabInner(release, true, tierTab)}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+            <AddReleaseMenu
+              movieSlug={movieSlug}
+              sourceReleaseId={activeRelease.id}
+            />
+          </div>
           <ReleasePanelActions
             movieId={movieId}
             movieSlug={movieSlug}

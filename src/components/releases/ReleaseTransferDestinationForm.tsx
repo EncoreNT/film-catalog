@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Field } from "@/components/primitives/Field";
 import { DiskSpaceFeedback } from "@/components/shared/DiskSpaceFeedback";
 import { FolderPathField } from "@/components/shared/FolderPathField";
+import { MOVE_RELEASE_SAME_DISK_HINT } from "@/lib/releases/move-release-ui";
 import type { UnmountedWslDrive } from "@/lib/shared/disk-space-types";
 
 export function ReleaseTransferDestinationForm({
@@ -24,6 +25,7 @@ export function ReleaseTransferDestinationForm({
   targetDirRuntime,
   collision,
   sameAsSource,
+  sameDisk,
   targetDisplay,
   unmountedDrive,
   mountingDrive,
@@ -47,6 +49,7 @@ export function ReleaseTransferDestinationForm({
   targetDirRuntime: string;
   collision?: boolean;
   sameAsSource?: boolean;
+  sameDisk?: boolean;
   targetDisplay?: string | null;
   unmountedDrive?: UnmountedWslDrive | null;
   mountingDrive?: boolean;
@@ -97,6 +100,8 @@ export function ReleaseTransferDestinationForm({
         <p className="text-sm text-danger" role="alert">
           Путь совпадает с текущим расположением файла.
         </p>
+      ) : sameDisk ? (
+        <p className="text-sm text-neural">{MOVE_RELEASE_SAME_DISK_HINT}</p>
       ) : null}
       {targetDisplay ? (
         <p className="break-all font-mono-tech text-xs leading-relaxed text-faint">

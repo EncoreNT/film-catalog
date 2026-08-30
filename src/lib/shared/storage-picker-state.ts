@@ -6,9 +6,9 @@ export function initialStorageKind(
   return storage ? "external" : "local";
 }
 
-/** Move dialog: preselect opposite of current release location. */
+/** Move dialog: stay on the current storage so a same-disk folder change is the default. */
 export function moveTargetStorageKind(sourceIsExternal: boolean): StorageKind {
-  return sourceIsExternal ? "local" : "external";
+  return sourceIsExternal ? "external" : "local";
 }
 
 export function initialSelectedStorageId(

@@ -59,6 +59,8 @@ interface BuildReelTrackCardProps {
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  copyOnly?: boolean;
+  sourceCaption?: string;
 }
 
 export function BuildReelTrackCard({
@@ -71,6 +73,8 @@ export function BuildReelTrackCard({
   onRemove,
   onMoveUp,
   onMoveDown,
+  copyOnly = false,
+  sourceCaption,
 }: BuildReelTrackCardProps) {
   const sourceRelease = useMemo(
     () => releases.find((r) => r.id === track.sourceReleaseId) ?? releases[0],
@@ -145,7 +149,7 @@ export function BuildReelTrackCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              {track.kind === "video" ? (
+              {track.kind === "video" && !copyOnly ? (
                 <p className="truncate text-sm text-text">{track.label}</p>
               ) : (
                 <div className="space-y-1">
@@ -166,7 +170,8 @@ export function BuildReelTrackCard({
               <p className="font-mono-tech mt-0.5 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-muted">
                 <TierDot tone={tone} />
                 <span className="truncate">
-                  {sourceRelease ? releaseTabLabel(sourceRelease) : "источник удалён"}
+                  {sourceCaption ??
+                    (sourceRelease ? releaseTabLabel(sourceRelease) : "источник удалён")}
                 </span>
               </p>
             </div>
@@ -183,7 +188,7 @@ export function BuildReelTrackCard({
                 onClick={onMoveDown}
                 disabled={!canMoveDown}
               />
-              {track.kind !== "video" ? (
+              {track.kind !== "video" || copyOnly ? (
                 <button
                   type="button"
                   onClick={onRemove}
@@ -208,6 +213,8 @@ export function BuildReelTrackCard({
 
       {track.kind === "audio" ? (
         <div className="space-y-3 border-t border-border/60 px-3 py-3 sm:px-4">
+          {copyOnly ? null : (
+          <>
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono-tech text-[10px] uppercase tracking-[0.18em] text-faint">
               режим
@@ -326,6 +333,9 @@ export function BuildReelTrackCard({
               ) : null}
             </div>
           ) : null}
+
+          </>
+          )}
 
           <div className="flex flex-wrap items-center gap-3">
             <TrackRadioOption

@@ -2,13 +2,14 @@ import { execFile } from "node:child_process";
 import { mkdir, readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { resolveRuntimePath } from "@/lib/shared/display-path";
+import {
+  wslDriveFromPath,
+  type WslDriveRef,
+} from "@/lib/shared/wsl-drive-path";
+
+export { wslDriveFromPath, type WslDriveRef } from "@/lib/shared/wsl-drive-path";
 
 const execFileAsync = promisify(execFile);
-
-export type WslDriveRef = {
-  letter: string;
-  mountPoint: string;
-};
 
 export type MountEntry = {
   mountPoint: string;
@@ -22,18 +23,8 @@ export type WslDriveMountStatus =
   | { kind: "mounted"; drive: WslDriveRef }
   | { kind: "unmounted"; drive: WslDriveRef };
 
-const WSL_DRIVE_PATH_RE = /^\/mnt\/([a-z])(?=\/|$)/;
-
 export function detectWsl(procVersion: string): boolean {
   return /microsoft|wsl/i.test(procVersion);
-}
-
-export function wslDriveFromPath(input: string): WslDriveRef | null {
-  const runtime = resolveRuntimePath(input);
-  const match = runtime.match(WSL_DRIVE_PATH_RE);
-  if (!match) return null;
-  const letter = match[1].toUpperCase();
-  return { letter, mountPoint: `/mnt/${match[1]}` };
 }
 
 function unescapeMountField(value: string): string {

@@ -48,6 +48,8 @@ export { normalizeBuildTrackKind } from "@/lib/builds/build-track-source";
 export function buildSourceRoleLabel(role: string): string {
   if (role === "video") return "Видео-источник";
   if (role === "tracks") return "Дорожки и субтитры";
+  if (role === "bdmv-root") return "Корень BDMV";
+  if (role === "bdmv-playlist") return "Плейлист";
   return role;
 }
 

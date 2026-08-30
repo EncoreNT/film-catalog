@@ -26,6 +26,8 @@ export interface MkvMergeInputFile {
   noAttachments?: boolean;
   /** mkvmerge `--default-track-flag` entries for this input (e.g. `2`, `2:0`). */
   defaultTrackFlags?: string[];
+  /** mkvmerge `--forced-display-flag` entries (e.g. `3`, `3:0`). */
+  forcedDisplayFlags?: string[];
   /** Per-track timestamp adjustments for stream-copy audio/subtitle from this input. */
   trackSync?: MkvMergeTrackSync[];
   /** Matroska track titles embedded in the output file (`--track-name`). */
@@ -72,6 +74,9 @@ export function buildMkvmergeArgs(plan: MkvMergePlan): string[] {
   for (const input of plan.inputs) {
     for (const flag of input.defaultTrackFlags ?? []) {
       args.push("--default-track-flag", flag);
+    }
+    for (const flag of input.forcedDisplayFlags ?? []) {
+      args.push("--forced-display-flag", flag);
     }
 
     if (input.noTrackTags) {

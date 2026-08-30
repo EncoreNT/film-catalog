@@ -66,5 +66,8 @@ docs/adr/0002-franchise-slots-model.md
 | [0016](0016-wsl-drive-mount-guard.md) | WSL drive mount guard for export/move | Accepted |
 | [0017](0017-hdr10plus-overlay.md) | HDR10+ as overlay flag | Accepted |
 | [0018](0018-copy-move-per-destination-disk.md) | Per-destination-disk copy/move lanes | Accepted |
+| [0019](0019-movies-without-releases.md) | Movies without releases | Accepted |
+| [0020](0020-bdmv-remux-builds.md) | BDMV remux via ReleaseBuild | Accepted |
+| [0021](0021-same-disk-move-rename.md) | Same-disk move via rename | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

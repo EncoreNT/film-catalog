@@ -100,6 +100,7 @@ film-catalog/
 | `/settings` | `app/settings/page.tsx` | Настройки: оценщики, каталог, сборки, экспорт |
 | `/dev` | `app/dev/page.tsx` | Инструменты: перепрогон HDR10+ по уже сканированным релизам |
 | `/movies/[slug]/builds/new` | `app/movies/[slug]/builds/new/page.tsx` | Конструктор пользовательского MKV |
+| `/movies/[slug]/releases/from-bdmv` | `app/movies/[slug]/releases/from-bdmv/page.tsx` | Сборка MKV из папки BDMV |
 | `/builds` | `app/builds/page.tsx` | Очередь сборок |
 | `/builds/[id]` | `app/builds/[id]/page.tsx` | Деталь job |
 
@@ -116,7 +117,7 @@ film-catalog/
 /scan UI → POST /api/scan { scanRoot, externalStorageId? }
          → setScanRoot (Setting table или SCAN_ROOT env)
          → scanDirectory (lib/media/scanner.ts)
-              walkVideoFiles (рекурсия, skip dot-dirs)
+              walkVideoFiles (рекурсия, skip dot-dirs и BDMV/STREAM/PLAYLIST/…)
               для каждого файла:
                 skip если size+mtime совпали
                 hash prefix (16MB) при изменении
@@ -133,7 +134,7 @@ film-catalog/
 
 ```
 /movies/[slug]/builds/new → POST validate → POST /api/movies/[id]/builds
-         → ReleaseBuild QUEUED (SQLite)
+         → ReleaseBuild QUEUED (SQLite, kind=recipe)
 scripts/release-build-worker.ts → claimNextBuild → runBuildJob
          → ffmpeg (AC-3/E-AC3 transcode) + mkvmerge (MKV mux, stream copy video)
          → atomic rename → probe → createReleaseWithTracks (новый Release)
@@ -141,6 +142,19 @@ scripts/release-build-worker.ts → claimNextBuild → runBuildJob
 ```
 
 ADR: `docs/adr/0006-durable-release-build-worker.md`. Домен: `lib/builds/*`.
+
+## Поток: сборка из BDMV
+
+```
+EmptyReleasesCard / «+» у табов релизов → /movies/[slug]/releases/from-bdmv
+         → POST /api/movies/[id]/bdmv/inspect { bdmvPath, playlistPath? }
+         → POST /api/movies/[id]/bdmv/builds { playlist, tracks[], output }
+         → ReleaseBuild QUEUED (kind=bdmv, sources bdmv-root + bdmv-playlist)
+worker → cap 1 RUNNING bdmv → mkvmerge .mpls (copy-only) → registerBuildOutput
+```
+
+Страница работает при 0 релизов. `/builds/new` без релизов остаётся `notFound()`.
+ADR: `docs/adr/0020-bdmv-remux-builds.md`. Домен: `lib/media/bdmv/*`, `lib/builds/bdmv-*.ts`.
 
 ## Поток: TV export и move
 
@@ -153,10 +167,10 @@ scripts/release-build-worker.ts → claimAvailableMediaJobs
            other jobs to the same disk stay QUEUED; different disks run in parallel
          → runExportJob | runMoveJob (lib/releases/*-runner.ts)
          → shared display/progress: lib/media-jobs/*
-Move success → update Release.filePath + externalStorage; unlink source (best-effort)
+Move: same disk → fs.rename; other disk → copy + unlink source (best-effort). Then update Release.filePath + externalStorage.
 ```
 
-ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib), `0016` (WSL drive mount), `0018` (per-destination-disk lanes).
+ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib), `0016` (WSL drive mount), `0018` (per-destination-disk lanes), `0021` (same-disk rename).
 
 ## Поток: каталог и фильтры
 
@@ -167,6 +181,7 @@ ADR: `0007` (export), `0008` (move), `0010` (shared media-jobs lib), `0016` (WSL
               → MovieCatalog (client) + FilterBar chips
 Facets: catalog-facets.ts + unstable_cache (60s)
 Status counts: archive-metrics.ts
+Пустые фильмы (releases: none) скрыты по умолчанию; ?emptyReleases=true показывает только их (ADR-0019)
 ```
 
 ## Поток: обложки

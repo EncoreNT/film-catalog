@@ -96,6 +96,7 @@ const DOMAIN_ERROR_STATUS: Record<string, number> = {
   "Слот не найден": 404,
   "Внешний диск не найден": 400,
   "Файл не найден по указанному пути": 404,
+  "У фильма уже есть активная сборка": 409,
 };
 
 export function mapDomainError(

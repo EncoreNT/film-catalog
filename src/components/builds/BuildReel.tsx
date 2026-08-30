@@ -28,6 +28,8 @@ interface BuildReelProps {
   onReorder: (tracks: BuildRecipeTrackState[]) => void;
   /** Сменить релиз-источник видео (подставит единственную видео-дорожку). */
   onVideoReleaseChange: (releaseId: number) => void;
+  copyOnly?: boolean;
+  sourceCaption?: string;
 }
 
 export function BuildReel({
@@ -38,6 +40,8 @@ export function BuildReel({
   onTrackRemove,
   onReorder,
   onVideoReleaseChange,
+  copyOnly = false,
+  sourceCaption,
 }: BuildReelProps) {
   const reduce = useReducedMotion();
   const tracks = state.tracks;
@@ -60,16 +64,34 @@ export function BuildReel({
         tone={videoTone}
         empty={!videoTrack}
         brief={
-          videoRelease
+          copyOnly
+            ? (videoTrack?.label || "не выбрано")
+            : videoRelease
             ? `${releaseTabLabel(videoRelease)}${videoRelease.videoTrack?.resolutionLabel && videoRelease.videoTrack.resolutionLabel !== "other" ? ` · ${videoRelease.videoTrack.resolutionLabel === "4K" ? "4K" : videoRelease.videoTrack.resolutionLabel}` : ""}`
             : "не выбрано"
         }
       >
-        <BuildVideoCard
-          track={videoTrack}
-          releases={releases}
-          onReleaseChange={onVideoReleaseChange}
-        />
+        {copyOnly && videoTrack ? (
+          <BuildReelTrackCard
+            track={videoTrack}
+            releases={releases}
+            durationMismatch={null}
+            canMoveUp={false}
+            canMoveDown={false}
+            copyOnly
+            sourceCaption={sourceCaption}
+            onChange={(patch) => onTrackChange(tracks.indexOf(videoTrack), patch)}
+            onRemove={() => onTrackRemove(tracks.indexOf(videoTrack))}
+            onMoveUp={() => undefined}
+            onMoveDown={() => undefined}
+          />
+        ) : (
+          <BuildVideoCard
+            track={videoTrack}
+            releases={releases}
+            onReleaseChange={onVideoReleaseChange}
+          />
+        )}
       </BuildKindSection>
 
       {/* Аудио */}
@@ -89,7 +111,13 @@ export function BuildReel({
         }
       >
         {audioTracks.length === 0 ? (
-          <EmptyGroupHint text="Добавьте аудиодорожки из источников слева." />
+          <EmptyGroupHint
+            text={
+              copyOnly
+                ? "Нет аудиодорожек в составе."
+                : "Добавьте аудиодорожки из источников слева."
+            }
+          />
         ) : (
           <div className="flex flex-col gap-3">
             <AnimatePresence initial={false} mode="popLayout">
@@ -118,6 +146,8 @@ export function BuildReel({
                       ) ?? null}
                       canMoveUp={posInGroup > 0}
                       canMoveDown={posInGroup < audioTracks.length - 1}
+                      copyOnly={copyOnly}
+                      sourceCaption={sourceCaption}
                       onChange={(patch) => onTrackChange(flatIndex, patch)}
                       onRemove={() => onTrackRemove(flatIndex)}
                       onMoveUp={() =>
@@ -149,7 +179,13 @@ export function BuildReel({
         }
       >
         {subTracks.length === 0 ? (
-          <EmptyGroupHint text="Добавьте субтитры из источников слева." />
+          <EmptyGroupHint
+            text={
+              copyOnly
+                ? "Нет субтитров в составе."
+                : "Добавьте субтитры из источников слева."
+            }
+          />
         ) : (
           <div className="flex flex-col gap-3">
             <AnimatePresence initial={false} mode="popLayout">
@@ -172,6 +208,8 @@ export function BuildReel({
                       durationMismatch={null}
                       canMoveUp={posInGroup > 0}
                       canMoveDown={posInGroup < subTracks.length - 1}
+                      copyOnly={copyOnly}
+                      sourceCaption={sourceCaption}
                       onChange={(patch) => onTrackChange(flatIndex, patch)}
                       onRemove={() => onTrackRemove(flatIndex)}
                       onMoveUp={() =>

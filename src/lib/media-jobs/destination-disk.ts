@@ -1,4 +1,4 @@
-import { wslDriveFromPath } from "@/lib/shared/wsl-drive-mount";
+import { wslDriveFromPath } from "@/lib/shared/wsl-drive-path";
 
 export type CopyJobCandidate = {
   kind: "export" | "move";
@@ -12,6 +12,14 @@ export function destinationDiskKey(targetPath: string): string {
   const drive = wslDriveFromPath(targetPath);
   if (drive) return `wsl:${drive.letter}`;
   return "local";
+}
+
+/** Same Windows drive letter, or both non-Windows paths on the local lane. */
+export function isSameDestinationDisk(
+  sourcePath: string,
+  targetPath: string,
+): boolean {
+  return destinationDiskKey(sourcePath) === destinationDiskKey(targetPath);
 }
 
 /**

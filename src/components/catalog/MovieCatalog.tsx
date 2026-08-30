@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useRef, useState, useTransition } from "re
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { MovieCard } from "@/components/movies/MovieCard";
 import { FilterToolbar, FilterSidebar } from "@/components/catalog/FilterBar";
-import { hasFacets } from "@/lib/catalog/filter-bar-utils";
+import { applyCatalogFilterUpdates, hasFacets } from "@/lib/catalog/filter-bar-utils";
 import { EmptyCatalog } from "@/components/catalog/EmptyCatalog";
 import { Pagination } from "@/components/primitives/Pagination";
 import { Select } from "@/components/primitives/Select";
@@ -243,6 +243,7 @@ interface MovieCatalogProps {
   archiveMetrics?: ArchiveMetrics;
   archiveTotals?: ArchiveTotals;
   remakeBadges?: Record<number, CatalogRemakeBadge>;
+  emptyReleaseCount?: number;
 }
 
 export function MovieCatalog({
@@ -258,6 +259,7 @@ export function MovieCatalog({
   archiveMetrics = { gold: 0, hdr10: 0, elite: 0 },
   archiveTotals = { durationSeconds: 0, fileSizeBytes: 0 },
   remakeBadges = {},
+  emptyReleaseCount = 0,
 }: MovieCatalogProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -343,7 +345,8 @@ export function MovieCatalog({
       opts?: { forceCatalog?: boolean },
     ) => {
       const params = new URLSearchParams(searchParams.toString());
-      for (const [key, value] of Object.entries(updates)) {
+      const nextUpdates = applyCatalogFilterUpdates(updates);
+      for (const [key, value] of Object.entries(nextUpdates)) {
         if (value == null || value === "") params.delete(key);
         else params.set(key, value);
       }
@@ -446,6 +449,7 @@ export function MovieCatalog({
     });
   };
 
+  const isEmptyReleasesView = searchParams.get("emptyReleases") === "true";
   const hasAnyMovies = totalCount > 0;
 
   const anyFacets =
@@ -482,7 +486,7 @@ export function MovieCatalog({
                   className="focus-ring group/btn flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-border-strong bg-bg-surface/80 px-3.5 py-1.5 text-sm font-medium text-text backdrop-blur-md transition-all duration-300 hover:border-neural/55 hover:text-neural-bright hover:bg-bg-surface-hover hover:shadow-[0_0_18px_rgba(139,92,246,0.55)] active:scale-[0.97]"
                 >
                   <Plus className="h-4 w-4" aria-hidden />
-                  <span className="hidden sm:inline">Добавить вручную</span>
+                  <span className="hidden sm:inline">Добавить фильм</span>
                   <span className="sm:hidden">Добавить</span>
                 </Link>
                 <Link
@@ -607,6 +611,7 @@ export function MovieCatalog({
               onToggleFacets={() => setFacetsOpen((open) => !open)}
               draftCount={draftCount}
               excludedCount={excludedCount}
+              emptyReleaseCount={emptyReleaseCount}
               status={status}
               className="mb-2"
             />
@@ -667,7 +672,9 @@ export function MovieCatalog({
 
           <div className="pt-4">
           {allMovies.length === 0 ? (
-            hasAnyMovies ? (
+            isEmptyReleasesView ? (
+              <EmptyCatalog variant="emptyReleases" />
+            ) : hasAnyMovies ? (
               <div className="surface-card flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                 <p className="font-display text-2xl font-semibold">
                   Ничего не найдено

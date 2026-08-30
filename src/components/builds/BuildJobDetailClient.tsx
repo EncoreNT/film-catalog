@@ -33,6 +33,7 @@ import type { SerializedBuild } from "@/lib/builds/build-serialize";
 import { buildLaserTier } from "@/lib/builds/build-visual-tier";
 import {
   BUILD_STATUS_META,
+  buildJobKindLabel,
   buildTimeCaption,
   sortBuildsForQueue,
 } from "@/lib/builds/build-queue-display";
@@ -351,7 +352,7 @@ export function BuildJobDetailClient({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <p className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-faint">
-                  Сборка #{build.id}
+                  {buildJobKindLabel(build.kind)} #{build.id}
                   {timeCaption ? <span className="text-muted"> · {timeCaption}</span> : null}
                 </p>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">

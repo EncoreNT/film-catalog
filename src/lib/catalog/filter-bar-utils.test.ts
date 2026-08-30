@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyCatalogFilterUpdates,
   countActiveFilters,
   countFacetFilters,
   facetCountMap,
@@ -100,6 +101,24 @@ describe("filter-bar-utils", () => {
         dict,
       );
       expect(sorted.map((f) => f.value)).toEqual(["4K", "other"]);
+    });
+  });
+
+  describe("applyCatalogFilterUpdates", () => {
+    it("clears quality filters when emptyReleases is turned on", () => {
+      const next = applyCatalogFilterUpdates({ emptyReleases: "true" });
+      expect(next.emptyReleases).toBe("true");
+      expect(next.resolution).toBeNull();
+      expect(next.multiRelease).toBeNull();
+    });
+
+    it("clears emptyReleases when a quality filter is set", () => {
+      const next = applyCatalogFilterUpdates({
+        emptyReleases: "true",
+        hdr: "HDR10",
+      });
+      expect(next.emptyReleases).toBeNull();
+      expect(next.hdr).toBe("HDR10");
     });
   });
 });

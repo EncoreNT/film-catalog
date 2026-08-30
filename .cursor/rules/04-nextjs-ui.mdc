@@ -126,7 +126,9 @@ Utility: `.focus-ring` / `.focus-ring-neural`, `.container-wide`,
 
 ## Формы
 
-- `MovieForm`, `AddMovieForm` — probeOnly → POST create
+- `MovieForm`, `AddMovieForm` — create work-only (название, год, жанры, описание, обложка); файл добавляется вторым шагом
+- `EmptyReleasesCard` — две CTA: BDMV (`/releases/from-bdmv`) и готовый файл (`/releases/new`)
+- `BdmvRemuxEditor` — мастер copy-only состава на `BuildReel` (`copyOnly`)
 - `FranchiseForm` + `FranchiseSlotsEditor` — slots через syncFranchiseSlots
 - Карточки секций форм — `MachinedCard` + `CardSectionHeader` (double-bezel), не плоский `surface-card`
 - Словари опций: `lib/shared/dictionaries.ts` (кодеки, профили, каналы, языки, release types, версии)

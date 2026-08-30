@@ -56,6 +56,8 @@ describe("build-detail-display", () => {
   it("labels source roles", () => {
     expect(buildSourceRoleLabel("video")).toBe("Видео-источник");
     expect(buildSourceRoleLabel("tracks")).toBe("Дорожки и субтитры");
+    expect(buildSourceRoleLabel("bdmv-root")).toBe("Корень BDMV");
+    expect(buildSourceRoleLabel("bdmv-playlist")).toBe("Плейлист");
   });
 
   it("builds transcode tag set for audio tracks", () => {
@@ -277,6 +279,8 @@ describe("build-detail-display", () => {
       finishedAt: null,
       queueOrder: 0,
       requiresTranscode: false,
+      kind: "recipe",
+      moviePartId: null,
       createdAt: "2026-01-01T09:00:00.000Z",
       updatedAt: "2026-01-01T10:00:00.000Z",
     });

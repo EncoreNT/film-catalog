@@ -2,6 +2,7 @@ import { access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { assertDirectoryWritableIfMounted } from "@/lib/db/settings";
+import { isSameDestinationDisk } from "@/lib/media-jobs/destination-disk";
 import {
   displayFilePath,
   joinRuntimePath,
@@ -21,6 +22,7 @@ export interface MoveDryRunResult {
   collision: boolean;
   suggestedFilename: string;
   sameAsSource: boolean;
+  sameDisk: boolean;
 }
 
 function normalizeMoveFilename(filename: string): string {
@@ -70,6 +72,7 @@ export async function moveReleaseDryRun(
       collision: false,
       suggestedFilename: chosenFilename,
       sameAsSource: false,
+      sameDisk: false,
     };
   }
 
@@ -79,7 +82,9 @@ export async function moveReleaseDryRun(
     ? collision.suggestedFilename
     : chosenFilename;
   const targetPath = joinRuntimePath(runtimeDir, finalFilename);
-  const sameAsSource = resolveRuntimePath(targetPath) === resolveRuntimePath(sourcePath);
+  const sourceRuntime = resolveRuntimePath(sourcePath);
+  const targetRuntime = resolveRuntimePath(targetPath);
+  const sameAsSource = targetRuntime === sourceRuntime;
 
   return {
     ok: true,
@@ -88,6 +93,7 @@ export async function moveReleaseDryRun(
     collision: collision.exists,
     suggestedFilename: finalFilename,
     sameAsSource,
+    sameDisk: isSameDestinationDisk(sourceRuntime, targetRuntime),
   };
 }
 

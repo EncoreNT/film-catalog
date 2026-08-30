@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { SerializedBuild } from "@/lib/builds/build-serialize";
 import {
+  buildJobKindLabel,
+  buildTimeCaption,
   compareBuildsForQueue,
   defaultBuildSectionOpen,
   groupBuildsForDisplay,
@@ -48,6 +50,8 @@ function stubBuild(
     finishedAt: partial.finishedAt ?? null,
     queueOrder: partial.queueOrder ?? partial.id,
     requiresTranscode: partial.requiresTranscode ?? false,
+    kind: partial.kind ?? "recipe",
+    moviePartId: partial.moviePartId ?? null,
     createdAt: partial.createdAt ?? "2026-07-17T10:00:00.000Z",
     updatedAt: partial.updatedAt ?? "2026-07-17T10:00:00.000Z",
   };
@@ -148,5 +152,28 @@ describe("summarizeBuildQueue", () => {
       active: 2,
       succeeded: 1,
     });
+  });
+});
+
+describe("buildJobKindLabel", () => {
+  it("labels BDMV jobs separately from recipe builds", () => {
+    expect(buildJobKindLabel("bdmv")).toBe("BDMV → MKV");
+    expect(buildJobKindLabel("recipe")).toBe("сборка из релизов");
+  });
+});
+
+describe("buildTimeCaption", () => {
+  it("uses the BDMV lane for queued remux jobs", () => {
+    const caption = buildTimeCaption(
+      stubBuild({
+        id: 1,
+        status: "QUEUED",
+        kind: "bdmv",
+        createdAt: "2026-07-17T10:00:00.000Z",
+      }),
+      Date.parse("2026-07-17T10:05:00.000Z"),
+    );
+    expect(caption).toContain("BDMV → MKV");
+    expect(caption).not.toContain("копирование");
   });
 });

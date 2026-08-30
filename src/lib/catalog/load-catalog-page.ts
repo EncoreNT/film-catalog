@@ -10,6 +10,7 @@ import {
   getCatalogFacets,
   getCatalogGenreFacets,
 } from "@/lib/catalog/catalog-facets";
+import { prisma } from "@/lib/db/prisma";
 import { MovieStatus } from "@/generated/prisma/client";
 import { getCatalogRemakeBadges } from "@/lib/remakes/remake-catalog-badges";
 import {
@@ -71,6 +72,7 @@ export async function loadCatalogPage(
     archiveTotals,
     facets,
     genreFacets,
+    emptyReleaseCount,
   ] = await Promise.all([
     fetchMovieList(query),
     getStatusCounts(),
@@ -78,6 +80,12 @@ export async function loadCatalogPage(
     getCachedArchiveTotals(),
     getCachedCatalogFacets(statuses),
     getCachedCatalogGenreFacets(statuses),
+    prisma.movie.count({
+      where: {
+        status: statuses.length === 1 ? statuses[0] : { in: statuses },
+        releases: { none: {} },
+      },
+    }),
   ]);
 
   const remakeBadges = await getCatalogRemakeBadges(movies.map((m) => m.id));
@@ -97,6 +105,7 @@ export async function loadCatalogPage(
     catalogCount,
     draftCount,
     excludedCount,
+    emptyReleaseCount,
     archiveMetrics,
     archiveTotals,
   };

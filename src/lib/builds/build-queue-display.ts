@@ -241,6 +241,10 @@ export function summarizeBuildQueue(items: SerializedBuild[]): BuildQueueSummary
   };
 }
 
+export function buildJobKindLabel(kind: SerializedBuild["kind"] | undefined): string {
+  return kind === "bdmv" ? "BDMV → MKV" : "сборка из релизов";
+}
+
 export function buildOutputBasename(outputPath: string): string {
   const normalized = outputPath.replace(/\\/g, "/");
   const parts = normalized.split("/");
@@ -279,7 +283,12 @@ export function buildTimeCaption(build: SerializedBuild, now = Date.now()): stri
     }
     case "QUEUED": {
       const rel = formatBuildRelativeTime(build.createdAt, now);
-      const lane = build.requiresTranscode ? "перекодирование" : "копирование";
+      const lane =
+        build.kind === "bdmv"
+          ? "BDMV → MKV"
+          : build.requiresTranscode
+            ? "перекодирование"
+            : "копирование";
       return rel ? `${lane} · добавлена ${rel}` : `${lane} · в очереди`;
     }
     case "FAILED":

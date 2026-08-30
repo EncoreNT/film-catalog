@@ -13,9 +13,13 @@ import { useTargetDiskSpace } from "@/hooks/useTargetDiskSpace";
 import { moveTargetStorageKind } from "@/lib/shared/storage-picker-state";
 import type { ReleaseMoveJobState } from "@/hooks/useReleaseMoveJob";
 import { apiFetch } from "@/lib/api/client";
+import { isSameDestinationDisk } from "@/lib/media-jobs/destination-disk";
 import {
+  MOVE_RELEASE_ACTIVE_COPY,
+  MOVE_RELEASE_ACTIVE_RENAME,
   MOVE_RELEASE_CONFIRM_LABEL,
   MOVE_RELEASE_DIALOG_TITLE,
+  MOVE_RELEASE_INTRO,
 } from "@/lib/releases/move-release-ui";
 import type { SerializedMove } from "@/lib/releases/move-serialize";
 import {
@@ -31,6 +35,7 @@ interface MoveDryRunResponse {
   suggestedFilename: string;
   targetPathDisplay: string;
   sameAsSource: boolean;
+  sameDisk: boolean;
 }
 
 export function ReleaseMoveDialog({
@@ -59,13 +64,22 @@ export function ReleaseMoveDialog({
     createExternalStorage,
     validateStorage,
     resolveExternalStorageId,
-  } = useStoragePicker(null, { defaultKind: defaultMoveKind });
+  } = useStoragePicker(
+    activeRelease.externalStorageId != null
+      ? {
+          id: activeRelease.externalStorageId,
+          name: activeRelease.storageLabel ?? "",
+        }
+      : null,
+    { defaultKind: defaultMoveKind },
+  );
 
   const [targetDir, setTargetDir] = useState("");
   const [targetDirRuntime, setTargetDirRuntime] = useState("");
   const [filename, setFilename] = useState("");
   const [collision, setCollision] = useState(false);
   const [sameAsSource, setSameAsSource] = useState(false);
+  const [sameDisk, setSameDisk] = useState(false);
   const [targetDisplay, setTargetDisplay] = useState<string | null>(null);
 
   const fileSizeBytes = activeRelease.fileSizeBytes;
@@ -85,7 +99,7 @@ export function ReleaseMoveDialog({
   const diskSpace = useTargetDiskSpace({
     enabled: open,
     targetDirRuntime,
-    requiredBytes: fileSizeBytes,
+    requiredBytes: sameDisk ? 0 : fileSizeBytes,
   });
 
   const selectedStorage = useMemo(
@@ -125,6 +139,7 @@ export function ReleaseMoveDialog({
     if (!nextTargetDir.trim()) {
       setCollision(false);
       setSameAsSource(false);
+      setSameDisk(false);
       setTargetDisplay(null);
       return;
     }
@@ -146,6 +161,7 @@ export function ReleaseMoveDialog({
     );
     setCollision(dryRun.collision);
     setSameAsSource(dryRun.sameAsSource);
+    setSameDisk(dryRun.sameDisk);
     setTargetDisplay(dryRun.targetPathDisplay);
     if (dryRun.collision) {
       setFilename(dryRun.suggestedFilename);
@@ -172,10 +188,15 @@ export function ReleaseMoveDialog({
       setTargetDirRuntime("");
       setCollision(false);
       setSameAsSource(false);
+      setSameDisk(false);
       setTargetDisplay(null);
       diskSpace.reset();
       setStorageKind(defaultMoveKind);
-      setSelectedStorageId("");
+      setSelectedStorageId(
+        activeRelease.externalStorageId != null && defaultMoveKind === "external"
+          ? String(activeRelease.externalStorageId)
+          : "",
+      );
     } catch (err) {
       onError(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -199,6 +220,7 @@ export function ReleaseMoveDialog({
     } else {
       setCollision(false);
       setSameAsSource(false);
+      setSameDisk(false);
       setTargetDisplay(null);
     }
   };
@@ -282,6 +304,9 @@ export function ReleaseMoveDialog({
     moveJob?.progressPercent != null ? Math.round(moveJob.progressPercent) : null;
   const speed = moveSpeedLabel(moveJob?.progressSpeed);
   const busy = loading;
+  const activeSameDisk = moveJob
+    ? isSameDestinationDisk(moveJob.sourceFilePath, moveJob.targetPath)
+    : sameDisk;
 
   const canSubmit =
     targetDirRuntime.trim() &&
@@ -352,7 +377,11 @@ export function ReleaseMoveDialog({
       {moveActive ? (
           <ReleaseJobDialogProgress
             accent="neural"
-            activeDescription="Файл копируется на новый диск. После проверки каталог обновится, а исходник будет удалён. Можно закрыть диалог — прогресс останется под вкладками релиза и в списке фоновых задач."
+            activeDescription={
+              activeSameDisk
+                ? MOVE_RELEASE_ACTIVE_RENAME
+                : MOVE_RELEASE_ACTIVE_COPY
+            }
             targetDisplay={targetDisplay}
             sizeHint={moveJob ? moveSizeHint(moveJob) : null}
             queued={moveJob?.status === "QUEUED"}
@@ -384,8 +413,7 @@ export function ReleaseMoveDialog({
         ) : (
           <>
             <p className="text-sm leading-relaxed text-muted">
-              Выберите хранилище и папку назначения. После успешного копирования
-              запись релиза обновится, а файл на старом месте будет удалён.
+              {MOVE_RELEASE_INTRO}
             </p>
             {activeRelease.filePathDisplay ? (
               <ReleasePathBlock
@@ -399,7 +427,7 @@ export function ReleaseMoveDialog({
             <ReleaseTransferDestinationForm
               storageSection={
                 <StoragePicker
-                  label="Перенести на"
+                  label="Хранилище"
                   fullWidth
                   storageKind={storageKind}
                   onStorageKindChange={setStorageKind}
@@ -430,6 +458,7 @@ export function ReleaseMoveDialog({
               targetDirRuntime={targetDirRuntime}
               collision={collision}
               sameAsSource={sameAsSource}
+              sameDisk={sameDisk && !sameAsSource}
               targetDisplay={targetDisplay}
               unmountedDrive={diskSpace.unmountedDrive}
               mountingDrive={diskSpace.mounting}

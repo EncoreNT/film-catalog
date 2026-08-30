@@ -14,9 +14,10 @@ alwaysApply: false
 | Tier ruby/gold rules | `lib/media/release-tags.ts` → `releaseTier()`; shared predicates → `lib/media/tier-core.ts` |
 | Spotlight / ambient color | ADR-0005; `lib/media/tier-presentation.ts`; `components/layout/SpotlightTier.tsx` |
 | Catalog filters / facets | `lib/movies/movie-query.ts`, `lib/catalog/catalog-facets.ts`, `lib/catalog/audio-track-scope.ts` |
-| Scan / import | `lib/media/scanner.ts`, `lib/media/name-parser.ts`, `lib/media/ffprobe.ts` |
+| Scan / import | `lib/media/scanner.ts`, `lib/media/scan-skip-dirs.ts`, `lib/media/name-parser.ts`, `lib/media/ffprobe.ts` |
 | HDR10+ overlay | `lib/media/ffprobe-parse.ts` → `resolveProbedHdr`; `VideoTrack.hasHdr10Plus`; `/dev` rescan |
 | Build MKV queue | `lib/builds/*`, `scripts/release-build-worker.ts`, ADR-0006 |
+| BDMV remux | `lib/media/bdmv/*`, `lib/builds/bdmv-*.ts`, ADR-0020 |
 | Export / move jobs | `lib/releases/export-*`, `lib/releases/move-*`, `lib/media-jobs/*`, ADR-0007/8/10 |
 | Covers | `lib/covers/cover-url.ts`, `lib/covers/cover-storage.ts` |
 | Merge / duplicates | `lib/merge/movie-merge.ts`, `lib/merge/duplicate-groups.ts` |
@@ -43,8 +44,9 @@ alwaysApply: false
 | Export/move remaining time | `lib/media-jobs/job-eta.ts` |
 | Copy speed window | `lib/media-jobs/copy-speed-window.ts` |
 | Copy/move dest disk lanes | `lib/media-jobs/destination-disk.ts` |
+| Same-disk move vs copy | `isSameDestinationDisk` in `destination-disk.ts`; runner `lib/releases/move-runner.ts` |
 | Tier filter combos | `lib/media/tier-core.ts` |
-| WSL Windows-drive mount | `lib/shared/wsl-drive-mount.ts` |
+| WSL Windows-drive mount | `lib/shared/wsl-drive-mount.ts`; letter from path → `wsl-drive-path.ts` |
 
 ## Anti-patterns
 
@@ -77,6 +79,6 @@ alwaysApply: false
 | `05-domain-pipelines` | Scanner, ffprobe, filters |
 | `06-engineering-standards` | ADR, tests, DB checklist |
 
-## ADR index (0001–0018)
+## ADR index (0001–0021)
 
-See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0018** per-destination-disk copy/move, **0017** HDR10+ overlay, **0016** WSL drive mount.
+See [`docs/adr/README.md`](../../docs/adr/README.md). Recent: **0021** same-disk move rename, **0020** BDMV remux, **0018** per-destination-disk copy/move.

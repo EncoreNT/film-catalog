@@ -41,12 +41,12 @@ describe("storage-picker-state", () => {
   });
 
   describe("moveTargetStorageKind", () => {
-    it("prefers external when source is local", () => {
-      expect(moveTargetStorageKind(false)).toBe("external");
+    it("stays on local when source is local", () => {
+      expect(moveTargetStorageKind(false)).toBe("local");
     });
 
-    it("prefers local when source is external", () => {
-      expect(moveTargetStorageKind(true)).toBe("local");
+    it("stays on external when source is external", () => {
+      expect(moveTargetStorageKind(true)).toBe("external");
     });
   });
 

@@ -226,11 +226,23 @@ export async function updateReleaseWithTracks(
   }
 }
 
+function nestedReleaseHasFileOrTracks(
+  release: NonNullable<MovieCreateInput["release"]>,
+): boolean {
+  const hasPath = Boolean(release.filePath?.trim());
+  const hasVideo = Boolean(release.videoTrack);
+  const hasAudio = (release.audioTracks?.length ?? 0) > 0;
+  const hasSubtitles = (release.subtitleTracks?.length ?? 0) > 0;
+  return hasPath || hasVideo || hasAudio || hasSubtitles;
+}
+
 /** Normalize legacy flat movie create fields into release input. */
 export function extractReleaseInputFromMovieCreate(
   data: MovieCreateInput,
 ): ReleaseCreateInput | null {
-  if (data.release) return data.release;
+  if (data.release) {
+    return nestedReleaseHasFileOrTracks(data.release) ? data.release : null;
+  }
 
   const hasReleaseData =
     data.filePath ||

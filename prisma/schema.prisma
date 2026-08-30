@@ -43,6 +43,11 @@ enum ReleaseBuildAudioSyncMode {
   FIT
 }
 
+enum ReleaseBuildKind {
+  recipe
+  bdmv
+}
+
 /** Named external drive; null externalStorageId on Release means local disk. */
 model ExternalStorage {
   id        Int      @id @default(autoincrement())
@@ -124,6 +129,7 @@ model MoviePart {
 
   movie    Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
   releases Release[]
+  builds   ReleaseBuild[]
 
   @@unique([movieId, partNumber])
   @@index([movieId, partNumber])
@@ -248,6 +254,7 @@ model Setting {
 model ReleaseBuild {
   id                   Int                @id @default(autoincrement())
   movieId              Int
+  kind                 ReleaseBuildKind   @default(recipe)
   status               ReleaseBuildStatus @default(QUEUED)
   phase                String?
   progressPercent      Float?
@@ -266,6 +273,7 @@ model ReleaseBuild {
   outputReleaseType    String?
   outputVersion        String             @default("theatrical")
   outputReleaseId      Int?
+  moviePartId          Int?
   externalStorageId    Int?
   acknowledgedWarnings String?
   queueOrder           Int                @default(0)
@@ -274,12 +282,14 @@ model ReleaseBuild {
   updatedAt            DateTime           @updatedAt
 
   movie           Movie              @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  moviePart       MoviePart?         @relation(fields: [moviePartId], references: [id], onDelete: SetNull)
   outputRelease   Release?           @relation("BuildOutputRelease", fields: [outputReleaseId], references: [id], onDelete: SetNull)
   externalStorage ExternalStorage?   @relation(fields: [externalStorageId], references: [id], onDelete: SetNull)
   sources         ReleaseBuildSource[]
   tracks          ReleaseBuildTrack[]
 
   @@index([movieId])
+  @@index([kind, status])
   @@index([status])
   @@index([status, queueOrder])
   @@index([status, requiresTranscode, queueOrder])

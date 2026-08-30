@@ -6,6 +6,15 @@ function queryFrom(params: Record<string, string>) {
   return parseListQuery(new URLSearchParams(params));
 }
 
+const HAS_RELEASES = { releases: { some: {} } };
+const NO_RELEASES = { releases: { none: {} } };
+
+function movieAnd(where: ReturnType<typeof buildMovieWhere>) {
+  if (Array.isArray(where.AND)) return where.AND;
+  if (where.AND) return [where.AND];
+  return [];
+}
+
 describe("parseListQuery", () => {
   it("defaults catalog page size to 70", () => {
     expect(queryFrom({}).limit).toBe(70);
@@ -19,6 +28,33 @@ describe("parseListQuery", () => {
 });
 
 describe("buildMovieWhere", () => {
+  it("hides movies without releases by default", () => {
+    const where = buildMovieWhere(queryFrom({}));
+    expect(movieAnd(where)).toContainEqual(HAS_RELEASES);
+  });
+
+  it("emptyReleases=true selects only movies with no releases", () => {
+    const where = buildMovieWhere(queryFrom({ emptyReleases: "true" }));
+    expect(movieAnd(where)).toContainEqual(NO_RELEASES);
+    expect(movieAnd(where)).not.toContainEqual(HAS_RELEASES);
+    expect(where.releases).toBeUndefined();
+  });
+
+  it("emptyReleases ignores quality and multiRelease filters", () => {
+    const where = buildMovieWhere(
+      queryFrom({
+        emptyReleases: "true",
+        hdr: "HDR10+",
+        tvReady: "true",
+        multiRelease: "true",
+      }),
+      { multiReleaseMovieIds: [10] },
+    );
+    expect(movieAnd(where)).toEqual([NO_RELEASES]);
+    expect(where.id).toBeUndefined();
+    expect(JSON.stringify(where)).not.toContain("HDR10+");
+  });
+
   it("merges watched status with date range", () => {
     const where = buildMovieWhere(
       queryFrom({
@@ -28,6 +64,7 @@ describe("buildMovieWhere", () => {
       }),
     );
     expect(where.AND).toEqual([
+      HAS_RELEASES,
       {
         watchedAt: {
           not: null,
@@ -41,6 +78,7 @@ describe("buildMovieWhere", () => {
   it("treats rated movies as watched", () => {
     const where = buildMovieWhere(queryFrom({ watched: "watched" }));
     expect(where.AND).toEqual([
+      HAS_RELEASES,
       {
         OR: [{ watchedAt: { not: null } }, { movieRatings: { some: {} } }],
       },
@@ -50,6 +88,7 @@ describe("buildMovieWhere", () => {
   it("treats movies without ratings or date as unwatched", () => {
     const where = buildMovieWhere(queryFrom({ watched: "unwatched" }));
     expect(where.AND).toEqual([
+      HAS_RELEASES,
       {
         AND: [{ watchedAt: null }, { movieRatings: { none: {} } }],
       },
@@ -63,7 +102,7 @@ describe("buildMovieWhere", () => {
         watchedFrom: "2024-01-01",
       }),
     );
-    expect(where.AND).toEqual([{ id: -1 }]);
+    expect(where.AND).toEqual([HAS_RELEASES, { id: -1 }]);
   });
 
   it("searches case-insensitively via normalized matchKey", () => {
@@ -72,6 +111,7 @@ describe("buildMovieWhere", () => {
       { matchKey: { contains: "подзем" } },
       { matchKey: null, title: { contains: "подзем" } },
     ]);
+    expect(movieAnd(where)).toContainEqual(HAS_RELEASES);
   });
 
   it("filters movies with multiple release variants", () => {
@@ -79,6 +119,7 @@ describe("buildMovieWhere", () => {
       multiReleaseMovieIds: [10, 20],
     });
     expect(where.id).toEqual({ in: [10, 20] });
+    expect(movieAnd(where)).toContainEqual(HAS_RELEASES);
   });
 
   it("returns impossible filter when no multi-release movies exist", () => {
@@ -97,6 +138,7 @@ describe("buildMovieWhere", () => {
       }),
     );
     expect(where.AND).toEqual([
+      HAS_RELEASES,
       { releases: { some: { audioTracks: { some: { language: "rus" } } } } },
       {
         releases: {
@@ -129,6 +171,7 @@ describe("buildMovieWhere", () => {
       }),
     );
     expect(where.AND).toEqual([
+      HAS_RELEASES,
       { releases: { some: { audioTracks: { some: { translationType: "original" } } } } },
       {
         releases: {
@@ -150,6 +193,7 @@ describe("buildMovieWhere", () => {
         premiumAudio: "true",
       }),
     );
+    expect(where.AND).toContainEqual(HAS_RELEASES);
     expect(where.AND).toContainEqual(archiveEliteTierWhere);
     expect(where.releases).toBeUndefined();
   });
@@ -159,6 +203,7 @@ describe("buildMovieWhere", () => {
       queryFrom({ hasLang: "rus,original" }),
     );
     expect(where.AND).toEqual([
+      HAS_RELEASES,
       { releases: { some: { audioTracks: { some: { language: "rus" } } } } },
       {
         releases: {
@@ -177,9 +222,10 @@ describe("buildMovieWhere", () => {
         },
       },
     });
+    expect(movieAnd(where)).toEqual([HAS_RELEASES]);
   });
 
-  it("keeps single audio filter without AND wrapper", () => {
+  it("keeps single audio filter without extra quality AND wrapper", () => {
     const where = buildMovieWhere(queryFrom({ language: "rus" }));
     expect(where.releases).toEqual({
       some: {
@@ -188,7 +234,7 @@ describe("buildMovieWhere", () => {
         },
       },
     });
-    expect(where.AND).toBeUndefined();
+    expect(movieAnd(where)).toEqual([HAS_RELEASES]);
   });
 
   it("filters HDR10+ by overlay flag, not only hdr string", () => {

@@ -38,25 +38,32 @@ export interface MovieCreatePayloadInput {
 }
 
 export function buildMovieCreatePayload(input: MovieCreatePayloadInput) {
+  const filePath = trimInputOptional(input.filePath);
   return {
     title: normalizeTitleSlash(trimInput(input.title)),
     year: input.year,
     description: trimMultilineOptional(input.description),
     genres: input.genres,
     status: "CATALOG" as const,
-    release: {
-      externalStorageId: input.externalStorageId,
-      releaseType: trimInputOptional(input.releaseType),
-      version: trimInputOptional(input.version) || DEFAULT_MOVIE_VERSION,
-      durationSeconds: input.durationSeconds,
-      filePath: trimInputOptional(input.filePath),
-      skipProbe: true,
-      videoTrack: buildVideoTrackPayload(input.video),
-      audioTracks: buildAudioTracksPayload(input.audioRows, { filterEmpty: true }),
-      subtitleTracks: buildSubtitleTracksPayload(input.subtitleRows, {
-        filterEmpty: true,
-      }),
-    },
+    ...(filePath
+      ? {
+          release: {
+            externalStorageId: input.externalStorageId,
+            releaseType: trimInputOptional(input.releaseType),
+            version: trimInputOptional(input.version) || DEFAULT_MOVIE_VERSION,
+            durationSeconds: input.durationSeconds,
+            filePath,
+            skipProbe: true,
+            videoTrack: buildVideoTrackPayload(input.video),
+            audioTracks: buildAudioTracksPayload(input.audioRows, {
+              filterEmpty: true,
+            }),
+            subtitleTracks: buildSubtitleTracksPayload(input.subtitleRows, {
+              filterEmpty: true,
+            }),
+          },
+        }
+      : {}),
   };
 }
 

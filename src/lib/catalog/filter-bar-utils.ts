@@ -40,7 +40,15 @@ export const SCALAR_KEYS = [
   "q",
   "minRating",
   "multiRelease",
+  "emptyReleases",
   ...SCALAR_FACET_KEYS,
+] as const;
+
+/** Quality / file filters mutually exclusive with emptyReleases. */
+export const QUALITY_FILTER_KEYS = [
+  ...FACET_KEYS,
+  ...SCALAR_FACET_KEYS,
+  "multiRelease",
 ] as const;
 export const LEGACY_FACET_KEYS = [
   "language",
@@ -61,9 +69,27 @@ export const CLEAR_ALL_FILTER_PARAMS = {
   q: null,
   minRating: null,
   multiRelease: null,
+  emptyReleases: null,
   sort: null,
   watched: null,
 };
+
+export function applyCatalogFilterUpdates(
+  updates: Record<string, string | null>,
+): Record<string, string | null> {
+  let next: Record<string, string | null> = { ...updates };
+  if (next.emptyReleases === "true") {
+    next = { ...CLEAR_FACET_PARAMS, multiRelease: null, ...next };
+  }
+  const setsQuality = QUALITY_FILTER_KEYS.some((key) => {
+    const value = next[key];
+    return value != null && value !== "";
+  });
+  if (setsQuality) {
+    next.emptyReleases = null;
+  }
+  return next;
+}
 
 export interface Facet {
   value: string | null;

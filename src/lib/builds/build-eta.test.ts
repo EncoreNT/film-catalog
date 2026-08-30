@@ -34,6 +34,8 @@ function baseBuild(
     progressStepTotal: partial.progressStepTotal ?? null,
     errorMessage: null,
     cancelRequested: false,
+    kind: partial.kind ?? "recipe",
+    moviePartId: partial.moviePartId ?? null,
     outputPath: "/tmp/out.mkv",
     outputReleaseType: "bdremux",
     outputVersion: "theatrical",

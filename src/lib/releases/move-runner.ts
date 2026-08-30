@@ -1,4 +1,5 @@
-import { rename, rm, stat, unlink } from "node:fs/promises";
+import { mkdir, rename, rm, stat, unlink } from "node:fs/promises";
+import { dirname } from "node:path";
 import { prisma } from "@/lib/db/prisma";
 import {
   copyFileWithProgress,
@@ -7,6 +8,7 @@ import {
 import { displayFilePath } from "@/lib/shared/display-path";
 import { mediaJobFileExists } from "@/lib/media-jobs/file-exists";
 import { createCopySpeedWindow } from "@/lib/media-jobs/copy-speed-window";
+import { isSameDestinationDisk } from "@/lib/media-jobs/destination-disk";
 import { mediaJobProgressMessage } from "@/lib/media-jobs/job-progress-message";
 import { exportPartPath } from "@/lib/releases/export-part-path";
 import { readMovieFileMeta } from "@/lib/releases/movie-file-meta";
@@ -29,9 +31,23 @@ async function fileExists(filePath: string): Promise<boolean> {
   return mediaJobFileExists(filePath);
 }
 
+function isExdevError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code: unknown }).code === "EXDEV"
+  );
+}
+
+async function ensureParentDir(filePath: string): Promise<void> {
+  await mkdir(dirname(filePath), { recursive: true });
+}
+
 export async function runMoveJob(moveId: number, signal?: AbortSignal) {
   const stopHeartbeat = startMoveHeartbeat(moveId);
   let partPath: string | null = null;
+  let relocatedByRename = false;
 
   try {
     const job = await prisma.releaseMove.findUnique({
@@ -57,66 +73,98 @@ export async function runMoveJob(moveId: number, signal?: AbortSignal) {
 
     const sourceStat = await stat(job.sourceFilePath);
     const totalBytes = job.sourceFileSize ?? sourceStat.size;
-    partPath = exportPartPath(job.targetPath, moveId);
+    const sameDisk = isSameDestinationDisk(job.sourceFilePath, job.targetPath);
 
-    await updateMoveProgress(moveId, {
-      phase: "copying",
-      progressPercent: 0,
-      progressMessage: moveProgressMessage(0, totalBytes),
-      progressSpeed: null,
-    });
-
-    let lastDbUpdate = 0;
-    const speedWindow = createCopySpeedWindow();
-    speedWindow.observe(0);
-
-    const copyAbort = new AbortController();
-    const onParentAbort = () => copyAbort.abort();
-    signal?.addEventListener("abort", onParentAbort);
-    const cancelPoll = setInterval(() => {
-      void isMoveCancelRequested(moveId).then((cancelled) => {
-        if (cancelled) copyAbort.abort();
+    if (sameDisk) {
+      await updateMoveProgress(moveId, {
+        phase: "moving",
+        progressPercent: 1,
+        progressMessage: "Перемещение в рамках диска…",
+        progressSpeed: null,
       });
-    }, 1_000);
 
-    try {
-      await copyFileWithProgress(job.sourceFilePath, partPath, {
-        totalBytes,
-        signal: copyAbort.signal,
-        onProgress: ({ bytesCopied }) => {
-          const now = Date.now();
-          const speed = speedWindow.observe(bytesCopied, now);
-          if (now - lastDbUpdate < PROGRESS_DB_INTERVAL_MS) return;
-          lastDbUpdate = now;
+      try {
+        if (await isMoveCancelRequested(moveId)) {
+          throw Object.assign(new Error("Отменено"), { code: "CANCELLED" });
+        }
+        await ensureParentDir(job.targetPath);
+        await rename(job.sourceFilePath, job.targetPath);
+        relocatedByRename = true;
+      } catch (err) {
+        if (!isExdevError(err)) throw err;
+      }
+    }
 
-          void updateMoveProgress(moveId, {
-            phase: "copying",
-            progressPercent: copyProgressPercent({ bytesCopied, totalBytes }),
-            progressMessage: moveProgressMessage(bytesCopied, totalBytes),
-            progressSpeed: speed,
-          });
-        },
+    if (!relocatedByRename) {
+      partPath = exportPartPath(job.targetPath, moveId);
+
+      await updateMoveProgress(moveId, {
+        phase: "copying",
+        progressPercent: 0,
+        progressMessage: moveProgressMessage(0, totalBytes),
+        progressSpeed: null,
       });
-    } finally {
-      speedWindow.clear();
-      clearInterval(cancelPoll);
-      signal?.removeEventListener("abort", onParentAbort);
+
+      let lastDbUpdate = 0;
+      const speedWindow = createCopySpeedWindow();
+      speedWindow.observe(0);
+
+      const copyAbort = new AbortController();
+      const onParentAbort = () => copyAbort.abort();
+      signal?.addEventListener("abort", onParentAbort);
+      const cancelPoll = setInterval(() => {
+        void isMoveCancelRequested(moveId).then((cancelled) => {
+          if (cancelled) copyAbort.abort();
+        });
+      }, 1_000);
+
+      try {
+        await ensureParentDir(partPath);
+        await copyFileWithProgress(job.sourceFilePath, partPath, {
+          totalBytes,
+          signal: copyAbort.signal,
+          onProgress: ({ bytesCopied }) => {
+            const now = Date.now();
+            const speed = speedWindow.observe(bytesCopied, now);
+            if (now - lastDbUpdate < PROGRESS_DB_INTERVAL_MS) return;
+            lastDbUpdate = now;
+
+            void updateMoveProgress(moveId, {
+              phase: "copying",
+              progressPercent: copyProgressPercent({ bytesCopied, totalBytes }),
+              progressMessage: moveProgressMessage(bytesCopied, totalBytes),
+              progressSpeed: speed,
+            });
+          },
+        });
+      } finally {
+        speedWindow.clear();
+        clearInterval(cancelPoll);
+        signal?.removeEventListener("abort", onParentAbort);
+      }
+
+      if (copyAbort.signal.aborted || (await isMoveCancelRequested(moveId))) {
+        throw Object.assign(new Error("Отменено"), { code: "CANCELLED" });
+      }
+
+      const [copied, source] = await Promise.all([
+        stat(partPath),
+        stat(job.sourceFilePath),
+      ]);
+      if (copied.size !== source.size) {
+        throw new Error("Размер скопированного файла не совпадает с исходником");
+      }
+
+      await rename(partPath, job.targetPath);
+      partPath = null;
     }
 
-    if (copyAbort.signal.aborted || (await isMoveCancelRequested(moveId))) {
-      throw Object.assign(new Error("Отменено"), { code: "CANCELLED" });
+    if (relocatedByRename && totalBytes > 0) {
+      const moved = await stat(job.targetPath);
+      if (moved.size !== totalBytes) {
+        throw new Error("Размер перемещённого файла не совпадает с исходником");
+      }
     }
-
-    const [copied, source] = await Promise.all([
-      stat(partPath),
-      stat(job.sourceFilePath),
-    ]);
-    if (copied.size !== source.size) {
-      throw new Error("Размер скопированного файла не совпадает с исходником");
-    }
-
-    await rename(partPath, job.targetPath);
-    partPath = null;
 
     await updateMoveProgress(moveId, {
       phase: "updating",
@@ -162,11 +210,13 @@ export async function runMoveJob(moveId: number, signal?: AbortSignal) {
     });
 
     let warningMessage: string | undefined;
-    try {
-      await unlink(job.sourceFilePath);
-    } catch {
-      warningMessage =
-        "Файл перемещён, но исходник на старом месте не удалён — удалите вручную";
+    if (!relocatedByRename) {
+      try {
+        await unlink(job.sourceFilePath);
+      } catch {
+        warningMessage =
+          "Файл перемещён, но исходник на старом месте не удалён — удалите вручную";
+      }
     }
 
     await finishMove(moveId, "SUCCEEDED", { warningMessage });

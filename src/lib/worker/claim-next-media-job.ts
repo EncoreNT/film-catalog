@@ -61,12 +61,14 @@ async function claimExportById(
 async function claimNextQueuedBuild(
   workerId: string,
   requiresTranscode: boolean,
+  extraWhere: { kind?: "recipe" | "bdmv" } = {},
 ): Promise<number | null> {
   const candidate = await prisma.releaseBuild.findFirst({
     where: {
       status: "QUEUED",
       cancelRequested: false,
       requiresTranscode,
+      ...extraWhere,
     },
     orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }],
     select: { id: true },
@@ -167,16 +169,28 @@ export async function claimAvailableMediaJobs(
     const transcodeLimit = await getBuildTranscodeConcurrency();
     let transcodeRunning = await countRunningTranscodeBuilds();
     while (transcodeRunning < transcodeLimit) {
-      const id = await claimNextQueuedBuild(workerId, true);
+      const id = await claimNextQueuedBuild(workerId, true, { kind: "recipe" });
       if (id == null) break;
       jobs.push({ kind: "build", id, requiresTranscode: true });
       transcodeRunning += 1;
     }
 
+    // Copy recipe jobs run in parallel. BDMV mux is disk-heavy: at most one
+    // RUNNING bdmv job worker-wide (ADR-0020).
     while (true) {
-      const id = await claimNextQueuedBuild(workerId, false);
+      const id = await claimNextQueuedBuild(workerId, false, { kind: "recipe" });
       if (id == null) break;
       jobs.push({ kind: "build", id, requiresTranscode: false });
+    }
+
+    const runningBdmv = await prisma.releaseBuild.count({
+      where: { status: "RUNNING", kind: "bdmv" },
+    });
+    if (runningBdmv === 0) {
+      const id = await claimNextQueuedBuild(workerId, false, { kind: "bdmv" });
+      if (id != null) {
+        jobs.push({ kind: "build", id, requiresTranscode: false });
+      }
     }
   }
 

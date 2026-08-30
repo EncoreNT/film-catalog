@@ -395,7 +395,11 @@ export function MovieCard({ movie, index = 0, remakeBadge }: MovieCardProps) {
             {/* Bottom overlay — spec chips, then title (2-line reserve),
                 then meta. Fixed block order reduces height jumping. */}
             <div className="absolute inset-x-0 bottom-0 z-10 p-2.5 pt-5">
-              {tech != null || hdrChip != null ? (
+              {releaseCount === 0 ? (
+                <p className="font-mono-tech text-[0.55rem] uppercase tracking-[0.12em] text-muted">
+                  нет релизов
+                </p>
+              ) : tech != null || hdrChip != null ? (
                 <div className="flex flex-wrap items-center gap-1">
                   {tech?.releaseType ? (
                     <SpecTag variant="chip" tone={chipTone} size="xs">
