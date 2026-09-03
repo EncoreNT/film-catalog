@@ -1,13 +1,13 @@
-export const COVER_MAX_BYTES = 10 * 1024 * 1024;
-export const COVER_FETCH_TIMEOUT_MS = 15_000;
+import {
+  COVER_EXT_BY_MIME,
+  COVER_FETCH_TIMEOUT_MS,
+  COVER_MAX_BYTES,
+} from "@/lib/covers/cover-formats";
 
-const MIME_TO_EXT: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-  "image/gif": ".gif",
-  "image/avif": ".avif",
-};
+export { COVER_MAX_BYTES, COVER_FETCH_TIMEOUT_MS };
+
+const BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 export type RemoteCoverResult = { buffer: Buffer; ext: string };
 export type RemoteCoverError = { message: string; status: number };
@@ -35,11 +35,20 @@ export async function fetchRemoteCoverBuffer(
     resp = await fetch(parsedUrl, {
       signal: controller.signal,
       redirect: "follow",
-      headers: { "User-Agent": "film-catalog-cover-fetch/1.0" },
+      headers: {
+        "User-Agent": BROWSER_USER_AGENT,
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        Referer: `${parsedUrl.protocol}//${parsedUrl.host}/`,
+      },
     });
-  } catch {
+  } catch (err) {
+    const aborted =
+      err instanceof Error &&
+      (err.name === "AbortError" || controller.signal.aborted);
     return {
-      message: "Не удалось загрузить изображение по ссылке",
+      message: aborted
+        ? "Превышено время ожидания загрузки по ссылке"
+        : "Не удалось загрузить изображение по ссылке",
       status: 502,
     };
   } finally {
@@ -54,7 +63,7 @@ export async function fetchRemoteCoverBuffer(
     .split(";")[0]
     .trim()
     .toLowerCase();
-  const ext = MIME_TO_EXT[remoteType];
+  const ext = COVER_EXT_BY_MIME[remoteType];
   if (!ext) {
     return {
       message: "По ссылке не изображение (ожидается jpg/png/webp/gif/avif)",

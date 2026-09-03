@@ -1,3 +1,6 @@
+export const COVER_MAX_BYTES = 10 * 1024 * 1024;
+export const COVER_FETCH_TIMEOUT_MS = 15_000;
+
 const COVER_IMAGE_EXTENSIONS = new Set([
   ".jpg",
   ".jpeg",
@@ -50,6 +53,21 @@ export const COVER_MIME_BY_EXT: Record<string, string> = {
   ".avif": "image/avif",
   ".bmp": "image/bmp",
 };
+
+export const COVER_EXT_BY_MIME: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/avif": ".avif",
+  "image/bmp": ".bmp",
+};
+
+export function coverExtFromMime(mime: string): string | null {
+  const normalized = mime.split(";")[0]?.trim().toLowerCase() ?? "";
+  return COVER_EXT_BY_MIME[normalized] ?? null;
+}
 
 /** True when buffer magic bytes match a common raster image format. */
 export function isImageBuffer(buffer: Buffer): boolean {

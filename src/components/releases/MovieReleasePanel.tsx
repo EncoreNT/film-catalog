@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 import type { ReleasePartGroup } from "@/lib/movies/build-part-release-groups";
-import { ReleaseTabStorageIcon } from "@/components/releases/ReleaseSpecRibbon";
+import { ReleaseTabStorageIcon, ReleaseCutMark } from "@/components/releases/ReleaseSpecRibbon";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
 import { AddReleaseMenu } from "@/components/releases/AddReleaseMenu";
@@ -14,6 +14,7 @@ import { ReleaseMoveProgressStrip } from "@/components/releases/ReleaseMoveProgr
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
 import { useReleaseExportJob } from "@/hooks/useReleaseExportJob";
 import { useReleaseMoveJob } from "@/hooks/useReleaseMoveJob";
+import { useOptionalMovieRuntime } from "@/components/movies/MovieRuntimeContext";
 import {
   releaseToTabTier,
   tierTabStyles,
@@ -32,6 +33,9 @@ function releaseTabInner(
         label={release.storageLabel}
       />
       <span>{release.label}</span>
+      {release.versionLabel ? (
+        <ReleaseCutMark label={release.versionLabel} />
+      ) : null}
       {release.tier ? (
         <span className="font-mono-tech text-[10px] uppercase tracking-[0.18em]">
           {tierTab.tag}
@@ -90,6 +94,7 @@ export function MovieReleasePanel({
   const [moveSuccessMessage, setMoveSuccessMessage] = useState<string | null>(
     null,
   );
+  const movieRuntime = useOptionalMovieRuntime();
   const showTabs = panelReleases.length > 1;
 
   const activeRelease =
@@ -152,6 +157,10 @@ export function MovieReleasePanel({
     },
     [syncUrl],
   );
+
+  useEffect(() => {
+    if (activeId != null) movieRuntime?.setActiveReleaseId(activeId);
+  }, [activeId, movieRuntime?.setActiveReleaseId]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -270,6 +279,11 @@ export function MovieReleasePanel({
                     id={`release-tab-${release.id}`}
                     aria-selected={active}
                     aria-controls={`release-panel-${release.id}`}
+                    aria-label={
+                      release.versionLabel
+                        ? `${release.label}, ${release.versionLabel}`
+                        : release.label
+                    }
                     onClick={() => selectRelease(release.id)}
                     className={`focus-ring transition-colors ${className}`}
                   >

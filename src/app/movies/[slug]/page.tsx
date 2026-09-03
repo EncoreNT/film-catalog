@@ -4,6 +4,7 @@ import { MovieReleasePanel } from "@/components/releases/MovieReleasePanel";
 import { DuplicateMergeBanner } from "@/components/movies/DuplicateMergeBanner";
 import { MovieCoverHero } from "@/components/movies/MovieCoverHero";
 import { MovieDetailHeader } from "@/components/movies/MovieDetailHeader";
+import { MovieRuntimeProvider } from "@/components/movies/MovieRuntimeContext";
 import { MovieFranchises } from "@/components/movies/MovieFranchises";
 import { MovieRemakes } from "@/components/movies/MovieRemakes";
 import { MovieRatingWatchedSection } from "@/components/movies/MovieRatingWatchedSection";
@@ -33,6 +34,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
     coverUrl,
     genres,
     releaseViews,
+    movieSeconds,
     displayDuration,
     franchiseMemberships,
     remakeMemberships,
@@ -53,72 +55,83 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
         />
       ) : null}
 
-      {/* Title band — full-width statement across the page. The header
-          (status, title, year, genres, edit) sits above the two-column
-          body so the H1 can stretch wide instead of wrapping inside the
-          narrow identity rail. */}
-      <MovieDetailHeader
-        movie={movie}
-        genres={genres}
-        displayDuration={displayDuration}
+      <MovieRuntimeProvider
+        movieSeconds={movieSeconds}
         partCount={movie.partCount}
-      />
+        initialActiveId={activeReleaseId}
+        releases={releaseViews.map((release) => ({
+          id: release.id,
+          version: release.version,
+          durationSeconds: release.durationSeconds,
+        }))}
+      >
+        {/* Title band — full-width statement across the page. The header
+            (status, title, year, genres, edit) sits above the two-column
+            body so the H1 can stretch wide instead of wrapping inside the
+            narrow identity rail. */}
+        <MovieDetailHeader
+          movie={movie}
+          genres={genres}
+          displayDuration={displayDuration}
+          partCount={movie.partCount}
+        />
 
-      {/* Body. Left: identity rail (poster, synopsis, franchises,
-          rating) — sticky on wide screens so it stays in view while only
-          the technical console on the right scrolls. Right: technical
-          console (releases, video, audio, subtitles, file). Below lg it
-          collapses to a single column. */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)] xl:gap-12 2xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)] 2xl:gap-16">
-        <div className="detail-reveal detail-reveal--2 space-y-5 lg:sticky lg:top-4 lg:self-start">
-          <SpotlightTarget side="left">
-            <MovieCoverHero coverUrl={coverUrl} title={movie.title} />
-          </SpotlightTarget>
+        {/* Body. Left: identity rail (poster, synopsis, franchises,
+            rating) — sticky on wide screens so it stays in view while only
+            the technical console on the right scrolls. Right: technical
+            console (releases, video, audio, subtitles, file). Below lg it
+            collapses to a single column. */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)] xl:gap-12 2xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)] 2xl:gap-16">
+          <div className="detail-reveal detail-reveal--2 space-y-5 lg:sticky lg:top-4 lg:self-start">
+            <SpotlightTarget side="left">
+              <MovieCoverHero coverUrl={coverUrl} title={movie.title} />
+            </SpotlightTarget>
 
-          {movie.description ? (
-            <p className="text-sm leading-relaxed text-muted 2xl:text-[0.95rem]">
-              {movie.description}
-            </p>
-          ) : null}
+            {movie.description ? (
+              <p className="text-sm leading-relaxed text-muted 2xl:text-[0.95rem]">
+                {movie.description}
+              </p>
+            ) : null}
 
-          <MovieFranchises memberships={franchiseMemberships} />
+            <MovieFranchises memberships={franchiseMemberships} />
 
-          <MovieRemakes
-            memberships={remakeMemberships}
-            currentMovieFranchises={franchiseMemberships.map((m) => ({
-              id: m.franchise.id,
-              name: m.franchise.name,
-              slug: m.franchise.slug,
-            }))}
-          />
-
-          <MovieRatingWatchedSection
-            movieId={movie.id}
-            ratings={ratingRows}
-            watchedAt={movie.watchedAt}
-          />
-        </div>
-
-        <SpotlightTarget
-          side="right"
-          className="detail-reveal detail-reveal--3 min-w-0"
-        >
-          {releaseViews.length > 0 ? (
-            <MovieReleasePanel
-              movieId={movie.id}
-              movieSlug={movie.slug}
-              releases={releaseViews}
-              partGroups={partReleaseGroups}
-              initialActiveReleaseId={
-                activeReleaseId ?? releaseViews[0].id
-              }
-              primaryReleaseId={catalogPrimaryReleaseId}
+            <MovieRemakes
+              memberships={remakeMemberships}
+              currentMovieFranchises={franchiseMemberships.map((m) => ({
+                id: m.franchise.id,
+                name: m.franchise.name,
+                slug: m.franchise.slug,
+              }))}
             />
-          ) : (
-            <EmptyReleasesCard movieSlug={movie.slug} />
-          )}
-        </SpotlightTarget>
-      </div>
+
+            <MovieRatingWatchedSection
+              movieId={movie.id}
+              ratings={ratingRows}
+              watchedAt={movie.watchedAt}
+            />
+          </div>
+
+          <SpotlightTarget
+            side="right"
+            className="detail-reveal detail-reveal--3 min-w-0"
+          >
+            {releaseViews.length > 0 ? (
+              <MovieReleasePanel
+                movieId={movie.id}
+                movieSlug={movie.slug}
+                releases={releaseViews}
+                partGroups={partReleaseGroups}
+                initialActiveReleaseId={
+                  activeReleaseId ?? releaseViews[0].id
+                }
+                primaryReleaseId={catalogPrimaryReleaseId}
+              />
+            ) : (
+              <EmptyReleasesCard movieSlug={movie.slug} />
+            )}
+          </SpotlightTarget>
+        </div>
+      </MovieRuntimeProvider>
     </div>
   );
 }

@@ -468,7 +468,8 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
           markDirty();
         }}
         options={MOVIE_VERSIONS}
-        hint="Театральная, режиссёрская…"
+        preserveOrder
+        hint="Театральная, режиссёрская, детская…"
       />
     </MachinedCard>
   );

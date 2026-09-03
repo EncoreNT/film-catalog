@@ -1,8 +1,8 @@
 import {
   AudioLines,
+  Clapperboard,
   Disc3,
   HardDrive,
-  Layers,
   MonitorPlay,
   Plug,
   Sun,
@@ -31,6 +31,15 @@ export function ReleaseTabStorageIcon({
   );
 }
 
+/** Same weight as the storage glyph: another take, not the theatrical cut. */
+export function ReleaseCutMark({ label }: { label: string }) {
+  return (
+    <span title={label} aria-label={label} className="inline-flex shrink-0">
+      <Clapperboard className="h-3 w-3" aria-hidden />
+    </span>
+  );
+}
+
 export function tagIcon(kind: ReleaseDetailView["tags"][number]["kind"]) {
   switch (kind) {
     case "resolution":
@@ -46,7 +55,7 @@ export function tagIcon(kind: ReleaseDetailView["tags"][number]["kind"]) {
     case "release":
       return <Disc3 className="h-3.5 w-3.5" />;
     case "version":
-      return <Layers className="h-3.5 w-3.5" />;
+      return <Clapperboard className="h-3.5 w-3.5" />;
     default:
       return null;
   }

@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  catalogDisplayDurationSeconds,
+  detailBaselineDurationSeconds,
   movieHasMultipleReleaseVariants,
   shouldShowCatalogReleaseCountBadge,
 } from "@/lib/movies/multipart-duration";
+import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
+
+function releaseSlice(
+  partial: Pick<ReleaseWithTracks, "version" | "durationSeconds">,
+): ReleaseWithTracks {
+  return partial as ReleaseWithTracks;
+}
 
 describe("movieHasMultipleReleaseVariants", () => {
   it("shows for ordinary multi-release movie", () => {
@@ -51,6 +60,40 @@ describe("movieHasMultipleReleaseVariants", () => {
         { moviePartId: null },
       ]),
     ).toBe(true);
+  });
+});
+
+describe("detailBaselineDurationSeconds", () => {
+  it("uses theatrical runtime and ignores a longer kid-mode cut", () => {
+    expect(
+      detailBaselineDurationSeconds(
+        [
+          releaseSlice({ version: "theatrical", durationSeconds: 5808 }),
+          releaseSlice({ version: "kid-mode", durationSeconds: 6431 }),
+        ],
+        null,
+      ),
+    ).toBe(5808);
+  });
+
+  it("stays null when only an alternate cut is present", () => {
+    expect(
+      detailBaselineDurationSeconds(
+        [releaseSlice({ version: "kid-mode", durationSeconds: 6431 })],
+        null,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("catalogDisplayDurationSeconds", () => {
+  it("falls back to the longest cut when theatrical duration is missing", () => {
+    expect(
+      catalogDisplayDurationSeconds(
+        [releaseSlice({ version: "kid-mode", durationSeconds: 6431 })],
+        null,
+      ),
+    ).toBe(6431);
   });
 });
 

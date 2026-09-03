@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import path from "path";
-import { COVER_MAX_BYTES, fetchRemoteCoverBuffer } from "@/lib/covers/fetch-remote-cover";
+import { COVER_MAX_BYTES } from "@/lib/covers/cover-formats";
+import { fetchRemoteCoverBuffer } from "@/lib/covers/fetch-remote-cover";
 
 export type CoverUploadPayload = { buffer: Buffer; ext: string };
 export type CoverUploadError = { message: string; status: number };

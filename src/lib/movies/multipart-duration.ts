@@ -1,8 +1,11 @@
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import {
-  pickPrimaryRelease,
-  sortReleasesByQuality,
-} from "@/lib/releases/release-primary";
+  movieCanonicalDurationSeconds,
+  movieTheatricalDurationSeconds,
+  resolveDetailRuntimeDisplay,
+} from "@/lib/movies/movie-runtime";
+import { sortReleasesByQuality } from "@/lib/releases/release-primary";
+import { isBaseMovieVersion } from "@/lib/shared/dictionaries";
 
 import { formatCountRu } from "@/lib/shared/russian-plural";
 
@@ -30,7 +33,15 @@ export function sumMultiPartDuration(
   let partsWithDuration = 0;
 
   for (const group of byPartId.values()) {
-    const best = sortReleasesByQuality(group)[0];
+    const theatrical = group.filter(
+      (release) =>
+        isBaseMovieVersion(release.version) &&
+        release.durationSeconds != null &&
+        release.durationSeconds > 0,
+    );
+    const best = sortReleasesByQuality(
+      theatrical.length > 0 ? theatrical : group,
+    )[0];
     if (best?.durationSeconds != null && best.durationSeconds > 0) {
       total += best.durationSeconds;
       partsWithDuration++;
@@ -47,14 +58,27 @@ export function sumMultiPartDuration(
 export function catalogDisplayDurationSeconds(
   releases: ReleaseWithTracks[],
   partCount: number | null | undefined,
-  primaryReleaseId: number | null | undefined,
+  _primaryReleaseId?: number | null,
 ): number | null {
   if (partCount != null && partCount > 1) {
     const summed = sumMultiPartDuration(releases, partCount);
     if (summed != null) return summed;
   }
-  const primary = pickPrimaryRelease(releases, primaryReleaseId ?? null);
-  return primary?.durationSeconds ?? releases[0]?.durationSeconds ?? null;
+  return movieCanonicalDurationSeconds(releases);
+}
+
+/**
+ * Baseline shown as "movie runtime" on the detail header: theatrical (or the
+ * multipart theatrical sum). Does not fall back to a longer alternate cut.
+ */
+export function detailBaselineDurationSeconds(
+  releases: ReleaseWithTracks[],
+  partCount: number | null | undefined,
+): number | null {
+  if (partCount != null && partCount > 1) {
+    return catalogDisplayDurationSeconds(releases, partCount);
+  }
+  return movieTheatricalDurationSeconds(releases);
 }
 
 export function detailDisplayDurationSeconds(
@@ -62,11 +86,12 @@ export function detailDisplayDurationSeconds(
   partCount: number | null | undefined,
   activeRelease: ReleaseWithTracks | null,
 ): number | null {
-  if (partCount != null && partCount > 1) {
-    const summed = sumMultiPartDuration(releases, partCount);
-    if (summed != null) return summed;
-  }
-  return activeRelease?.durationSeconds ?? releases[0]?.durationSeconds ?? null;
+  const movieSeconds = detailBaselineDurationSeconds(releases, partCount);
+  return resolveDetailRuntimeDisplay({
+    movieSeconds,
+    activeRelease,
+    lockToMovieRuntime: partCount != null && partCount > 1,
+  }).seconds;
 }
 
 type ReleasePartLink = Pick<ReleaseWithTracks, "moviePartId">;

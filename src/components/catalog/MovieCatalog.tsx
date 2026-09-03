@@ -20,7 +20,7 @@ import {
   formatArchiveTotalDuration,
   formatArchiveTotalSize,
 } from "@/lib/shared/format";
-import { pluralRu } from "@/lib/shared/russian-plural";
+import { catalogListCountLabel } from "@/lib/catalog/catalog-list-count-label";
 import type { CatalogRemakeBadge } from "@/lib/remakes/remake-catalog-badges";
 import {
   DEFAULT_MOVIE_LIST_ORDER,
@@ -234,6 +234,7 @@ interface MovieCatalogProps {
     translationTypes: Facet[];
   };
   total: number;
+  releaseCount: number;
   totalCount: number;
   page: number;
   limit: number;
@@ -250,6 +251,7 @@ export function MovieCatalog({
   movies,
   facets,
   total,
+  releaseCount,
   totalCount,
   page,
   limit,
@@ -397,6 +399,11 @@ export function MovieCatalog({
   const isDraftView = status === "DRAFT";
   const isExcludedView = status === "EXCLUDED";
   const isCatalog = !isDraftView && !isExcludedView;
+  const listCount = catalogListCountLabel(
+    isDraftView ? "draft" : isExcludedView ? "excluded" : "catalog",
+    total,
+    releaseCount,
+  );
 
   const activeResolution = searchParams.get("resolution");
   const activeHdr = searchParams.get("hdr");
@@ -617,24 +624,48 @@ export function MovieCatalog({
             />
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-baseline gap-3">
+              <p
+                className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1"
+                aria-label={listCount.ariaLabel}
+                title={listCount.displayText}
+              >
+                <span className="inline-flex items-baseline gap-1.5">
+                  <span
+                    className="font-display text-2xl font-bold tabular-nums text-accent"
+                    style={{
+                      textShadow:
+                        "0 0 18px rgba(232,176,90,0.55), 0 0 36px rgba(139,92,246,0.55)",
+                    }}
+                    aria-hidden
+                  >
+                    {total}
+                  </span>
+                  <span className="text-sm text-muted" aria-hidden>
+                    {listCount.movieWord}
+                  </span>
+                </span>
                 <span
-                  className="font-display text-2xl font-bold tabular-nums text-accent"
-                  style={{
-                    textShadow:
-                      "0 0 18px rgba(232,176,90,0.55), 0 0 36px rgba(139,92,246,0.55)",
-                  }}
+                  className="font-display text-lg font-semibold text-accent/40"
+                  aria-hidden
                 >
-                  {total}
+                  /
                 </span>
-                <span className="font-mono-tech text-sm text-muted">
-                  {isDraftView
-                    ? pluralRu(total, "черновик", "черновика", "черновиков")
-                    : isExcludedView
-                      ? pluralRu(total, "скрытый", "скрытых", "скрытых")
-                      : pluralRu(total, "фильм", "фильма", "фильмов")}
+                <span className="inline-flex items-baseline gap-1.5">
+                  <span
+                    className="font-display text-2xl font-bold tabular-nums text-accent"
+                    style={{
+                      textShadow:
+                        "0 0 18px rgba(232,176,90,0.55), 0 0 36px rgba(139,92,246,0.55)",
+                    }}
+                    aria-hidden
+                  >
+                    {releaseCount}
+                  </span>
+                  <span className="text-sm text-muted" aria-hidden>
+                    {listCount.releaseWord}
+                  </span>
                 </span>
-              </div>
+              </p>
 
               {allMovies.length > 0 ? (
                 <div className="flex items-center gap-2">

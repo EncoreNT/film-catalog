@@ -11,7 +11,10 @@ import {
   buildPartReleaseGroups,
   type ReleasePartGroup,
 } from "@/lib/movies/build-part-release-groups";
-import { detailDisplayDurationSeconds } from "@/lib/movies/multipart-duration";
+import {
+  detailBaselineDurationSeconds,
+  detailDisplayDurationSeconds,
+} from "@/lib/movies/multipart-duration";
 import {
   pickPrimaryRelease,
   sortReleasesByQuality,
@@ -63,6 +66,10 @@ export async function loadMovieDetailPage(
   const partReleaseGroups = buildPartReleaseGroups(movie, releaseViews);
   const catalogPrimaryReleaseId =
     pickPrimaryRelease(releases, movie.primaryReleaseId)?.id ?? null;
+  const movieSeconds = detailBaselineDurationSeconds(
+    releases,
+    movie.partCount,
+  );
   const displayDuration = detailDisplayDurationSeconds(
     releases,
     movie.partCount,
@@ -77,6 +84,7 @@ export async function loadMovieDetailPage(
     genres,
     releaseViews,
     partReleaseGroups,
+    movieSeconds,
     displayDuration,
     franchiseMemberships,
     remakeMemberships,

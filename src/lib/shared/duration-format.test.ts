@@ -17,6 +17,7 @@ describe("formatDurationDelta", () => {
   it("formats short deltas", () => {
     expect(formatDurationDelta(45)).toBe("45 с");
     expect(formatDurationDelta(125)).toBe("2 мин 5 с");
+    expect(formatDurationDelta(623)).toBe("10 мин 23 с");
   });
 });
 

@@ -9,13 +9,32 @@ import {
 const noDownload = { fileDownloadedAt: null as Date | null };
 
 describe("movieDurationSortKey", () => {
-  it("returns max duration across releases", () => {
+  it("returns max duration across theatrical releases", () => {
     expect(
       movieDurationSortKey([
         { durationSeconds: 3600, fileSize: null, fileDownloadedAt: null },
         { durationSeconds: 7200, fileSize: null, fileDownloadedAt: null },
       ]),
     ).toBe(7200);
+  });
+
+  it("ignores a longer non-theatrical cut", () => {
+    expect(
+      movieDurationSortKey([
+        {
+          durationSeconds: 5808,
+          fileSize: null,
+          fileDownloadedAt: null,
+          version: "theatrical",
+        },
+        {
+          durationSeconds: 6431,
+          fileSize: null,
+          fileDownloadedAt: null,
+          version: "kid-mode",
+        },
+      ]),
+    ).toBe(5808);
   });
 
   it("returns null when no release has duration", () => {

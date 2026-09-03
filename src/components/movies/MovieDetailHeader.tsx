@@ -2,9 +2,9 @@ import { MovieApproveButton } from "@/components/movies/MovieApproveButton";
 import { EditEntityLink } from "@/components/primitives/EditEntityLink";
 import { DetailMetaLine } from "@/components/primitives/DetailMetaLine";
 import { TagPill } from "@/components/primitives/TagPill";
-import { formatDuration } from "@/lib/shared/format";
 import { displayGenreName } from "@/lib/shared/dictionaries";
 import { formatSeriesCountLabel } from "@/lib/movies/multipart-duration";
+import { MovieRuntimeMeta } from "@/components/movies/MovieRuntimeMeta";
 import type { MovieStatus } from "@/generated/prisma/client";
 
 export interface MovieDetailGenre {
@@ -80,7 +80,7 @@ export function MovieDetailHeader({
           {
             key: "duration",
             node: displayDuration ? (
-              <span>{formatDuration(displayDuration, "long")}</span>
+              <MovieRuntimeMeta fallbackSeconds={displayDuration} />
             ) : null,
           },
         ]}

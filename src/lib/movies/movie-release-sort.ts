@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { movieCanonicalDurationSeconds } from "@/lib/movies/movie-runtime";
 
 export const RELEASE_AGGREGATE_SORT_FIELDS = [
   "durationSeconds",
@@ -13,6 +14,7 @@ type ReleaseSortSlice = {
   durationSeconds: number | null;
   fileSize: number | null;
   fileDownloadedAt: Date | null;
+  version?: string | null;
 };
 
 type MovieSortCandidate = {
@@ -28,18 +30,11 @@ export function isReleaseAggregateSort(
   );
 }
 
-/** Longest known release duration; null when no release has duration. */
+/** Canonical movie runtime (theatrical when present); null when unknown. */
 export function movieDurationSortKey(
   releases: ReleaseSortSlice[],
 ): number | null {
-  let max: number | null = null;
-  for (const release of releases) {
-    if (release.durationSeconds == null) continue;
-    if (max == null || release.durationSeconds > max) {
-      max = release.durationSeconds;
-    }
-  }
-  return max;
+  return movieCanonicalDurationSeconds(releases);
 }
 
 /** Sum of release file sizes; null when every release lacks size. */
@@ -120,6 +115,7 @@ export const releaseAggregateSortSelect = {
       durationSeconds: true,
       fileSize: true,
       fileDownloadedAt: true,
+      version: true,
     },
   },
 } satisfies Prisma.MovieSelect;

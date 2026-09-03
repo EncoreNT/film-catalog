@@ -66,7 +66,7 @@ export async function loadCatalogPage(
     .filter(Boolean) as MovieStatus[];
 
   const [
-    { items: movies, total },
+    { items: movies, total, releaseCount },
     { totalCount, catalogCount, draftCount, excludedCount },
     archiveMetrics,
     archiveTotals,
@@ -94,6 +94,7 @@ export async function loadCatalogPage(
   return {
     movies,
     total,
+    releaseCount,
     totalCount,
     page,
     limit,

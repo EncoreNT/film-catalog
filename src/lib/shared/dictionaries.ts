@@ -243,6 +243,7 @@ export const MOVIE_VERSIONS: DictOption[] = [
   { value: "collectors-cut", label: "Коллекционная версия" },
   { value: "remastered", label: "Ремастер" },
   { value: "tv-cut", label: "Телевизионная версия" },
+  { value: "kid-mode", label: "Детская версия" },
   { value: "international", label: "Международная версия" },
   { value: "other", label: "Другое" },
 ];

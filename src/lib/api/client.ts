@@ -35,29 +35,31 @@ export type CoverUploadInput =
   | { kind: "file"; file: File }
   | { kind: "url"; url: string };
 
+async function postCoverFile(
+  uploadUrl: string,
+  file: File,
+): Promise<{ updatedAt: string }> {
+  const formData = new FormData();
+  formData.append("cover", file);
+  return apiFetch<{ updatedAt: string }>(
+    uploadUrl,
+    { method: "POST", body: formData },
+    "Не удалось загрузить обложку",
+  );
+}
+
 /** POST cover file or remote URL to a movie/franchise cover endpoint. */
 export async function uploadCover(
   uploadUrl: string,
   input: CoverUploadInput,
 ): Promise<{ updatedAt: string }> {
   if (input.kind === "file") {
-    const formData = new FormData();
-    formData.append("cover", input.file);
-    return apiFetch<{ updatedAt: string }>(
-      uploadUrl,
-      { method: "POST", body: formData },
-      "Не удалось загрузить обложку",
-    );
+    return postCoverFile(uploadUrl, input.file);
   }
-  return apiFetch<{ updatedAt: string }>(
-    uploadUrl,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: input.url }),
-    },
-    "Не удалось загрузить обложку",
-  );
+
+  const { fetchCoverUrlAsFile } = await import("@/lib/covers/fetch-cover-client");
+  const file = await fetchCoverUrlAsFile(input.url);
+  return postCoverFile(uploadUrl, file);
 }
 
 /** Best-effort cover upload after entity creation (non-fatal). */

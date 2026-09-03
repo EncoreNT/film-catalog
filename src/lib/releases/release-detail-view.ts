@@ -14,6 +14,7 @@ import {
 } from "@/lib/releases/release-storage";
 import { formatDate, formatFileSizeGB } from "@/lib/shared/format";
 import { displayFilePath } from "@/lib/shared/display-path";
+import { displayMovieVersionLabel } from "@/lib/shared/dictionaries";
 import { formatBitrateKbps, formatFps } from "@/lib/shared/resolution";
 import {
   codecFull,
@@ -62,6 +63,9 @@ export type ReleaseDetailSubtitleTrack = {
 export type ReleaseDetailView = {
   id: number;
   label: string;
+  version: string | null;
+  versionLabel: string | null;
+  durationSeconds: number | null;
   showRibbon: boolean;
   vPixels: string | null;
   premiumHdr: { label: string; isDolbyVision: boolean; sublabel?: string } | null;
@@ -141,6 +145,9 @@ export function buildReleaseDetailView(
   return {
     id: release.id,
     label: releaseTabLabel(release),
+    version: release.version,
+    versionLabel: displayMovieVersionLabel(release.version),
+    durationSeconds: release.durationSeconds,
     showRibbon,
     vPixels,
     premiumHdr: premiumHdr
