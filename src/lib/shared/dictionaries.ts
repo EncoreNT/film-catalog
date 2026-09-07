@@ -235,6 +235,7 @@ export const MOVIE_VERSIONS: DictOption[] = [
   { value: "theatrical", label: "Театральная версия" },
   { value: "directors-cut", label: "Режиссёрская версия" },
   { value: "extended", label: "Расширенная версия" },
+  { value: "imax", label: "IMAX версия" },
   { value: "special-edition", label: "Специальная версия" },
   { value: "ultimate-edition", label: "Ультимативная версия" },
   { value: "final-cut", label: "Финальная версия" },
