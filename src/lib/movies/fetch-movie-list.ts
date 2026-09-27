@@ -16,6 +16,10 @@ import {
   isRatingSortOrFilter,
   fetchRatingSortedMovieIds,
 } from "@/lib/movies/movie-rating-sort";
+import {
+  fetchWatchSortedMovieIds,
+  isWatchDateSort,
+} from "@/lib/movies/movie-watch-sort";
 
 function countReleasesForMovies(where: Prisma.MovieWhereInput) {
   return prisma.release.count({ where: { movie: where } });
@@ -35,6 +39,37 @@ export async function fetchMovieList(
         sort: query.sort,
         order: query.order ?? "asc",
         minRating: query.minRating,
+        skip,
+        take: limit,
+      }),
+      countReleasesForMovies(where),
+    ]);
+
+    if (pageIds.length === 0) {
+      return { items: [], total, releaseCount, page, limit };
+    }
+
+    const items = await prisma.movie.findMany({
+      where: { id: { in: pageIds } },
+      include: movieInclude,
+    });
+    const byId = new Map(items.map((movie) => [movie.id, movie]));
+
+    return {
+      items: pageIds
+        .map((id) => byId.get(id))
+        .filter((movie): movie is NonNullable<typeof movie> => movie != null),
+      total,
+      releaseCount,
+      page,
+      limit,
+    };
+  }
+
+  if (isWatchDateSort(query.sort)) {
+    const [{ pageIds, total }, releaseCount] = await Promise.all([
+      fetchWatchSortedMovieIds(where, {
+        order: query.order ?? "asc",
         skip,
         take: limit,
       }),

@@ -8,14 +8,12 @@ describe("planMerge", () => {
         id: 1,
         description: "A",
         coverPath: "covers/1.jpg",
-        watchedAt: new Date("2024-01-01"),
         _count: { releases: 2 },
       },
       {
         id: 2,
         description: "B",
         coverPath: "covers/2.jpg",
-        watchedAt: new Date("2024-06-01"),
         _count: { releases: 1 },
       },
       [10],
@@ -26,7 +24,6 @@ describe("planMerge", () => {
     expect(plan.otherReleaseCount).toBe(1);
     expect(plan.conflicts.description).toBe(true);
     expect(plan.conflicts.coverPath).toBe(true);
-    expect(plan.conflicts.watchedAt).toBe(true);
     expect(plan.conflicts.franchiseSlots).toBe(false);
   });
 });

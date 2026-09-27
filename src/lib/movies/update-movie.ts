@@ -14,8 +14,7 @@ import type { z } from "zod";
 type MovieUpdateInput = z.infer<typeof movieUpdateSchema>;
 
 export async function updateMovie(movieId: number, data: MovieUpdateInput) {
-  const { genres, watchedAt, parts, partCount, partReleaseLinks, ...movieData } =
-    data;
+  const { genres, parts, partCount, partReleaseLinks, ...movieData } = data;
   const genreNames = genres ?? null;
 
   const existing = await prisma.movie.findUnique({
@@ -47,12 +46,6 @@ export async function updateMovie(movieId: number, data: MovieUpdateInput) {
         ...(movieData.title !== undefined ? { title: nextTitle } : {}),
         slug,
         matchKey,
-        watchedAt:
-          watchedAt === undefined
-            ? undefined
-            : watchedAt
-              ? new Date(watchedAt)
-              : null,
       },
     });
 

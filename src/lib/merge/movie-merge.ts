@@ -3,6 +3,7 @@ import path from "path";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { movieInclude } from "@/lib/movies/movie-include";
+import { adoptMovieWatches } from "@/lib/movies/movie-watch";
 import { dataPath } from "@/lib/db/data-path";
 
 type Db = Prisma.TransactionClient | typeof prisma;
@@ -10,7 +11,6 @@ type Db = Prisma.TransactionClient | typeof prisma;
 export interface MergeFieldChoice {
   description?: "canonical" | "other";
   coverPath?: "canonical" | "other";
-  watchedAt?: "canonical" | "other";
 }
 
 export interface MergePlan {
@@ -21,7 +21,6 @@ export interface MergePlan {
   conflicts: {
     description: boolean;
     coverPath: boolean;
-    watchedAt: boolean;
     franchiseSlots: boolean;
   };
 }
@@ -31,14 +30,12 @@ export function planMerge(
     id: number;
     description: string | null;
     coverPath: string | null;
-    watchedAt: Date | null;
     _count: { releases: number };
   },
   other: {
     id: number;
     description: string | null;
     coverPath: string | null;
-    watchedAt: Date | null;
     _count: { releases: number };
   },
   canonicalSlotFranchiseIds: number[],
@@ -56,7 +53,6 @@ export function planMerge(
     conflicts: {
       description: !!canonical.description && !!other.description,
       coverPath: !!canonical.coverPath && !!other.coverPath,
-      watchedAt: canonical.watchedAt != null && other.watchedAt != null,
       franchiseSlots: slotOverlap,
     },
   };
@@ -184,6 +180,7 @@ export async function mergeMovies(
     }
 
     await mergeMovieRatings(tx, canonicalId, otherId);
+    await adoptMovieWatches(tx, canonicalId, otherId);
 
     const pick = <T>(
       field: keyof MergeFieldChoice,
@@ -199,11 +196,6 @@ export async function mergeMovies(
       "description",
       canonical.description,
       other.description,
-    );
-    const nextWatchedAt = pick(
-      "watchedAt",
-      canonical.watchedAt,
-      other.watchedAt,
     );
 
     let nextCoverPath = canonical.coverPath;
@@ -223,7 +215,6 @@ export async function mergeMovies(
       where: { id: canonicalId },
       data: {
         description: nextDescription,
-        watchedAt: nextWatchedAt,
         coverPath: nextCoverPath,
       },
     });

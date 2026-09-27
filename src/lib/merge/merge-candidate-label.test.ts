@@ -14,7 +14,7 @@ function candidate(
     year: null,
     status: "DRAFT",
     rating: null,
-    watchedAt: null,
+    lastWatchedOn: null,
     coverUrl: null,
     description: null,
     genres: [],

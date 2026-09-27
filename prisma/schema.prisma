@@ -69,7 +69,6 @@ model Movie {
   matchKey    String?
   status      MovieStatus @default(DRAFT)
   coverPath   String?
-  watchedAt   DateTime?
   /** Denormalized series count for catalog badge; null = single-part or unknown. */
   partCount   Int?
   createdAt   DateTime    @default(now())
@@ -80,6 +79,7 @@ model Movie {
 
   movieGenres MovieGenre[]
   movieRatings MovieRating[]
+  watches     MovieWatch[]
   parts       MoviePart[]
   slots       FranchiseSlot[]
   remakeMemberships RemakeMember[]
@@ -90,7 +90,6 @@ model Movie {
 
   @@index([status])
   @@index([matchKey])
-  @@index([watchedAt])
 }
 
 model Rater {
@@ -102,6 +101,18 @@ model Rater {
   ratings   MovieRating[]
 
   @@index([sortOrder])
+}
+
+/** One viewing per calendar day. `watchedOn` is UTC midnight of that day. */
+model MovieWatch {
+  id        Int      @id @default(autoincrement())
+  movieId   Int
+  watchedOn DateTime
+  createdAt DateTime @default(now())
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, watchedOn])
+  @@index([movieId])
 }
 
 model MovieRating {

@@ -8,7 +8,6 @@ import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
 import { Field, TextAreaField } from "@/components/primitives/Field";
-import { DatePicker } from "@/components/primitives/DatePicker";
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { MovieFranchisePicker } from "@/components/franchises/MovieFranchisePicker";
 import { MovieRemakePicker } from "@/components/remakes/MovieRemakePicker";
@@ -55,11 +54,6 @@ export function MovieEditor({
   const [genres, setGenres] = useState<string[]>(
     orderedMovieGenres(movie).map((g) => g.name),
   );
-  const [watchedAt, setWatchedAt] = useState(
-    movie.watchedAt
-      ? new Date(movie.watchedAt).toISOString().slice(0, 10)
-      : "",
-  );
   const [multipartEnabled, setMultipartEnabled] = useState(() =>
     isMultipartMovie(movie),
   );
@@ -88,7 +82,6 @@ export function MovieEditor({
               year,
               description,
               genres,
-              watchedAt,
               partCount: multipartEnabled ? partCount : null,
               parts: multipartEnabled
                 ? partsPayloadFromSlots(releaseSlots)
@@ -185,24 +178,14 @@ export function MovieEditor({
           }}
           required
         />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <YearInput
-            value={year}
-            onChange={(y) => {
-              setYear(y);
-              markDirty();
-            }}
-            hint="Год выхода, 1888 — текущий+1."
-          />
-          <DatePicker
-            label="Дата просмотра"
-            value={watchedAt}
-            onChange={(d) => {
-              setWatchedAt(d);
-              markDirty();
-            }}
-          />
-        </div>
+        <YearInput
+          value={year}
+          onChange={(y) => {
+            setYear(y);
+            markDirty();
+          }}
+          hint="Год выхода, 1888 — текущий+1."
+        />
       </div>
     </MachinedCard>
   );

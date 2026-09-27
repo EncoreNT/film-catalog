@@ -1,20 +1,45 @@
 import type { Prisma } from "@/generated/prisma/client";
 
-/** Просмотрен = есть дата просмотра или хотя бы одна оценка. */
+/** Просмотрен = есть день в журнале или хотя бы одна оценка. */
 export function isMovieWatched(
-  watchedAt: Date | null | undefined,
+  lastWatchedOn: Date | null | undefined,
   ratingCount: number,
 ): boolean {
-  return watchedAt != null || ratingCount > 0;
+  return lastWatchedOn != null || ratingCount > 0;
 }
 
 export const movieIsWatchedWhere: Prisma.MovieWhereInput = {
-  OR: [{ watchedAt: { not: null } }, { movieRatings: { some: {} } }],
+  OR: [{ watches: { some: {} } }, { movieRatings: { some: {} } }],
 };
 
 export const movieIsUnwatchedWhere: Prisma.MovieWhereInput = {
-  AND: [{ watchedAt: null }, { movieRatings: { none: {} } }],
+  AND: [{ watches: { none: {} } }, { movieRatings: { none: {} } }],
 };
+
+/** Last journal day falls in the range. `some >= from` is the latest day; `none > to` caps it. */
+export function latestWatchRangeWhere(input: {
+  watchedFrom?: string;
+  watchedTo?: string;
+}): Prisma.MovieWhereInput {
+  const watchedOn: Prisma.DateTimeFilter = {
+    ...(input.watchedFrom ? { gte: new Date(input.watchedFrom) } : {}),
+    ...(input.watchedTo ? { lte: new Date(input.watchedTo) } : {}),
+  };
+  const inRange: Prisma.MovieWhereInput = {
+    watches: { some: { watchedOn } },
+  };
+  if (!input.watchedTo) return inRange;
+  return {
+    AND: [
+      inRange,
+      {
+        watches: {
+          none: { watchedOn: { gt: new Date(input.watchedTo) } },
+        },
+      },
+    ],
+  };
+}
 
 export function buildMovieWatchedFilter(input: {
   watched: "watched" | "unwatched";
@@ -31,13 +56,7 @@ export function buildMovieWatchedFilter(input: {
   }
 
   if (hasWatchedRange) {
-    return {
-      watchedAt: {
-        not: null,
-        ...(input.watchedFrom ? { gte: new Date(input.watchedFrom) } : {}),
-        ...(input.watchedTo ? { lte: new Date(input.watchedTo) } : {}),
-      },
-    };
+    return latestWatchRangeWhere(input);
   }
 
   return movieIsWatchedWhere;

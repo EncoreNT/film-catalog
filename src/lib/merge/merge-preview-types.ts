@@ -13,7 +13,8 @@ export type MergeCandidate = {
   year: number | null;
   status: "DRAFT" | "CATALOG" | "EXCLUDED";
   rating: number | null;
-  watchedAt: string | null;
+  /** Latest journal day, computed. */
+  lastWatchedOn: string | null;
   coverUrl: string | null;
   description: string | null;
   genres: string[];

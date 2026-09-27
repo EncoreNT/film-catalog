@@ -120,7 +120,6 @@ function makeMovie(opts: MovieOpts): MovieWithTracks {
     matchKey: null,
     status: "CATALOG",
     coverPath: null,
-    watchedAt: null,
     partCount: null,
     createdAt: new Date(),
     updatedAt: new Date(),

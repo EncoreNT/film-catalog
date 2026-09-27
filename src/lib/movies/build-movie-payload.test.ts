@@ -175,18 +175,18 @@ describe("buildMovieCreatePayload", () => {
 });
 
 describe("buildMovieUpdatePayload", () => {
-  it("converts watchedAt to ISO string", () => {
+  it("does not send a viewing date", () => {
     const payload = buildMovieUpdatePayload({
       title: "Test",
       year: 2000,
       description: null,
       genres: [],
-      watchedAt: "2024-01-15T10:00:00.000Z",
       partCount: null,
       parts: [],
       partReleaseLinks: [],
     });
-    expect(payload.watchedAt).toBe("2024-01-15T10:00:00.000Z");
+    expect(payload).not.toHaveProperty("watchedAt");
+    expect(payload.title).toBe("Test");
   });
 });
 

@@ -12,7 +12,10 @@ import {
   DEFAULT_MOVIE_LIST_ORDER,
   DEFAULT_MOVIE_LIST_SORT,
 } from "@/lib/movies/movie-list-defaults";
-import { buildMovieWatchedFilter } from "@/lib/movies/movie-watched";
+import {
+  buildMovieWatchedFilter,
+  latestWatchRangeWhere,
+} from "@/lib/movies/movie-watched";
 
 export type { MovieWithTracks } from "@/lib/movies/movie-include";
 
@@ -181,10 +184,13 @@ export function buildMovieWhere(
       }),
     );
   } else if (hasWatchedRange) {
-    where.watchedAt = {
-      ...(query.watchedFrom ? { gte: new Date(query.watchedFrom) } : {}),
-      ...(query.watchedTo ? { lte: new Date(query.watchedTo) } : {}),
-    };
+    appendMovieAnd(
+      where,
+      latestWatchRangeWhere({
+        watchedFrom: query.watchedFrom,
+        watchedTo: query.watchedTo,
+      }),
+    );
   }
 
   if (emptyOnly) {
@@ -286,7 +292,9 @@ export function buildMovieOrder(
         `Sort "${query.sort}" is handled by fetchMovieList rating aggregate ordering`,
       );
     case "watchedAt":
-      return [{ watchedAt: order }, { id: order }];
+      throw new Error(
+        `Sort "${query.sort}" is handled by fetchMovieList watch-date ordering`,
+      );
     case "durationSeconds":
     case "fileSize":
     case "fileDownloadedAt":

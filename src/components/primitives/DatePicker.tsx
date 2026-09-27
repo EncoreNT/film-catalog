@@ -27,6 +27,9 @@ interface DatePickerProps {
   onChange: (value: string) => void;
   error?: string;
   hint?: ReactNode;
+  /** Inclusive latest day, `YYYY-MM-DD`. Later days cannot be chosen. */
+  max?: string;
+  allowClear?: boolean;
 }
 
 export function DatePicker({
@@ -35,6 +38,8 @@ export function DatePicker({
   onChange,
   error,
   hint,
+  max,
+  allowClear = true,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState<Date>(() => {
@@ -79,6 +84,7 @@ export function DatePicker({
   const days = useMemo(() => buildMonthGrid(viewDate), [viewDate]);
 
   const pick = (iso: string) => {
+    if (max && iso > max) return;
     onChange(iso);
     setOpen(false);
   };
@@ -172,7 +178,7 @@ export function DatePicker({
         <span className={`flex-1 ${value ? "" : "text-faint"}`}>
           {value ? display : "дата не выбрана"}
         </span>
-        {value ? (
+        {value && allowClear ? (
           <span
             role="button"
             tabIndex={-1}
@@ -234,16 +240,17 @@ export function DatePicker({
               const isSelected =
                 selectedDate != null && isSameDay(cell.date, selectedDate);
               const isFocused = cell.iso === focusedIso;
+              const isAfterMax = max != null && cell.iso > max;
               return (
                 <button
                   key={cell.iso}
                   type="button"
-                  disabled={!cell.inMonth}
+                  disabled={!cell.inMonth || isAfterMax}
                   onClick={() => pick(cell.iso)}
                   onFocus={() => setFocusedIso(cell.iso)}
                   onMouseEnter={() => setFocusedIso(cell.iso)}
                   className={`relative flex h-8 w-full items-center justify-center rounded-md text-xs transition-all duration-150 ${
-                    !cell.inMonth
+                    !cell.inMonth || isAfterMax
                       ? "cursor-default text-faint/40"
                       : "cursor-pointer text-text hover:bg-bg-surface-hover"
                   } ${
@@ -269,13 +276,17 @@ export function DatePicker({
           </div>
 
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-            <button
-              type="button"
-              onClick={clear}
-              className="font-mono-tech cursor-pointer rounded-md px-2 py-1 text-[0.65rem] text-muted transition-colors hover:text-danger"
-            >
-              очистить
-            </button>
+            {allowClear ? (
+              <button
+                type="button"
+                onClick={clear}
+                className="font-mono-tech cursor-pointer rounded-md px-2 py-1 text-[0.65rem] text-muted transition-colors hover:text-danger"
+              >
+                очистить
+              </button>
+            ) : (
+              <span />
+            )}
             <button
               type="button"
               onClick={goToday}

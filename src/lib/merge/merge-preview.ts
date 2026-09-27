@@ -31,6 +31,11 @@ export const mergeCandidateInclude = {
   slots: {
     include: { franchise: { select: { name: true } } },
   },
+  watches: {
+    orderBy: { watchedOn: "desc" as const },
+    take: 1,
+    select: { watchedOn: true },
+  },
 } as const;
 
 function toMergeCandidateRelease(
@@ -57,7 +62,7 @@ function toMergeCandidate(movie: MergeCandidateMovie): MergeCandidate {
     year: movie.year,
     status: movie.status,
     rating: computeAverageRating(movie.movieRatings),
-    watchedAt: movie.watchedAt?.toISOString() ?? null,
+    lastWatchedOn: movie.watches[0]?.watchedOn.toISOString() ?? null,
     coverUrl: movieCoverUrlFromMovie(movie),
     description: movie.description,
     genres: orderedMovieGenres(movie).map((g) => displayGenreName(g.name)),

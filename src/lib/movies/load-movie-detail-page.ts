@@ -21,6 +21,7 @@ import {
 } from "@/lib/releases/release-primary";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { buildMovieRatingRows } from "@/lib/movies/movie-rating-rows";
+import { watchISODateFromInstant } from "@/lib/movies/movie-watch-date";
 
 export interface MovieDetailFranchiseMembershipView {
   id: number;
@@ -76,6 +77,15 @@ export async function loadMovieDetailPage(
     activeRelease,
   );
   const ratingRows = await buildMovieRatingRows(movie);
+  const watchRows = await prisma.movieWatch.findMany({
+    where: { movieId: movie.id },
+    orderBy: { watchedOn: "desc" },
+    select: { id: true, watchedOn: true },
+  });
+  const watches = watchRows.map((row) => ({
+    id: row.id,
+    watchedOn: watchISODateFromInstant(row.watchedOn),
+  }));
 
   return {
     movie,
@@ -89,6 +99,7 @@ export async function loadMovieDetailPage(
     franchiseMemberships,
     remakeMemberships,
     ratingRows,
+    watches,
     activeReleaseId: activeRelease?.id ?? releaseViews[0]?.id ?? null,
     catalogPrimaryReleaseId,
   };

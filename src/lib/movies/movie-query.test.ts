@@ -66,11 +66,23 @@ describe("buildMovieWhere", () => {
     expect(where.AND).toEqual([
       HAS_RELEASES,
       {
-        watchedAt: {
-          not: null,
-          gte: new Date("2024-01-01"),
-          lte: new Date("2024-12-31"),
-        },
+        AND: [
+          {
+            watches: {
+              some: {
+                watchedOn: {
+                  gte: new Date("2024-01-01"),
+                  lte: new Date("2024-12-31"),
+                },
+              },
+            },
+          },
+          {
+            watches: {
+              none: { watchedOn: { gt: new Date("2024-12-31") } },
+            },
+          },
+        ],
       },
     ]);
   });
@@ -80,7 +92,7 @@ describe("buildMovieWhere", () => {
     expect(where.AND).toEqual([
       HAS_RELEASES,
       {
-        OR: [{ watchedAt: { not: null } }, { movieRatings: { some: {} } }],
+        OR: [{ watches: { some: {} } }, { movieRatings: { some: {} } }],
       },
     ]);
   });
@@ -90,7 +102,7 @@ describe("buildMovieWhere", () => {
     expect(where.AND).toEqual([
       HAS_RELEASES,
       {
-        AND: [{ watchedAt: null }, { movieRatings: { none: {} } }],
+        AND: [{ watches: { none: {} } }, { movieRatings: { none: {} } }],
       },
     ]);
   });
@@ -275,10 +287,9 @@ describe("buildMovieOrder", () => {
     expect(() =>
       buildMovieOrder(queryFrom({ sort: "rating", order: "asc" })),
     ).toThrow(/rating aggregate/);
-    expect(buildMovieOrder(queryFrom({ sort: "watchedAt", order: "asc" }))).toEqual([
-      { watchedAt: "asc" },
-      { id: "asc" },
-    ]);
+    expect(() =>
+      buildMovieOrder(queryFrom({ sort: "watchedAt", order: "asc" })),
+    ).toThrow(/watch-date/);
     expect(() =>
       buildMovieOrder(queryFrom({ sort: "durationSeconds" })),
     ).toThrow();

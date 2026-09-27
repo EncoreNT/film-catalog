@@ -28,12 +28,19 @@ ADR: `docs/adr/0002-external-storage-only.md`.
 - `matchKey` — нормализованный `title|year` для поиска дублей (merge candidates)
 - `status` — lifecycle (скан создаёт DRAFT)
 - `coverPath` — относительный путь `covers/<id>.ext`
-- `watchedAt` — дата просмотра (на уровне фильма; просмотрен = есть `watchedAt` или хотя бы одна оценка; оценка не проставляет дату автоматически)
+- просмотрен = есть строка в `MovieWatch` или хотя бы одна оценка; оценка не пишет день автоматически. ADR-0023
 - `partCount` — число серий для многосерийного фильма (>1), иначе null (ADR-0014)
 
 Может существовать **без релизов** (ADR-0019): каталог прячет (`releases: { some: {} }`), фильтр `?emptyReleases=true` показывает только такие карточки. Удаление последнего релиза не удаляет Movie.
 
-Relations: `releases[]`, `parts[]` (MoviePart), `movieGenres[]`, `movieRatings[]`, `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
+Relations: `releases[]`, `parts[]` (MoviePart), `movieGenres[]`, `movieRatings[]`, `watches[]` (MovieWatch), `slots[]` (FranchiseSlot), `remakeMemberships[]` (RemakeMember), `builds[]` (ReleaseBuild)
+
+### MovieWatch (журнал просмотров, ADR-0023)
+
+- Один ряд на календарный день: `@@unique([movieId, watchedOn])`
+- `watchedOn` — UTC-полночь этого дня
+- Кнопка «Посмотрели» добавляет сегодняшний день; повтор в тот же день ничего не пишет
+- Колонки `Movie.watchedAt` нет. Сортировка и фильтр каталога по «дате просмотра» берут `max(watchedOn)`
 
 ### Rater / MovieRating (ADR-0015)
 
@@ -111,7 +118,8 @@ Many-to-many через `MovieGenre` с `sortOrder`. Жанры на уровн�
 
 ## Индексы (важные для фильтров)
 
-Movie: status, matchKey, watchedAt
+Movie: status, matchKey
+MovieWatch: unique (movieId, watchedOn)
 Release: movieId, fileHash, externalStorageId, releaseType, version, durationSeconds
 VideoTrack: resolutionLabel
 AudioTrack: language, channelLayout, translationType

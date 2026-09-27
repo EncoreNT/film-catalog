@@ -69,5 +69,7 @@ docs/adr/0002-franchise-slots-model.md
 | [0019](0019-movies-without-releases.md) | Movies without releases | Accepted |
 | [0020](0020-bdmv-remux-builds.md) | BDMV remux via ReleaseBuild | Accepted |
 | [0021](0021-same-disk-move-rename.md) | Same-disk move via rename | Accepted |
+| [0022](0022-movie-watch-journal.md) | Movie watch journal | Superseded by ADR-0023 |
+| [0023](0023-watch-journal-without-watched-at.md) | Watch journal without watchedAt | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

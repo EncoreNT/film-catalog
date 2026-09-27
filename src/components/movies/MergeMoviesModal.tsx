@@ -114,8 +114,8 @@ function CandidateCard({
             ) : (
               <span className="text-faint">без оценки</span>
             )}
-            {candidate.watchedAt ? (
-              <span>· просмотр {formatWatchedAt(candidate.watchedAt)}</span>
+            {candidate.lastWatchedOn ? (
+              <span>· просмотр {formatWatchedAt(candidate.lastWatchedOn)}</span>
             ) : null}
             <span>· {releaseCountLabel(candidate.releases.length)}</span>
             {candidate.coverUrl ? <span>· обложка</span> : null}
@@ -242,7 +242,6 @@ export function MergeMoviesModal({
     description?: FieldChoice;
     coverPath?: FieldChoice;
     rating?: FieldChoice;
-    watchedAt?: FieldChoice;
   }>({});
 
   useEffect(() => {
@@ -274,13 +273,11 @@ export function MergeMoviesModal({
       return {
         description: false,
         coverPath: false,
-        watchedAt: false,
       };
     }
     return {
       description: !!canonical.description && !!other.description,
       coverPath: !!canonical.coverUrl && !!other.coverUrl,
-      watchedAt: canonical.watchedAt != null && other.watchedAt != null,
     };
   }, [canonical, other]);
 
@@ -303,9 +300,6 @@ export function MergeMoviesModal({
     }
     if (conflicts.coverPath) {
       payloadChoices.coverPath = choices.coverPath ?? "canonical";
-    }
-    if (conflicts.watchedAt) {
-      payloadChoices.watchedAt = choices.watchedAt ?? "canonical";
     }
 
     try {
@@ -333,10 +327,7 @@ export function MergeMoviesModal({
   const groupTitle = candidates[0]?.title ?? "";
   const groupYear = candidates[0]?.year ?? null;
 
-  const hasConflicts =
-    conflicts.description ||
-    conflicts.coverPath ||
-    conflicts.watchedAt;
+  const hasConflicts = conflicts.description || conflicts.coverPath;
 
   return (
     <Modal
@@ -433,15 +424,6 @@ export function MergeMoviesModal({
             <p className="font-mono-tech text-xs text-muted">
               поля с разными значениями — выберите, что сохранить
             </p>
-            {conflicts.watchedAt ? (
-              <ConflictPicker
-                label="дата просмотра"
-                canonicalLabel={formatWatchedAt(canonical.watchedAt)!}
-                otherLabel={formatWatchedAt(other.watchedAt)!}
-                value={choices.watchedAt ?? "canonical"}
-                onChange={(v) => setChoices((c) => ({ ...c, watchedAt: v }))}
-              />
-            ) : null}
             {conflicts.coverPath ? (
               <ConflictPicker
                 label="обложка"

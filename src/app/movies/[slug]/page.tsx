@@ -42,6 +42,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
     catalogPrimaryReleaseId,
     partReleaseGroups,
     ratingRows,
+    watches,
   } = data;
 
   return (
@@ -107,7 +108,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
             <MovieRatingWatchedSection
               movieId={movie.id}
               ratings={ratingRows}
-              watchedAt={movie.watchedAt}
+              watches={watches}
             />
           </div>
 

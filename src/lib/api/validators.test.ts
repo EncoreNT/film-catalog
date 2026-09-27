@@ -52,11 +52,12 @@ describe("movieUpdateSchema", () => {
     expect(() => movieUpdateSchema.parse({ title: "" })).toThrow();
   });
 
-  it("accepts ISO watchedAt", () => {
+  it("strips a viewing date from the edit payload", () => {
     const parsed = movieUpdateSchema.parse({
+      title: "Matrix",
       watchedAt: "2024-06-01T12:00:00.000Z",
     });
-    expect(parsed.watchedAt).toBe("2024-06-01T12:00:00.000Z");
+    expect(parsed).toEqual({ title: "Matrix" });
   });
 });
 
@@ -87,10 +88,10 @@ describe("mergeSchema", () => {
   it("requires otherId and optional choices", () => {
     const parsed = mergeSchema.parse({
       otherId: 5,
-      choices: { watchedAt: "other" },
+      choices: { coverPath: "other" },
     });
     expect(parsed.otherId).toBe(5);
-    expect(parsed.choices?.watchedAt).toBe("other");
+    expect(parsed.choices?.coverPath).toBe("other");
   });
 });
 

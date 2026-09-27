@@ -50,6 +50,22 @@ export async function parseMovieFranchiseIds(
   return { movieId, franchiseId };
 }
 
+export type MovieWatchRouteContext = {
+  params: Promise<{ id: string; watchId: string }>;
+};
+
+export async function parseMovieWatchIds(
+  params: Promise<{ id: string; watchId: string }>,
+): Promise<{ movieId: number; watchId: number } | NextResponse> {
+  const resolved = await params;
+  const movieId = parseInt(resolved.id, 10);
+  const watchId = parseInt(resolved.watchId, 10);
+  if (Number.isNaN(movieId) || Number.isNaN(watchId)) {
+    return jsonError("Некорректный идентификатор", 400);
+  }
+  return { movieId, watchId };
+}
+
 export async function parseMovieRemakeIds(
   params: Promise<{ id: string; groupId: string }>,
 ): Promise<{ movieId: number; groupId: number } | NextResponse> {
@@ -91,6 +107,8 @@ export async function parseRequestBody<T extends z.ZodType>(
 
 const DOMAIN_ERROR_STATUS: Record<string, number> = {
   "Фильм не найден": 404,
+  "Просмотр не найден": 404,
+  "В этот день просмотр уже записан": 409,
   "Релиз не найден": 404,
   "Франшиза не найдена": 404,
   "Слот не найден": 404,

@@ -32,7 +32,7 @@ Strips release group tags, quality, codecs from filename. Extracts year, release
 - `parseListQuery` → zod
 - `buildMovieListWhere` / `buildMovieWhere` — status tabs, genre, resolution, hdr, audio scope/channels/format/translation, watched range, duration, premium audio, multiRelease, emptyReleases (minRating → `movie-rating-sort`). По умолчанию `releases: { some: {} }`; `emptyReleases=true` → только карточки без релизов (ADR-0019)
 - `fetchMultiReleaseMovieIds` — фильмы с несколькими **вариантами** релиза (`movieHasMultipleReleaseVariants`); многосерийные «1 файл = 1 серия» исключаются
-- `buildMovieOrder` — title, year, watchedAt, createdAt; rating/duration/fileSize via `fetchMovieList` aggregate paths
+- `buildMovieOrder` — title, year, createdAt; `watchedAt` / rating / duration / fileSize via `fetchMovieList` aggregate paths (`movie-watch-sort.ts` берёт последний `watchedOn`)
 - Audio scope: `catalog/audio-track-scope.ts` + `catalog/russian-audio-formats.ts`
 
 ## catalog/catalog-facets.ts

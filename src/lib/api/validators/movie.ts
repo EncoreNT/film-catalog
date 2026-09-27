@@ -50,11 +50,16 @@ export const moviePartReleaseLinkSchema = z.object({
   releaseIds: z.array(z.number().int()),
 });
 
+export const movieWatchLogSchema = z.object({
+  watchedOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Некорректная дата просмотра"),
+});
+
 export const movieUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
   description: z.string().nullable().optional(),
-  watchedAt: z.string().datetime().nullable().optional(),
   status: movieStatusSchema.optional(),
   genres: z.array(z.string().min(1)).optional(),
   partCount: z.number().int().min(1).nullable().optional(),
@@ -128,7 +133,6 @@ export const mergeSchema = z.object({
     .object({
       description: z.enum(["canonical", "other"]).optional(),
       coverPath: z.enum(["canonical", "other"]).optional(),
-      watchedAt: z.enum(["canonical", "other"]).optional(),
     })
     .optional(),
 });

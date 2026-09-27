@@ -22,6 +22,7 @@ alwaysApply: false
 | Covers | `lib/covers/cover-url.ts`, `lib/covers/cover-storage.ts` |
 | Merge / duplicates | `lib/merge/movie-merge.ts`, `lib/merge/duplicate-groups.ts` |
 | Raters / ratings | `lib/raters/rater-crud.ts`, `lib/movies/update-movie-rating.ts`, `lib/movies/movie-rating.ts` |
+| Watch journal | `lib/movies/movie-watch.ts`, `movie-watch-date.ts`; catalog date = `max(MovieWatch.watchedOn)` |
 | App settings | `lib/db/settings.ts`, `app/settings/page.tsx` |
 | Franchises | `lib/franchises/franchise-slots.ts`, `franchise-summary.ts` |
 | Remakes | `lib/remakes/remake-members.ts`, `remake-membership.ts`, `remake-catalog-badges.ts` |
