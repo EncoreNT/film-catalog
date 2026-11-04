@@ -11,7 +11,7 @@ export function GrainOverlay() {
       />
       {/* Vignette — projection-room falloff, cool-tinted */}
       <div
-        className="pointer-events-none fixed inset-0 z-[55]"
+        className="projection-vignette pointer-events-none fixed inset-0 z-[55]"
         aria-hidden
         style={{
           background:

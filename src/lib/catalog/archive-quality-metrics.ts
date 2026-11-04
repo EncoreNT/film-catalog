@@ -35,8 +35,8 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   {
     key: "gold",
     label: "4K + любой HDR",
-    stackedLabel: ["4K", "HDR"],
-    caption: "Gold tier · Ultra HD с расширенным динамическим диапазоном",
+    shortLabel: "4K + HDR",
+    caption: "Ultra HD с расширенным динамическим диапазоном",
     icon: MonitorPlay,
     isActive: (params, isCatalog) => matchesCatalogGoldFilter(params, isCatalog),
     toggleFilter: (active) =>
@@ -52,7 +52,7 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
     key: "hdr10",
     label: "HDR10+",
     shortLabel: "HDR10+",
-    caption: "динамическая метадата, которую покажет телевизор",
+    caption: "Динамические метаданные",
     icon: Sun,
     isActive: ({ hdr }, isCatalog) => isCatalog && hdr === "HDR10+",
     toggleFilter: (active) => ({
@@ -63,7 +63,8 @@ export const ARCHIVE_QUALITY_METRIC_DEFS: ArchiveQualityMetricDef[] = [
   {
     key: "elite",
     label: RUBY_TIER_RIBBON_GENERIC,
-    shortLabel: RUBY_TIER_RIBBON_GENERIC,
+    shortLabel: "4K + HDR + рус. Atmos / DTS:X",
+    caption: "Объёмный звук на русской дорожке",
     elite: true,
     icon: Gem,
     isActive: (params, isCatalog) => matchesCatalogRubyFilter(params, isCatalog),

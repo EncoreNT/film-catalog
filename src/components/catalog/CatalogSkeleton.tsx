@@ -1,12 +1,11 @@
 export function CatalogSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7">
-      {Array.from({ length: 21 }).map((_, i) => (
-        <div
-          key={i}
-          className="aspect-[2/3] animate-pulse rounded-[var(--radius)] border border-border/50 bg-bg-surface"
-        />
-      ))}
+    <div className="catalog-skeleton" aria-label="Загрузка каталога" aria-busy="true">
+      <div className="mb-6 h-44 animate-pulse rounded-2xl bg-bg-surface" />
+      <div className="mb-6 h-32 animate-pulse rounded-2xl bg-bg-surface" />
+      <div className="catalog-grid">
+        {Array.from({ length: 14 }, (_, i) => <div key={i} className="aspect-[2/4] animate-pulse rounded-2xl border border-border/50 bg-bg-surface" />)}
+      </div>
     </div>
   );
 }

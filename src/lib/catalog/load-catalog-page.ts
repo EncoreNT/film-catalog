@@ -67,7 +67,7 @@ export async function loadCatalogPage(
 
   const [
     { items: movies, total, releaseCount },
-    { totalCount, catalogCount, draftCount, excludedCount },
+    { totalCount, catalogCount, draftCount, excludedCount, catalogReleaseCount },
     archiveMetrics,
     archiveTotals,
     facets,
@@ -104,6 +104,7 @@ export async function loadCatalogPage(
       genres: genreFacets,
     },
     catalogCount,
+    catalogReleaseCount,
     draftCount,
     excludedCount,
     emptyReleaseCount,

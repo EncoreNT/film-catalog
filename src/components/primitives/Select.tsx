@@ -20,6 +20,13 @@ import {
   type SelectOption,
 } from "./select-utils";
 import { trimInput } from "@/lib/shared/text-trim";
+import {
+  clampBoxInContainer,
+  FLOATING_GAP,
+  FLOATING_VIEWPORT_PAD,
+  viewportRect,
+  resolveDialogPortalTarget,
+} from "@/lib/ui/floating-position";
 
 interface SelectProps {
   value: string;
@@ -42,6 +49,8 @@ interface MenuCoords {
   top: number;
   left: number;
   minWidth: number;
+  maxWidth: number;
+  maxHeight: number;
 }
 
 const emptySubscribe = () => () => {};
@@ -65,6 +74,7 @@ export function Select({
   const [menuCoords, setMenuCoords] = useState<MenuCoords | null>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
   const mounted = useSyncExternalStore(
@@ -105,29 +115,51 @@ export function Select({
     setOpen(false);
     setQuery("");
     setMenuCoords(null);
+    setPortalTarget(null);
   }, []);
 
   const updateMenuCoords = useCallback(() => {
     const trigger = triggerRef.current;
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
+    const viewport = viewportRect();
+    const maxWidth = Math.max(0, viewport.right - 2 * FLOATING_VIEWPORT_PAD);
+    const minWidth = Math.min(rect.width, maxWidth);
+    const list = listRef.current;
+    const menu = menuRef.current;
+    const width = Math.min(menu?.getBoundingClientRect().width ?? minWidth, maxWidth);
+    // Measure natural content height, not the previously constrained height.
+    const naturalHeight = menu && list
+      ? menu.getBoundingClientRect().height - list.getBoundingClientRect().height + list.scrollHeight
+      : 288;
+    const desiredHeight = Math.min(naturalHeight, 288);
+    const below = viewport.bottom - rect.bottom - FLOATING_GAP - FLOATING_VIEWPORT_PAD;
+    const above = rect.top - FLOATING_GAP - FLOATING_VIEWPORT_PAD;
+    const placeBelow = below >= desiredHeight || below >= above;
+    const maxHeight = Math.max(0, Math.min(288, placeBelow ? below : above, viewport.bottom - 2 * FLOATING_VIEWPORT_PAD));
+    const height = Math.min(desiredHeight, maxHeight);
+    // Keep the menu attached to the trigger. Flip horizontal alignment before
+    // using the viewport clamp, which is only a last-resort overflow guard.
+    const left = rect.left + width > viewport.right - FLOATING_VIEWPORT_PAD
+      ? rect.right - width
+      : rect.left;
+    const position = clampBoxInContainer(
+      left,
+      placeBelow ? rect.bottom + FLOATING_GAP : rect.top - FLOATING_GAP - height,
+      width,
+      height,
+      viewport,
+    );
     setMenuCoords({
-      top: rect.bottom + 8,
-      left: rect.left,
-      minWidth: rect.width,
+      ...position,
+      minWidth,
+      maxWidth,
+      maxHeight,
     });
   }, []);
 
   useLayoutEffect(() => {
-    if (!open) {
-      setPortalTarget(null);
-      return;
-    }
-    const host = triggerRef.current?.closest("dialog");
-    const dialog =
-      host instanceof HTMLDialogElement && host.open ? host : null;
-    setPortalTarget(dialog ?? document.body);
-    updateMenuCoords();
+    if (!open) return;
     const onLayoutChange = () => updateMenuCoords();
     window.addEventListener("scroll", onLayoutChange, true);
     window.addEventListener("resize", onLayoutChange);
@@ -137,12 +169,25 @@ export function Select({
     };
   }, [open, updateMenuCoords]);
 
+  // The portal mounts after its host is resolved. Reposition before paint
+  // once the actual menu width is known, and when search changes its size.
+  useLayoutEffect(() => {
+    if (!open || !portalTarget) return;
+    updateMenuCoords();
+    const menu = menuRef.current;
+    if (!menu) return;
+    const observer = new ResizeObserver(updateMenuCoords);
+    observer.observe(menu);
+    if (listRef.current) observer.observe(listRef.current);
+    return () => observer.disconnect();
+  }, [open, portalTarget, filtered, updateMenuCoords]);
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (triggerRef.current?.contains(target)) return;
-      if (listRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
       close();
     };
     const esc = (e: KeyboardEvent) => {
@@ -157,18 +202,19 @@ export function Select({
   }, [open, close]);
 
   const listbox = open && menuCoords ? (
-    <ul
-      ref={listRef}
-      role="listbox"
-      className="surface-elevated scroll-subtle fixed z-[80] max-h-72 w-max max-w-[min(90vw,20rem)] overflow-auto p-1 shadow-2xl"
+    <div
+      ref={menuRef}
+      className="surface-elevated fixed z-[80] flex max-h-72 w-max max-w-[min(90vw,20rem)] flex-col overflow-hidden p-1 shadow-2xl"
       style={{
         top: menuCoords.top,
         left: menuCoords.left,
         minWidth: menuCoords.minWidth,
+        maxWidth: menuCoords.maxWidth,
+        maxHeight: menuCoords.maxHeight,
       }}
     >
       {showSearch ? (
-        <li className="px-1 pb-1 pt-2">
+        <div className="shrink-0 px-1 pb-2 pt-2">
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted/60"
@@ -177,7 +223,11 @@ export function Select({
             <input
               autoFocus
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                if (listRef.current) listRef.current.scrollTop = 0;
+              }}
+              aria-label={`Поиск: ${label}`}
               onBlur={() => {
                 const trimmed = trimInput(query);
                 if (trimmed !== query) setQuery(trimmed);
@@ -186,8 +236,9 @@ export function Select({
               className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
             />
           </div>
-        </li>
+        </div>
       ) : null}
+      <ul ref={listRef} role="listbox" aria-label={label} className="scroll-subtle min-h-0 overflow-auto overscroll-contain">
       {filtered.length === 0 ? (
         <li className="px-3 py-2 text-sm text-muted">Ничего не найдено</li>
       ) : null}
@@ -215,7 +266,8 @@ export function Select({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   ) : null;
 
   return (
@@ -236,7 +288,16 @@ export function Select({
           aria-disabled={disabled}
           aria-label={compact ? label : undefined}
           title={compact ? label : undefined}
-          onClick={() => (disabled ? null : open ? close() : setOpen(true))}
+          onClick={() => {
+            if (disabled) return;
+            if (open) {
+              close();
+            } else {
+              setPortalTarget(resolveDialogPortalTarget(triggerRef.current));
+              updateMenuCoords();
+              setOpen(true);
+            }
+          }}
           aria-haspopup="listbox"
           aria-expanded={open}
           style={compact ? { minWidth: triggerMinWidth } : undefined}

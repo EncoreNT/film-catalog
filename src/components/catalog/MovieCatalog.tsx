@@ -1,25 +1,22 @@
 "use client";
 
-import { type ReactNode, useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import type { MovieWithTracks } from "@/lib/movies/movie-query";
 import { MovieCard } from "@/components/movies/MovieCard";
-import { FilterToolbar, FilterSidebar } from "@/components/catalog/FilterBar";
-import { applyCatalogFilterUpdates, hasFacets } from "@/lib/catalog/filter-bar-utils";
+import { FilterToolbar } from "@/components/catalog/FilterBar";
+import { applyCatalogFilterUpdates } from "@/lib/catalog/filter-bar-utils";
 import { EmptyCatalog } from "@/components/catalog/EmptyCatalog";
 import { Pagination } from "@/components/primitives/Pagination";
 import { Select } from "@/components/primitives/Select";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowDownUp, ChevronRight, Clock, HardDrive, Loader2, Plus, ScanSearch } from "lucide-react";
+import { ArrowDownWideNarrow, Loader2, Plus } from "lucide-react";
 import { motion, AnimatePresence, MotionConfig, useScroll, useMotionValueEvent } from "motion/react";
 import type { ArchiveMetrics, ArchiveTotals } from "@/lib/catalog/archive-metrics";
-import { ARCHIVE_QUALITY_METRIC_DEFS } from "@/lib/catalog/archive-quality-metrics";
+import { CatalogOverview } from "./CatalogOverview";
+import { FilterMenus } from "./FilterMenus";
 import { resolveCatalogSpotlightTier } from "@/lib/catalog/catalog-spotlight";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
-import {
-  formatArchiveTotalDuration,
-  formatArchiveTotalSize,
-} from "@/lib/shared/format";
 import { catalogListCountLabel } from "@/lib/catalog/catalog-list-count-label";
 import type { CatalogRemakeBadge } from "@/lib/remakes/remake-catalog-badges";
 import {
@@ -37,180 +34,6 @@ const SORT_OPTIONS = [
   { value: "durationSeconds", label: "Продолжительность" },
   { value: "fileSize", label: "Размер файла" },
 ] as const;
-
-interface RailStatProps {
-  icon: ReactNode;
-  value: ReactNode;
-  total?: ReactNode;
-  label: ReactNode;
-  stackedLabel?: [string, string];
-  title?: string;
-  interactive?: boolean;
-  active?: boolean;
-  elite?: boolean;
-  onClick?: () => void;
-}
-
-/**
- * Instrument-rail cell for the archive console. Two visual registers split the
- * rail into two semantically distinct groups without extra labels:
- *
- *  - Filter cells (`interactive`) read as machined key-caps: accent-tinted icon
- *    chip, inset top highlight, hover lift + accent edge-glow, a chevron that
- *    fades in to signal drill-in, and the scan-sweep on the active state.
- *  - Total cells (display-only) read as a recessed readout strip: neutral slate
- *    chip, no border, no hover affordance, dimmer label. They sit in a darker
- *    recess so they visually sink below the floating key-caps.
- *
- * `stackedLabel` renders a two-line spec pair (HDR10 / HDR10+) inside a
- * fixed-height label slot so the rail stays aligned.
- */
-function RailStat({
-  icon,
-  value,
-  total,
-  label,
-  stackedLabel,
-  title,
-  interactive = false,
-  active = false,
-  elite = false,
-  onClick,
-}: RailStatProps) {
-  const isFilter = interactive;
-  const isRuby = elite;
-
-  const frame = isFilter
-    ? `group relative flex min-h-[3.75rem] items-center gap-2.5 overflow-hidden rounded-[var(--radius-sm)] border px-3.5 py-2.5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-        active
-          ? isRuby
-            ? "border-crimson/55 bg-crimson/12 shadow-[0_0_24px_rgba(154,27,52,0.42),0_0_16px_rgba(154,27,52,0.34),inset_0_1px_0_rgba(255,255,255,0.08)]"
-            : "border-accent/50 bg-accent/10 shadow-[0_0_22px_rgba(232,176,90,0.40),inset_0_1px_0_rgba(255,255,255,0.08)]"
-          : isRuby
-            ? "border-crimson/30 bg-crimson-soft shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_14px_rgba(154,27,52,0.08)] hover:-translate-y-px hover:border-crimson/50 hover:bg-crimson/14 hover:shadow-[0_0_20px_rgba(154,27,52,0.28),inset_0_1px_0_rgba(255,255,255,0.08)]"
-            : "border-border-strong/45 bg-bg-surface/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:-translate-y-px hover:border-accent/45 hover:bg-bg-surface-hover/45 hover:shadow-[0_0_18px_rgba(232,176,90,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]"
-      }`
-    : "relative flex min-h-[3.75rem] items-center gap-2.5 rounded-none px-3.5 py-2.5 text-left";
-
-  const chip = isFilter
-    ? `flex h-7 w-7 shrink-0 items-center justify-center rounded-[calc(var(--radius-sm)-4px)] border transition-colors duration-300 ${
-        active
-          ? isRuby
-            ? "border-crimson/60 bg-crimson/25 text-crimson-bright"
-            : "border-accent/55 bg-accent/22 text-accent-bright"
-          : isRuby
-            ? "border-crimson/55 bg-crimson/18 text-crimson-bright group-hover:border-crimson/65 group-hover:bg-crimson/26"
-            : "border-accent/40 bg-accent/10 text-accent group-hover:bg-accent/18"
-      }`
-    : "flex h-6 w-6 shrink-0 items-center justify-center rounded-[calc(var(--radius-sm)-6px)] border border-border/55 bg-bg-surface/40 text-muted";
-
-  const valueClass = isFilter
-    ? `font-display whitespace-nowrap text-xl font-bold tabular-nums leading-none transition-colors sm:text-2xl ${
-        active
-          ? isRuby
-            ? "text-crimson-bright"
-            : "text-accent-bright"
-          : "text-text"
-      }`
-    : "font-display whitespace-nowrap text-base font-bold tabular-nums leading-none text-text sm:text-lg";
-
-  const labelColor = active
-    ? isRuby
-      ? "text-crimson-bright"
-      : "text-accent"
-    : isFilter && isRuby
-      ? "text-crimson-bright"
-      : isFilter
-        ? "text-muted"
-        : "text-muted";
-  const labelTypography =
-    isFilter && isRuby
-      ? "font-mono-tech text-[0.55rem] font-semibold tracking-[0.12em]"
-      : "font-micro";
-  const labelBlock = stackedLabel ? (
-    <span className={`${labelTypography} flex min-h-[1.7rem] flex-col justify-center leading-[1.15] ${labelColor}`}>
-      <span className="whitespace-nowrap">{stackedLabel[0]}</span>
-      <span
-        className={`whitespace-nowrap ${
-          active
-            ? isRuby
-              ? "text-crimson-bright/90"
-              : "text-accent/85"
-            : "text-faint"
-        }`}
-      >
-        {stackedLabel[1]}
-      </span>
-    </span>
-  ) : (
-    <span className={`${labelTypography} flex min-h-[1.7rem] items-center leading-none whitespace-nowrap ${labelColor}`}>
-      {label}
-    </span>
-  );
-
-  const content = (
-    <>
-      {active ? (
-        <span
-          className={`pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent to-transparent [animation:scan-h_3.5s_var(--ease)_infinite] motion-reduce:hidden ${
-            isRuby ? "via-crimson-bright/12" : "via-accent-bright/12"
-          }`}
-          aria-hidden
-        />
-      ) : null}
-      <span className={chip} aria-hidden>
-        {icon}
-      </span>
-      <span className="relative flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
-        <span className="flex min-w-0 items-baseline gap-1">
-          <span className={valueClass}>
-            {value}
-          </span>
-          {total != null ? (
-            <span className="font-mono shrink-0 text-[0.58rem] tabular-nums text-faint">
-              / {total}
-            </span>
-          ) : null}
-        </span>
-        {labelBlock}
-      </span>
-      {isFilter ? (
-        <ChevronRight
-          className={`absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 shrink-0 transition-opacity duration-300 ${
-            active
-              ? isRuby
-                ? "text-crimson-bright opacity-80"
-                : "text-accent-bright opacity-80"
-              : isRuby
-                ? "text-crimson-bright/70 opacity-0 group-hover:opacity-80"
-                : "text-accent opacity-0 group-hover:opacity-80"
-          }`}
-          aria-hidden
-        />
-      ) : null}
-    </>
-  );
-
-  if (!interactive) {
-    return (
-      <div className={frame} title={title}>
-        {content}
-      </div>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      title={title}
-      className={`${frame} focus-ring cursor-pointer active:scale-[0.98]`}
-    >
-      {content}
-    </button>
-  );
-}
 
 interface Facet {
   value: string | null;
@@ -239,6 +62,7 @@ interface MovieCatalogProps {
   page: number;
   limit: number;
   catalogCount?: number;
+  catalogReleaseCount?: number;
   draftCount?: number;
   excludedCount?: number;
   archiveMetrics?: ArchiveMetrics;
@@ -256,6 +80,7 @@ export function MovieCatalog({
   page,
   limit,
   catalogCount = 0,
+  catalogReleaseCount = 0,
   draftCount = 0,
   excludedCount = 0,
   archiveMetrics = { gold: 0, hdr10: 0, elite: 0 },
@@ -267,7 +92,6 @@ export function MovieCatalog({
   const searchParams = useSearchParams();
   const status = searchParams.get("status") ?? "CATALOG";
   const [isPending, startTransition] = useTransition();
-  const [facetsOpen, setFacetsOpen] = useState(false);
   const { scrollY } = useScroll();
   const [deckScrolled, setDeckScrolled] = useState(false);
   // Detect when the sticky FilterToolbar deck is actually pinned (its top
@@ -303,9 +127,9 @@ export function MovieCatalog({
   const [prevPage, setPrevPage] = useState(page);
   const [prevMode, setPrevMode] = useState(mode);
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
-  // prevMoviesRef хранит `movies` предыдущего рендера — нужен, чтобы при
+  // prevMovies хранит `movies` предыдущего рендера — нужен, чтобы при
   // переходе page→page+1 в режиме more добавить старую страницу в накопление.
-  const prevMoviesRef = useRef(movies);
+  const [prevMovies, setPrevMovies] = useState(movies);
 
   if (filterKey !== prevFilterKey) {
     // Сменился фильтр/сорт — новый результат, накопление неактуально.
@@ -322,7 +146,7 @@ export function MovieCatalog({
       // «Показать ещё» (mode=more, +1 страница): добавляем прежнюю страницу
       // в накопление. Из режима page в more — текущая страница становится
       // «предыдущей», поверх неё догрузится новая.
-      const oldPageMovies = prevMoviesRef.current;
+      const oldPageMovies = prevMovies;
       setPriorMovies((prev) =>
         prevMode === "more" ? [...prev, ...oldPageMovies] : [...oldPageMovies],
       );
@@ -334,7 +158,7 @@ export function MovieCatalog({
     setPrevPage(page);
     setPrevMode(mode);
   }
-  prevMoviesRef.current = movies;
+  if (movies !== prevMovies) setPrevMovies(movies);
 
   // Filter/sort changes go through a transition with `scroll: false` so the
   // URL updates and the server re-fetches the catalog without scrolling back
@@ -459,249 +283,28 @@ export function MovieCatalog({
   const isEmptyReleasesView = searchParams.get("emptyReleases") === "true";
   const hasAnyMovies = totalCount > 0;
 
-  const anyFacets =
-    hasFacets(facets.resolutions) ||
-    hasFacets(facets.genres) ||
-    hasFacets(facets.channelLayouts) ||
-    facets.audioFormats.some((f) => f.count > 0);
-
-  // The property sidebar steals ~340px on lg+, so the grid drops one column
-  // per tier when it's open to keep cards comfortably sized. Below lg the
-  // sidebar is an overlay, so column counts are unchanged.
-  const gridCols = facetsOpen
-    ? "grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 3xl:grid-cols-5 4xl:grid-cols-6"
-    : "grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7";
-
   return (
     <MotionConfig reducedMotion="user">
-      <SpotlightTier tier={catalogSpotlight} />
-      {isPending ? <div className="catalog-loading-bar" aria-hidden /> : null}
-      {/* Archive console — primary actions + quality index rail on catalog view. */}
-      <motion.section
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-5"
-      >
-        <div className="relative rounded-[var(--radius)] p-1 ring-1 ring-border-strong/60 bg-gradient-to-b from-white/[0.05] via-transparent to-transparent">
-          <div className="glass-frame-top-glow relative overflow-hidden rounded-[calc(var(--radius)-4px)] border border-border/60 bg-bg-glass/70 backdrop-blur-md">
-            {/* Row 1 — primary actions */}
-            <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-2.5">
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/movies/new"
-                  className="focus-ring group/btn flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-border-strong bg-bg-surface/80 px-3.5 py-1.5 text-sm font-medium text-text backdrop-blur-md transition-all duration-300 hover:border-neural/55 hover:text-neural-bright hover:bg-bg-surface-hover hover:shadow-[0_0_18px_rgba(139,92,246,0.55)] active:scale-[0.97]"
-                >
-                  <Plus className="h-4 w-4" aria-hidden />
-                  <span className="hidden sm:inline">Добавить фильм</span>
-                  <span className="sm:hidden">Добавить</span>
-                </Link>
-                <Link
-                  href="/scan"
-                  className="focus-ring group/btn relative flex min-h-9 cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-bg-deep shadow-[0_0_22px_rgba(232,176,90,0.55)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_0_32px_rgba(232,176,90,0.55)] active:scale-[0.97]"
-                >
-                  <ScanSearch className="h-4 w-4" aria-hidden />
-                  Скан
-                  <span
-                    className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full"
-                    aria-hidden
-                  />
-                </Link>
-              </div>
-            </div>
-
-            {/* Row 2 - archive quality index rail (catalog view only).
-                Two registers split the rail without extra labels: the three
-                quality filters render as floating machined key-caps (accent
-                chips, hover lift, drill-in chevron, scan-sweep on active),
-                while duration / size render as a recessed hairline readout
-                strip (neutral chips, no hover). A functional hairline divider
-                separates the groups; on mobile it stacks vertically. */}
-            {isCatalog ? (
-              <>
-                <div className="h-px bg-border/60" aria-hidden />
-                <div className="flex flex-col p-2 md:flex-row md:items-stretch">
-                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:flex-[3]">
-                    {ARCHIVE_QUALITY_METRIC_DEFS.map((def) => {
-                      const Icon = def.icon;
-                      const active = def.isActive(filterParams, isCatalog);
-                      return (
-                        <RailStat
-                          key={def.key}
-                          icon={<Icon className="h-4 w-4" />}
-                          value={archiveMetrics[def.key]}
-                          total={catalogCount}
-                          label={def.shortLabel ?? def.label}
-                          stackedLabel={def.stackedLabel}
-                          title={`${def.label}${def.caption ? ` · ${def.caption}` : ""} · нажмите, чтобы отфильтровать`}
-                          interactive
-                          active={active}
-                          elite={def.elite}
-                          onClick={() => applyFilter(def.toggleFilter(active))}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div
-                    className="my-1.5 h-px bg-border/60 md:mx-1.5 md:my-0 md:h-auto md:w-px"
-                    aria-hidden
-                  />
-                  <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-sm)] bg-border/40 md:flex-[3]">
-                    <RailStat
-                      icon={<Clock className="h-4 w-4" />}
-                      value={formatArchiveTotalDuration(archiveTotals.durationSeconds) ?? "-"}
-                      label="хронометраж"
-                      title="Суммарный хронометраж каталога"
-                    />
-                    <RailStat
-                      icon={<HardDrive className="h-4 w-4" />}
-                      value={formatArchiveTotalSize(archiveTotals.fileSizeBytes) ?? "-"}
-                      label="объём"
-                      title="Файлы релизов в каталоге"
-                    />
-                  </div>
-                </div>
-              </>
-            ) : null}
+      <div className="catalog-page">
+        <SpotlightTier tier={catalogSpotlight} />
+        {isPending ? <div className="catalog-loading-bar" aria-hidden /> : null}
+        {isCatalog ? <CatalogOverview count={catalogCount} releaseCount={catalogReleaseCount} metrics={archiveMetrics} totals={archiveTotals} filters={filterParams} onFilter={applyFilter} /> : <h1 className="catalog-view-title">{isDraftView ? "Черновики" : "Скрытые фильмы"}</h1>}
+        <div ref={deckRef} className={`catalog-sticky-deck catalog-deck ${deckScrolled ? "catalog-sticky-deck--active" : ""}`}>
+          <FilterToolbar updateParams={updateParams} emptyReleaseCount={emptyReleaseCount} />
+          <FilterMenus facets={facets} updateParams={updateParams} />
+          <div className="catalog-results-row">
+            <nav className="catalog-status-tabs" aria-label="Раздел каталога">
+              {[{ value: "CATALOG", label: "Каталог", count: 0 }, { value: "DRAFT", label: "Черновики", count: draftCount }, { value: "EXCLUDED", label: "Скрытые", count: excludedCount }].map((tab) => <Link key={tab.value} href={tab.value === "CATALOG" ? "/" : `/?status=${tab.value}`} className="focus-ring" aria-current={status === tab.value ? "page" : undefined}>{tab.label}{tab.count > 0 ? <span>{tab.count}</span> : null}</Link>)}
+            </nav>
+            <p className="catalog-result-count" aria-label={listCount.ariaLabel} aria-live="polite">{listCount.displayText}</p>
+            {allMovies.length > 0 ? <div className="catalog-sort">
+              <span className="catalog-sort-label">Сортировка</span>
+              <Select compact label="Сортировка" value={sort} onChange={(v) => applySort(v, order)} preserveOrder options={[...SORT_OPTIONS]} />
+              <button type="button" onClick={toggleOrder} className="catalog-icon focus-ring" aria-label={order === "asc" ? "По возрастанию, переключить на убывание" : "По убыванию, переключить на возрастание"} title={order === "asc" ? "По возрастанию" : "По убыванию"}><ArrowDownWideNarrow className={order === "asc" ? "rotate-180" : ""} aria-hidden /></button>
+            </div> : null}
           </div>
         </div>
-      </motion.section>
-
-      {/* Sidebar + catalog share one row so both sticky at top-4 side-by-side.
-          Main column uses self-start so position:sticky works inside flex.
-          The SiteHeader is non-sticky, so the sticky deck/sidebar pin near the
-          viewport top without reserving space for a header. */}
-      <div className="flex items-start gap-5 lg:gap-6">
-        <AnimatePresence initial={false}>
-          {facetsOpen && anyFacets ? (
-            <>
-              <motion.div
-                key="facet-backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-40 bg-bg-deep/70 backdrop-blur-sm lg:hidden"
-                onClick={() => setFacetsOpen(false)}
-                aria-hidden
-              />
-              <motion.aside
-                key="facet-sidebar"
-                initial={{ opacity: 0, x: -24 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -24 }}
-                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed inset-y-0 left-0 z-50 flex w-[88%] max-w-[360px] flex-col overflow-hidden lg:sticky lg:top-4 lg:z-20 lg:inset-auto lg:h-[calc(100dvh-2rem)] lg:w-[320px] lg:max-w-none lg:shrink-0 lg:self-start xl:w-[340px]"
-              >
-                <FilterSidebar
-                  facets={facets}
-                  updateParams={updateParams}
-                  anyFacets={anyFacets}
-                  onClose={() => setFacetsOpen(false)}
-                />
-              </motion.aside>
-            </>
-          ) : null}
-        </AnimatePresence>
-
-        <div className="min-w-0 w-full flex-1 self-start">
-          <div
-            ref={deckRef}
-            className={`catalog-sticky-deck sticky top-4 z-30 border-b border-border/40 ${
-              deckScrolled ? "catalog-sticky-deck--active border-b-transparent" : ""
-            }`}
-          >
-            <FilterToolbar
-              updateParams={updateParams}
-              anyFacets={anyFacets}
-              facetsOpen={facetsOpen}
-              onToggleFacets={() => setFacetsOpen((open) => !open)}
-              draftCount={draftCount}
-              excludedCount={excludedCount}
-              emptyReleaseCount={emptyReleaseCount}
-              status={status}
-              className="mb-2"
-            />
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p
-                className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1"
-                aria-label={listCount.ariaLabel}
-                title={listCount.displayText}
-              >
-                <span className="inline-flex items-baseline gap-1.5">
-                  <span
-                    className="font-display text-2xl font-bold tabular-nums text-accent"
-                    style={{
-                      textShadow:
-                        "0 0 18px rgba(232,176,90,0.55), 0 0 36px rgba(139,92,246,0.55)",
-                    }}
-                    aria-hidden
-                  >
-                    {total}
-                  </span>
-                  <span className="text-sm text-muted" aria-hidden>
-                    {listCount.movieWord}
-                  </span>
-                </span>
-                <span
-                  className="font-display text-lg font-semibold text-accent/40"
-                  aria-hidden
-                >
-                  /
-                </span>
-                <span className="inline-flex items-baseline gap-1.5">
-                  <span
-                    className="font-display text-2xl font-bold tabular-nums text-accent"
-                    style={{
-                      textShadow:
-                        "0 0 18px rgba(232,176,90,0.55), 0 0 36px rgba(139,92,246,0.55)",
-                    }}
-                    aria-hidden
-                  >
-                    {releaseCount}
-                  </span>
-                  <span className="text-sm text-muted" aria-hidden>
-                    {listCount.releaseWord}
-                  </span>
-                </span>
-              </p>
-
-              {allMovies.length > 0 ? (
-                <div className="flex items-center gap-2">
-                  <span className="font-mono-tech hidden text-faint sm:inline">
-                    сортировка
-                  </span>
-                  <Select
-                    compact
-                    label="Сортировка"
-                    value={sort}
-                    onChange={(v) => applySort(v, order)}
-                    preserveOrder
-                    options={[...SORT_OPTIONS]}
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleOrder}
-                    className="focus-ring flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-bg-elevated/80 px-3 py-1.5 text-xs text-muted backdrop-blur-md transition-all duration-200 hover:border-accent/55 hover:text-accent hover:bg-bg-surface-hover active:scale-[0.97]"
-                    aria-label={
-                      order === "asc"
-                        ? "По возрастанию — нажать для убывания"
-                        : "По убыванию — нажать для возрастания"
-                    }
-                    title={order === "asc" ? "По возрастанию" : "По убыванию"}
-                  >
-                    <ArrowDownUp className="h-3.5 w-3.5" aria-hidden />
-                    <span className="font-mono-tech">
-                      {order === "asc" ? "А→Я" : "Я→А"}
-                    </span>
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="pt-4">
+        <div className="pt-4">
           {allMovies.length === 0 ? (
             isEmptyReleasesView ? (
               <EmptyCatalog variant="emptyReleases" />
@@ -719,7 +322,7 @@ export function MovieCatalog({
             )
           ) : (
             <>
-              <div className={gridCols} aria-busy={isPending}>
+              <div className="catalog-grid" aria-busy={isPending}>
                 <AnimatePresence mode="popLayout">
                   {allMovies.map((movie, index) => (
                     <motion.div
@@ -756,7 +359,7 @@ export function MovieCatalog({
                     type="button"
                     onClick={handleLoadMore}
                     disabled={isPending}
-                    className="focus-ring group/btn relative flex min-h-11 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full border border-border-strong bg-bg-surface/80 px-6 py-2.5 text-sm font-medium text-text backdrop-blur-md transition-all duration-300 hover:border-accent/55 hover:text-accent hover:shadow-[0_0_26px_rgba(232,176,90,0.55),0_0_20px_rgba(139,92,246,0.55)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="catalog-load-more focus-ring"
                   >
                     {isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -767,10 +370,6 @@ export function MovieCatalog({
                     <span className="text-faint">
                       ({shownCount} из {total})
                     </span>
-                    <span
-                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-accent-bright/20 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full"
-                      aria-hidden
-                    />
                   </button>
                 </div>
               )}
@@ -780,10 +379,8 @@ export function MovieCatalog({
               )}
             </>
           )}
-          </div>
         </div>
       </div>
-
     </MotionConfig>
   );
 }

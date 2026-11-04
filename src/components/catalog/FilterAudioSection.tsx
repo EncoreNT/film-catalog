@@ -35,10 +35,12 @@ export function FilterAudioSection({
   facets,
   searchParams,
   updateParams,
+  section = "all",
 }: {
   facets: FilterBarFacets;
   searchParams: URLSearchParams;
   updateParams: UpdateParams;
+  section?: "all" | "audio" | "translation";
 }) {
   const activeLangs = useMemo(
     () => parseMulti(searchParams.get("hasLang")),
@@ -63,9 +65,10 @@ export function FilterAudioSection({
   const codecFacets = facets.audioFormats;
   const translationFacets = facets.translationTypes;
 
-  const showChannels = hasFacets(channelFacets);
-  const showCodecs = codecFacets.some((f) => f.count > 0);
-  const showTranslations = hasFacets(translationFacets);
+  const showSound = section !== "translation";
+  const showChannels = showSound && hasFacets(channelFacets);
+  const showCodecs = showSound && codecFacets.some((f) => f.count > 0);
+  const showTranslations = section !== "audio" && hasFacets(translationFacets);
 
   // Extra language chips beyond rus/original, derived from facet data.
   // Only show languages with a meaningful presence to keep the row compact.
@@ -116,11 +119,11 @@ export function FilterAudioSection({
     <section className="space-y-3">
       <div className="flex items-center gap-2">
         <Waves className="h-3.5 w-3.5 text-accent/80" aria-hidden />
-        <h3 className="font-mono-tech text-faint">звук</h3>
+        <h3 className="font-mono-tech text-faint">{section === "translation" ? "Перевод" : "Звук"}</h3>
       </div>
 
       {/* Language presence (AND between selections). */}
-      <div className="space-y-1.5">
+      {showSound ? <div className="space-y-1.5">
         <div className="flex flex-wrap gap-1.5">
           {LANGUAGE_PRESENCE.map((lang) => (
             <Chip
@@ -153,6 +156,8 @@ export function FilterAudioSection({
           ))}
         </div>
       </div>
+
+        : null}
 
       {/* Channels (OR within — any track). */}
       {showChannels ? (
@@ -218,7 +223,7 @@ export function FilterAudioSection({
       ) : null}
 
       {/* Premium + TV-ready. */}
-      <div className="flex flex-wrap gap-1.5">
+      {showSound ? <div className="flex flex-wrap gap-1.5">
         <Chip
           size="sm"
           active={premiumActive}
@@ -240,7 +245,7 @@ export function FilterAudioSection({
           <MonitorPlay className="h-3 w-3" aria-hidden />
           {tvReadyFilterChipLabel()}
         </Chip>
-      </div>
+      </div> : null}
     </section>
   );
 }

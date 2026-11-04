@@ -115,6 +115,14 @@ Motion: `--ease` + `motion/react` (sliding underline табов). Глобаль
 Utility: `.focus-ring` / `.focus-ring-neural`, `.container-wide`,
 `.text-gradient-cinematic`, `.tech-grid`, `.film-perfs[-y]`, `.scroll-subtle`.
 
+### Каталог (принятый редизайн v5)
+
+- `CatalogOverview`: общие метрики + крупные плитки качества с долями; фильтры через canonical `ARCHIVE_QUALITY_METRIC_DEFS`.
+- `MovieCard`: открытый 2:3 постер, подписи/specs под ним, без tier ribbon и нижнего scrim. Цвет рамки/glow сохраняет tier; Gold/Ruby в UI не писать.
+- `FilterMenus` + `FilterPanel`: раскрывающиеся фасеты поверх сетки, без сужающего её sidebar; просмотр — иконки, оценка — раскрываемые звёзды.
+- Главная fluid-width, 7 колонок от 2400px. Остальные страницы сохраняют `container-wide`.
+- `SiteHeader`: общая широкая навигация с добавлением, сканом и настройками. Подробнее: `docs/design-system.md`, «Каталог: принятый вариант v5».
+
 ## Обложки — ориентация
 
 | Тип | Aspect | Где |

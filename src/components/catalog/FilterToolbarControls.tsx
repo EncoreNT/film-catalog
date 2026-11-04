@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
-import { Archive, CircleOff, Eye, EyeOff, Inbox, Layers2, Library, ListVideo, Star } from "lucide-react";
-import { SEGMENT_SHELL } from "@/components/catalog/FilterFacetParts";
+import { useEffect, useRef, useState } from "react";
+import { CircleOff, Eye, EyeOff, Layers2, ListVideo, MonitorPlay, Star } from "lucide-react";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 
 type WatchedFilterValue = "all" | "watched" | "unwatched";
@@ -50,11 +48,7 @@ function FilterTooltipContent({
 }
 
 const segmentButtonClass = (active: boolean) =>
-  `focus-ring inline-flex min-h-8 min-w-8 items-center justify-center rounded-[calc(var(--radius-sm)-2px)] transition-colors ${
-    active
-      ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
-      : "text-muted hover:bg-bg-surface hover:text-text"
-  }`;
+  `catalog-icon focus-ring ${active ? "is-active" : ""}`;
 
 interface WatchedFilterProps {
   value: WatchedFilterValue;
@@ -64,7 +58,7 @@ interface WatchedFilterProps {
 export function WatchedFilter({ value, onChange }: WatchedFilterProps) {
   return (
     <div
-      className={`${SEGMENT_SHELL} p-0.5`}
+      className="catalog-tool-segment"
       role="group"
       aria-label="Просмотр"
     >
@@ -111,12 +105,6 @@ interface MinRatingFilterProps {
   max?: number;
 }
 
-const MIN_RATING_TOOLTIP = {
-  label: "Минимальная оценка",
-  description:
-    "Наведите, чтобы раскрыть звёзды, и выберите порог — покажутся фильмы с оценкой не ниже выбранной. Клик по уже горящей звезде сбрасывает фильтр.",
-};
-
 export function parseMinRating(raw: string | null): number | null {
   if (!raw) return null;
   const parsed = parseInt(raw, 10);
@@ -124,100 +112,38 @@ export function parseMinRating(raw: string | null): number | null {
   return parsed;
 }
 
-export function MinRatingFilter({
-  value,
-  onChange,
-  max = 10,
-}: MinRatingFilterProps) {
+export function MinRatingFilter({ value, onChange, max = 10 }: MinRatingFilterProps) {
   const [hover, setHover] = useState<number | null>(null);
-  const active = value != null;
-  const preview = hover;
-  const display = preview ?? value;
-
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const display = hover ?? value;
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
+    const escape = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); trigger.current?.focus(); } };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
+  }, [open]);
   return (
-    <div
-      className={`${SEGMENT_SHELL} group inline-flex items-center p-0.5 transition-shadow duration-200 ${
-        active ? "shadow-[0_0_16px_var(--accent-glow)]" : ""
-      }`}
-      role="group"
-      aria-label={MIN_RATING_TOOLTIP.label}
-      onMouseLeave={() => setHover(null)}
-    >
-      {/* Раскрывающийся звёздный ряд: 0 ширины в покое, полный при hover/focus-within */}
-      <div className="grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] duration-200 ease-out group-hover:grid-cols-[1fr] group-hover:opacity-100 group-focus-within:grid-cols-[1fr] group-focus-within:opacity-100">
-        <div className="flex items-center gap-0.5 overflow-hidden">
-          {Array.from({ length: max }, (_, i) => {
-            const rating = i + 1;
-            const filled = display != null && rating <= display;
-            const isSelected = active && value === rating;
-            return (
-              <button
-                key={rating}
-                type="button"
-                onMouseEnter={() => setHover(rating)}
-                onFocus={() => setHover(rating)}
-                onBlur={() => setHover(null)}
-                onClick={() => onChange(value === rating ? null : rating)}
-                aria-label={
-                  isSelected
-                    ? `Минимальная оценка ${rating}+. Нажмите, чтобы сбросить`
-                    : `Показывать фильмы с оценкой ${rating} и выше`
-                }
-                aria-pressed={isSelected}
-                className="focus-ring inline-flex min-h-8 min-w-7 items-center justify-center rounded-[calc(var(--radius-sm)-2px)] text-muted transition-colors hover:text-accent"
-              >
-                <Star
-                  className={`h-3.5 w-3.5 transition-colors duration-150 ${
-                    filled
-                      ? preview != null
-                        ? "fill-accent/70 text-accent/70"
-                        : "fill-accent text-accent"
-                      : "fill-transparent text-muted/40"
-                  }`}
-                  aria-hidden
-                />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      {/* Компактный индикатор — всегда виден, фиксированная ширина */}
-      <button
-        type="button"
-        onClick={() => {
-          if (active) onChange(null);
-        }}
-        aria-label={
-          active
-            ? `Минимальная оценка ${value}+. Нажмите, чтобы сбросить`
-            : MIN_RATING_TOOLTIP.label
-        }
-        aria-pressed={active}
-        className={`focus-ring inline-flex min-h-8 items-center justify-center gap-1 rounded-[calc(var(--radius-sm)-2px)] px-2 text-xs transition-colors ${
-          active
-            ? "text-accent"
-            : "text-muted hover:bg-bg-surface hover:text-text"
-        }`}
-      >
-        <Star
-          className={`h-3.5 w-3.5 shrink-0 transition-colors duration-150 ${
-            display != null
-              ? preview != null
-                ? "fill-accent/70 text-accent/70"
-                : "fill-accent text-accent"
-              : "fill-transparent text-muted/40"
-          }`}
-          aria-hidden
-        />
-        <span
-          className="font-mono-tech inline-block w-8 text-center tabular-nums"
-          aria-live="polite"
-        >
-          {display != null ? `${display}+` : "мин."}
-        </span>
+    <div className="catalog-rating-filter" ref={root} onMouseLeave={() => { setHover(null); setOpen(false); }} onBlur={(event) => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false); }}>
+      <button type="button" ref={trigger} className={`catalog-icon focus-ring ${value != null ? "is-active" : ""}`} onMouseEnter={() => setOpen(true)} onClick={() => setOpen(true)} aria-label={value != null ? `Минимальная оценка ${value}+` : "Минимальная оценка"} aria-expanded={open} aria-controls="catalog-rating-options">
+        <Star className={value != null ? "fill-current" : ""} aria-hidden />{value != null ? <span>{value}+</span> : null}
       </button>
+      {open ? <div id="catalog-rating-options" className="catalog-rating-options" role="group" aria-label="Минимальная оценка">
+        <span className="text-xs text-muted">Оценка от {display ?? 1}</span>
+        <div className="flex" onMouseLeave={() => setHover(null)}>
+          {Array.from({ length: max }, (_, i) => i + 1).map((rating) => <button key={rating} type="button" className={`catalog-rating-star focus-ring ${display != null && rating <= display ? "is-active" : ""}`} aria-label={`Показывать фильмы с оценкой ${rating} и выше`} aria-pressed={value === rating} onMouseEnter={() => setHover(rating)} onFocus={() => setHover(rating)} onBlur={() => setHover(null)} onClick={() => onChange(value === rating ? null : rating)}><Star aria-hidden /><span>{rating}</span></button>)}
+        </div>
+        {value != null ? <button type="button" className="catalog-reset focus-ring" onClick={() => onChange(null)}>Сбросить оценку</button> : null}
+      </div> : null}
     </div>
   );
+}
+
+export function TvReadyFilter({ active, onChange }: MultiReleaseFilterProps) {
+  return <div className="catalog-tool-segment"><HoverTooltip content={<FilterTooltipContent title="Для телевизора" description="Релизы, совместимые с телевизором" />}><button type="button" className={segmentButtonClass(active)} aria-label="Для телевизора" aria-pressed={active} onClick={() => onChange(!active)}><MonitorPlay className="h-4 w-4" aria-hidden /></button></HoverTooltip></div>;
 }
 
 export function MultiReleaseFilter({
@@ -225,7 +151,7 @@ export function MultiReleaseFilter({
   onChange,
 }: MultiReleaseFilterProps) {
   return (
-    <div className={`${SEGMENT_SHELL} p-0.5`}>
+    <div className="catalog-tool-segment">
       <HoverTooltip
         className="inline-flex"
         content={
@@ -269,7 +195,7 @@ export function EmptyReleasesFilter({
   if (count <= 0 && !active) return null;
 
   return (
-    <div className={`${SEGMENT_SHELL} p-0.5`}>
+    <div className="catalog-tool-segment">
       <HoverTooltip
         className="inline-flex"
         content={
@@ -296,119 +222,6 @@ export function EmptyReleasesFilter({
           </span>
         </button>
       </HoverTooltip>
-    </div>
-  );
-}
-
-interface ArchiveStatusAccessProps {
-  draftCount: number;
-  excludedCount: number;
-  status: string;
-}
-
-const segmentLinkClass = (active: boolean) =>
-  `focus-ring inline-flex min-h-8 min-w-8 items-center justify-center rounded-[calc(var(--radius-sm)-2px)] transition-colors ${
-    active
-      ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
-      : "text-muted hover:bg-bg-surface hover:text-text"
-  }`;
-
-/** Draft / hidden catalog views — compact icon access in the filter toolbar. */
-export function ArchiveStatusAccess({
-  draftCount,
-  excludedCount,
-  status,
-}: ArchiveStatusAccessProps) {
-  const isDraft = status === "DRAFT";
-  const isExcluded = status === "EXCLUDED";
-  const isCatalog = !isDraft && !isExcluded;
-
-  const showDraft = draftCount > 0 || isDraft;
-  const showExcluded = excludedCount > 0 || isExcluded;
-
-  if (isCatalog && !showDraft && !showExcluded) {
-    return null;
-  }
-
-  return (
-    <div
-      className={`${SEGMENT_SHELL} p-0.5`}
-      role="group"
-      aria-label="Черновики и скрытые"
-    >
-      {!isCatalog ? (
-        <HoverTooltip
-          className="inline-flex"
-          content={
-            <FilterTooltipContent
-              title="Каталог"
-              description="Вернуться к основному списку фильмов"
-            />
-          }
-        >
-          <Link
-            href="/?status=CATALOG"
-            className={segmentLinkClass(false)}
-            aria-label="Каталог"
-          >
-            <Library className="h-4 w-4" aria-hidden />
-          </Link>
-        </HoverTooltip>
-      ) : null}
-      {showDraft ? (
-        <HoverTooltip
-          className="inline-flex"
-          content={
-            <FilterTooltipContent
-              title="Черновики"
-              description="Новые находки после скана — проверка перед каталогом"
-            />
-          }
-        >
-          <Link
-            href="/?status=DRAFT"
-            className={segmentLinkClass(isDraft)}
-            aria-label={`Черновики${draftCount > 0 ? `, ${draftCount}` : ""}`}
-            aria-current={isDraft ? "page" : undefined}
-          >
-            <span className="relative inline-flex">
-              <Inbox className="h-4 w-4" aria-hidden />
-              {draftCount > 0 ? (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[0.55rem] font-medium tabular-nums text-bg-deep">
-                  {draftCount}
-                </span>
-              ) : null}
-            </span>
-          </Link>
-        </HoverTooltip>
-      ) : null}
-      {showExcluded ? (
-        <HoverTooltip
-          className="inline-flex"
-          content={
-            <FilterTooltipContent
-              title="Скрытые"
-              description="Фильмы, убранные из каталога — можно вернуть"
-            />
-          }
-        >
-          <Link
-            href="/?status=EXCLUDED"
-            className={segmentLinkClass(isExcluded)}
-            aria-label={`Скрытые${excludedCount > 0 ? `, ${excludedCount}` : ""}`}
-            aria-current={isExcluded ? "page" : undefined}
-          >
-            <span className="relative inline-flex">
-              <Archive className="h-4 w-4" aria-hidden />
-              {excludedCount > 0 ? (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[0.55rem] font-medium tabular-nums text-bg-deep">
-                  {excludedCount}
-                </span>
-              ) : null}
-            </span>
-          </Link>
-        </HoverTooltip>
-      ) : null}
     </div>
   );
 }

@@ -10,17 +10,15 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 import { Chip } from "@/components/primitives/Chip";
-import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 import {
-  ArchiveStatusAccess,
   EmptyReleasesFilter,
   MinRatingFilter,
   MultiReleaseFilter,
   parseMinRating,
   parseWatchedFilter,
   WatchedFilter,
+  TvReadyFilter,
 } from "@/components/catalog/FilterToolbarControls";
 import {
   RESOLUTIONS,
@@ -32,9 +30,7 @@ import {
   type GenreSortMode,
 } from "@/lib/catalog/genre-facet-sort";
 import {
-  CLEAR_ALL_FILTER_PARAMS,
   CLEAR_FACET_PARAMS,
-  countActiveFilters,
   countFacetFilters,
   facetCountMap,
   hasFacets,
@@ -45,181 +41,69 @@ import {
 } from "@/lib/catalog/filter-bar-utils";
 import { FilterAudioSection } from "@/components/catalog/FilterAudioSection";
 import {
-  Divider,
   FacetSection,
   GenreSortToggle,
   HDR_ANY,
   HDR_OPTIONS,
   QualityLadder,
-  SEGMENT_SHELL,
 } from "@/components/catalog/FilterFacetParts";
 
 interface FilterToolbarProps {
   updateParams: (updates: Record<string, string | null>) => void;
-  anyFacets: boolean;
-  facetsOpen: boolean;
-  onToggleFacets: () => void;
-  className?: string;
-  draftCount?: number;
-  excludedCount?: number;
   emptyReleaseCount?: number;
-  status?: string;
 }
 
-export function FilterToolbar({
-  updateParams,
-  anyFacets,
-  facetsOpen,
-  onToggleFacets,
-  className = "",
-  draftCount = 0,
-  excludedCount = 0,
-  emptyReleaseCount = 0,
-  status = "CATALOG",
-}: FilterToolbarProps) {
+export function FilterToolbar({ updateParams, emptyReleaseCount = 0 }: FilterToolbarProps) {
   const searchParams = useSearchParams();
-  const [q, setQ] = useState(searchParams.get("q") ?? "");
-
-  const activeCount = countActiveFilters(searchParams);
-  const facetActiveCount = countFacetFilters(searchParams);
-
+  const committedQuery = searchParams.get("q") ?? "";
+  const [q, setQ] = useState(committedQuery);
+  const [previousQuery, setPreviousQuery] = useState(committedQuery);
+  // Keep the field in sync when browser Back or a reset changes the URL.
+  if (previousQuery !== committedQuery) {
+    setPreviousQuery(committedQuery);
+    setQ(committedQuery);
+  }
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = trimInput(q);
-    if (trimmed !== q) setQ(trimmed);
+    setQ(trimmed);
     updateParams({ q: trimmed || null });
   };
-
-  const resetFilters = () => {
-    setQ("");
-    updateParams(CLEAR_ALL_FILTER_PARAMS);
-  };
-
   return (
-    <form
-      onSubmit={handleSearch}
-      className={`surface-card flex flex-col gap-2 p-2 lg:flex-row lg:items-center ${className}`}
-    >
-      <div className="relative min-w-0 flex-1">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent/60"
-          aria-hidden
-        />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onBlur={() => {
-            const trimmed = trimInput(q);
-            if (trimmed !== q) setQ(trimmed);
-          }}
-          placeholder="Поиск по названию…"
-          className="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-elevated/80 py-2 pl-10 pr-3 text-sm text-text backdrop-blur-md placeholder:text-faint"
-          aria-label="Поиск по названию"
-        />
+    <form onSubmit={handleSearch} className="catalog-search-row" role="search">
+      <div className="catalog-search-field">
+        <button type="submit" className="catalog-icon focus-ring" aria-label="Найти фильм"><Search aria-hidden /></button>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Найти фильм по названию…" aria-label="Поиск по названию" />
+        {q ? <button type="button" className="catalog-icon focus-ring" aria-label="Очистить поиск" onClick={() => { setQ(""); updateParams({ q: null }); }}><X aria-hidden /></button> : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {anyFacets ? (
-          <div className={`${SEGMENT_SHELL} p-0.5`}>
-            <HoverTooltip
-              className="inline-flex"
-              content={
-                <div className="max-w-52 px-3 py-2">
-                  <p className="text-xs font-medium text-text">
-                    Фильтры по свойствам
-                  </p>
-                  <p className="mt-0.5 text-xs leading-snug text-muted">
-                    Жанры, разрешение, HDR и звук
-                  </p>
-                </div>
-              }
-            >
-              <button
-                type="button"
-                onClick={onToggleFacets}
-                aria-expanded={facetsOpen}
-                aria-controls="catalog-facet-sidebar"
-                aria-label={
-                  facetsOpen
-                    ? "Скрыть фильтры по свойствам"
-                    : "Открыть фильтры по свойствам"
-                }
-                className={`focus-ring relative inline-flex min-h-8 min-w-8 items-center justify-center rounded-[calc(var(--radius-sm)-2px)] transition-colors ${
-                  facetsOpen
-                    ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
-                    : "text-muted hover:bg-bg-surface hover:text-text"
-                }`}
-              >
-                <SlidersHorizontal className="h-4 w-4" aria-hidden />
-                {facetActiveCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-0.5 text-[0.55rem] font-medium tabular-nums text-bg-deep">
-                    {facetActiveCount}
-                  </span>
-                ) : null}
-              </button>
-            </HoverTooltip>
-          </div>
-        ) : null}
-        <WatchedFilter
-          value={parseWatchedFilter(searchParams.get("watched"))}
-          onChange={(v) => updateParams({ watched: v === "all" ? null : v })}
-        />
-        <MultiReleaseFilter
-          active={searchParams.get("multiRelease") === "true"}
-          onChange={(on) =>
-            updateParams({ multiRelease: on ? "true" : null })
-          }
-        />
-        <EmptyReleasesFilter
-          active={searchParams.get("emptyReleases") === "true"}
-          count={emptyReleaseCount}
-          onChange={(on) =>
-            updateParams({ emptyReleases: on ? "true" : null })
-          }
-        />
-        <MinRatingFilter
-          value={parseMinRating(searchParams.get("minRating"))}
-          onChange={(v) => updateParams({ minRating: v?.toString() ?? null })}
-        />
-        <ArchiveStatusAccess
-          draftCount={draftCount}
-          excludedCount={excludedCount}
-          status={status}
-        />
-        <AnimatePresence>
-          {activeCount > 0 ? (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-              type="button"
-              onClick={resetFilters}
-              className="focus-ring font-mono-tech inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-3 text-xs text-accent transition-colors hover:bg-accent/10"
-              aria-label="Сбросить все фильтры"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden />
-              сбросить · {activeCount}
-            </motion.button>
-          ) : null}
-        </AnimatePresence>
+      <div className="catalog-quick-tools">
+        <WatchedFilter value={parseWatchedFilter(searchParams.get("watched"))} onChange={(v) => updateParams({ watched: v === "all" ? null : v })} />
+        <div className="catalog-release-tools">
+          <MultiReleaseFilter active={searchParams.get("multiRelease") === "true"} onChange={(on) => updateParams({ multiRelease: on ? "true" : null })} />
+          <TvReadyFilter active={searchParams.get("tvReady") === "true"} onChange={(on) => updateParams({ tvReady: on ? "true" : null })} />
+          <EmptyReleasesFilter active={searchParams.get("emptyReleases") === "true"} count={emptyReleaseCount} onChange={(on) => updateParams({ emptyReleases: on ? "true" : null })} />
+        </div>
+        <MinRatingFilter value={parseMinRating(searchParams.get("minRating"))} onChange={(v) => updateParams({ minRating: v?.toString() ?? null })} />
       </div>
     </form>
   );
 }
 
-interface FilterSidebarProps {
+interface FilterPanelProps {
   facets: FilterBarFacets;
   updateParams: (updates: Record<string, string | null>) => void;
   anyFacets: boolean;
   onClose: () => void;
+  group?: "all" | "genre" | "image" | "audio" | "translation";
 }
 
-export function FilterSidebar({
+export function FilterPanel({
   facets,
   updateParams,
   anyFacets,
   onClose,
-}: FilterSidebarProps) {
+  group = "all",
+}: FilterPanelProps) {
   const searchParams = useSearchParams();
   const [genreSort, setGenreSort] = useState<GenreSortMode>("alpha");
 
@@ -237,16 +121,15 @@ export function FilterSidebar({
   );
   const hdrAnyActive = activeHdr.includes(HDR_ANY);
 
-  const showResolution = hasFacets(facets.resolutions);
-  const showGenres = hasFacets(facets.genres);
+  const showImage = group === "all" || group === "image";
+  const showResolution = showImage && hasFacets(facets.resolutions);
+  const showGenres = (group === "all" || group === "genre") && hasFacets(facets.genres);
   const sortedGenres = useMemo(
     () => sortGenreFacets(facets.genres, genreSort),
     [facets.genres, genreSort],
   );
 
-  const showAudio =
-    hasFacets(facets.channelLayouts) ||
-    facets.audioFormats.some((f) => f.count > 0);
+  const showAudio = group === "all" || group === "audio" || group === "translation";
 
   const facetActiveCount = countFacetFilters(searchParams);
 
@@ -282,8 +165,7 @@ export function FilterSidebar({
 
   return (
     <div
-      id="catalog-facet-sidebar"
-      className="surface-card glass-frame-top-glow flex h-full min-h-0 flex-col overflow-hidden p-4"
+      className={`catalog-facet-panel catalog-facet-panel--${group}`}
     >
       {/* Slim panel header — pinned, scroll happens below */}
       <div className="flex shrink-0 items-center justify-between gap-2">
@@ -292,7 +174,7 @@ export function FilterSidebar({
             className="h-3.5 w-3.5 text-accent/70"
             aria-hidden
           />
-          <span className="font-mono-tech text-faint">выбор по свойствам</span>
+          <span className="font-mono-tech text-faint">{group === "all" ? "Все фильтры" : group === "genre" ? "Жанры" : group === "image" ? "Изображение" : group === "audio" ? "Звук" : "Перевод"}</span>
         </div>
         <div className="flex items-center gap-2">
           {facetActiveCount > 0 ? (
@@ -307,7 +189,7 @@ export function FilterSidebar({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Скрыть панель фильтров"
+            aria-label="Закрыть фильтры"
             className="focus-ring flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent"
           >
             <X className="h-3.5 w-3.5" aria-hidden />
@@ -315,7 +197,7 @@ export function FilterSidebar({
         </div>
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain scroll-subtle pr-1">
+      <div className="catalog-facet-content scroll-subtle">
         {showGenres ? (
           <FacetSection
             icon={<Clapperboard className="h-3.5 w-3.5" />}
@@ -346,62 +228,63 @@ export function FilterSidebar({
           </FacetSection>
         ) : null}
 
-        {showGenres && showResolution ? <Divider /> : null}
+        {showImage ? <div className="space-y-5">
 
-        {showResolution ? (
-          <FacetSection
-            icon={<MonitorPlay className="h-3.5 w-3.5" />}
-            title="разрешение"
-          >
-            <QualityLadder
-              options={resolutionOptions}
-              active={activeResolutions}
-              counts={resolutionCounts}
-              onToggle={(v) =>
-                updateParams({
-                  resolution:
-                    toggleMulti(activeResolutions, v).join(",") || null,
-                })
-              }
-            />
-          </FacetSection>
-        ) : null}
-
-        {showResolution ? <Divider /> : null}
-
-        <FacetSection
-          icon={<Sun className="h-3.5 w-3.5" />}
-          title="динамический диапазон"
-          hint="HDR"
-        >
-          <div className="flex flex-wrap gap-1.5">
-            <Chip
-              size="sm"
-              active={hdrAnyActive}
-              onClick={() => toggleHdr(HDR_ANY)}
+          {showResolution ? (
+            <FacetSection
+              icon={<MonitorPlay className="h-3.5 w-3.5" />}
+              title="разрешение"
             >
-              Любой HDR
-            </Chip>
-            {HDR_OPTIONS.map((opt) => (
+              <QualityLadder
+                options={resolutionOptions}
+                active={activeResolutions}
+                counts={resolutionCounts}
+                onToggle={(v) =>
+                  updateParams({
+                    resolution:
+                      toggleMulti(activeResolutions, v).join(",") || null,
+                  })
+                }
+              />
+            </FacetSection>
+          ) : null}
+
+
+          <FacetSection
+            icon={<Sun className="h-3.5 w-3.5" />}
+            title="динамический диапазон"
+            hint="HDR"
+          >
+            <div className="flex flex-wrap gap-1.5">
               <Chip
-                key={opt.value}
                 size="sm"
-                active={!hdrAnyActive && activeHdr.includes(opt.value)}
-                onClick={() => toggleHdr(opt.value)}
+                active={hdrAnyActive}
+                onClick={() => toggleHdr(HDR_ANY)}
               >
-                {opt.label}
+                Любой HDR
               </Chip>
-            ))}
-          </div>
-        </FacetSection>
+              {HDR_OPTIONS.map((opt) => (
+                <Chip
+                  key={opt.value}
+                  size="sm"
+                  active={!hdrAnyActive && activeHdr.includes(opt.value)}
+                  onClick={() => toggleHdr(opt.value)}
+                >
+                  {opt.label}
+                </Chip>
+              ))}
+            </div>
+          </FacetSection>
+
+        </div> : null}
 
         {showAudio ? (
           <>
-            <Divider />
             <FilterAudioSection
               facets={facets}
               searchParams={searchParams}
               updateParams={updateParams}
+              section={group === "translation" ? "translation" : group === "audio" ? "audio" : "all"}
             />
           </>
         ) : null}

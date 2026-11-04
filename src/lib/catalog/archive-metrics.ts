@@ -88,13 +88,14 @@ export async function getArchiveTotals(): Promise<ArchiveTotals> {
 }
 
 export async function getStatusCounts() {
-  const [totalCount, catalogCount, draftCount, excludedCount] = await Promise.all([
+  const [totalCount, catalogCount, draftCount, excludedCount, catalogReleaseCount] = await Promise.all([
     prisma.movie.count(),
     prisma.movie.count({ where: { status: MovieStatus.CATALOG } }),
     prisma.movie.count({ where: { status: MovieStatus.DRAFT } }),
     prisma.movie.count({ where: { status: MovieStatus.EXCLUDED } }),
+    prisma.release.count({ where: { movie: { status: MovieStatus.CATALOG } } }),
   ]);
-  return { totalCount, catalogCount, draftCount, excludedCount };
+  return { totalCount, catalogCount, draftCount, excludedCount, catalogReleaseCount };
 }
 
 export async function getStatsOverview() {
