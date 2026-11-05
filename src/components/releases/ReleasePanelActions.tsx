@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   HardDrive,
   HardDriveDownload,
-  Menu,
+  Ellipsis,
   Pencil,
   ScanSearch,
   Star,
@@ -60,6 +60,34 @@ export function ReleasePanelActions({
   moveDialogOpen: boolean;
   onMoveDialogOpenChange: (open: boolean) => void;
 }) {
+  const menuId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useLayoutEffect(() => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!menuOpen || !trigger || !menu) return;
+
+    const placeMenu = () => {
+      const anchor = trigger.getBoundingClientRect();
+      const { width, height } = menu.getBoundingClientRect();
+      const left = Math.min(anchor.left, document.documentElement.clientWidth - width - 8);
+      const top = anchor.bottom + height + 12 <= window.innerHeight
+        ? anchor.bottom + 4
+        : anchor.top - height - 4;
+      menu.style.left = `${Math.max(8, left)}px`;
+      menu.style.top = `${Math.max(8, top)}px`;
+    };
+    placeMenu();
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    return () => {
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+    };
+  }, [menuOpen]);
+
   const router = useRouter();
   const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
   const [loading, setLoading] = useState(false);
@@ -162,23 +190,22 @@ export function ReleasePanelActions({
 
   return (
     <>
-      <div className="flex shrink-0 flex-col items-end gap-1 px-2 py-2 sm:px-3">
-        <div className="group/menu relative">
-          <button
-            type="button"
-            className="focus-ring font-mono-tech inline-flex items-center justify-center rounded-[var(--radius)] border border-border-strong bg-bg-surface px-2.5 py-1.5 text-muted transition-colors hover:border-accent/40 hover:text-accent group-hover/menu:border-accent/40 group-hover/menu:text-accent group-focus-within/menu:border-accent/40 group-focus-within/menu:text-accent"
-            aria-label="Меню действий релиза"
-            aria-haspopup="menu"
-          >
-            <Menu className="h-3.5 w-3.5" aria-hidden />
+      <div className="movie-release-actions">
+          <button ref={triggerRef} type="button" className="movie-release-more focus-ring"
+            aria-label={`Действия с релизом: ${activeRelease.label}, ${activeRelease.fileSizeLabel ?? activeRelease.id}`}
+            title="Действия с этим релизом" aria-haspopup="menu" popoverTarget={menuId}>
+            <Ellipsis size={18} aria-hidden />
           </button>
-
-          <div
-            className="pointer-events-none invisible absolute right-0 top-full z-30 pt-1 opacity-0 transition-[opacity,visibility] duration-150 group-hover/menu:pointer-events-auto group-hover/menu:visible group-hover/menu:opacity-100 group-focus-within/menu:pointer-events-auto group-focus-within/menu:visible group-focus-within/menu:opacity-100"
-            role="menu"
-            aria-label="Действия с релизом"
-          >
+          <div ref={menuRef} id={menuId} popover="auto" className="movie-action-menu"
+            onToggle={(event) => setMenuOpen(event.newState === "open")}
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest('[role="menuitem"]')) event.currentTarget.hidePopover();
+            }}
+            role="menu" aria-label="Действия с релизом">
             <div className="min-w-[15rem] overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-elevated py-1 shadow-[0_12px_32px_rgba(0,0,0,0.55)]">
+            <div className="movie-menu-release">
+              {[activeRelease.label, activeRelease.fileSizeLabel ?? `#${activeRelease.id}`].join(" · ")}
+            </div>
             <ReleaseMenuItem
               label="Редактировать"
               href={`/movies/${movieSlug}/releases/${activeRelease.id}/edit`}
@@ -226,7 +253,6 @@ export function ReleasePanelActions({
             />
             </div>
           </div>
-        </div>
         {error ? (
           <p className="max-w-[min(20rem,45vw)] truncate text-right text-xs text-red-400" role="alert">
             {error}

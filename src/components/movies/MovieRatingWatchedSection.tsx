@@ -14,19 +14,10 @@ export function MovieRatingWatchedSection({
   watches,
 }: MovieRatingWatchedSectionProps) {
   return (
-    <section className="border-t border-border/60 pt-4">
-      <h2 className="font-mono-tech mb-3 text-muted">оценка и просмотр</h2>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <span className="font-mono-tech text-faint">оценки</span>
-          <MovieRating movieId={movieId} ratings={ratings} />
-        </div>
-        <MovieWatchLog
-          movieId={movieId}
-          watches={watches}
-          ratingCount={ratings.length}
-        />
-      </div>
+    <section className="movie-journal" aria-label="Оценки и просмотры">
+      <MovieRating movieId={movieId} ratings={ratings} />
+      <MovieWatchLog movieId={movieId} watches={watches}
+        ratingCount={ratings.filter((row) => row.rating != null).length} />
     </section>
   );
 }

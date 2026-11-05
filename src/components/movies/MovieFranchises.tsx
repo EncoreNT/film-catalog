@@ -1,5 +1,5 @@
-import { Library } from "lucide-react";
-import { TagPill } from "@/components/primitives/TagPill";
+import Link from "next/link";
+import { ArrowUpRight, Library } from "lucide-react";
 
 interface MovieFranchisesProps {
   memberships: {
@@ -15,18 +15,14 @@ interface MovieFranchisesProps {
 export function MovieFranchises({ memberships }: MovieFranchisesProps) {
   if (memberships.length === 0) return null;
   return (
-    <section>
-      <h2 className="font-mono-tech mb-3 text-faint">входит во франшизы</h2>
-      <ul className="flex flex-wrap gap-2">
+    <section className="movie-franchises">
+      <h2><Library size={15} aria-hidden /> Франшизы</h2>
+      <ul>
         {memberships.map((membership) => (
           <li key={membership.id}>
-            <TagPill
-              href={`/franchises/${membership.franchise.slug}`}
-              icon={<Library className="h-3.5 w-3.5 text-accent" aria-hidden />}
-              className="py-1.5"
-            >
-              {membership.franchise.name}
-            </TagPill>
+            <Link className="focus-ring" href={`/franchises/${membership.franchise.slug}`}>
+              {membership.franchise.name}<ArrowUpRight size={14} aria-hidden />
+            </Link>
           </li>
         ))}
       </ul>

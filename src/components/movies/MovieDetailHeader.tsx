@@ -1,7 +1,6 @@
+import { CalendarDays, Clock } from "lucide-react";
 import { MovieApproveButton } from "@/components/movies/MovieApproveButton";
-import { EditEntityLink } from "@/components/primitives/EditEntityLink";
 import { DetailMetaLine } from "@/components/primitives/DetailMetaLine";
-import { TagPill } from "@/components/primitives/TagPill";
 import { displayGenreName } from "@/lib/shared/dictionaries";
 import { formatSeriesCountLabel } from "@/lib/movies/multipart-duration";
 import { MovieRuntimeMeta } from "@/components/movies/MovieRuntimeMeta";
@@ -31,45 +30,22 @@ export function MovieDetailHeader({
   displayDuration,
   partCount,
 }: MovieDetailHeaderProps) {
+  const [title, ...otherTitles] = movie.title.trim().split(" / ");
   return (
-    <header>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-mono-tech text-accent">
-            {movie.status === "DRAFT"
-              ? "черновик"
-              : movie.status === "EXCLUDED"
-                ? "исключён"
-                : "каталог"}
-          </p>
-          {movie.status === "DRAFT" ? (
-            <MovieApproveButton
-              compact
-              movieId={movie.id}
-              title={movie.title}
-            />
-          ) : null}
-          {movie.status === "EXCLUDED" ? (
-            <MovieApproveButton
-              compact
-              restoreFromExcluded
-              movieId={movie.id}
-              title={movie.title}
-            />
-          ) : null}
+    <header className="movie-heading" data-long-title={title.length > 38}>
+      {movie.status !== "CATALOG" && (
+        <div className="movie-status">
+          {movie.status === "DRAFT" ? "Черновик" : "Исключён"}
+          <MovieApproveButton compact restoreFromExcluded={movie.status === "EXCLUDED"}
+            movieId={movie.id} title={movie.title} />
         </div>
-        <EditEntityLink
-          href={`/movies/${movie.slug}/edit`}
-          title="Редактировать фильм"
-        />
-      </div>
-      <h1 className="font-display mt-3 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-5xl xl:text-6xl 2xl:text-6xl">
-        {movie.title}
-      </h1>
+      )}
+      <h1>{title}</h1>
+      {otherTitles.length > 0 && <p className="movie-original">{otherTitles.join(" / ")}</p>}
       <DetailMetaLine
-        className="mt-3"
+        className="movie-meta" separator="pipe"
         items={[
-          { key: "year", node: movie.year ? <span>{movie.year}</span> : null },
+          { key: "year", node: movie.year ? <span className="movie-fact"><CalendarDays size={15} aria-hidden />{movie.year}</span> : null },
           {
             key: "series",
             node:
@@ -80,18 +56,16 @@ export function MovieDetailHeader({
           {
             key: "duration",
             node: displayDuration ? (
-              <MovieRuntimeMeta fallbackSeconds={displayDuration} />
+              <span className="movie-fact"><Clock size={15} aria-hidden />
+                <MovieRuntimeMeta fallbackSeconds={displayDuration} />
+              </span>
             ) : null,
           },
         ]}
       />
-      {genres.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {genres.map((g) => (
-            <TagPill key={g.id}>{displayGenreName(g.name)}</TagPill>
-          ))}
-        </div>
-      ) : null}
+      {genres.length > 0 && (
+        <p className="movie-genres">{genres.map((genre) => displayGenreName(genre.name)).join(", ")}</p>
+      )}
     </header>
   );
 }

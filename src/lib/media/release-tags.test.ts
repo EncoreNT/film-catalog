@@ -12,6 +12,7 @@ import {
   releaseQuickSpecHints,
   secondaryTags,
 } from "@/lib/media/spec-tags";
+import { buildReleaseDetailView } from "@/lib/releases/release-detail-view";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 
 function release(
@@ -873,5 +874,26 @@ describe("audioTrackChannelCount", () => {
     expect(
       audioTrackChannelCount(audio({ channels: null, channelLayout: "quad" })),
     ).toBe(0);
+  });
+});
+
+describe("характеристики на странице фильма", () => {
+  it("различает SDR, неизвестный диапазон и HDR10+ с профилем DV", () => {
+    const range = (hdr: string | null, plus = false) =>
+      buildReleaseDetailView(release({ id: 1, videoTrack: video(hdr, plus) }));
+    expect(range(null).video.dynamicRange).toBeNull();
+    expect(range("SDR").video.dynamicRange).toBe("SDR");
+    expect(range("DV:P8", true).premiumHdr).toMatchObject({
+      label: "HDR10+", sublabel: "Dolby Vision · Profile 8.1",
+    });
+  });
+
+  it("выбирает основной звук по тем же правилам, что и каталог", () => {
+    const original = audio({ isDefault: false, language: "eng", translationType: "original" });
+    const dub = { ...audio({ isDefault: false }), id: 2, streamIndex: 1 };
+    const view = buildReleaseDetailView(release({ id: 1, audioTracks: [original, dub] }));
+    expect(view.mainAudio?.id).toBe(dub.id);
+    expect(view.audioTracks.map(track => track.id)).toEqual([original.id, dub.id]);
+    expect(view.showRibbon).toBe(true);
   });
 });

@@ -101,6 +101,7 @@ export function MovieWatchHistoryModal({
       open={open}
       onClose={onClose}
       title="История просмотров"
+      bodyClassName="movie-history-body"
     >
       {rows.length === 0 ? (
         <p className="font-mono-tech text-faint">просмотров нет</p>
@@ -115,7 +116,7 @@ export function MovieWatchHistoryModal({
                 className="border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
               >
                 {editing ? (
-                  <div className="flex flex-col gap-3 pb-96">
+                  <div className="movie-history-editor">
                     <DatePicker
                       label="Дата просмотра"
                       value={draft}

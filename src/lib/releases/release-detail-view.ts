@@ -8,7 +8,6 @@ import {
   isTvCompatibleAudioCodec,
 } from "@/lib/media/tv-ready";
 import {
-  releaseHasExternalStorage,
   releaseStorageIsExternal,
   releaseStorageLabel,
 } from "@/lib/releases/release-storage";
@@ -20,6 +19,7 @@ import {
   codecFull,
   codecShort,
   formatAudioLabel,
+  mainAudioTrack,
   premiumAudio,
   premiumHdrView,
   releaseTabLabel,
@@ -75,12 +75,14 @@ export type ReleaseDetailView = {
   video: {
     hasData: boolean;
     resolution: string;
+    dynamicRange: string | null;
     vPixels: string | null;
     vBitrateValue: string | null;
     vBitrateUnit: string;
     codec: string | null;
     fps: string | null;
   };
+  mainAudio: ReleaseDetailAudioTrack | null;
   audioTracks: ReleaseDetailAudioTrack[];
   subtitleTracks: ReleaseDetailSubtitleTrack[];
   filePath: string | null;
@@ -127,12 +129,14 @@ export function buildReleaseDetailView(
   const vBitrate = videoBitrateLabel(release);
   const premiumHdr = premiumHdrView(release);
   const premiumAtmos = premiumAudio(release);
+  const mainAudio = mainAudioTrack(release);
   const tier = releaseTier(release);
   const hasResolution = !!(
     release.videoTrack?.resolutionLabel &&
     release.videoTrack.resolutionLabel !== "other"
   );
-  const showRibbon = hasResolution || premiumHdr != null || premiumAtmos != null;
+  const dynamicRange = premiumHdr?.label ?? (release.videoTrack?.hdr === "SDR" ? "SDR" : null);
+  const showRibbon = hasResolution || dynamicRange != null || release.audioTracks.length > 0;
 
   const resolution =
     release.videoTrack?.resolutionLabel &&
@@ -172,6 +176,7 @@ export function buildReleaseDetailView(
     video: {
       hasData: !!(release.videoTrack || release.releaseType),
       resolution,
+      dynamicRange,
       vPixels,
       vBitrateValue: vBitrate ? vBitrate.replace(/[a-z]+/i, "").trim() : null,
       vBitrateUnit: vBitrate?.match(/[a-zA-Z]+/)?.[0] ?? "",
@@ -181,6 +186,7 @@ export function buildReleaseDetailView(
         : null,
       fps: formatFps(release.videoTrack?.fps)?.replace(/fps$/, "") ?? null,
     },
+    mainAudio: mainAudio ? buildAudioTrack(mainAudio) : null,
     audioTracks: [...release.audioTracks]
       .sort((a, b) => {
         if (a.isDefault && !b.isDefault) return -1;

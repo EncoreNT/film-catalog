@@ -9,7 +9,9 @@ import { MovieFranchises } from "@/components/movies/MovieFranchises";
 import { MovieRemakes } from "@/components/movies/MovieRemakes";
 import { MovieRatingWatchedSection } from "@/components/movies/MovieRatingWatchedSection";
 import { EmptyReleasesCard } from "@/components/movies/EmptyReleasesCard";
-import { SpotlightTarget } from "@/components/layout/SpotlightTarget";
+import { MovieBillboard } from "@/components/movies/MovieBillboard";
+import { EditEntityLink } from "@/components/primitives/EditEntityLink";
+import "./movie-detail.css";
 import { loadMovieDetailPage } from "@/lib/movies/load-movie-detail-page";
 
 interface PageProps {
@@ -46,8 +48,12 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
   } = data;
 
   return (
-    <div className="space-y-8 xl:space-y-10 2xl:space-y-12">
-      <BackLink href="/">Назад к каталогу</BackLink>
+    <div className="movie-detail-page">
+      <div className="movie-atmosphere" aria-hidden />
+      <div className="movie-crumb">
+        <BackLink href="/">К каталогу</BackLink>
+        <EditEntityLink href={`/movies/${movie.slug}/edit`} title="Редактировать фильм" label="Редактировать фильм" />
+      </div>
 
       {mergeCandidates.length > 1 ? (
         <DuplicateMergeBanner
@@ -57,6 +63,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
       ) : null}
 
       <MovieRuntimeProvider
+        key={movie.id}
         movieSeconds={movieSeconds}
         partCount={movie.partCount}
         initialActiveId={activeReleaseId}
@@ -66,72 +73,45 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
           durationSeconds: release.durationSeconds,
         }))}
       >
-        {/* Title band — full-width statement across the page. The header
-            (status, title, year, genres, edit) sits above the two-column
-            body so the H1 can stretch wide instead of wrapping inside the
-            narrow identity rail. */}
-        <MovieDetailHeader
-          movie={movie}
-          genres={genres}
-          displayDuration={displayDuration}
-          partCount={movie.partCount}
-        />
-
-        {/* Body. Left: identity rail (poster, synopsis, franchises,
-            rating) — sticky on wide screens so it stays in view while only
-            the technical console on the right scrolls. Right: technical
-            console (releases, video, audio, subtitles, file). Below lg it
-            collapses to a single column. */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)] xl:gap-12 2xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)] 2xl:gap-16">
-          <div className="detail-reveal detail-reveal--2 space-y-5 lg:sticky lg:top-4 lg:self-start">
-            <SpotlightTarget side="left">
-              <MovieCoverHero coverUrl={coverUrl} title={movie.title} />
-            </SpotlightTarget>
-
-            {movie.description ? (
-              <p className="text-sm leading-relaxed text-muted 2xl:text-[0.95rem]">
-                {movie.description}
-              </p>
-            ) : null}
-
-            <MovieFranchises memberships={franchiseMemberships} />
-
-            <MovieRemakes
-              memberships={remakeMemberships}
-              currentMovieFranchises={franchiseMemberships.map((m) => ({
-                id: m.franchise.id,
-                name: m.franchise.name,
-                slug: m.franchise.slug,
-              }))}
-            />
-
-            <MovieRatingWatchedSection
+        <MovieBillboard
+          poster={<MovieCoverHero coverUrl={coverUrl} title={movie.title} />}
+          summary={
+            <>
+              <div className="movie-story">
+                <MovieDetailHeader movie={movie} genres={genres} displayDuration={displayDuration} partCount={movie.partCount} />
+                {movie.description && <p className="movie-synopsis">{movie.description}</p>}
+              </div>
+              <div className="movie-personal">
+                <MovieRatingWatchedSection movieId={movie.id} ratings={ratingRows} watches={watches} />
+                <MovieFranchises memberships={franchiseMemberships} />
+                {remakeMemberships.some((membership) => membership.coMembers.length > 0) && (
+                  <details className="movie-related">
+                    <summary>Связанные версии</summary>
+                    <MovieRemakes
+                      memberships={remakeMemberships}
+                      currentMovieFranchises={franchiseMemberships.map(({ franchise }) => franchise)}
+                    />
+                  </details>
+                )}
+              </div>
+            </>
+          }
+        >
+          {releaseViews.length > 0 ? (
+            <MovieReleasePanel
               movieId={movie.id}
-              ratings={ratingRows}
-              watches={watches}
+              movieSlug={movie.slug}
+              releases={releaseViews}
+              partGroups={partReleaseGroups}
+              initialActiveReleaseId={
+                activeReleaseId ?? releaseViews[0].id
+              }
+              primaryReleaseId={catalogPrimaryReleaseId}
             />
-          </div>
-
-          <SpotlightTarget
-            side="right"
-            className="detail-reveal detail-reveal--3 min-w-0"
-          >
-            {releaseViews.length > 0 ? (
-              <MovieReleasePanel
-                movieId={movie.id}
-                movieSlug={movie.slug}
-                releases={releaseViews}
-                partGroups={partReleaseGroups}
-                initialActiveReleaseId={
-                  activeReleaseId ?? releaseViews[0].id
-                }
-                primaryReleaseId={catalogPrimaryReleaseId}
-              />
-            ) : (
-              <EmptyReleasesCard movieSlug={movie.slug} />
-            )}
-          </SpotlightTarget>
-        </div>
+          ) : (
+            <EmptyReleasesCard movieSlug={movie.slug} />
+          )}
+        </MovieBillboard>
       </MovieRuntimeProvider>
     </div>
   );

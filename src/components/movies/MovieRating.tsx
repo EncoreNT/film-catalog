@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Star } from "lucide-react";
 import { StarRating } from "@/components/primitives/StarRating";
 import { apiFetch } from "@/lib/api/client";
 import {
@@ -22,89 +23,58 @@ interface MovieRatingProps {
 
 export function MovieRating({ movieId, ratings }: MovieRatingProps) {
   const router = useRouter();
+  const saving = useRef(false);
   const [rows, setRows] = useState(ratings);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
-  const average = computeAverageRating(
-    rows
-      .filter((row): row is MovieRatingRow & { rating: number } => row.rating != null)
-      .map((row) => ({ rating: row.rating })),
-  );
+  const rated = rows.filter((row): row is MovieRatingRow & { rating: number } => row.rating != null);
+  const average = computeAverageRating(rated);
 
-  const handleChange = (raterId: number, next: number | null) => {
+  const handleChange = async (raterId: number, next: number | null) => {
+    if (saving.current) return;
+    saving.current = true;
+    setPending(true);
     const previous = rows;
-    setRows((current) =>
-      current.map((row) =>
-        row.raterId === raterId ? { ...row, rating: next } : row,
-      ),
-    );
+    setRows(rows.map((row) => row.raterId === raterId ? { ...row, rating: next } : row));
     setError(null);
-
-    startTransition(async () => {
-      try {
-        if (next == null) {
-          await apiFetch(
-            `/api/movies/${movieId}/ratings`,
-            {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ raterId }),
-            },
-            "Не удалось удалить оценку",
-          );
-        } else {
-          await apiFetch(
-            `/api/movies/${movieId}/ratings`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ raterId, rating: next }),
-            },
-            "Не удалось сохранить оценку",
-          );
-        }
-        router.refresh();
-      } catch {
-        setRows(previous);
-        setError("Не удалось сохранить оценку");
-      }
-    });
+    try {
+      await apiFetch(
+        `/api/movies/${movieId}/ratings`,
+        {
+          method: next == null ? "DELETE" : "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next == null ? { raterId } : { raterId, rating: next }),
+        },
+        "Не удалось сохранить оценку",
+      );
+      router.refresh();
+    } catch {
+      setRows(previous);
+      setError("Не удалось сохранить оценку");
+    } finally {
+      saving.current = false;
+      setPending(false);
+    }
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      {average != null ? (
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-semibold tabular-nums text-accent-bright">
-            {formatRatingDisplay(average)}
-          </span>
-          <span className="font-mono-tech text-xs text-faint">средняя</span>
-        </div>
-      ) : (
-        <p className="font-mono-tech text-sm text-faint">ещё нет оценок</p>
-      )}
-
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <div key={row.raterId} className="flex flex-col gap-1.5">
-            <span className="font-mono-tech text-xs text-muted">{row.raterName}</span>
-            <StarRating
-              value={row.rating}
-              onChange={(next) => handleChange(row.raterId, next)}
-            />
-          </div>
-        ))}
+    <div className="movie-ratings">
+      <div className="movie-journal-label">
+        <Star size={15} aria-hidden /> Оценки
+        <strong aria-label={`Средняя оценка: ${average == null ? "нет" : formatRatingDisplay(average)}`}>
+          {average == null ? "—" : formatRatingDisplay(average)}
+        </strong>
       </div>
-
-      {error ? (
-        <p className="text-sm text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {pending ? (
-        <p className="font-mono-tech text-xs text-faint">сохранение…</p>
-      ) : null}
+      {rows.map((row) => (
+        <div className="movie-rater" key={row.raterId}>
+          <span>{row.raterName}</span>
+          <StarRating size="sm" label={`Оценка — ${row.raterName}`} disabled={pending}
+            value={row.rating} onChange={(next) => void handleChange(row.raterId, next)} />
+        </div>
+      ))}
+      {rows.length === 0 && <p className="text-xs text-muted">Нет зрителей</p>}
+      {error && <p className="text-sm text-danger" role="alert">{error}</p>}
     </div>
   );
 }

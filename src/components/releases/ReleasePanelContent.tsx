@@ -1,21 +1,15 @@
 "use client";
 
-import { type ReactNode, useCallback, useState } from "react";
-import { AudioLines, Check, Copy, CopyPlus, Waves } from "lucide-react";
+import { useCallback, useState } from "react";
+import { AudioLines, Check, Copy, CopyPlus, ChevronDown, Waves, FileVideo, Captions } from "lucide-react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 import { displayFileDir, displayFilePath } from "@/lib/shared/display-path";
-import { SpecTag } from "@/components/shared/SpecTag";
 import { ReleaseStorageBadge } from "@/components/releases/ReleaseStorageBadge";
 import { ReleaseSpecHero } from "@/components/releases/ReleaseSpecHero";
 import { TvReadyReleaseNotice, TvCompatibleTrackBadge } from "@/components/shared/TvReadyMark";
 import { tagIcon } from "@/components/releases/ReleaseSpecRibbon";
 
 type CopyTarget = "file" | "dir";
-
-/** Six-column audio track grid — shared by the header and every row so the
-    columns line up. Default-rail · language · translation · format · channels · bitrate. */
-const AUDIO_GRID =
-  "grid-cols-[16px_56px_minmax(0,1fr)_minmax(0,1.2fr)_56px_64px]";
 
 function FilePathCopyButtons({ filePath }: { filePath: string }) {
   const [copied, setCopied] = useState<CopyTarget | null>(null);
@@ -34,7 +28,7 @@ function FilePathCopyButtons({ filePath }: { filePath: string }) {
   }, []);
 
   const buttonClass =
-    "focus-ring font-mono-tech inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-sm)] border border-border-strong bg-bg-surface px-2.5 py-1.5 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-40";
+    "movie-copy-button focus-ring";
 
   return (
     <div className="mt-3 flex flex-wrap gap-2">
@@ -66,335 +60,116 @@ function FilePathCopyButtons({ filePath }: { filePath: string }) {
   );
 }
 
-function VideoSpecCell({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null;
-}) {
+function ReleaseFile({ release }: { release: ReleaseDetailView }) {
+  const path = release.filePathDisplay;
   return (
-    <div className="flex flex-col gap-1.5">
-      <dt className="font-mono-tech text-faint">{label}</dt>
-      <dd className="font-mono text-sm text-text tabular-nums">{value}</dd>
-    </div>
-  );
-}
-
-/** Medium "spec chip" for the characteristics row (BDRemux, звук 7.1 …).
-    Deliberately a middle tier: clearly larger and more legible than the
-    inline SpecTag pills used inside the audio table, but smaller than the
-    hero plaques above, so the hierarchy reads plaques → characteristics →
-    inline audio badges. */
-function CharacteristicChip({
-  icon,
-  children,
-}: {
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <span className="font-mono inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-bg-elevated/60 px-3 py-1.5 text-xs text-text shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:border-accent/35 hover:bg-bg-surface">
-      <span className="flex shrink-0 items-center text-muted" aria-hidden>
-        {icon}
-      </span>
-      <span>{children}</span>
-    </span>
+    <section className="movie-file" aria-label="Файл релиза">
+      {path ? (
+        <details>
+          <summary className="focus-ring" title={path}>
+            <FileVideo size={15} aria-hidden />
+            <span>{path.split(/[\\/]/).pop() || path}</span>
+            <ChevronDown size={14} aria-hidden />
+          </summary>
+          <p className="movie-file-path">{path}</p>
+          {release.filePath && <FilePathCopyButtons filePath={release.filePath} />}
+        </details>
+      ) : (
+        <p className="movie-file-missing"><FileVideo size={15} aria-hidden /> Путь к файлу не указан</p>
+      )}
+      <div className="movie-file-meta">
+        {release.storageLabel && <ReleaseStorageBadge label={release.storageLabel} external={release.storageExternal} />}
+        {release.fileSizeLabel && <span>{release.fileSizeLabel}</span>}
+        {release.fileDownloadedAtLabel && <span>Скачан {release.fileDownloadedAtLabel}</span>}
+        {release.catalogAddedAtLabel && <span>В каталоге с {release.catalogAddedAtLabel}</span>}
+      </div>
+    </section>
   );
 }
 
 export function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
+  const [section, setSection] = useState("audio");
+  const sections = [
+    { id: "audio", label: "Аудио", count: release.audioTracks.length, Icon: AudioLines },
+    { id: "subs", label: "Субтитры", count: release.subtitleTracks.length, Icon: Captions },
+  ];
   return (
     <div className="min-w-0">
-      {release.showRibbon ? (
-        <div className="mb-6">
+      {release.showRibbon || release.video.hasData ? (
+        <div className="movie-quality-row" key={`quality-${release.id}`}>
           <ReleaseSpecHero release={release} />
         </div>
       ) : null}
 
-      {release.tvReady ? (
-        <div className="mb-4">
-          <TvReadyReleaseNotice />
-        </div>
-      ) : null}
-
-      {release.tags.length > 0 ? (
-        <div className="mb-6">
-          <p className="font-mono-tech mb-2.5 text-faint">характеристики</p>
-          <div className="flex flex-wrap gap-2">
-            {release.tags.map((tag, i) => (
-              <CharacteristicChip
-                key={`${tag.kind}-${tag.label}-${i}`}
-                icon={tagIcon(tag.kind)}
-              >
-                {tag.label}
-              </CharacteristicChip>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Console: a vertical flow of full-width sections separated by
-         hairline dividers. The hero plaques above own the premium-spec
-         showcase; below is the flat technical readout — video signal,
-         audio tracks, subtitles, file provenance. DOM order is the
-         reading order on every breakpoint. */}
-      <div className="min-w-0">
-        <section className="pt-0">
-          <h2 className="font-mono-tech mb-4 text-muted">видео</h2>
-          {release.video.hasData ? (
-            <div className="relative overflow-hidden rounded-[var(--radius)] border border-border/60 bg-bg-elevated/75 p-4 sm:p-5">
-              {/* Calibration scan sweep — a slow cyan probe travelling the
-                 signal readout. Decorative; hidden under reduced motion. */}
-              <div
-                className="laser-scan-line pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan/50 to-transparent"
-                aria-hidden
-              />
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6">
-                {/* Bitrate hero — the marquee number, kept medium so it
-                   reads as an instrument readout, not a giant billboard. */}
-                <div className="flex shrink-0 flex-col gap-1.5">
-                  <span className="font-mono-tech text-faint">битрейт</span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-3xl font-medium leading-none tracking-tight text-text tabular-nums drop-glow-accent sm:text-4xl">
-                      {release.video.vBitrateValue ?? "—"}
-                    </span>
-                    {release.video.vBitrateUnit ? (
-                      <span className="font-mono text-sm text-muted">
-                        {release.video.vBitrateUnit}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-                {/* Spec cells — codec / fps. Resolution lives up in the hero
-                   plaque (with its long-form label), so it is not repeated here. */}
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60 pt-4 sm:flex-1 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-                  <VideoSpecCell label="кодек" value={release.video.codec} />
-                  <VideoSpecCell label="fps" value={release.video.fps} />
-                </dl>
-              </div>
+      {(release.tags.length > 0 || release.tvReady) && (
+        <div className="movie-release-notes">
+          {release.tags.length > 0 && (
+            <div className="movie-characteristics" aria-label="Характеристики">
+              {release.tags.map((tag, i) => <span title={tag.note} key={`${tag.kind}-${i}`}>{tagIcon(tag.kind)}{tag.label}</span>)}
             </div>
-          ) : (
-            <p className="text-sm text-muted">Нет данных</p>
           )}
-        </section>
-
-        <section className="min-w-0 border-t border-border/70 pt-5">
-          <h2 className="font-mono-tech mb-4 text-muted">аудиодорожки</h2>
+          {release.tvReady && <TvReadyReleaseNotice />}
+        </div>
+      )}
+      <ReleaseFile key={`file-${release.id}`} release={release} />
+      <div className="movie-section-tabs" role="group" aria-label="Дорожки релиза">
+        <span aria-hidden className="movie-tab-backdrop" />
+        {sections.map(({ id, label, count, Icon }) => (
+          <button className="focus-ring" key={id} type="button" aria-pressed={section === id}
+            onClick={() => setSection(id)}><Icon size={15} aria-hidden />{label} <small>{count}</small></button>
+        ))}
+      </div>
+      <div className="min-w-0">
+        <section hidden={section !== "audio"} className="min-w-0 pt-3">
+          <h2 className="sr-only">Аудиодорожки</h2>
           {release.audioTracks.length === 0 ? (
             <p className="text-sm text-muted">Нет данных</p>
           ) : (
-            <div className="min-w-0 space-y-1">
-              <div
-                className={`font-mono-tech grid ${AUDIO_GRID} items-center gap-x-2 gap-y-1 border-b border-border pb-2 text-faint`}
-                aria-hidden
-              >
-                <span />
-                <span>язык</span>
-                <span>перевод</span>
-                <span>формат</span>
-                <span>каналы</span>
-                <span className="text-right">битрейт</span>
-              </div>
-              {release.audioTracks.map((track) => (
-                <div
-                  key={track.id}
-                  className={`relative min-w-0 border-b border-border/60 py-2.5 transition-colors last:border-0 last:pb-1 hover:bg-bg-surface/30 ${
-                    track.isDefault
-                      ? "bg-gradient-to-r from-accent/[0.10] via-accent/[0.03] to-transparent"
-                      : ""
-                  }`}
-                >
-                  {/* Default-track accent: a full-height gold rail with a
-                     soft glow plus a gold wash — the row reads as the main
-                     track without a redundant star icon. */}
-                  {track.isDefault ? (
-                    <span
-                      className="glow-accent-10 absolute left-0 top-0 bottom-0 w-[2px] bg-accent"
-                      aria-hidden
-                    />
-                  ) : null}
-                  <div
-                    className={`grid ${AUDIO_GRID} items-center gap-x-2 gap-y-1`}
-                  >
-                    {/* Rail lane — empty spacer reserving room for the gold
-                       bar so it never collides with the language cell. */}
-                    <span aria-hidden />
-                    <span className="flex min-w-0 items-center">
-                      {track.langLabel ? (
-                        <span
-                          className={`font-mono rounded-md px-2 py-1 text-xs tracking-wide ${
-                            track.languageCode === "rus"
-                              ? "bg-bg-elevated text-text"
-                              : "text-muted"
-                          }`}
-                        >
-                          {track.langLabel}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-sm text-faint">—</span>
-                      )}
-                    </span>
-                    <span className="flex min-w-0 items-center">
-                      {track.translation ? (
-                        <span
-                          className="font-mono-tech max-w-full truncate rounded-md border border-border bg-bg-surface px-2 py-1 text-[0.65rem] text-muted"
-                          title={track.translation}
-                        >
-                          {track.translation}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-sm text-faint">—</span>
-                      )}
-                    </span>
-                    <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+            <>
+              <div className="movie-track-head" aria-hidden><span>Язык</span><span>Дорожка</span><span>Формат</span><span>Каналы</span><span>Битрейт</span></div>
+              <ul className="movie-audio-tracks">
+                {release.audioTracks.map((track) => (
+                  <li key={track.id} data-default={track.isDefault}>
+                    <span className="movie-track-lang">{track.langLabel ?? "—"}</span>
+                    <div className="movie-track-name">
+                      <b>{track.title || track.translation || "Аудиодорожка"}</b>
+                      <small>{[track.title && track.translation, track.isDefault && "главная дорожка"].filter(Boolean).join(" · ")}</small>
+                    </div>
+                    <div className="movie-track-format">
                       {track.formatLabel ? (
-                        <SpecTag
-                          kind={track.is3D ? "audio-3d" : "audio"}
-                          icon={
-                            track.is3D ? (
-                              <Waves className="h-3 w-3" />
-                            ) : (
-                              <AudioLines className="h-3 w-3" />
-                            )
-                          }
-                          note={track.codecFullLabel ?? undefined}
-                        >
-                          {track.formatLabel}
-                        </SpecTag>
-                      ) : (
-                        <span className="font-mono text-sm text-faint">—</span>
-                      )}
-                      {track.tvCompatible &&
-                      track.languageCode === "rus" ? (
-                        <TvCompatibleTrackBadge />
-                      ) : null}
-                    </span>
-                    <span className="flex min-w-0 items-center">
-                      {track.channelLayout ? (
-                        <SpecTag kind="channel">{track.channelLayout}</SpecTag>
-                      ) : (
-                        <span className="font-mono text-sm text-faint">—</span>
-                      )}
-                    </span>
-                    <span className="font-mono min-w-0 truncate text-right text-xs text-muted tabular-nums">
-                      {track.bitrate ?? "—"}
-                    </span>
-                    {track.isDefault || track.title ? (
-                      <p className="font-mono-tech col-span-full mt-1 min-w-0 truncate pl-4 text-xs">
-                        {track.isDefault ? (
-                          <span className="text-accent/80">главная дорожка</span>
-                        ) : null}
-                        {track.isDefault && track.title ? (
-                          <span className="text-faint"> · </span>
-                        ) : null}
-                        {track.title ? (
-                          <span className="text-faint" title={track.title}>
-                            {track.title}
-                          </span>
-                        ) : null}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
+                        <span className={track.is3D ? "movie-spatial-format" : undefined} title={track.codecFullLabel ?? undefined}>
+                          {track.is3D && <Waves size={14} aria-hidden />}{track.formatLabel}
+                        </span>
+                      ) : "—"}
+                      {track.tvCompatible && track.languageCode === "rus" && <TvCompatibleTrackBadge />}
+                    </div>
+                    <span className="movie-track-channels" title="Каналы">{track.channelLayout ?? "—"}</span>
+                    <span className="movie-track-rate" title="Битрейт">{track.bitrate ?? "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
 
-        <section className="min-w-0 border-t border-border/70 pt-5">
-          <h2 className="font-mono-tech mb-4 text-muted">
-            субтитры
-            {release.subtitleTracks.length > 0
-              ? ` · ${release.subtitleTracks.length}`
-              : ""}
-          </h2>
+        <section hidden={section !== "subs"} className="min-w-0 pt-3">
+          <h2 className="sr-only">Субтитры</h2>
           {release.subtitleTracks.length === 0 ? (
             <p className="text-sm text-muted">Нет субтитров</p>
           ) : (
-            <ul className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="movie-subtitles">
               {release.subtitleTracks.map((track) => (
-                <li
-                  key={track.id}
-                  className="flex min-w-0 items-center gap-2 rounded-[var(--radius-sm)] border border-border/60 bg-bg-surface/40 px-2.5 py-1.5 transition-colors hover:border-accent/30 hover:bg-bg-surface/70"
-                >
-                  <span className="font-mono-tech shrink-0 text-text">
-                    {track.codecLabel ?? "—"}
-                  </span>
-                  <span className="min-w-0 truncate text-muted">
-                    {track.language ?? "—"}
-                  </span>
-                  {track.forced ? (
-                    <span className="font-mono-tech shrink-0 text-accent">
-                      forced
-                    </span>
-                  ) : null}
-                  {track.title ? (
-                    <span
-                      className="font-mono-tech ml-auto shrink-0 truncate text-faint"
-                      title={track.title}
-                    >
-                      {track.title}
-                    </span>
-                  ) : null}
+                <li key={track.id}>
+                  <span className="movie-track-lang">{track.language?.toUpperCase() ?? "—"}</span>
+                  <b>{track.title ?? "Субтитры"}</b>
+                  <small>{track.forced && "Форсированные"}</small>
+                  <span>{track.codecLabel ?? "—"}</span>
                 </li>
               ))}
             </ul>
           )}
         </section>
 
-        <section className="min-w-0 border-t border-border/70 pt-5">
-          <h2 className="font-mono-tech mb-4 text-muted">файл</h2>
-          {release.storageLabel ||
-          release.fileSizeLabel ||
-          release.fileDownloadedAtLabel ||
-          release.catalogAddedAtLabel ? (
-            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-              {release.storageLabel ? (
-                <ReleaseStorageBadge
-                  label={release.storageLabel}
-                  external={release.storageExternal}
-                />
-              ) : null}
-              {release.fileSizeLabel ? (
-                <span className="font-mono-tech text-faint">
-                  размер{" "}
-                  <span className="font-mono text-sm text-text tabular-nums">
-                    {release.fileSizeLabel}
-                  </span>
-                </span>
-              ) : null}
-              {release.fileDownloadedAtLabel ? (
-                <span className="font-mono-tech text-faint">
-                  скачан{" "}
-                  <span className="font-mono text-sm text-muted">
-                    {release.fileDownloadedAtLabel}
-                  </span>
-                </span>
-              ) : null}
-              {release.catalogAddedAtLabel ? (
-                <span className="font-mono-tech text-faint">
-                  добавлен в каталог{" "}
-                  <span className="font-mono text-sm text-muted">
-                    {release.catalogAddedAtLabel}
-                  </span>
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-          {release.filePathDisplay ? (
-            <>
-              <p className="break-all text-xs text-muted">
-                {release.filePathDisplay}
-              </p>
-              {release.filePath ? (
-                <FilePathCopyButtons filePath={release.filePath} />
-              ) : null}
-            </>
-          ) : (
-            <p className="font-mono-tech text-xs text-faint">путь не указан</p>
-          )}
-        </section>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Disc3, Plus } from "lucide-react";
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
 import { buttonClassName } from "@/components/primitives/Button";
 
 interface EmptyReleasesCardProps {
@@ -10,12 +9,9 @@ interface EmptyReleasesCardProps {
 
 export function EmptyReleasesCard({ movieSlug }: EmptyReleasesCardProps) {
   return (
-    <MachinedCard variant="calm" bodyClassName="space-y-4">
+    <section className="movie-empty">
       <SpotlightTier tier="standard" />
-      <CardSectionHeader
-        label="нет релизов"
-        title="Сюда ещё не положили файл"
-      />
+      <h2>Релизов пока нет</h2>
       <p className="text-sm text-muted">
         Карточка фильма уже в базе. Релиз появится после сборки или ручного
         добавления файла.
@@ -36,6 +32,6 @@ export function EmptyReleasesCard({ movieSlug }: EmptyReleasesCardProps) {
           Добавить готовый файл
         </Link>
       </div>
-    </MachinedCard>
+    </section>
   );
 }

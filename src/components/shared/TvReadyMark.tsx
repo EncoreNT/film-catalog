@@ -35,26 +35,9 @@ export function TvReadyReleaseNotice({
   const detail = tvReadyMarkDetail();
 
   return (
-    <article
-      className={`flex items-center gap-2.5 rounded-[var(--radius-sm)] border border-cyan/30 bg-cyan/[0.06] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] ${className}`}
-      aria-label={`${label}. ${detail}`}
-    >
-      <span
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[calc(var(--radius-sm)-2px)] border border-cyan/35 bg-cyan/[0.12] text-cyan shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
-        aria-hidden
-      >
-        <Tv className="h-3.5 w-3.5" strokeWidth={1.75} />
-      </span>
-      <div className="min-w-0 flex-1 leading-snug">
-        <p className="font-mono text-xs font-medium text-text">
-          <span>{label}</span>
-          <span className="mx-1.5 hidden font-normal text-faint sm:inline" aria-hidden>
-            ·
-          </span>
-          <span className="hidden font-normal text-muted sm:inline">{detail}</span>
-        </p>
-        <p className="font-mono-tech mt-0.5 text-[10px] text-muted sm:hidden">{detail}</p>
-      </div>
+    <article className={`movie-tv-notice ${className}`} aria-label={`${label}. ${detail}`}>
+      <Tv size={16} aria-hidden />
+      <span>{label}</span>
       <InfoHint
         label="TV и USB"
         text={

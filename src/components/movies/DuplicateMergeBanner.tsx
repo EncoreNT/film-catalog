@@ -36,7 +36,7 @@ export function DuplicateMergeBanner({
 
   return (
     <>
-      <div className="surface-card flex flex-col gap-3 border border-accent/25 bg-accent/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="movie-duplicate flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden />
           <div>
@@ -44,7 +44,7 @@ export function DuplicateMergeBanner({
               Похоже, у этой карточки есть дубли
             </p>
             {groupTitle ? (
-              <p className="font-display mt-1 text-base font-semibold text-text">
+              <p className="mt-1 text-base font-semibold text-text">
                 {groupTitle}
                 {groupYear ? (
                   <span className="font-normal text-muted"> ({groupYear})</span>

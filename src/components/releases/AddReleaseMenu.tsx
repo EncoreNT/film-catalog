@@ -37,7 +37,7 @@ export function AddReleaseMenu({
     <div ref={rootRef} className="relative flex shrink-0 items-center self-center px-1">
       <button
         type="button"
-        className={`focus-ring inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] transition-colors ${
+        className={`focus-ring inline-flex min-h-8 items-center justify-center rounded-[var(--radius-sm)] transition-colors ${
           open
             ? "bg-bg-surface text-accent"
             : "text-faint hover:bg-bg-surface hover:text-accent"
@@ -50,11 +50,12 @@ export function AddReleaseMenu({
         onClick={() => setOpen((value) => !value)}
       >
         <Plus className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+        <span className="movie-tool-label">Добавить</span>
       </button>
       {open ? (
         <div
           id={menuId}
-          className="absolute left-0 top-full z-30 pt-1"
+          className="absolute right-0 top-full z-30 pt-1"
           role="menu"
           aria-label="Как добавить релиз"
         >

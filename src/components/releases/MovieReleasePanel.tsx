@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 import type { ReleasePartGroup } from "@/lib/movies/build-part-release-groups";
 import { ReleaseTabStorageIcon, ReleaseCutMark } from "@/components/releases/ReleaseSpecRibbon";
+import { ReleaseComparison } from "@/components/releases/ReleaseComparison";
 import { ReleasePanelContent } from "@/components/releases/ReleasePanelContent";
 import { ReleasePanelActions } from "@/components/releases/ReleasePanelActions";
 import { AddReleaseMenu } from "@/components/releases/AddReleaseMenu";
@@ -28,19 +29,14 @@ function releaseTabInner(
 ) {
   return (
     <>
-      <ReleaseTabStorageIcon
-        external={release.storageExternal}
-        label={release.storageLabel}
-      />
-      <span>{release.label}</span>
-      {release.versionLabel ? (
-        <ReleaseCutMark label={release.versionLabel} />
-      ) : null}
-      {release.tier ? (
-        <span className="font-mono-tech text-[10px] uppercase tracking-[0.18em]">
-          {tierTab.tag}
-        </span>
-      ) : null}
+      <strong>
+        {release.label}
+        {release.versionLabel && <ReleaseCutMark label={release.versionLabel} />}
+      </strong>
+      <small>
+        <ReleaseTabStorageIcon external={release.storageExternal} label={release.storageLabel} />
+        {release.fileSizeLabel ?? `Релиз #${release.id}`}
+      </small>
       {active ? (
         <motion.span
           layoutId="release-tab-underline"
@@ -70,6 +66,7 @@ export function MovieReleasePanel({
   initialActiveReleaseId,
   primaryReleaseId,
 }: MovieReleasePanelProps) {
+  const releaseTabsRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const grouped =
     partGroups != null && partGroups.length > 1 ? partGroups : null;
@@ -94,7 +91,7 @@ export function MovieReleasePanel({
   const [moveSuccessMessage, setMoveSuccessMessage] = useState<string | null>(
     null,
   );
-  const movieRuntime = useOptionalMovieRuntime();
+  const setRuntimeReleaseId = useOptionalMovieRuntime()?.setActiveReleaseId;
   const showTabs = panelReleases.length > 1;
 
   const activeRelease =
@@ -103,6 +100,17 @@ export function MovieReleasePanel({
     releases.find((r) => r.id === activeId) ??
     releases[0] ??
     null;
+
+  const selectedId = activeRelease?.id;
+  useEffect(() => {
+    const tabs = releaseTabsRef.current;
+    const choice = tabs?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!tabs || !choice) return;
+    const bounds = tabs.getBoundingClientRect();
+    const item = choice.getBoundingClientRect();
+    if (item.right > bounds.right) tabs.scrollLeft += item.right - bounds.right;
+    else if (item.left < bounds.left) tabs.scrollLeft -= bounds.left - item.left;
+  }, [selectedId]);
 
   const handleExportSucceeded = useCallback(
     (job: { targetPathDisplay: string }) => {
@@ -159,8 +167,8 @@ export function MovieReleasePanel({
   );
 
   useEffect(() => {
-    if (activeId != null) movieRuntime?.setActiveReleaseId(activeId);
-  }, [activeId, movieRuntime?.setActiveReleaseId]);
+    if (activeRelease) setRuntimeReleaseId?.(activeRelease.id);
+  }, [activeRelease, setRuntimeReleaseId]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -215,12 +223,19 @@ export function MovieReleasePanel({
   const stripMoveJob = moveJobState.moveJob;
 
   return (
-    <section className="surface-release-panel overflow-hidden">
+    <section className="movie-releases" data-tier={activeTier}>
       <SpotlightTier tier={activeTier} />
-      <div className="flex flex-col gap-0 overflow-visible border-b border-border bg-bg-elevated/85">
+      <div className="movie-edition-heading">
+        <h2>Релизы фильма <small>{releases.length}</small></h2>
+        <div className="movie-edition-controls">
+          {showTabs && <ReleaseComparison releases={panelReleases} activeId={activeRelease.id} onSelect={selectRelease} />}
+          <AddReleaseMenu movieSlug={movieSlug} sourceReleaseId={activeRelease.id} />
+        </div>
+      </div>
+      <div className="movie-release-bar">
         {grouped ? (
           <div
-            className="flex flex-wrap gap-1 border-b border-border/60 px-2 py-2 sm:px-3"
+            className="movie-parts scroll-subtle"
             role="tablist"
             aria-label="Серии фильма"
           >
@@ -251,66 +266,43 @@ export function MovieReleasePanel({
             })}
           </div>
         ) : null}
-        <div className="flex flex-col gap-0 sm:flex-row sm:items-stretch sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-wrap items-stretch px-1 pt-1">
-            <div
-              className="flex flex-wrap gap-0"
-              role={showTabs ? "tablist" : undefined}
-              aria-label={showTabs ? "Релизы" : undefined}
-            >
-              {panelReleases.map((release) => {
-                const active = release.id === activeId;
-                const tierTab = tierTabStyles(releaseToTabTier(release.tier));
-                const className = `font-mono-tech relative inline-flex items-center gap-1.5 px-4 py-2.5 text-xs ${
-                  showTabs && !active ? tierTab.inactiveText : tierTab.text
-                }`;
-                if (!showTabs) {
-                  return (
-                    <div key={release.id} className={className}>
-                      {releaseTabInner(release, true, tierTab)}
-                    </div>
-                  );
-                }
-                return (
-                  <button
-                    key={release.id}
-                    type="button"
-                    role="tab"
-                    id={`release-tab-${release.id}`}
-                    aria-selected={active}
-                    aria-controls={`release-panel-${release.id}`}
-                    aria-label={
-                      release.versionLabel
-                        ? `${release.label}, ${release.versionLabel}`
-                        : release.label
-                    }
+        <div ref={releaseTabsRef} className="movie-release-tabs scroll-subtle"
+          role={showTabs ? "tablist" : undefined} aria-label={showTabs ? "Релизы" : undefined}>
+          {panelReleases.map((release) => {
+            const active = release.id === activeRelease.id;
+            const tierTab = tierTabStyles(releaseToTabTier(release.tier));
+            return (
+              <div key={release.id} className="movie-release-choice" data-active={active}>
+                {showTabs ? (
+                  <button type="button" role="tab" id={`release-tab-${release.id}`}
+                    aria-selected={active} aria-controls={`release-panel-${release.id}`}
+                    aria-label={[release.label, release.versionLabel, release.fileSizeLabel ?? `Релиз #${release.id}`, release.storageLabel].filter(Boolean).join(", ")}
                     onClick={() => selectRelease(release.id)}
-                    className={`focus-ring transition-colors ${className}`}
-                  >
+                    className={`movie-release-tab focus-ring ${active ? tierTab.text : tierTab.inactiveText}`}>
                     {releaseTabInner(release, active, tierTab)}
                   </button>
-                );
-              })}
-            </div>
-            <AddReleaseMenu
-              movieSlug={movieSlug}
-              sourceReleaseId={activeRelease.id}
-            />
-          </div>
-          <ReleasePanelActions
-            movieId={movieId}
-            movieSlug={movieSlug}
-            activeRelease={activeRelease}
-            releaseCount={panelReleases.length}
-            primaryReleaseId={primaryReleaseId}
-            exportJobState={exportJobState}
-            exportDialogOpen={exportDialogOpen}
-            onExportDialogOpenChange={setExportDialogOpen}
-            onExportSuccessMessageChange={setExportSuccessMessage}
-            moveJobState={moveJobState}
-            moveDialogOpen={moveDialogOpen}
-            onMoveDialogOpenChange={setMoveDialogOpen}
-          />
+                ) : (
+                  <div className={`movie-release-tab ${tierTab.text}`}>{releaseTabInner(release, true, tierTab)}</div>
+                )}
+                {active && (
+                  <ReleasePanelActions
+                    movieId={movieId}
+                    movieSlug={movieSlug}
+                    activeRelease={activeRelease}
+                    releaseCount={panelReleases.length}
+                    primaryReleaseId={primaryReleaseId}
+                    exportJobState={exportJobState}
+                    exportDialogOpen={exportDialogOpen}
+                    onExportDialogOpenChange={setExportDialogOpen}
+                    onExportSuccessMessageChange={setExportSuccessMessage}
+                    moveJobState={moveJobState}
+                    moveDialogOpen={moveDialogOpen}
+                    onMoveDialogOpenChange={setMoveDialogOpen}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
         {showMoveStrip && stripMoveJob ? (
           <ReleaseMoveProgressStrip
@@ -356,19 +348,9 @@ export function MovieReleasePanel({
         aria-labelledby={
           showTabs ? `release-tab-${activeRelease.id}` : undefined
         }
-        className="min-w-0 p-4 sm:p-5 2xl:p-5"
+        className="min-w-0"
       >
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={activeRelease.id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-          >
-            <ReleasePanelContent release={activeRelease} />
-          </motion.div>
-        </AnimatePresence>
+        <ReleasePanelContent release={activeRelease} />
       </div>
     </section>
   );

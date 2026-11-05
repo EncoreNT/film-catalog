@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
-import { Button } from "@/components/primitives/Button";
+import { CalendarPlus, Check, Eye, History, LoaderCircle } from "lucide-react";
 import { MovieWatchHistoryModal } from "@/components/movies/MovieWatchHistoryModal";
 import { apiFetch } from "@/lib/api/client";
 import { isMovieWatched } from "@/lib/movies/movie-watched";
@@ -32,16 +31,11 @@ export function MovieWatchLog({
   const [error, setError] = useState<string | null>(null);
   const watchKey = watchEntries.map((row) => `${row.id}:${row.watchedOn}`).join(",");
 
-  useEffect(() => {
-    setWatches(
-      watchKey
-        ? watchKey.split(",").map((part) => {
-            const [id, watchedOn] = part.split(":");
-            return { id: Number(id), watchedOn };
-          })
-        : [],
-    );
-  }, [movieId, watchKey]);
+  const [serverWatchKey, setServerWatchKey] = useState(watchKey);
+  if (watchKey !== serverWatchKey) {
+    setServerWatchKey(watchKey);
+    setWatches(watchEntries);
+  }
   const [pending, startTransition] = useTransition();
 
   const rows = sortWatchesByDate(watches);
@@ -82,58 +76,33 @@ export function MovieWatchLog({
   };
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border/60 pt-4">
-      <span className="font-mono-tech text-faint">просмотрен</span>
-      {watched ? (
-        latestDate ? (
-          <div className="flex flex-col gap-1">
-            <span className="font-mono text-xl font-medium tracking-wide text-text">
-              {formatDate(latestIso)}
-            </span>
-            {relativeWatched ? (
-              <span className="font-mono-tech text-accent/80">
-                {relativeWatched}
-              </span>
-            ) : null}
-            {rows.length > 0 ? (
-              <button
-                type="button"
-                className="focus-ring font-mono-tech w-fit rounded-sm text-left text-muted transition-colors hover:text-accent"
-                onClick={() => setHistoryOpen(true)}
-              >
-                {formatWatchCount(rows.length)} · история
-              </button>
-            ) : null}
-          </div>
+    <div className="movie-watch-log">
+      <div className="movie-watch-heading">
+        <span className="movie-journal-label"><Eye size={15} aria-hidden /> Последний просмотр</span>
+        {rows.length > 0 && (
+          <button type="button" className="movie-history-trigger focus-ring" aria-haspopup="dialog"
+            aria-label={`История ${formatWatchCount(rows.length)}`}
+            title="История просмотров" onClick={() => setHistoryOpen(true)}>
+            <History size={14} aria-hidden /> История
+            <small><span className="movie-count-full">{formatWatchCount(rows.length)}</span><span className="movie-count-short">{rows.length}</span></small>
+          </button>
+        )}
+      </div>
+      <div className="movie-last-watch">
+        {latestDate && latestIso ? <time dateTime={latestIso}>{formatDate(latestIso)}</time>
+          : watched ? "Дата не записана" : "Ещё не смотрели"}
+        {relativeWatched && <small>{relativeWatched}</small>}
+        {watchedToday ? (
+          <span className="movie-watched-today" role="status" title="Просмотр за сегодня отмечен">
+            <Check size={16} aria-hidden /><span className="sr-only">Просмотр за сегодня отмечен</span>
+          </span>
         ) : (
-          <div className="flex flex-col gap-1">
-            <span className="font-mono text-xl font-medium tracking-wide text-text">
-              Смотрели
-            </span>
-            <span className="font-mono-tech text-faint">дату не записывали</span>
-          </div>
-        )
-      ) : (
-        <span className="font-mono text-sm text-faint">не отмечено</span>
-      )}
-
-      {watchedToday ? (
-        <p className="font-mono-tech flex items-center gap-2 text-accent/80">
-          <Check className="h-3.5 w-3.5" aria-hidden />
-          уже отмечено сегодня
-        </p>
-      ) : (
-        <Button
-          type="button"
-          variant="secondary"
-          className="w-full"
-          loading={pending}
-          onClick={markWatched}
-        >
-          Посмотрели
-        </Button>
-      )}
-
+          <button type="button" className="movie-watch-action focus-ring" disabled={pending}
+            aria-label="Отметить просмотр сегодня" title="Отметить просмотр сегодня" onClick={markWatched}>
+            {pending ? <LoaderCircle size={16} className="motion-safe:animate-spin" aria-hidden /> : <CalendarPlus size={16} aria-hidden />}
+          </button>
+        )}
+      </div>
       {error ? (
         <p className="text-sm text-danger" role="alert">
           {error}
