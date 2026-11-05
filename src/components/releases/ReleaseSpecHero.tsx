@@ -1,4 +1,4 @@
-import { AudioLines, Monitor, Sun } from "lucide-react";
+import { AudioLines, Sun, Waves } from "lucide-react";
 import type { ReleaseDetailView } from "@/lib/releases/release-detail-view";
 
 const resolutionNames: Record<string, string> = {
@@ -6,47 +6,49 @@ const resolutionNames: Record<string, string> = {
 };
 
 export function ReleaseSpecHero({ release }: { release: ReleaseDetailView }) {
-  const track = release.mainAudio;
-  const hdr = release.premiumHdr;
-  const [range, profile] = (release.video.dynamicRange ?? "Нет данных").split(" · ");
+  const { video, mainAudio: track, premiumHdr: hdr, premiumAtmos } = release;
+  const [range, profile] = (video.dynamicRange ?? "Нет данных").split(" · ");
   const hdrNote = hdr?.sublabel === "Dynamic Metadata" ? "Динамические метаданные" : hdr?.sublabel;
-  const mainAudio = [track?.formatLabel, track?.channelLayout].filter(Boolean).join(" ");
-  const videoRate = [
-    release.video.vBitrateValue && `${release.video.vBitrateValue} ${release.video.vBitrateUnit}`,
-    release.video.fps && `${release.video.fps} fps`,
-  ].filter(Boolean).join(" · ");
+  const spatialName = track?.is3D && track.formatLabel?.includes("Atmos") ? "Atmos"
+    : track?.is3D && track.formatLabel?.includes("DTS:X") ? "DTS:X" : null;
+  const otherAudio = premiumAtmos && (premiumAtmos.label !== track?.formatLabel || premiumAtmos.sublabel !== track?.channelLayout)
+    ? [premiumAtmos.label, premiumAtmos.sublabel].join(" · ") : null;
   const specs = [
     {
-      label: "Изображение", Icon: Monitor, value: release.video.resolution,
-      note: [resolutionNames[release.video.resolution], release.video.codec, release.vPixels],
-      effect: release.video.resolution === "4K" ? "holo-gold" : "",
+      label: "Разрешение", tone: video.resolution === "4K" ? "gold" : "neutral", Icon: null,
+      value: video.resolution, subtitle: resolutionNames[video.resolution],
+      details: [[release.vPixels, video.codec].filter(Boolean).join(" · ")],
     },
     {
-      label: "Динамический диапазон", Icon: Sun, value: range, note: [profile, hdrNote],
-      effect: hdr ? (hdr.isDolbyVision ? "holo-foil" : "holo-gold") : "",
+      label: "Динамический диапазон", tone: hdr?.isDolbyVision ? "violet" : hdr ? "gold" : "neutral", Icon: Sun,
+      value: range, subtitle: null, details: [profile, hdrNote],
     },
     {
-      label: "Основной звук", Icon: AudioLines, value: mainAudio || "Нет данных",
-      note: [track?.langLabel, track?.translation, release.premiumAtmos?.label, release.premiumAtmos?.sublabel],
-      effect: release.premiumAtmos ? "holo-ruby" : "",
+      label: spatialName ? "Объёмный звук" : "Основной звук", tone: track?.is3D ? "ruby" : "neutral",
+      Icon: track?.is3D ? Waves : AudioLines,
+      value: [spatialName ?? track?.formatLabel, track?.channelLayout].filter(Boolean).join("\u00a0") || "Нет данных",
+      subtitle: null,
+      details: [
+        [spatialName && track?.formatLabel, track?.langLabel, track?.translation].filter(Boolean).join(" · "),
+        otherAudio && `Также: ${otherAudio}`,
+      ],
     },
   ];
+
   return (
     <div className="movie-quality" aria-label="Качество выбранного релиза">
-      {specs.map(({ label, Icon, value, note, effect }, index) => (
-        <article className={`movie-quality-card group/laser spec-plaque-in spec-plaque-in--${index + 1}`} key={label}>
-          <span aria-hidden className="sheen-layer" />
-          {index === 0 && release.video.resolution === "4K" && (
-            <span aria-hidden className="lens-flare left-[4%] top-[34%] w-[50%] opacity-40" />
-          )}
-          {effect && <span aria-hidden className={`movie-card-foil ${effect}`} />}
-          <Icon className="movie-quality-engraving" strokeWidth={0.7} aria-hidden />
-          <div className="movie-plaque-label">{label}</div>
-          <strong>{value}</strong>
-          <small>
-            {note.filter(Boolean).join(" · ")}
-            {index === 0 && videoRate && <span className="block">{videoRate}</span>}
-          </small>
+      {specs.map(({ label, tone, Icon, value, subtitle, details }, index) => (
+        <article key={label} className="movie-quality-card" data-tone={tone}>
+          <div className="movie-plaque-core">
+            <span className="movie-plaque-label">{label}</span>
+            <div className="movie-plaque-reading">
+              {Icon && <span className="movie-plaque-icon"><Icon size={18} strokeWidth={1.6} aria-hidden /></span>}
+              <strong>{value}</strong>
+            </div>
+            {subtitle && <span className="movie-plaque-subtitle">{subtitle}</span>}
+            <small>{details.filter(Boolean).map((line, i) => <span key={i}>{line}</span>)}</small>
+            {index === 0 && video.resolution === "4K" && <span className="movie-plaque-flare" aria-hidden />}
+          </div>
         </article>
       ))}
     </div>

@@ -81,7 +81,6 @@ export function MovieWatchLog({
         <span className="movie-journal-label"><Eye size={15} aria-hidden /> Последний просмотр</span>
         {rows.length > 0 && (
           <button type="button" className="movie-history-trigger focus-ring" aria-haspopup="dialog"
-            aria-label={`История ${formatWatchCount(rows.length)}`}
             title="История просмотров" onClick={() => setHistoryOpen(true)}>
             <History size={14} aria-hidden /> История
             <small><span className="movie-count-full">{formatWatchCount(rows.length)}</span><span className="movie-count-short">{rows.length}</span></small>

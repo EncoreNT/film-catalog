@@ -30,17 +30,17 @@ function releaseTabInner(
   return (
     <>
       <strong>
+        <ReleaseTabStorageIcon external={release.storageExternal} label={release.storageLabel} />
         {release.label}
         {release.versionLabel && <ReleaseCutMark label={release.versionLabel} />}
       </strong>
       <small>
-        <ReleaseTabStorageIcon external={release.storageExternal} label={release.storageLabel} />
         {release.fileSizeLabel ?? `Релиз #${release.id}`}
       </small>
       {active ? (
         <motion.span
           layoutId="release-tab-underline"
-          className={`pointer-events-none absolute inset-x-3 bottom-0 h-[2px] rounded-full ${tierTab.underline} ${tierTab.glow}`}
+          className={`pointer-events-none absolute inset-x-3 top-0 h-[2px] rounded-full ${tierTab.underline} ${tierTab.glow}`}
           transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           aria-hidden
         />
@@ -223,16 +223,10 @@ export function MovieReleasePanel({
   const stripMoveJob = moveJobState.moveJob;
 
   return (
-    <section className="movie-releases" data-tier={activeTier}>
+    <section className="movie-releases" data-tier={activeTier} aria-label="Релизы фильма">
       <SpotlightTier tier={activeTier} />
-      <div className="movie-edition-heading">
-        <h2>Релизы фильма <small>{releases.length}</small></h2>
-        <div className="movie-edition-controls">
-          {showTabs && <ReleaseComparison releases={panelReleases} activeId={activeRelease.id} onSelect={selectRelease} />}
-          <AddReleaseMenu movieSlug={movieSlug} sourceReleaseId={activeRelease.id} />
-        </div>
-      </div>
       <div className="movie-release-bar">
+        <span className="movie-tab-backdrop" aria-hidden />
         {grouped ? (
           <div
             className="movie-parts scroll-subtle"
@@ -266,43 +260,49 @@ export function MovieReleasePanel({
             })}
           </div>
         ) : null}
-        <div ref={releaseTabsRef} className="movie-release-tabs scroll-subtle"
-          role={showTabs ? "tablist" : undefined} aria-label={showTabs ? "Релизы" : undefined}>
-          {panelReleases.map((release) => {
-            const active = release.id === activeRelease.id;
-            const tierTab = tierTabStyles(releaseToTabTier(release.tier));
-            return (
-              <div key={release.id} className="movie-release-choice" data-active={active}>
-                {showTabs ? (
-                  <button type="button" role="tab" id={`release-tab-${release.id}`}
-                    aria-selected={active} aria-controls={`release-panel-${release.id}`}
-                    aria-label={[release.label, release.versionLabel, release.fileSizeLabel ?? `Релиз #${release.id}`, release.storageLabel].filter(Boolean).join(", ")}
-                    onClick={() => selectRelease(release.id)}
-                    className={`movie-release-tab focus-ring ${active ? tierTab.text : tierTab.inactiveText}`}>
-                    {releaseTabInner(release, active, tierTab)}
-                  </button>
-                ) : (
-                  <div className={`movie-release-tab ${tierTab.text}`}>{releaseTabInner(release, true, tierTab)}</div>
-                )}
-                {active && (
-                  <ReleasePanelActions
-                    movieId={movieId}
-                    movieSlug={movieSlug}
-                    activeRelease={activeRelease}
-                    releaseCount={panelReleases.length}
-                    primaryReleaseId={primaryReleaseId}
-                    exportJobState={exportJobState}
-                    exportDialogOpen={exportDialogOpen}
-                    onExportDialogOpenChange={setExportDialogOpen}
-                    onExportSuccessMessageChange={setExportSuccessMessage}
-                    moveJobState={moveJobState}
-                    moveDialogOpen={moveDialogOpen}
-                    onMoveDialogOpenChange={setMoveDialogOpen}
-                  />
-                )}
-              </div>
-            );
-          })}
+        <div className="movie-release-toolbar">
+          <div ref={releaseTabsRef} className="movie-release-tabs scroll-subtle"
+            role={showTabs ? "tablist" : undefined} aria-label={showTabs ? "Релизы" : undefined}>
+            {panelReleases.map((release) => {
+              const active = release.id === activeRelease.id;
+              const tierTab = tierTabStyles(releaseToTabTier(release.tier));
+              return (
+                <div key={release.id} className="movie-release-choice" data-active={active} data-tier={release.tier ?? "standard"}>
+                  {showTabs ? (
+                    <button type="button" role="tab" id={`release-tab-${release.id}`}
+                      aria-selected={active} aria-controls={`release-panel-${release.id}`}
+                      aria-label={[release.label, release.versionLabel, release.fileSizeLabel ?? `Релиз #${release.id}`, release.storageLabel].filter(Boolean).join(", ")}
+                      onClick={() => selectRelease(release.id)}
+                      className={`movie-release-tab focus-ring ${active ? tierTab.text : tierTab.inactiveText}`}>
+                      {releaseTabInner(release, active, tierTab)}
+                    </button>
+                  ) : (
+                    <div className={`movie-release-tab ${tierTab.text}`}>{releaseTabInner(release, true, tierTab)}</div>
+                  )}
+                  {active && (
+                    <ReleasePanelActions
+                      movieId={movieId}
+                      movieSlug={movieSlug}
+                      activeRelease={activeRelease}
+                      releaseCount={panelReleases.length}
+                      primaryReleaseId={primaryReleaseId}
+                      exportJobState={exportJobState}
+                      exportDialogOpen={exportDialogOpen}
+                      onExportDialogOpenChange={setExportDialogOpen}
+                      onExportSuccessMessageChange={setExportSuccessMessage}
+                      moveJobState={moveJobState}
+                      moveDialogOpen={moveDialogOpen}
+                      onMoveDialogOpenChange={setMoveDialogOpen}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="movie-edition-controls">
+            {showTabs && <ReleaseComparison releases={panelReleases} activeId={activeRelease.id} onSelect={selectRelease} />}
+            <AddReleaseMenu movieSlug={movieSlug} sourceReleaseId={activeRelease.id} />
+          </div>
         </div>
         {showMoveStrip && stripMoveJob ? (
           <ReleaseMoveProgressStrip
@@ -348,7 +348,7 @@ export function MovieReleasePanel({
         aria-labelledby={
           showTabs ? `release-tab-${activeRelease.id}` : undefined
         }
-        className="min-w-0"
+        className="movie-release-workspace min-w-0"
       >
         <ReleasePanelContent release={activeRelease} />
       </div>

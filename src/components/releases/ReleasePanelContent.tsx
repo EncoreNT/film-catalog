@@ -64,6 +64,7 @@ function ReleaseFile({ release }: { release: ReleaseDetailView }) {
   const path = release.filePathDisplay;
   return (
     <section className="movie-file" aria-label="Файл релиза">
+      <h3>Файл релиза</h3>
       {path ? (
         <details>
           <summary className="focus-ring" title={path}>
@@ -87,6 +88,20 @@ function ReleaseFile({ release }: { release: ReleaseDetailView }) {
   );
 }
 
+function VideoRates({ video }: { video: ReleaseDetailView["video"] }) {
+  if (!video.vBitrateValue && !video.fps) return null;
+  return (
+    <dl className="movie-video-rates" aria-label="Параметры видео">
+      {video.vBitrateValue && (
+        <div><dt>Битрейт видео</dt><dd>{video.vBitrateValue} {video.vBitrateUnit}</dd></div>
+      )}
+      {video.fps && (
+        <div><dt>Частота кадров</dt><dd>{video.fps} fps</dd></div>
+      )}
+    </dl>
+  );
+}
+
 export function ReleasePanelContent({ release }: { release: ReleaseDetailView }) {
   const [section, setSection] = useState("audio");
   const sections = [
@@ -94,82 +109,87 @@ export function ReleasePanelContent({ release }: { release: ReleaseDetailView })
     { id: "subs", label: "Субтитры", count: release.subtitleTracks.length, Icon: Captions },
   ];
   return (
-    <div className="min-w-0">
-      {release.showRibbon || release.video.hasData ? (
-        <div className="movie-quality-row" key={`quality-${release.id}`}>
-          <ReleaseSpecHero release={release} />
-        </div>
-      ) : null}
-
-      {(release.tags.length > 0 || release.tvReady) && (
-        <div className="movie-release-notes">
-          {release.tags.length > 0 && (
-            <div className="movie-characteristics" aria-label="Характеристики">
-              {release.tags.map((tag, i) => <span title={tag.note} key={`${tag.kind}-${i}`}>{tagIcon(tag.kind)}{tag.label}</span>)}
-            </div>
-          )}
-          {release.tvReady && <TvReadyReleaseNotice />}
-        </div>
-      )}
-      <ReleaseFile key={`file-${release.id}`} release={release} />
-      <div className="movie-section-tabs" role="group" aria-label="Дорожки релиза">
-        <span aria-hidden className="movie-tab-backdrop" />
-        {sections.map(({ id, label, count, Icon }) => (
-          <button className="focus-ring" key={id} type="button" aria-pressed={section === id}
-            onClick={() => setSection(id)}><Icon size={15} aria-hidden />{label} <small>{count}</small></button>
-        ))}
+    <div className="movie-release-body min-w-0">
+      <div className="movie-release-rail">
+        <VideoRates video={release.video} />
+        <ReleaseFile key={release.id} release={release} />
       </div>
-      <div className="min-w-0">
-        <section hidden={section !== "audio"} className="min-w-0 pt-3">
-          <h2 className="sr-only">Аудиодорожки</h2>
-          {release.audioTracks.length === 0 ? (
-            <p className="text-sm text-muted">Нет данных</p>
-          ) : (
-            <>
-              <div className="movie-track-head" aria-hidden><span>Язык</span><span>Дорожка</span><span>Формат</span><span>Каналы</span><span>Битрейт</span></div>
-              <ul className="movie-audio-tracks">
-                {release.audioTracks.map((track) => (
-                  <li key={track.id} data-default={track.isDefault}>
-                    <span className="movie-track-lang">{track.langLabel ?? "—"}</span>
-                    <div className="movie-track-name">
-                      <b>{track.title || track.translation || "Аудиодорожка"}</b>
-                      <small>{[track.title && track.translation, track.isDefault && "главная дорожка"].filter(Boolean).join(" · ")}</small>
-                    </div>
-                    <div className="movie-track-format">
-                      {track.formatLabel ? (
-                        <span className={track.is3D ? "movie-spatial-format" : undefined} title={track.codecFullLabel ?? undefined}>
-                          {track.is3D && <Waves size={14} aria-hidden />}{track.formatLabel}
-                        </span>
-                      ) : "—"}
-                      {track.tvCompatible && track.languageCode === "rus" && <TvCompatibleTrackBadge />}
-                    </div>
-                    <span className="movie-track-channels" title="Каналы">{track.channelLayout ?? "—"}</span>
-                    <span className="movie-track-rate" title="Битрейт">{track.bitrate ?? "—"}</span>
+      <div className="movie-release-main min-w-0">
+        {release.showRibbon || release.video.hasData ? (
+          <div className="movie-quality-row" key={`quality-${release.id}`}>
+            <ReleaseSpecHero release={release} />
+          </div>
+        ) : null}
+
+        {(release.tags.length > 0 || release.tvReady) && (
+          <div className="movie-release-notes">
+            {release.tags.length > 0 && (
+              <div className="movie-characteristics" aria-label="Характеристики">
+                {release.tags.map((tag, i) => <span title={tag.note} key={`${tag.kind}-${i}`}>{tagIcon(tag.kind)}{tag.label}</span>)}
+              </div>
+            )}
+            {release.tvReady && <TvReadyReleaseNotice />}
+          </div>
+        )}
+        <div className="movie-section-tabs" role="group" aria-label="Дорожки релиза">
+          <span aria-hidden className="movie-tab-backdrop" />
+          {sections.map(({ id, label, count, Icon }) => (
+            <button className="focus-ring" key={id} type="button" aria-pressed={section === id}
+              onClick={() => setSection(id)}><Icon size={15} aria-hidden />{label} <small>{count}</small></button>
+          ))}
+        </div>
+        <div className="min-w-0">
+          <section hidden={section !== "audio"} className="min-w-0 pt-3">
+            <h2 className="sr-only">Аудиодорожки</h2>
+            {release.audioTracks.length === 0 ? (
+              <p className="text-sm text-muted">Нет данных</p>
+            ) : (
+              <>
+                <div className="movie-track-head" aria-hidden><span>Язык</span><span>Дорожка</span><span>Формат</span><span>Каналы</span><span>Битрейт</span></div>
+                <ul className="movie-audio-tracks">
+                  {release.audioTracks.map((track) => (
+                    <li key={track.id} data-default={track.isDefault}>
+                      <span className="movie-track-lang">{track.langLabel ?? "—"}</span>
+                      <div className="movie-track-name">
+                        <b>{track.title || track.translation || "Аудиодорожка"}</b>
+                        <small>{[track.title && track.translation, track.isDefault && "главная дорожка"].filter(Boolean).join(" · ")}</small>
+                      </div>
+                      <div className="movie-track-format">
+                        {track.formatLabel ? (
+                          <span className={track.is3D ? "movie-spatial-format" : undefined} title={track.codecFullLabel ?? undefined}>
+                            {track.is3D && <Waves size={14} aria-hidden />}{track.formatLabel}
+                          </span>
+                        ) : "—"}
+                        {track.tvCompatible && track.languageCode === "rus" && <TvCompatibleTrackBadge />}
+                      </div>
+                      <span className="movie-track-channels" title="Каналы">{track.channelLayout ?? "—"}</span>
+                      <span className="movie-track-rate" title="Битрейт">{track.bitrate ?? "—"}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+
+          <section hidden={section !== "subs"} className="min-w-0 pt-3">
+            <h2 className="sr-only">Субтитры</h2>
+            {release.subtitleTracks.length === 0 ? (
+              <p className="text-sm text-muted">Нет субтитров</p>
+            ) : (
+              <ul className="movie-subtitles">
+                {release.subtitleTracks.map((track) => (
+                  <li key={track.id}>
+                    <span className="movie-track-lang">{track.language?.toUpperCase() ?? "—"}</span>
+                    <b>{track.title ?? "Субтитры"}</b>
+                    <small>{track.forced && "Форсированные"}</small>
+                    <span>{track.codecLabel ?? "—"}</span>
                   </li>
                 ))}
               </ul>
-            </>
-          )}
-        </section>
+            )}
+          </section>
 
-        <section hidden={section !== "subs"} className="min-w-0 pt-3">
-          <h2 className="sr-only">Субтитры</h2>
-          {release.subtitleTracks.length === 0 ? (
-            <p className="text-sm text-muted">Нет субтитров</p>
-          ) : (
-            <ul className="movie-subtitles">
-              {release.subtitleTracks.map((track) => (
-                <li key={track.id}>
-                  <span className="movie-track-lang">{track.language?.toUpperCase() ?? "—"}</span>
-                  <b>{track.title ?? "Субтитры"}</b>
-                  <small>{track.forced && "Форсированные"}</small>
-                  <span>{track.codecLabel ?? "—"}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
+        </div>
       </div>
     </div>
   );

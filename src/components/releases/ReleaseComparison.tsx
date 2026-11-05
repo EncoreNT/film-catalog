@@ -22,8 +22,8 @@ export function ReleaseComparison({ releases, activeId, onSelect }: {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="movie-compare-trigger focus-ring" aria-haspopup="dialog" onClick={() => setOpen(true)}>
-        <SlidersHorizontal size={15} aria-hidden /> Сравнить релизы
+      <button type="button" className="movie-compare-trigger focus-ring" aria-label="Сравнить релизы" title="Сравнить релизы" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        <SlidersHorizontal size={15} aria-hidden /><span className="movie-tool-label">Сравнить релизы</span>
       </button>
       <Modal title="Сравнение релизов" size="wide" open={open} onClose={() => setOpen(false)}>
         <div className="overflow-x-auto">
