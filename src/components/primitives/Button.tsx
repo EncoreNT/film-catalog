@@ -1,8 +1,9 @@
-import { type ButtonHTMLAttributes } from "react";
+import { type ButtonHTMLAttributes, type Ref } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: Ref<HTMLButtonElement>;
   variant?: Variant;
   loading?: boolean;
 }

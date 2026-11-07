@@ -87,6 +87,7 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | DELETE | `/api/movies/[id]/ratings` | Снять оценку raterId |
 | POST | `/api/movies/[id]/watches` | Записать просмотр дня `{ watchedOn: "YYYY-MM-DD" }`; повтор того же дня — `{ created: false }` |
 | PATCH | `/api/movies/[id]/watches/[watchId]` | Перенести просмотр на другой день; не в будущее; день занят → 409 |
+| DELETE | `/api/movies/[id]/watches/[watchId]` | Удалить просмотр указанного фильма; идемпотентно, 204 |
 
 ## Releases (movie)
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { Button } from "./Button";
 import { NativeDialog } from "./NativeDialog";
 
@@ -13,6 +13,7 @@ interface ModalProps {
   footer?: ReactNode;
   size?: "default" | "wide" | "xwide";
   bodyClassName?: string;
+  preventCancel?: boolean;
 }
 
 export function Modal({
@@ -23,7 +24,9 @@ export function Modal({
   footer,
   size = "default",
   bodyClassName,
+  preventCancel = false,
 }: ModalProps) {
+  const titleId = useId();
   const width =
     size === "xwide"
       ? "w-[min(100%-2rem,1080px)]"
@@ -35,6 +38,8 @@ export function Modal({
     <NativeDialog
       open={open}
       onClose={onClose}
+      preventCancel={preventCancel}
+      ariaLabelledBy={titleId}
       zIndex={100}
       className={`fixed inset-0 m-auto flex ${width} max-h-[90dvh] flex-col overflow-hidden rounded-[var(--radius)] border border-border-strong bg-bg-elevated/85 p-0 text-text shadow-[0_24px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl backdrop:bg-black/60 open:animate-in`}
     >
@@ -47,10 +52,11 @@ export function Modal({
       />
 
       <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
-        <h2 className="font-display text-xl font-semibold">{title}</h2>
+        <h2 id={titleId} className="font-display text-xl font-semibold">{title}</h2>
         <Button
           variant="ghost"
           onClick={onClose}
+          disabled={preventCancel}
           aria-label="Закрыть"
           className="!min-h-11 !w-11 !p-0"
         >

@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useId,
   useRef,
   useState,
   type ReactNode,
@@ -30,6 +31,8 @@ interface DatePickerProps {
   /** Inclusive latest day, `YYYY-MM-DD`. Later days cannot be chosen. */
   max?: string;
   allowClear?: boolean;
+  /** Always-visible calendar for editors with reserved space. */
+  inline?: boolean;
 }
 
 export function DatePicker({
@@ -40,8 +43,12 @@ export function DatePicker({
   hint,
   max,
   allowClear = true,
+  inline = false,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [inputText, setInputText] = useState(() => formatDisplayDate(value));
+  const [inputError, setInputError] = useState<string | undefined>();
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [viewDate, setViewDate] = useState<Date>(() => {
     const parsed = parseISODate(value);
     return parsed ?? startOfDay(new Date());
@@ -53,7 +60,7 @@ export function DatePicker({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const fieldId = label.toLowerCase().replace(/\s+/g, "-");
+  const fieldId = useId();
 
   const openPicker = useCallback(() => {
     const parsed = parseISODate(value);
@@ -64,7 +71,20 @@ export function DatePicker({
   }, [value]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!inline) return;
+    if (document.activeElement !== dateInputRef.current) {
+      setInputText(formatDisplayDate(value));
+      setInputError(undefined);
+      dateInputRef.current?.setCustomValidity("");
+    }
+    const date = parseISODate(value);
+    if (!date) return;
+    setViewDate(new Date(date.getFullYear(), date.getMonth(), 1));
+    setFocusedIso(value);
+  }, [inline, value]);
+
+  useEffect(() => {
+    if (!open || inline) return;
     const handleClick = (e: MouseEvent) => {
       if (!containerRef.current?.contains(e.target as Node)) {
         setOpen(false);
@@ -79,17 +99,22 @@ export function DatePicker({
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleKey);
     };
-  }, [open]);
+  }, [open, inline]);
 
   const days = useMemo(() => buildMonthGrid(viewDate), [viewDate]);
 
   const pick = (iso: string) => {
     if (max && iso > max) return;
+    setInputText(formatDisplayDate(iso));
+    setInputError(undefined);
+    dateInputRef.current?.setCustomValidity("");
     onChange(iso);
     setOpen(false);
   };
 
   const clear = () => {
+    setInputText("");
+    setInputError(undefined);
     onChange("");
     setOpen(false);
   };
@@ -147,6 +172,7 @@ export function DatePicker({
 
   const display = value ? formatDisplayDate(value) : "";
   const selectedDate = parseISODate(value);
+  const fieldError = error ?? inputError;
 
   return (
     <div ref={containerRef} className="relative flex flex-col gap-2">
@@ -161,7 +187,37 @@ export function DatePicker({
         ) : null}
       </div>
 
-      <button
+      {inline ? (
+        <input
+          ref={dateInputRef}
+          id={fieldId}
+          type="text"
+          inputMode="numeric"
+          placeholder="ДД.ММ.ГГГГ"
+          autoComplete="off"
+          value={inputText}
+          required={!allowClear}
+          aria-invalid={!!fieldError}
+          aria-describedby={fieldError ? `${fieldId}-error` : undefined}
+          className="focus-ring min-h-11 w-full rounded-[var(--radius-sm)] border border-border bg-bg-elevated px-3 text-sm text-text [color-scheme:dark]"
+          onChange={(event) => {
+            const digits = event.target.value.replace(/\D/g, "").slice(0, 8);
+            const text = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)].filter(Boolean).join(".");
+            setInputText(text);
+            const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(text);
+            const iso = match ? `${match[3]}-${match[2]}-${match[1]}` : "";
+            const date = parseISODate(iso);
+            const valid = date != null && toISODate(date) === iso;
+            const afterMax = valid && max != null && iso > max;
+            const message = afterMax
+              ? `Выберите дату не позднее ${formatDisplayDate(max)}`
+              : valid || (!text && allowClear) ? "" : "Введите корректную дату ДД.ММ.ГГГГ";
+            event.target.setCustomValidity(message);
+            setInputError(text.length === 10 ? message || undefined : undefined);
+            onChange(valid && !afterMax ? iso : "");
+          }}
+        />
+      ) : <button
         type="button"
         id={fieldId}
         onClick={() => (open ? setOpen(false) : openPicker())}
@@ -192,13 +248,21 @@ export function DatePicker({
             <X className="h-3.5 w-3.5" aria-hidden />
           </span>
         ) : null}
-      </button>
+      </button>}
 
-      {open ? (
+      {inline && (
+        <p id={`${fieldId}-error`} className="min-h-4 text-xs text-danger" role={fieldError ? "alert" : undefined}>
+          {fieldError}
+        </p>
+      )}
+
+      {inline || open ? (
         <div
-          role="dialog"
-          aria-label={`${label} — выбор даты`}
-          className="surface-elevated absolute left-0 top-full z-50 mt-2 w-[19rem] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
+          role={inline ? "group" : "dialog"}
+          aria-label={`${label}, выбор даты`}
+          className={inline
+            ? "w-full min-w-0 py-3"
+            : "surface-elevated absolute left-0 top-full z-50 mt-2 w-[19rem] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"}
         >
           <div className="mb-3 flex items-center justify-between">
             <span className="font-mono-tech text-sm text-text">
@@ -252,7 +316,7 @@ export function DatePicker({
                   className={`relative flex h-8 w-full items-center justify-center rounded-md text-xs transition-all duration-150 ${
                     !cell.inMonth || isAfterMax
                       ? "cursor-default text-faint/40"
-                      : "cursor-pointer text-text hover:bg-bg-surface-hover"
+                      : "focus-ring cursor-pointer text-text hover:bg-bg-surface-hover"
                   } ${
                     cell.inMonth && cell.isToday && !isSelected
                       ? "font-mono-tech text-accent/90 ring-1 ring-inset ring-accent/30"
@@ -298,7 +362,7 @@ export function DatePicker({
         </div>
       ) : null}
 
-      {error ? (
+      {!inline && error ? (
         <p id={`${fieldId}-error`} className="text-xs text-danger" role="alert">
           {error}
         </p>

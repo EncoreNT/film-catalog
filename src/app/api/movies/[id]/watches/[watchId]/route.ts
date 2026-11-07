@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { movieWatchLogSchema } from "@/lib/api/validators";
-import { moveMovieWatch } from "@/lib/movies/movie-watch";
+import { deleteMovieWatch, moveMovieWatch } from "@/lib/movies/movie-watch";
 import {
   isErrorResponse,
   mapDomainError,
@@ -21,5 +21,17 @@ export async function PATCH(request: NextRequest, context: MovieWatchRouteContex
     return NextResponse.json(result);
   } catch (err) {
     return mapDomainError(err, "Не удалось изменить дату просмотра");
+  }
+}
+
+export async function DELETE(_request: NextRequest, context: MovieWatchRouteContext) {
+  const ids = await parseMovieWatchIds(context.params);
+  if (isErrorResponse(ids)) return ids;
+
+  try {
+    await deleteMovieWatch(ids.movieId, ids.watchId);
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    return mapDomainError(err, "Не удалось удалить просмотр");
   }
 }

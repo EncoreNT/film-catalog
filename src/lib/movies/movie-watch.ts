@@ -43,6 +43,11 @@ export async function recordMovieWatch(movieId: number, isoDate: string) {
 
 const DUPLICATE_WATCH_DAY = "В этот день просмотр уже записан";
 
+export async function deleteMovieWatch(movieId: number, watchId: number) {
+  // Scope by both IDs. Repeating a successful deletion is safe.
+  await prisma.movieWatch.deleteMany({ where: { id: watchId, movieId } });
+}
+
 export async function moveMovieWatch(
   movieId: number,
   watchId: number,
