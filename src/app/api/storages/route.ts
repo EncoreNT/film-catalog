@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db/prisma";
+import {
+  createExternalStorage,
+  listExternalStorages,
+} from "@/lib/storages/storage-crud";
 import { externalStorageCreateSchema } from "@/lib/api/validators";
 import { jsonError } from "@/lib/api/api-utils";
 
-const storageListInclude = {
-  _count: { select: { releases: true } },
-} as const;
-
 export async function GET() {
-  const storages = await prisma.externalStorage.findMany({
-    orderBy: { name: "asc" },
-    include: storageListInclude,
-  });
+  const storages = await listExternalStorages();
   return NextResponse.json({ storages });
 }
 
@@ -19,13 +15,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const data = externalStorageCreateSchema.parse(body);
-    const storage = await prisma.externalStorage.create({
-      data: { name: data.name, path: data.path ?? null },
-      include: storageListInclude,
-    });
+    const storage = await createExternalStorage(data);
     return NextResponse.json(storage, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Не удалось создать диск";
+    const message =
+      err instanceof Error ? err.message : "Не удалось создать диск";
     return jsonError(message, 400);
   }
 }

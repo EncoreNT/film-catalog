@@ -1,4 +1,4 @@
-export type FormatBytesUnit = "gb" | "short" | "archive";
+export type FormatBytesUnit = "gb" | "short" | "archive" | "binary";
 
 export interface FormatBytesOptions {
   /** Decimal places for GiB output (default depends on unit). */
@@ -13,11 +13,27 @@ export interface FormatBytesOptions {
  * - `gb` — file sizes with 2 decimals (default for release files)
  * - `short` — deficit labels: 1 decimal GB or rounded MB
  * - `archive` — totals: TiB above 1 TiB, rounded GiB above 100 GiB
+ * - `binary` — explicit binary unit labels (ГиБ/ТиБ), including zero
  */
 export function formatBytes(
   bytes: number | null | undefined,
   options: FormatBytesOptions = {},
 ): string | null {
+  if (options.unit === "binary") {
+    if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return null;
+    const power =
+      bytes >= 1024 ** 4
+        ? 4
+        : bytes >= 1024 ** 3
+          ? 3
+          : bytes >= 1024 ** 2
+            ? 2
+            : bytes >= 1024
+              ? 1
+              : 0;
+    const labels = ["Б", "КиБ", "МиБ", "ГиБ", "ТиБ"];
+    return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: options.precision ?? 2 }).format(bytes / 1024 ** power)} ${labels[power]}`;
+  }
   if (bytes == null || bytes <= 0) return null;
 
   const unit = options.unit ?? "gb";

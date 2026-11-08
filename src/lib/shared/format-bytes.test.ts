@@ -6,6 +6,12 @@ import {
 } from "@/lib/shared/format-bytes";
 
 describe("formatBytes", () => {
+  it("labels binary disk capacity explicitly and distinguishes zero from unknown", () => {
+    expect(formatBytes(2_000_000_000_000, { unit: "binary" })).toBe("1,82 ТиБ");
+    expect(formatBytes(500_000_000_000, { unit: "binary" })).toBe("465,66 ГиБ");
+    expect(formatBytes(0, { unit: "binary" })).toBe("0 Б");
+    expect(formatBytes(null, { unit: "binary" })).toBeNull();
+  });
   it("formats gb mode with 2 decimals", () => {
     expect(formatBytes(2 * 1024 ** 3, { unit: "gb" })).toBe("2.00 ГБ");
     expect(formatFileSizeGB(2 * 1024 ** 3)).toBe("2.00 ГБ");

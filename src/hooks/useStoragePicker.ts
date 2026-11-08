@@ -20,19 +20,32 @@ export function useStoragePicker(
   initialExternalStorage?: InitialExternalStorage | null,
   options?: { defaultKind?: StorageKind },
 ) {
-  const [storageKind, setStorageKindState] = useState<StorageKind>(() =>
-    options?.defaultKind ?? initialStorageKind(initialExternalStorage),
+  const [storageKind, setStorageKindState] = useState<StorageKind>(
+    () => options?.defaultKind ?? initialStorageKind(initialExternalStorage),
   );
   const [storages, setStorages] = useState<StorageOption[]>([]);
   const [selectedStorageId, setSelectedStorageId] = useState(() =>
     initialSelectedStorageId(initialExternalStorage),
   );
 
+  const refreshStorages = useCallback(
+    () =>
+      apiFetch<{ storages: StorageOption[] }>("/api/storages")
+        .then((data) => setStorages(data.storages))
+        .catch(() => {
+          // Keep selectable disks, but never present stale occupancy as current data.
+          setStorages((current) =>
+            current.map((storage) => ({ ...storage, usage: undefined })),
+          );
+        }),
+    [],
+  );
+
   useEffect(() => {
-    void apiFetch<{ storages?: StorageOption[] }>("/api/storages").then(
-      (d) => setStorages(d.storages ?? []),
-    );
-  }, []);
+    void refreshStorages();
+    window.addEventListener("focus", refreshStorages);
+    return () => window.removeEventListener("focus", refreshStorages);
+  }, [refreshStorages]);
 
   const setStorageKind = useCallback((kind: StorageKind) => {
     setStorageKindState(kind);
@@ -68,6 +81,7 @@ export function useStoragePicker(
     selectedStorageId,
     setSelectedStorageId,
     externalStorages: storages,
+    refreshStorages,
     createExternalStorage,
     validateStorage,
     resolveExternalStorageId: resolveExternalStorageIdForSubmit,

@@ -1,0 +1,571 @@
+/* Reference: movie-detail's release pane, readable track inventory and catalog controls.
+   Gold identifies an action or selection; field values retain the neutral film ink. */
+body:has(.release-editor-page) {
+  display: flow-root;
+}
+body:has(.release-editor-page) .stage-floor {
+  background: #0c0b10;
+}
+body:has(.release-editor-page) .spotlight-lit-mask {
+  opacity: 0.3;
+}
+main.container-wide:has(.release-editor-page) {
+  max-width: none;
+  padding: 0 var(--catalog-inset) 48px;
+}
+.release-editor-page {
+  --editor-pane: #191721;
+  --editor-ink: #f3eff5;
+  --editor-muted: #b8afc1;
+  --editor-line: color-mix(
+    in srgb,
+    var(--catalog-control-text) 18%,
+    transparent
+  );
+  color: var(--editor-ink);
+  padding-bottom: 120px;
+}
+.release-editor-heading {
+  padding: 14px 0 28px;
+}
+.release-editor-heading > header {
+  margin-top: 18px;
+  align-items: center;
+}
+.release-editor-heading header > a {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  width: min(calc(var(--release-header-height, 140px) * 2 / 3), 30%);
+  align-self: center;
+}
+.release-editor-heading header a > div {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 7px;
+}
+.release-editor-heading h1 {
+  font:
+    650 clamp(26px, 2.2vw, 42px)/1.18 var(--font-manrope),
+    sans-serif;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.release-editor-heading header p {
+  font:
+    500 12px/1.5 var(--font-manrope),
+    sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--editor-muted);
+}
+.release-editor-grid {
+  min-width: 0;
+  display: grid;
+  gap: 28px;
+}
+.release-editor-source {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border: 1px solid var(--editor-line);
+  background: var(--editor-pane);
+  border-radius: 12px;
+}
+.release-editor-section {
+  min-width: 0;
+  padding: 24px;
+}
+.release-source-section {
+  border-right: 1px solid var(--editor-line);
+}
+.release-editor-section-heading {
+  margin-bottom: 22px;
+}
+.release-editor-section-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font:
+    600 19px/1.3 var(--font-manrope),
+    sans-serif;
+  letter-spacing: -0.025em;
+}
+.release-editor-section-heading h2 svg {
+  color: var(--editor-muted);
+}
+.release-editor-section-heading p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--editor-muted);
+  margin-top: 6px;
+}
+.release-source-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 0.7fr);
+  gap: 18px 24px;
+  align-content: start;
+}
+.release-source-section > * {
+  margin: 0;
+}
+.release-source-section > .release-editor-section-heading {
+  align-self: center;
+}
+.release-source-section > :last-child {
+  grid-column: 1/-1;
+}
+.release-source-section > :last-child > .flex.flex-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.release-source-section #file-path-fill-feedback {
+  grid-column: 1/-1;
+}
+.release-identity-section {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.2fr) minmax(140px, 0.8fr);
+  gap: 18px 22px;
+  align-content: start;
+}
+.release-identity-section > * {
+  margin: 0;
+}
+.release-identity-section > .release-editor-section-heading {
+  grid-column: 1/-1;
+}
+.release-identity-section > :last-child {
+  grid-column: 1/-1;
+}
+.release-editor-workbench {
+  display: grid;
+  grid-template-columns: minmax(320px, 30fr) minmax(0, 70fr);
+  gap: 28px;
+  align-items: start;
+}
+.release-video-panel,
+.release-track-panel {
+  min-width: 0;
+  border: 1px solid var(--editor-line);
+  border-radius: 12px;
+  background: var(--editor-pane);
+}
+.release-video-panel {
+  padding: 24px;
+}
+.release-track-panel > .release-editor-section {
+  padding-bottom: 24px;
+}
+/* Only the navigation owns these rules. Nested segmented controls are not tabs here. */
+.release-editor-page .track-editor-tabs {
+  margin-top: 20px;
+  gap: 24px;
+  border-bottom: 1px solid var(--editor-line);
+}
+.release-editor-page .track-editor-tabs > button {
+  font:
+    550 14px/1.5 var(--font-manrope),
+    sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  min-height: 44px;
+  padding: 8px 0;
+  white-space: nowrap;
+}
+.release-editor-page .track-editor-tabs > button > span {
+  background: var(--accent);
+  box-shadow: none;
+  inset-inline: 0;
+  height: 2px;
+}
+.release-editor-page [role="tabpanel"] {
+  padding-top: 0;
+}
+.release-editor-page [role="tabpanel"] > section > .space-y-4 {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.release-editor-page [role="tabpanel"] > section > .space-y-4 > * {
+  margin: 0;
+}
+.release-editor-page [role="tabpanel"] > section > .space-y-4 > button {
+  align-self: flex-start;
+  margin-top: 20px;
+  border-style: dashed;
+  background: transparent;
+}
+/* One control scale. Segments share the 44px outer height with selects and fields. */
+.release-editor-page :is(input:not([type="checkbox"]), .select-trigger) {
+  height: 44px;
+  min-height: 44px;
+  border-radius: 7px;
+  background: #121018;
+  border: 1px solid var(--editor-line);
+  box-shadow: none;
+  color: var(--editor-ink);
+  font-size: 14px;
+}
+.release-editor-page :is(input:not([type="checkbox"]), .select-trigger):hover {
+  border-color: color-mix(in srgb, var(--editor-muted) 45%, transparent);
+}
+.release-editor-page :is(input, .select-trigger):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.release-editor-page :is(label, .text-muted, .text-faint) {
+  color: var(--editor-muted);
+}
+.release-editor-page input::placeholder {
+  color: var(--editor-muted);
+  opacity: 0.7;
+}
+.release-editor-page input,
+.release-editor-page button {
+  scroll-margin-bottom: 180px;
+}
+.release-editor-page .segmented-control {
+  height: 44px;
+  min-height: 44px;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 7px;
+  background: #121018;
+  border: 1px solid var(--editor-line);
+  margin: 0;
+}
+.release-editor-page .segmented-control > button {
+  height: 36px;
+  min-height: 36px;
+  flex: 1;
+  padding: 4px 10px;
+  border-radius: 4px;
+  box-shadow: none;
+  font:
+    500 13px/1.3 var(--font-manrope),
+    sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+}
+.release-editor-page .segmented-control > button[aria-selected="true"] {
+  background: #39303a;
+  color: var(--accent-bright);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.release-editor-page [role="group"]:has(> input) {
+  border-radius: 7px;
+}
+.release-editor-page [role="group"].overflow-hidden {
+  height: 44px;
+  min-height: 44px;
+  background: #121018;
+  border-color: var(--editor-line);
+}
+.release-editor-page [role="group"].overflow-hidden > input {
+  height: 42px;
+  min-height: 42px;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.release-editor-page [role="group"].overflow-hidden > div > button {
+  min-height: 42px;
+  padding-inline: 10px;
+}
+.release-editor-page [role="group"] > input {
+  min-width: 0;
+}
+.release-editor-page .font-mono-tech {
+  font-family: var(--font-jetbrains), monospace;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.track-editor-row {
+  border-bottom: 1px solid var(--editor-line);
+}
+.track-editor-row > summary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 82px;
+  padding: 16px 4px;
+  list-style: none;
+  cursor: pointer;
+}
+.track-editor-row > summary::-webkit-details-marker {
+  display: none;
+}
+.track-editor-row > summary:hover {
+  background: #ffffff04;
+}
+.track-editor-row > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+.track-editor-language {
+  flex: 0 0 85px;
+  color: var(--accent-bright);
+  font-size: 13px;
+}
+.track-editor-summary {
+  display: grid;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+.track-editor-summary strong {
+  font-size: 15px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.track-editor-summary small {
+  font:
+    12px/1.6 var(--font-jetbrains),
+    monospace;
+  color: var(--editor-muted);
+  overflow-wrap: anywhere;
+}
+.track-editor-primary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-bright);
+  font-size: 11px;
+}
+.track-editor-chevron {
+  flex-shrink: 0;
+  color: var(--editor-muted);
+  transition: transform 160ms;
+}
+.track-editor-row[open] > summary > .track-editor-chevron {
+  transform: rotate(180deg);
+}
+.track-editor-fields {
+  padding: 18px 20px 20px;
+  background: #121018;
+  border: 1px solid var(--editor-line);
+  border-radius: 8px;
+  margin-bottom: 18px;
+  display: grid;
+  gap: 18px;
+}
+.track-editor-fields > .flex.items-center.justify-between > span {
+  display: none;
+}
+.track-editor-fields > .flex.items-center.justify-between {
+  justify-content: flex-end;
+}
+.track-editor-fields > .flex.items-center.justify-between button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  cursor: pointer;
+}
+.track-editor-fields > .flex.items-center.justify-between button::after {
+  content: "Удалить";
+  font-size: 12px;
+}
+.track-editor-fields .grid > :has(input[id$="-title"]) {
+  grid-column: 1/-1;
+}
+.track-editor-fields > .flex.items-center.justify-between {
+  order: 2;
+}
+.track-editor-fields .font-mono-tech {
+  font:
+    500 12px/1.5 var(--font-manrope),
+    sans-serif;
+}
+.release-editor-page .fixed > .container-wide {
+  max-width: none;
+  padding-inline: var(--catalog-inset);
+}
+.release-editor-page .fixed [role="alert"] {
+  white-space: normal;
+  overflow: visible;
+}
+.release-editor-page .fixed .font-mono-tech {
+  font:
+    400 12px/1.5 var(--font-manrope),
+    sans-serif;
+}
+@media (max-width: 1279px) {
+  .release-editor-source {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .release-source-section {
+    border-right: 0;
+    border-bottom: 1px solid var(--editor-line);
+  }
+  .release-identity-section {
+    grid-template-columns: minmax(260px, 1fr) repeat(2, minmax(0, 1fr));
+  }
+  .release-identity-section > :last-child {
+    grid-column: auto;
+  }
+  .release-editor-workbench {
+    grid-template-columns: minmax(280px, 35fr) minmax(0, 65fr);
+    gap: 20px;
+  }
+  .track-editor-language {
+    flex-basis: 65px;
+  }
+  .track-editor-primary {
+    font-size: 0;
+    gap: 0;
+  }
+}
+@media (max-width: 767px) {
+  .release-editor-page {
+    padding-bottom: 180px;
+  }
+  .release-editor-heading h1 {
+    font-size: 26px;
+  }
+  .release-editor-section,
+  .release-video-panel {
+    padding: 18px;
+  }
+  .release-source-section,
+  .release-identity-section,
+  .release-editor-workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .release-source-section > :last-child > .flex.flex-col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .release-editor-source {
+    border-radius: 10px;
+  }
+  .release-editor-section-heading {
+    margin-bottom: 18px;
+  }
+  .track-editor-row > summary {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .track-editor-language {
+    flex-basis: auto;
+    width: 100%;
+  }
+  .track-editor-summary strong {
+    font-size: 14px;
+  }
+  .track-editor-fields {
+    padding: 14px;
+  }
+  .release-editor-page .fixed > .container-wide > :last-child {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .track-editor-chevron {
+    transition: none;
+  }
+}
+/* Keep track actions on one quiet footer row, away from editable values. */
+.track-editor-fields {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.track-editor-fields > .grid {
+  grid-column: 1/-1;
+}
+.track-editor-fields > .flex.items-center.justify-between {
+  grid-column: 2;
+  grid-row: 2;
+  order: 1;
+}
+.track-editor-fields > :last-child {
+  grid-column: 1;
+  grid-row: 2;
+}
+.track-editor-fields .group > svg {
+  filter: none;
+}
+@media (max-width: 767px) {
+  .track-editor-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .track-editor-fields > .flex.items-center.justify-between {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+.release-editor-heading header p.release-original-title {
+  font:
+    450 clamp(19px, 1.5vw, 28px)/1.3 var(--font-fraunces),
+    Georgia,
+    serif;
+  letter-spacing: -0.02em;
+  color: var(--editor-muted);
+}
+.release-file-size {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 3px 0 8px;
+  font-size: 12px;
+  color: var(--editor-muted);
+}
+.release-file-size strong {
+  font:
+    500 14px/1.5 var(--font-jetbrains),
+    monospace;
+  color: var(--editor-ink);
+}
+.release-editor-form[data-tier="gold"] {
+  --release-tier-color: var(--accent);
+}
+.release-editor-form[data-tier="ruby"] {
+  --release-tier-color: var(--crimson-bright);
+}
+.release-editor-form:is([data-tier="gold"], [data-tier="ruby"])
+  :is(.release-editor-source, .release-video-panel, .release-track-panel) {
+  border-color: color-mix(
+    in srgb,
+    var(--release-tier-color) 40%,
+    var(--editor-line)
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--release-tier-color) 18%, transparent),
+    0 0 24px color-mix(in srgb, var(--release-tier-color) 6%, transparent);
+}
+.release-editor-form:is([data-tier="gold"], [data-tier="ruby"])
+  .track-editor-tabs
+  > button[aria-selected="true"] {
+  color: var(--release-tier-color);
+}
+.release-editor-form:is([data-tier="gold"], [data-tier="ruby"])
+  .track-editor-tabs
+  > button
+  > span {
+  background: var(--release-tier-color);
+}
+.release-editor-page:has(.release-editor-form[data-tier="gold"])
+  .release-editor-heading
+  header
+  a
+  > div {
+  border-color: var(--accent);
+}
+.release-editor-page:has(.release-editor-form[data-tier="ruby"])
+  .release-editor-heading
+  header
+  a
+  > div {
+  border-color: var(--crimson-bright);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .release-editor-source,
+  .release-video-panel,
+  .release-track-panel {
+    transition:
+      border-color 240ms,
+      box-shadow 240ms;
+  }
+}

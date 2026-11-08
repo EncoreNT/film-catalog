@@ -6,7 +6,6 @@ import { ReleaseTransferDialog } from "@/components/releases/ReleaseTransferDial
 import { ReleaseJobDialogProgress } from "@/components/releases/ReleaseJobDialogProgress";
 import { ReleasePathBlock } from "@/components/releases/ReleasePathBlock";
 import { ReleaseTransferDestinationForm } from "@/components/releases/ReleaseTransferDestinationForm";
-import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import { useTargetDiskSpace } from "@/hooks/useTargetDiskSpace";
 import type { ReleaseExportJobState } from "@/hooks/useReleaseExportJob";
 import { apiFetch } from "@/lib/api/client";
@@ -63,7 +62,7 @@ export function ReleaseExportDialog({
     cancelExport,
   } = exportJobState;
 
-  const etaLabel = useMediaJobEtaLabel(exportJob);
+  const etaLabel = exportJobState.etaLabel;
 
   const diskSpace = useTargetDiskSpace({
     enabled: open,
@@ -292,7 +291,7 @@ export function ReleaseExportDialog({
       preventCancel={busy && !exportActive}
       accent="accent"
       eyebrow="экспорт"
-      title={EXPORT_RELEASE_DIALOG_TITLE}
+      title={exportActive ? "Копирование для ТВ" : EXPORT_RELEASE_DIALOG_TITLE}
       titleId="export-dialog-title"
       statusMeta={exportMeta}
       statusRunning={exportJob?.status === "RUNNING"}
@@ -300,8 +299,7 @@ export function ReleaseExportDialog({
     >
       {exportActive ? (
           <ReleaseJobDialogProgress
-            accent="accent"
-            activeDescription="Копирование идёт в фоне. Можно закрыть диалог — прогресс останется в полоске под вкладками релиза и в списке фоновых задач."
+            activeDescription="Копирование продолжается в фоне. Можно скрыть окно и следить за прогрессом на странице фильма."
             targetDisplay={targetDisplay}
             sizeHint={exportJob ? exportSizeHint(exportJob) : null}
             queued={exportJob?.status === "QUEUED"}

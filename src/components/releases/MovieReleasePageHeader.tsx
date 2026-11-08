@@ -1,3 +1,6 @@
+"use client";
+
+import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { DetailMetaLine } from "@/components/primitives/DetailMetaLine";
 import { ApiCoverImage } from "@/components/primitives/ApiCoverImage";
@@ -23,10 +26,28 @@ export function MovieReleasePageHeader({
   eyebrow,
   releaseLabel,
 }: MovieReleasePageHeaderProps) {
+  const headerRef = useRef<HTMLElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    const text = textRef.current;
+    if (!header || !text) return;
+    const measure = () =>
+      header.style.setProperty(
+        "--release-header-height",
+        `${text.getBoundingClientRect().height}px`,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(text);
+    return () => observer.disconnect();
+  }, []);
   const coverUrl = movieCoverUrlFromMovie(movie);
+  const [title, ...otherTitles] = movie.title.trim().split(" / ");
+  const originalTitle = otherTitles.join(" / ");
 
   return (
-    <header className="flex gap-4 sm:gap-5">
+    <header ref={headerRef} className="flex gap-4 sm:gap-5">
       <Link
         href={`/movies/${movie.slug}`}
         className="focus-ring group shrink-0"
@@ -38,7 +59,7 @@ export function MovieReleasePageHeader({
               src={coverUrl}
               alt={`Обложка: ${movie.title}`}
               fill
-              sizes="88px"
+              sizes="(max-width: 767px) 112px, 160px"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             />
           ) : (
@@ -51,15 +72,23 @@ export function MovieReleasePageHeader({
         </div>
       </Link>
 
-      <div className="min-w-0 flex-1 pt-0.5">
+      <div ref={textRef} className="min-w-0 flex-1 pt-0.5">
         <p className="font-mono-tech text-accent">{eyebrow}</p>
         <h1 className="font-display mt-1.5 text-2xl font-bold tracking-tight sm:mt-2 sm:text-3xl">
-          {movie.title}
+          {title}
         </h1>
+        {originalTitle ? (
+          <p className="release-original-title font-display mt-1 text-xl text-muted">
+            {originalTitle}
+          </p>
+        ) : null}
         <DetailMetaLine
           className="mt-2 text-sm"
           items={[
-            { key: "year", node: movie.year ? <span>{movie.year}</span> : null },
+            {
+              key: "year",
+              node: movie.year ? <span>{movie.year}</span> : null,
+            },
             {
               key: "release",
               node: releaseLabel ? <span>{releaseLabel}</span> : null,

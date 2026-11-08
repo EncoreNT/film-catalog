@@ -27,3 +27,14 @@ describe("formatBuildEtaSeconds", () => {
     expect(formatBuildEtaSeconds(120)).toBe("~2 мин");
   });
 });
+
+
+describe("ETA with ten-second precision", () => {
+  it.each([
+    [1, "~10 с"], [14, "~10 с"], [15, "~20 с"], [54, "~50 с"],
+    [59, "~1 мин"], [194, "~3 мин 10 с"], [195, "~3 мин 20 с"],
+    [3599, "~1 ч"], [3611, "~1 ч 10 с"], [3679, "~1 ч 1 мин 20 с"],
+  ])("rounds %s seconds without fractional minutes", (seconds, label) => {
+    expect(formatBuildEtaSeconds(seconds as number, "ten-seconds")).toBe(label);
+  });
+});

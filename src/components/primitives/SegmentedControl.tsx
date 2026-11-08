@@ -29,7 +29,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`flex gap-1 rounded-[var(--radius-sm)] border border-border bg-bg-elevated p-1 ${
+      className={`segmented-control flex gap-1 rounded-[var(--radius-sm)] border border-border bg-bg-elevated p-1 ${
         fullWidth ? "w-full" : "inline-flex w-auto"
       }`}
     >

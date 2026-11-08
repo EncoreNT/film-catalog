@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Plus, Star, Trash2 } from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+import { Monitor, Plus, Star, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/primitives/Button";
 import { Checkbox } from "@/components/primitives/Checkbox";
 import { Field } from "@/components/primitives/Field";
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+import {
+  MachinedCard,
+  CardSectionHeader,
+} from "@/components/primitives/MachinedCard";
 import { Select } from "@/components/primitives/Select";
 import { BitrateInput, SizeInput } from "@/components/primitives/MeasureInput";
 import { HdrInput } from "@/components/primitives/HdrInput";
@@ -24,6 +27,7 @@ import type {
   SubtitleFormRow,
   VideoFieldState,
 } from "@/lib/movies/movie-form-types";
+import { TrackEditorRow } from "./TrackEditorRow";
 import { detectTranslationType } from "@/lib/media/channels";
 
 interface TrackEditorSectionProps {
@@ -44,7 +48,7 @@ interface TrackEditorSectionProps {
   showSectionTitle?: boolean;
   emptySubtitleMessage?: string;
   sections?: Array<"video" | "audio" | "subtitle">;
-  /** default — spacious; balanced — release editor; compact — dense panels */
+  /** default - spacious; balanced - release editor; compact - dense panels */
   variant?: "default" | "balanced" | "compact";
   /** lg+: video in a sticky left column; audio and subtitles on the right. */
   splitColumns?: boolean;
@@ -52,8 +56,8 @@ interface TrackEditorSectionProps {
   videoColumnsOnXl?: boolean;
   /** Tabs for video / audio / subtitles instead of a long vertical stack. */
   tabbed?: boolean;
-  /** default — stacked page; panel — flex column with scrollable tab body (release editor). */
-  layout?: "default" | "panel";
+  /** default - stacked page; panel - flex column with scrollable tab body (release editor). */
+  layout?: "default" | "panel" | "editor";
   /** Action beside the «Дорожки» title (e.g. fill-from-file). */
   headerTrailing?: ReactNode;
   /** Inline notice below header, above tabs (probe feedback, …). */
@@ -86,6 +90,10 @@ export function TrackEditorSection({
   headerTrailing,
   notice,
 }: TrackEditorSectionProps) {
+  const tabId = useId();
+  const isEditor = layout === "editor";
+  const languageLabel = (value: string) =>
+    LANGUAGES.find((option) => option.value === value)?.label ?? value;
   const showVideo = sections.includes("video");
   const showAudio = sections.includes("audio");
   const showSubtitle = sections.includes("subtitle");
@@ -115,98 +123,58 @@ export function TrackEditorSection({
         ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
         : "grid gap-3 sm:grid-cols-2";
 
-  const videoFieldsInner = (
-    <>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Select
-          label="Кодек"
-          value={video.codec}
-          onChange={(codec) => onVideoChange({ codec })}
-          options={[{ value: "", label: "—" }, ...VIDEO_CODECS]}
-          hint="Алгоритм сжатия видео: HEVC/H.265, H.264, AV1 и т.д. AV1 и HEVC эффективнее."
-        />
-        <Field
-          label="FPS"
-          value={video.fps}
-          onChange={(e) => onVideoChange({ fps: e.target.value })}
-          placeholder="23.976"
-          hint="Кадров в секунду. Кино — 23.976, сериалы — 25/30, HFR — 48/60."
+  const videoFieldsBody = (
+    <div
+      className={
+        videoColumnsOnXl && !splitColumns
+          ? "grid gap-6 xl:grid-cols-2 items-start"
+          : elevatedGap
+      }
+    >
+      <div className="space-y-5">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Select
+            label="Кодек"
+            value={video.codec}
+            onChange={(codec) => onVideoChange({ codec })}
+            options={[{ value: "", label: "-" }, ...VIDEO_CODECS]}
+            hint="Алгоритм сжатия видео: HEVC/H.265, H.264, AV1 и т.д. AV1 и HEVC эффективнее."
+          />
+          <Field
+            label="FPS"
+            value={video.fps}
+            onChange={(e) => onVideoChange({ fps: e.target.value })}
+            placeholder="23.976"
+            hint="Кадров в секунду. Кино - 23.976, сериалы - 25/30, HFR - 48/60."
+          />
+        </div>
+        <SizeInput
+          width={video.width}
+          height={video.height}
+          resolutionLabel={video.resolutionLabel}
+          onWidthChange={(width) => onVideoChange({ width })}
+          onHeightChange={(height) => onVideoChange({ height })}
+          onResolutionLabelChange={(resolutionLabel) =>
+            onVideoChange({ resolutionLabel })
+          }
         />
       </div>
-      <HdrInput
-        value={video.hdr}
-        hasHdr10Plus={video.hasHdr10Plus}
-        onChange={(hdr) => onVideoChange({ hdr })}
-        onHdr10PlusChange={(hasHdr10Plus) => onVideoChange({ hasHdr10Plus })}
-      />
-      <SizeInput
-        width={video.width}
-        height={video.height}
-        resolutionLabel={video.resolutionLabel}
-        onWidthChange={(width) => onVideoChange({ width })}
-        onHeightChange={(height) => onVideoChange({ height })}
-        onResolutionLabelChange={(resolutionLabel) =>
-          onVideoChange({ resolutionLabel })
-        }
-      />
-      <BitrateInput
-        label="Битрейт видео"
-        valueKbps={video.bitrate}
-        onChange={(bitrate) => onVideoChange({ bitrate })}
-        hint="Скорость видеопотока. Переключается между kbps и Mbps. Больше — выше качество при том же кодеке."
-      />
-    </>
+      <div className="space-y-5">
+        <HdrInput
+          value={video.hdr}
+          hasHdr10Plus={video.hasHdr10Plus}
+          onChange={(hdr) => onVideoChange({ hdr })}
+          onHdr10PlusChange={(hasHdr10Plus) => onVideoChange({ hasHdr10Plus })}
+        />
+        <BitrateInput
+          label="Битрейт видео"
+          valueKbps={video.bitrate}
+          onChange={(bitrate) => onVideoChange({ bitrate })}
+          hint="Скорость видеопотока. Переключается между kbps и Mbps. Больше - выше качество при том же кодеке."
+        />
+      </div>
+    </div>
   );
-
-  const videoFieldsBody =
-    videoColumnsOnXl && !splitColumns ? (
-      <div className={`${elevatedGap} xl:grid xl:grid-cols-2 xl:gap-x-6`}>
-        <div className={elevatedGap}>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <Select
-              label="Кодек"
-              value={video.codec}
-              onChange={(codec) => onVideoChange({ codec })}
-              options={[{ value: "", label: "—" }, ...VIDEO_CODECS]}
-              hint="Алгоритм сжатия видео: HEVC/H.265, H.264, AV1 и т.д. AV1 и HEVC эффективнее."
-            />
-            <Field
-              label="FPS"
-              value={video.fps}
-              onChange={(e) => onVideoChange({ fps: e.target.value })}
-              placeholder="23.976"
-              hint="Кадров в секунду. Кино — 23.976, сериалы — 25/30, HFR — 48/60."
-            />
-          </div>
-          <HdrInput
-            value={video.hdr}
-            hasHdr10Plus={video.hasHdr10Plus}
-            onChange={(hdr) => onVideoChange({ hdr })}
-            onHdr10PlusChange={(hasHdr10Plus) => onVideoChange({ hasHdr10Plus })}
-          />
-        </div>
-        <div className={elevatedGap}>
-          <SizeInput
-            width={video.width}
-            height={video.height}
-            resolutionLabel={video.resolutionLabel}
-            onWidthChange={(width) => onVideoChange({ width })}
-            onHeightChange={(height) => onVideoChange({ height })}
-            onResolutionLabelChange={(resolutionLabel) =>
-              onVideoChange({ resolutionLabel })
-            }
-          />
-          <BitrateInput
-            label="Битрейт видео"
-            valueKbps={video.bitrate}
-            onChange={(bitrate) => onVideoChange({ bitrate })}
-            hint="Скорость видеопотока. Переключается между kbps и Mbps. Больше — выше качество при том же кодеке."
-          />
-        </div>
-      </div>
-    ) : (
-      <div className={elevatedGap}>{videoFieldsInner}</div>
-    );
 
   const videoSection = showVideo ? (
     <section className={splitColumns ? "lg:sticky lg:top-24" : undefined}>
@@ -216,7 +184,9 @@ export function TrackEditorSection({
       {tabbed ? (
         videoFieldsBody
       ) : (
-        <div className={`surface-elevated ${elevatedPad}`}>{videoFieldsBody}</div>
+        <div className={`surface-elevated ${elevatedPad}`}>
+          {videoFieldsBody}
+        </div>
       )}
     </section>
   ) : null;
@@ -224,21 +194,24 @@ export function TrackEditorSection({
   const audioSection = showAudio ? (
     <section>
       {!hideSectionHeading ? (
-        <h3 className={`font-mono-tech ${headingMb} text-muted`}>аудиодорожки</h3>
+        <h3 className={`font-mono-tech ${headingMb} text-muted`}>
+          аудиодорожки
+        </h3>
       ) : null}
       <div className={trackListGap}>
+        {audioRows.length === 0 ? (
+          <p className="text-sm text-muted py-4">
+            Аудиодорожек пока нет. Заполните их из файла или добавьте вручную.
+          </p>
+        ) : null}
         {audioRows.map((track, index) => {
           const profileOptions = getAudioProfilesForCodec(track.codec);
           const profileDisabled =
             profileOptions.length <= 1 ||
-            (profileOptions.length === 1 &&
-              profileOptions[0].value === "None");
+            (profileOptions.length === 1 && profileOptions[0].value === "None");
 
-          return (
-            <div
-              key={track.rowKey}
-              className={`surface-elevated space-y-3 ${elevatedPad}`}
-            >
+          const fields = (
+            <>
               <div className="flex items-center justify-between">
                 <span className="font-mono-tech text-faint">
                   дорожка {index + 1}
@@ -256,13 +229,15 @@ export function TrackEditorSection({
               </div>
               <div className={audioGridClass}>
                 <Select
+                  id={`${tabId}-${track.rowKey}-codec`}
                   label="Кодек"
                   value={track.codec}
                   onChange={(codec) => onUpdateAudio(index, { codec })}
-                  options={[{ value: "", label: "—" }, ...AUDIO_CODECS]}
+                  options={[{ value: "", label: "-" }, ...AUDIO_CODECS]}
                   hint="Аудиоформат: TrueHD/E-AC3/AC3/DTS/AAC/FLAC… Определяет доступные профили."
                 />
                 <Select
+                  id={`${tabId}-${track.rowKey}-Профиль`}
                   label="Профиль"
                   value={track.profile}
                   onChange={(profile) => onUpdateAudio(index, { profile })}
@@ -271,35 +246,38 @@ export function TrackEditorSection({
                   disabled={profileDisabled}
                   hint={
                     profileDisabled
-                      ? "У этого кодека нет профилей — поле недоступно."
+                      ? "У этого кодека нет профилей - поле недоступно."
                       : "Уточнение кодека: Dolby Atmos, DTS-HD MA и т.д. Зависит от выбранного кодека."
                   }
                 />
                 <Select
+                  id={`${tabId}-${track.rowKey}-Формат`}
                   label="Формат"
                   value={track.channelLayout}
                   onChange={(channelLayout) =>
                     onUpdateAudio(index, { channelLayout })
                   }
-                  options={[{ value: "", label: "—" }, ...CHANNEL_LAYOUTS]}
+                  options={[{ value: "", label: "-" }, ...CHANNEL_LAYOUTS]}
                   preserveOrder
                   hint="Расположение каналов: 2.0 (стерео), 5.1, 7.1…"
                 />
                 <Select
+                  id={`${tabId}-${track.rowKey}-Язык`}
                   label="Язык"
                   value={track.language}
                   onChange={(language) => onUpdateAudio(index, { language })}
-                  options={[{ value: "", label: "—" }, ...LANGUAGES]}
+                  options={[{ value: "", label: "-" }, ...LANGUAGES]}
                   hint="Язык дорожки. Используется для фильтрации каталога."
                 />
                 <Select
+                  id={`${tabId}-${track.rowKey}-Тип перевода`}
                   label="Тип перевода"
                   value={track.translationType}
                   onChange={(translationType) =>
                     onUpdateAudio(index, { translationType })
                   }
                   options={[
-                    { value: "", label: "—" },
+                    { value: "", label: "-" },
                     ...AUDIO_TRANSLATION_TYPES,
                   ]}
                   hint="Дубляж, многоголосый, авторский, оригинал и т.д."
@@ -311,6 +289,7 @@ export function TrackEditorSection({
                   hint="Скорость аудиопотока. Переключается kbps/Mbps."
                 />
                 <Field
+                  id={`${tabId}-${track.rowKey}-title`}
                   label={
                     mainTrackStyle === "star" ? "Название дорожки" : "Название"
                   }
@@ -364,6 +343,39 @@ export function TrackEditorSection({
                   <span className="font-mono-tech">основная дорожка</span>
                 </Checkbox>
               )}
+            </>
+          );
+          return isEditor ? (
+            <TrackEditorRow
+              key={track.rowKey}
+              title={track.title || `Аудиодорожка ${index + 1}`}
+              language={languageLabel(track.language)}
+              description={[
+                AUDIO_CODECS.find((option) => option.value === track.codec)
+                  ?.label ?? track.codec,
+                track.profile !== "None"
+                  ? (profileOptions.find(
+                      (option) => option.value === track.profile,
+                    )?.label ?? track.profile)
+                  : "",
+                track.channelLayout,
+                AUDIO_TRANSLATION_TYPES.find(
+                  (option) => option.value === track.translationType,
+                )?.label ?? track.translationType,
+              ]
+                .filter(Boolean)
+                .join(" / ")}
+              primary={track.isDefault}
+              initialOpen={index === 0 || !track.codec}
+            >
+              {fields}
+            </TrackEditorRow>
+          ) : (
+            <div
+              key={track.rowKey}
+              className={`surface-elevated space-y-3 ${elevatedPad}`}
+            >
+              {fields}
             </div>
           );
         })}
@@ -386,75 +398,51 @@ export function TrackEditorSection({
             {emptySubtitleMessage}
           </p>
         ) : null}
-        {subtitleRows.map((track, index) => (
-          <div
-            key={track.rowKey}
-            className={`surface-elevated space-y-3 ${elevatedPad}`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-mono-tech text-faint">
-                субтитры {index + 1}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRemoveSubtitle(index)}
-                aria-label="Удалить субтитры"
-                className="focus-ring rounded-md p-1.5 text-muted transition-colors hover:text-danger"
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-            <div className={audioGridClass}>
-              <Select
-                label="Тип"
-                value={track.codecLabel}
-                onChange={(codecLabel) =>
-                  onUpdateSubtitle(index, { codecLabel })
-                }
-                options={SUBTITLE_TYPES}
-                hint="Формат субтитров: SRT/ASS (текст), PGS/VobSub (графика) и т.д."
-              />
-              <Select
-                label="Язык"
-                value={track.language}
-                onChange={(language) => onUpdateSubtitle(index, { language })}
-                options={[{ value: "", label: "—" }, ...LANGUAGES]}
-                hint="Язык субтитров. Используется для фильтрации каталога."
-              />
-              <Field
-                label="Название"
-                value={track.title}
-                onChange={(e) =>
-                  onUpdateSubtitle(index, { title: e.target.value })
-                }
-                placeholder="Full"
-              />
-              {mainTrackStyle === "star" ? (
+        {subtitleRows.map((track, index) => {
+          const fields = (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="font-mono-tech text-faint">
+                  субтитры {index + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveSubtitle(index)}
+                  aria-label="Удалить субтитры"
+                  className="focus-ring rounded-md p-1.5 text-muted transition-colors hover:text-danger"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+              <div className={audioGridClass}>
                 <Select
-                  label="Forced"
-                  value={track.forced ? "yes" : "no"}
-                  onChange={(value) =>
-                    onUpdateSubtitle(index, { forced: value === "yes" })
+                  id={`${tabId}-${track.rowKey}-Тип`}
+                  label="Тип"
+                  value={track.codecLabel}
+                  onChange={(codecLabel) =>
+                    onUpdateSubtitle(index, { codecLabel })
                   }
-                  preserveOrder
-                  options={[
-                    { value: "no", label: "Нет" },
-                    { value: "yes", label: "Да" },
-                  ]}
-                  hint="Forced-субтитры показываются принудительно (например, перевод надписей в кадре)."
+                  options={SUBTITLE_TYPES}
+                  hint="Формат субтитров: SRT/ASS (текст), PGS/VobSub (графика) и т.д."
                 />
-              ) : null}
-            </div>
-            {mainTrackStyle === "star" ? (
-              <Checkbox
-                checked={track.isDefault}
-                onChange={(e) =>
-                  onUpdateSubtitle(index, { isDefault: e.target.checked })
-                }
-              >
-                <span className="font-mono-tech">основные</span>
-              </Checkbox>
-            ) : (
+                <Select
+                  id={`${tabId}-${track.rowKey}-Язык`}
+                  label="Язык"
+                  value={track.language}
+                  onChange={(language) => onUpdateSubtitle(index, { language })}
+                  options={[{ value: "", label: "-" }, ...LANGUAGES]}
+                  hint="Язык субтитров. Используется для фильтрации каталога."
+                />
+                <Field
+                  id={`${tabId}-${track.rowKey}-title`}
+                  label="Название"
+                  value={track.title}
+                  onChange={(e) =>
+                    onUpdateSubtitle(index, { title: e.target.value })
+                  }
+                  placeholder="Full"
+                />
+              </div>
               <div className="flex flex-wrap gap-5">
                 <Checkbox
                   checked={track.isDefault}
@@ -462,7 +450,7 @@ export function TrackEditorSection({
                     onUpdateSubtitle(index, { isDefault: e.target.checked })
                   }
                 >
-                  <span className="font-mono-tech">основные</span>
+                  Основные субтитры
                 </Checkbox>
                 <Checkbox
                   checked={track.forced}
@@ -470,12 +458,34 @@ export function TrackEditorSection({
                     onUpdateSubtitle(index, { forced: e.target.checked })
                   }
                 >
-                  <span className="font-mono-tech">forced</span>
+                  Принудительные (forced)
                 </Checkbox>
               </div>
-            )}
-          </div>
-        ))}
+            </>
+          );
+          return isEditor ? (
+            <TrackEditorRow
+              key={track.rowKey}
+              title={track.title || `Субтитры ${index + 1}`}
+              language={languageLabel(track.language)}
+              description={[
+                track.codecLabel,
+                track.forced ? "Принудительные" : "Полные",
+              ].join(" / ")}
+              primary={track.isDefault}
+              initialOpen={index === 0 || !track.language}
+            >
+              {fields}
+            </TrackEditorRow>
+          ) : (
+            <div
+              key={track.rowKey}
+              className={`surface-elevated space-y-3 ${elevatedPad}`}
+            >
+              {fields}
+            </div>
+          );
+        })}
         <Button variant="secondary" type="button" onClick={onAddSubtitle}>
           <Plus className="h-4 w-4" aria-hidden />
           Добавить субтитры
@@ -503,7 +513,7 @@ export function TrackEditorSection({
 
   type TrackTab = "video" | "audio" | "subtitle";
   const tabItems: { id: TrackTab; label: string }[] = [];
-  if (showVideo) tabItems.push({ id: "video", label: "Видео" });
+  if (showVideo && !isEditor) tabItems.push({ id: "video", label: "Видео" });
   if (showAudio) {
     tabItems.push({
       id: "audio",
@@ -529,15 +539,26 @@ export function TrackEditorSection({
 
   if (tabbed && tabItems.length > 0) {
     const isPanel = layout === "panel";
-    return (
+    const trackPanel = (
       <MachinedCard
-        variant={isPanel ? "calm" : "machined"}
-        className={isPanel ? "flex h-full min-h-0 flex-col" : undefined}
+        variant={layout === "editor" ? "open" : isPanel ? "calm" : "machined"}
+        className={
+          layout === "editor"
+            ? "release-editor-section"
+            : isPanel
+              ? "flex h-full min-h-0 flex-col"
+              : undefined
+        }
         bodyClassName={
           isPanel ? "flex min-h-0 flex-1 flex-col gap-4" : undefined
         }
       >
-        {showSectionTitle ? (
+        {showSectionTitle && layout === "editor" ? (
+          <div className="release-editor-section-heading">
+            <h2>Дорожки</h2>
+            <p>Выберите дорожку, чтобы изменить её параметры.</p>
+          </div>
+        ) : showSectionTitle ? (
           <CardSectionHeader
             label="содержимое"
             title="Дорожки"
@@ -547,7 +568,7 @@ export function TrackEditorSection({
         ) : null}
         {notice ? <div className="shrink-0">{notice}</div> : null}
         <div
-          className={`${showSectionTitle && !isPanel ? "mt-5" : notice ? "mt-1" : ""} flex shrink-0 gap-1 border-b border-border`}
+          className={`track-editor-tabs ${showSectionTitle && !isPanel ? "mt-5" : notice ? "mt-1" : ""} flex shrink-0 gap-1 border-b border-border`}
           role="tablist"
           aria-label="Дорожки"
         >
@@ -558,9 +579,31 @@ export function TrackEditorSection({
                 key={tab.id}
                 type="button"
                 role="tab"
-                id={`track-tab-${tab.id}`}
+                id={`${tabId}-tab-${tab.id}`}
                 aria-selected={active}
-                aria-controls={`track-panel-${tab.id}`}
+                aria-controls={`${tabId}-panel-${tab.id}`}
+                tabIndex={active ? 0 : -1}
+                onKeyDown={(event) => {
+                  const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+                  if (!keys.includes(event.key)) return;
+                  event.preventDefault();
+                  const current = tabItems.findIndex(
+                    (item) => item.id === tab.id,
+                  );
+                  const next =
+                    event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? tabItems.length - 1
+                        : (current +
+                            (event.key === "ArrowRight" ? 1 : -1) +
+                            tabItems.length) %
+                          tabItems.length;
+                  setActiveTab(tabItems[next].id);
+                  document
+                    .getElementById(`${tabId}-tab-${tabItems[next].id}`)
+                    ?.focus();
+                }}
                 onClick={() => setActiveTab(tab.id)}
                 className={`focus-ring font-mono-tech relative inline-flex items-center px-3 py-2 text-xs font-medium transition-colors ${
                   active ? "text-accent" : "text-muted hover:text-text"
@@ -569,7 +612,7 @@ export function TrackEditorSection({
                 {tab.label}
                 {active ? (
                   <motion.span
-                    layoutId="track-tab-underline"
+                    layoutId={`${tabId}-underline`}
                     className="pointer-events-none absolute inset-x-2 bottom-[-1px] h-[2px] rounded-full bg-gradient-to-r from-transparent via-accent to-accent-bright shadow-[0_0_10px_var(--accent-glow)]"
                     transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                     aria-hidden
@@ -581,8 +624,8 @@ export function TrackEditorSection({
         </div>
         <div
           role="tabpanel"
-          id={`track-panel-${resolvedTab}`}
-          aria-labelledby={`track-tab-${resolvedTab}`}
+          id={`${tabId}-panel-${resolvedTab}`}
+          aria-labelledby={`${tabId}-tab-${resolvedTab}`}
           className={
             isPanel
               ? "scroll-subtle min-h-0 flex-1 overflow-y-auto pt-5 pr-1 sm:pt-6"
@@ -594,6 +637,23 @@ export function TrackEditorSection({
           {resolvedTab === "subtitle" ? subtitleSection : null}
         </div>
       </MachinedCard>
+    );
+    return isEditor ? (
+      <div className="release-editor-workbench">
+        <section className="release-video-panel">
+          <div className="release-editor-section-heading">
+            <h2>
+              <Monitor size={20} aria-hidden />
+              Видео
+            </h2>
+            <p>Изображение и технические параметры файла.</p>
+          </div>
+          {videoSection}
+        </section>
+        <div className="release-track-panel">{trackPanel}</div>
+      </div>
+    ) : (
+      trackPanel
     );
   }
 

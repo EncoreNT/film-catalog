@@ -197,6 +197,7 @@ describe("movieExternalStorageNames", () => {
     id,
     name,
     path: null,
+    capacityBytes: null,
     createdAt: new Date(),
   });
 

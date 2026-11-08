@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import { apiFetch } from "@/lib/api/client";
 import type { SerializedExport } from "@/lib/releases/export-serialize";
 import { isExportTerminal } from "@/lib/releases/export-display";
@@ -16,6 +17,7 @@ export function useReleaseExportJob({
 }) {
   const [exportJob, setExportJob] = useState<SerializedExport | null>(null);
   const [loading, setLoading] = useState(false);
+  const etaLabel = useMediaJobEtaLabel(exportJob);
 
   const refreshExportJob = useCallback(async (jobId: number) => {
     return apiFetch<SerializedExport>(
@@ -96,6 +98,7 @@ export function useReleaseExportJob({
 
   return {
     exportJob,
+    etaLabel,
     setExportJob,
     exportActive,
     loading,

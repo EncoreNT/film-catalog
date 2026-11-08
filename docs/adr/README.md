@@ -71,5 +71,9 @@ docs/adr/0002-franchise-slots-model.md
 | [0021](0021-same-disk-move-rename.md) | Same-disk move via rename | Accepted |
 | [0022](0022-movie-watch-journal.md) | Movie watch journal | Superseded by ADR-0023 |
 | [0023](0023-watch-journal-without-watched-at.md) | Watch journal without watchedAt | Accepted |
+| [0024](0024-stable-media-job-eta.md) | Stable copy/move ETA | Superseded by ADR-0025 |
+
+| [0025](0025-shared-transfer-eta.md) | Shared transfer ETA across strip and dialog | Accepted |
+| [0026](0026-external-storage-capacity.md) | External storage capacity and catalog usage | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

@@ -9,6 +9,7 @@ import {
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { CreatableCombobox } from "@/components/primitives/CreatableCombobox";
 import { SegmentedControl } from "@/components/primitives/SegmentedControl";
+import { StorageUsage } from "@/components/shared/StorageUsage";
 import type { StorageKind, StorageOption } from "@/lib/shared/storage-types";
 
 type StoragePickerLayout = "default" | "embedded" | "toolbar";
@@ -25,6 +26,7 @@ interface StoragePickerProps {
   label?: string;
   /** Stack label and stretch segment + disk select to full modal width. */
   fullWidth?: boolean;
+  showUsage?: boolean;
   /** @deprecated Use layout="embedded" */
   embedded?: boolean;
   /** @deprecated Use layout="embedded" */
@@ -43,6 +45,7 @@ export function StoragePicker({
   layout,
   label = "Хранилище",
   fullWidth = false,
+  showUsage = false,
   embedded = false,
   compact = false,
 }: StoragePickerProps) {
@@ -341,6 +344,9 @@ export function StoragePicker({
       </div>
 
       {externalSelect}
+      {showUsage && storageKind === "external" && selectedStorage && (
+        <StorageUsage storage={selectedStorage} settingsLink />
+      )}
 
       {error ? (
         <p className="text-xs text-danger" role="alert">

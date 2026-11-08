@@ -1,11 +1,13 @@
 "use client";
 
+import { useId, useState } from "react";
+import { Minus, Plus } from "lucide-react";
+import { Modal } from "@/components/primitives/Modal";
+import { Button } from "@/components/primitives/Button";
+import "./movie-parts-editor.css";
 import type { MovieWithTracksAndParts } from "@/lib/movies/movie-include";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { Checkbox } from "@/components/primitives/Checkbox";
-import { Select } from "@/components/primitives/Select";
-import { MultiSelect } from "@/components/primitives/MultiSelect";
-import { InfoHint } from "@/components/primitives/InfoHint";
 import { releasePickerLabel } from "@/lib/releases/release-picker-label";
 
 export const MULTIPART_MIN = 2;
@@ -96,7 +98,10 @@ export function partReleaseLinksPayload(
   }));
 }
 
-function resizeSlots(slots: PartReleaseSlot[], count: number): PartReleaseSlot[] {
+function resizeSlots(
+  slots: PartReleaseSlot[],
+  count: number,
+): PartReleaseSlot[] {
   return Array.from({ length: count }, (_, i) => {
     const partNumber = i + 1;
     const existing = slots.find((s) => s.partNumber === partNumber);
@@ -120,111 +125,225 @@ export function MovieMultipartSection({
   onReleaseSlotsChange,
   releases,
 }: MovieMultipartSectionProps) {
-  const countOptions = Array.from(
-    { length: MULTIPART_MAX - MULTIPART_MIN + 1 },
-    (_, i) => {
-      const n = i + MULTIPART_MIN;
-      return { value: String(n), label: String(n) };
-    },
-  );
-
+  const sectionId = useId();
+  const [activePart, setActivePart] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
   const allReleaseOptions = releaseOptions(releases);
+  const selectedSlot = releaseSlots.find(
+    (slot) => slot.partNumber === activePart,
+  );
+  const selectedIds = selectedSlot?.releaseIds ?? [];
 
-  const setReleasesForPart = (partNumber: number, rawIds: string[]) => {
-    const numericIds = rawIds.map((id) => parseInt(id, 10)).filter(Boolean);
-    const next = releaseSlots.map((slot) => {
-      if (slot.partNumber === partNumber) {
-        return { ...slot, releaseIds: numericIds };
-      }
-      return {
-        ...slot,
-        releaseIds: slot.releaseIds.filter((id) => !numericIds.includes(id)),
-      };
-    });
-    onReleaseSlotsChange(next);
+  const changeCount = (count: number) => {
+    const next = Math.min(MULTIPART_MAX, Math.max(MULTIPART_MIN, count));
+    onPartCountChange(next);
+    onReleaseSlotsChange(resizeSlots(releaseSlots, next));
   };
-
-  const optionsForPart = (partNumber: number) => {
-    const takenElsewhere = new Set(
-      releaseSlots
-        .filter((s) => s.partNumber !== partNumber)
-        .flatMap((s) => s.releaseIds),
+  const toggleRelease = (id: number) => {
+    onReleaseSlotsChange(
+      releaseSlots.map((slot) =>
+        slot.partNumber === activePart
+          ? {
+              ...slot,
+              releaseIds: slot.releaseIds.includes(id)
+                ? slot.releaseIds.filter((value) => value !== id)
+                : [...slot.releaseIds, id],
+            }
+          : slot,
+      ),
     );
-    return allReleaseOptions.filter(
-      (opt) => !takenElsewhere.has(parseInt(opt.value, 10)),
-    );
+  };
+  const closePicker = () => {
+    setActivePart(null);
+    setQuery("");
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Checkbox
-          checked={enabled}
-          onChange={(e) => onEnabledChange(e.target.checked)}
-        >
-          <span className="text-sm text-text">Многосерийный фильм</span>
-        </Checkbox>
-        <InfoHint
-          label="Многосерийный фильм"
-          text="Один фильм из нескольких файлов (части 1, 2, 3…). К одной серии можно привязать несколько релизов (разное качество или источник). Релиз без серии остаётся в блоке «Без серии» на карточке фильма. Обычный фильм с несколькими релизами не затрагивается, пока режим выключен."
-        />
-      </div>
-
-      {enabled ? (
-        <div className="space-y-4 rounded-[var(--radius-sm)] border border-border bg-bg-elevated/40 p-4">
-          <Select
-            label="Количество серий"
-            value={String(partCount)}
-            onChange={(raw) => {
-              const next = Math.min(
-                MULTIPART_MAX,
-                Math.max(MULTIPART_MIN, parseInt(raw, 10) || MULTIPART_MIN),
-              );
-              onPartCountChange(next);
-              onReleaseSlotsChange(resizeSlots(releaseSlots, next));
-            }}
-            options={countOptions}
-            preserveOrder
-            searchable={false}
-            hint="Сколько частей у этого фильма на диске."
-          />
-
+    <div className="movie-parts-editor">
+      <Checkbox
+        checked={enabled}
+        aria-controls={sectionId}
+        aria-expanded={enabled}
+        className="movie-parts-toggle"
+        onChange={(event) => onEnabledChange(event.target.checked)}
+      >
+        Многосерийный фильм
+      </Checkbox>
+      {enabled && (
+        <div id={sectionId} className="movie-parts-content">
+          <div className="movie-parts-heading">
+            <div>
+              <h2>Серии фильма</h2>
+              <p>
+                Один фильм из нескольких серий. Продолжения и приквелы
+                добавляйте во франшизу.
+              </p>
+            </div>
+            <div className="movie-parts-count">
+              <label htmlFor={`${sectionId}-count`}>Количество серий</label>
+              <div>
+                <button
+                  type="button"
+                  className="focus-ring"
+                  aria-label="Уменьшить количество серий"
+                  disabled={partCount <= MULTIPART_MIN}
+                  onClick={() => changeCount(partCount - 1)}
+                >
+                  <Minus size={17} aria-hidden />
+                </button>
+                <select
+                  id={`${sectionId}-count`}
+                  className="focus-ring"
+                  value={partCount}
+                  onChange={(event) => changeCount(Number(event.target.value))}
+                >
+                  {Array.from(
+                    { length: MULTIPART_MAX - MULTIPART_MIN + 1 },
+                    (_, i) => i + MULTIPART_MIN,
+                  ).map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="focus-ring"
+                  aria-label="Увеличить количество серий"
+                  disabled={partCount >= MULTIPART_MAX}
+                  onClick={() => changeCount(partCount + 1)}
+                >
+                  <Plus size={17} aria-hidden />
+                </button>
+              </div>
+            </div>
+          </div>
           {releases.length === 0 ? (
-            <p className="text-sm leading-relaxed text-muted">
-              Пока нет релизов. Добавьте файлы на карточке фильма (скан или новый
-              релиз), затем выберите их в слотах ниже.
+            <p className="movie-parts-empty">
+              После добавления файлов на странице фильма здесь можно будет
+              распределить релизы по сериям.
             </p>
           ) : (
-            <ul className="space-y-3" aria-label="Привязка релизов к сериям">
-              {releaseSlots.map((slot) => (
-                <li
-                  key={slot.partNumber}
-                  className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-border/80 bg-bg/50 p-3 sm:flex-row sm:gap-4"
-                >
-                  <div className="flex h-11 shrink-0 items-center sm:w-[5.5rem]">
-                    <p className="font-mono-tech text-xs uppercase tracking-[0.12em] text-muted tabular-nums">
-                      Серия {slot.partNumber}
-                    </p>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <MultiSelect
-                      label={`Релизы серии ${slot.partNumber}`}
-                      placeholder="Выберите один или несколько"
-                      value={slot.releaseIds.map(String)}
-                      onChange={(ids) =>
-                        setReleasesForPart(slot.partNumber, ids)
-                      }
-                      options={optionsForPart(slot.partNumber)}
-                      preserveOrder
-                      searchable={releases.length >= 8}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="movie-parts-hint">
+                У серии может быть несколько релизов. Непривязанные файлы
+                останутся в разделе «Без серии».
+              </p>
+              <ul
+                className="movie-parts-list"
+                aria-label="Привязка релизов к сериям"
+              >
+                {releaseSlots.map((slot) => (
+                  <li key={slot.partNumber}>
+                    <span className="movie-parts-number" aria-hidden>
+                      {String(slot.partNumber).padStart(2, "0")}
+                    </span>
+                    <div className="movie-parts-summary">
+                      <h3>Серия {slot.partNumber}</h3>
+                      {slot.releaseIds.length ? (
+                        <ul>
+                          {slot.releaseIds.map((id) => (
+                            <li key={id}>
+                              {allReleaseOptions.find(
+                                (option) => option.value === String(id),
+                              )?.label ?? `Релиз ${id}`}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>Релизы ещё не выбраны</p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      aria-label={`Выбрать релизы серии ${slot.partNumber}`}
+                      onClick={() => {
+                        setActivePart(slot.partNumber);
+                        setQuery("");
+                      }}
+                    >
+                      {slot.releaseIds.length ? "Изменить" : "Выбрать релизы"}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
-      ) : null}
+      )}
+      <Modal
+        open={activePart != null && enabled}
+        onClose={closePicker}
+        title={`Релизы серии ${activePart}`}
+        size="wide"
+        bodyClassName="movie-parts-dialog"
+        footer={
+          <>
+            <span className="movie-parts-save-note">
+              Привязки сохранятся вместе с фильмом.
+            </span>
+            <Button type="button" variant="primary" onClick={closePicker}>
+              Готово
+            </Button>
+          </>
+        }
+      >
+        <p className="movie-parts-hint">
+          Выберите один или несколько вариантов качества для этой серии.
+        </p>
+        {releases.length >= 8 && (
+          <input
+            className="movie-parts-search focus-ring"
+            aria-label="Найти релиз"
+            placeholder="Название файла или качество"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.preventDefault();
+            }}
+          />
+        )}
+        <div className="movie-parts-options">
+          {allReleaseOptions
+            .filter((option) =>
+              option.label
+                .toLocaleLowerCase()
+                .includes(query.trim().toLocaleLowerCase()),
+            )
+            .map((option) => {
+              const id = Number(option.value);
+              const otherPart = releaseSlots.find(
+                (slot) =>
+                  slot.partNumber !== activePart &&
+                  slot.releaseIds.includes(id),
+              );
+              return (
+                <Checkbox
+                  key={id}
+                  checked={selectedIds.includes(id)}
+                  disabled={!!otherPart}
+                  onChange={() => toggleRelease(id)}
+                >
+                  <span className="movie-parts-option-label">
+                    {option.label}
+                  </span>
+                  {otherPart && (
+                    <span className="movie-parts-option-note">
+                      Уже в серии {otherPart.partNumber}
+                    </span>
+                  )}
+                </Checkbox>
+              );
+            })}
+          {allReleaseOptions.every(
+            (option) =>
+              !option.label
+                .toLocaleLowerCase()
+                .includes(query.trim().toLocaleLowerCase()),
+          ) && <p className="movie-parts-hint">Ничего не найдено</p>}
+        </div>
+      </Modal>
     </div>
   );
 }

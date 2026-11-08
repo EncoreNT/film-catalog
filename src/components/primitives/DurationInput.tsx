@@ -35,6 +35,14 @@ export function DurationInput({
   const [format, setFormat] = useState<DurationFormat>(defaultDurationFormat());
   const [text, setText] = useState(() => formatDurationField(format, valueSeconds));
   const [touched, setTouched] = useState(false);
+  const [lastValue, setLastValue] = useState(valueSeconds);
+
+  // External updates (probe/reset) replace the draft; echoed keystrokes do not.
+  if (valueSeconds !== lastValue) {
+    setLastValue(valueSeconds);
+    setText(formatDurationField(format, valueSeconds));
+    setTouched(false);
+  }
 
   const active = FORMATS.find((f) => f.id === format)!;
   const { seconds, error } = parseDuration(format, text);
@@ -43,6 +51,7 @@ export function DurationInput({
   const handleText = (raw: string) => {
     setText(raw);
     const parsed = parseDuration(format, raw);
+    setLastValue(parsed.seconds);
     onChange(parsed.seconds);
   };
 

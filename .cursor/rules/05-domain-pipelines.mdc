@@ -84,6 +84,8 @@ ADR: `0009`. `releaseTier()` остаётся в `release-tags.ts`; filter/spotl
 
 ADR: `0010`, `0018`, `0021`. `job-display`, `job-progress-message`, `job-eta`, `copy-speed-window`, `part-path`, `serialize-base`, `destination-disk` (one RUNNING copy/move per destination drive; same-disk move is `fs.rename`).
 
+ETA переноса/копирования: `job-eta.ts` + `useMediaJobEtaLabel`, ADR-0025. Владелец ETA — `useReleaseMoveJob`/`useReleaseExportJob`: полоса и диалог получают общий label, открытие подробностей не сбрасывает прогрев. Вывод секунд округляется до 10 с. Скорость worker остаётся окном 12 с; прогноз сглаживает скорость с постоянной 20 с, игнорирует повторные poll/heartbeat, скрывает число после 15 с без новых измерений. Завершение показывается фазой, без условных секунд.
+
 ## catalog/archive-metrics.ts
 
 Total/catalog/draft/excluded counts + aggregate stats for dashboard. Elite tier: `archiveEliteTierWhere` from `media/quality-predicates.ts` (specs may split across releases).

@@ -53,6 +53,8 @@ model ExternalStorage {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   path      String?
+  /// Manufacturer capacity in bytes (decimal GB/TB); null means unknown.
+  capacityBytes Int?
   createdAt DateTime @default(now())
 
   releases Release[]

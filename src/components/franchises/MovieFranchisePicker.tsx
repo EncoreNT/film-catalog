@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Library, Loader2, Plus, X } from "lucide-react";
+import { Library, Loader2, Plus, X } from "lucide-react";
+import { Modal } from "@/components/primitives/Modal";
 import { CreatableCombobox } from "@/components/primitives/CreatableCombobox";
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { FranchiseSlotPickerDialog } from "@/components/franchises/FranchiseSlotPickerDialog";
@@ -47,7 +48,6 @@ export function MovieFranchisePicker({
   const [slotDialog, setSlotDialog] = useState<SlotDialogState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const buildUrl = useCallback(
@@ -74,7 +74,6 @@ export function MovieFranchisePicker({
 
   const openDropdown = useCallback(() => {
     setOpen(true);
-    setTimeout(() => inputRef.current?.focus(), 40);
   }, []);
 
   const closeDropdown = useCallback(() => {
@@ -82,24 +81,6 @@ export function MovieFranchisePicker({
     setQuery("");
     void runSearch("");
   }, [runSearch, setQuery]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        closeDropdown();
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeDropdown();
-    };
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open, closeDropdown]);
 
   const pickFranchise = (franchise: FranchiseLite) => {
     setSlotDialog({
@@ -206,9 +187,21 @@ export function MovieFranchisePicker({
                     >
                       {m.franchiseName}
                     </Link>
-                    <p className="font-mono-tech mt-0.5 text-xs text-faint">
-                      слот {m.position} из {m.totalInFranchise}
-                    </p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        setSlotDialog({
+                          mode: "move",
+                          franchiseId: m.franchiseId,
+                          franchiseName: m.franchiseName,
+                          currentSlotId: m.slotId,
+                        })
+                      }
+                      className="focus-ring mt-1 min-h-8 rounded text-left text-xs text-muted transition-colors hover:text-accent disabled:opacity-40"
+                    >
+                      Место {m.position} из {m.totalInFranchise} · Изменить
+                    </button>
                   </div>
                   <button
                     type="button"
@@ -228,17 +221,17 @@ export function MovieFranchisePicker({
             })}
           </ul>
         ) : (
-          <p className="px-1 py-2 text-sm text-faint">
+          <p className="px-1 py-2 text-sm text-muted">
             Не входит ни в одну франшизу
           </p>
         )}
 
-        <div className="relative mt-2" ref={containerRef}>
+        <div className="relative mt-2">
           <button
             type="button"
-            onClick={open ? closeDropdown : openDropdown}
-            aria-haspopup="listbox"
-            aria-expanded={open}
+            onClick={openDropdown}
+            aria-haspopup="dialog"
+
             className={`focus-ring flex min-h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-sm)] border px-3 text-sm transition-all duration-200 ${
               open
                 ? "border-accent/50 bg-bg-surface shadow-[0_0_16px_var(--accent-glow)]"
@@ -249,53 +242,60 @@ export function MovieFranchisePicker({
               <Plus className="h-4 w-4 text-accent/80" aria-hidden />
               Добавить франшизу
             </span>
-            <ChevronDown
-              className={`h-4 w-4 shrink-0 text-accent/70 transition-transform duration-200 ${
-                open ? "rotate-180" : ""
-              }`}
-              aria-hidden
-            />
           </button>
 
           {open ? (
-            <CreatableCombobox
-              open
-              query={query}
-              onQueryChange={onQueryChange}
-              loading={searching}
-              disabled={busy}
-              items={results
-                .filter((r) => !joinedIds.has(r.id))
-                .map((r) => ({
-                  id: r.id,
-                  label: r.name,
-                }))}
-              onSelect={(item) => {
-                const franchise = results.find((r) => r.id === item.id);
-                if (franchise) pickFranchise(franchise);
-              }}
-              canCreate={canCreate}
-              creating={creatingName === trimmedQuery}
-              onCreate={createFranchise}
-              emptyMessage={
-                trimmedQuery ? "Ничего не найдено" : "Нет доступных франшиз"
-              }
-              itemIcon={
-                <Library
-                  className="h-4 w-4 shrink-0 text-accent/70"
-                  aria-hidden
-                />
-              }
-              createIcon={<Plus className="h-4 w-4 shrink-0" aria-hidden />}
-              inputRef={inputRef}
-              className="surface-elevated absolute z-50 mt-2 max-h-72 w-full overflow-auto p-1 shadow-2xl"
-              searchInputClassName="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
-            />
+            <Modal
+              open={open}
+              onClose={closeDropdown}
+              preventCancel={busy}
+              title="Добавить франшизу"
+              bodyClassName="relation-picker-body"
+            >
+              <CreatableCombobox
+                open
+                query={query}
+                onQueryChange={onQueryChange}
+                loading={searching}
+                disabled={busy}
+                items={results
+                  .filter((r) => !joinedIds.has(r.id))
+                  .map((r) => ({
+                    id: r.id,
+                    label: r.name,
+                  }))}
+                onSelect={(item) => {
+                  const franchise = results.find((r) => r.id === item.id);
+                  if (franchise) pickFranchise(franchise);
+                }}
+                canCreate={canCreate}
+                creating={creatingName === trimmedQuery}
+                onCreate={createFranchise}
+                emptyMessage={
+                  trimmedQuery ? "Ничего не найдено" : "Нет доступных франшиз"
+                }
+                itemIcon={
+                  <Library
+                    className="h-4 w-4 shrink-0 text-accent/70"
+                    aria-hidden
+                  />
+                }
+                createIcon={<Plus className="h-4 w-4 shrink-0" aria-hidden />}
+                inputRef={inputRef}
+                className="relation-picker-results"
+                searchInputClassName="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
+              />
+              {error && (
+                <p role="alert" className="mt-3 text-sm text-danger">
+                  {error}
+                </p>
+              )}
+            </Modal>
           ) : null}
         </div>
       </div>
 
-      {error ? (
+      {error && !open ? (
         <p className="text-xs text-danger" role="alert">
           {error}
         </p>

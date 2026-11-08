@@ -5,4 +5,6 @@ export interface StorageOption {
   name: string;
   path?: string | null;
   _count?: { releases: number };
+  capacityBytes?: number | null;
+  usage?: { knownBytes: number; unknownSizeCount: number };
 }

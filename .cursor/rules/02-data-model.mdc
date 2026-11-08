@@ -106,6 +106,8 @@ Many-to-many через `MovieGenre` с `sortOrder`. Жанры на уровн�
 
 Именованные **внешние** диски. Relation: `releases[]`. Локальные файлы — `externalStorageId = null`, без строки в БД.
 
+`capacityBytes Int?` — ёмкость в байтах по маркировке производителя (ГБ = 10^9, ТБ = 10^12); null = неизвестна. Управление: Настройки → Диски. Заполненность — сумма `Release.fileSize` по диску, без фильтра статуса фильма; null-размеры считаются отдельно. Canonical query: `lib/storages/storage-crud.ts`; ADR-0026.
+
 ### Franchise + FranchiseSlot
 
 - `FranchiseSlot.movieId` → Movie (не Release)

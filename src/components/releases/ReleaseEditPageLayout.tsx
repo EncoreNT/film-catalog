@@ -1,3 +1,4 @@
+import "./release-editor.css";
 import type { ReactNode } from "react";
 import { BackLink } from "@/components/primitives/BackLink";
 import {
@@ -13,6 +14,7 @@ interface ReleaseEditPageLayoutProps {
   /** Pin chrome; editor manages internal scroll (release edit on lg+).
    *  10.25rem ≈ header + main top padding + fixed FormActionBar. */
   fillViewport?: boolean;
+  editor?: boolean;
 }
 
 /** Shared shell for /movies/[slug]/releases/new and .../[releaseId]/edit. */
@@ -22,6 +24,7 @@ export function ReleaseEditPageLayout({
   releaseLabel,
   children,
   fillViewport = false,
+  editor = false,
 }: ReleaseEditPageLayoutProps) {
   const chrome = (
     <>
@@ -36,6 +39,10 @@ export function ReleaseEditPageLayout({
       />
     </>
   );
+
+  if (editor) {
+    return <div className="release-editor-page"><div className="release-editor-heading">{chrome}</div>{children}</div>;
+  }
 
   if (fillViewport) {
     return (

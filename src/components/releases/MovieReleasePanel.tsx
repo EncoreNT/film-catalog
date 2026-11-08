@@ -307,35 +307,37 @@ export function MovieReleasePanel({
         {showMoveStrip && stripMoveJob ? (
           <ReleaseMoveProgressStrip
             job={stripMoveJob}
+            etaLabel={moveJobState.etaLabel}
             loading={moveJobState.loading}
             onOpen={() => setMoveDialogOpen(true)}
-            onCancel={() => void moveJobState.cancelMove()}
+            onCancel={() => moveJobState.cancelMove()}
           />
         ) : null}
         {showExportStrip && stripExportJob ? (
           <ReleaseExportProgressStrip
             job={stripExportJob}
+            etaLabel={exportJobState.etaLabel}
             loading={exportJobState.loading}
             onOpen={() => setExportDialogOpen(true)}
-            onCancel={() => void exportJobState.cancelExport()}
+            onCancel={() => exportJobState.cancelExport()}
           />
         ) : null}
         {moveSuccessMessage ? (
           <div
-            className="border-t border-neural/20 bg-neural/[0.06] px-3 py-2 sm:px-5"
+            className="release-transfer-result"
             role="status"
           >
-            <p className="truncate font-mono-tech text-xs text-neural">
+            <p>
               {moveSuccessMessage}
             </p>
           </div>
         ) : null}
         {exportSuccessMessage ? (
           <div
-            className="border-t border-accent/20 bg-accent/[0.06] px-3 py-2 sm:px-5"
+            className="release-transfer-result"
             role="status"
           >
-            <p className="truncate font-mono-tech text-xs text-accent">
+            <p>
               {exportSuccessMessage}
             </p>
           </div>

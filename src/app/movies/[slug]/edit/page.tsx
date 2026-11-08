@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { EntityEditLayout } from "@/components/layout/EntityEditLayout";
-import { MovieEditor } from "@/components/movies/MovieForm";
+import { getCatalogGenreFacets } from "@/lib/catalog/catalog-facets";
+import { MovieForm } from "@/components/movies/MovieForm";
 import {
   generateMovieMetadata,
   loadMovieBySlug,
@@ -26,25 +26,20 @@ export default async function EditMoviePage({ params }: PageProps) {
   const movie = await loadMovieBySlug(slug);
   if (!movie) notFound();
 
-  const franchiseMemberships = await getMovieFranchiseMemberships(
-    prisma,
-    movie.id,
-  );
-  const remakeMemberships = await getMovieRemakeMemberships(prisma, movie.id);
+  const [franchiseMemberships, remakeMemberships, genrePopularity] =
+    await Promise.all([
+      getMovieFranchiseMemberships(prisma, movie.id),
+      getMovieRemakeMemberships(prisma, movie.id),
+      getCatalogGenreFacets(),
+    ]);
 
   return (
-    <EntityEditLayout
-      backHref={`/movies/${movie.slug}`}
-      backLabel="Назад к фильму"
-      eyebrow="редактирование"
-      title={movie.title}
-      fillViewport
-    >
-      <MovieEditor
-        movie={movie}
-        franchiseMemberships={franchiseMemberships}
-        remakeMemberships={remakeMemberships}
-      />
-    </EntityEditLayout>
+    <MovieForm
+      key={movie.id}
+      movie={movie}
+      genrePopularity={genrePopularity}
+      franchiseMemberships={franchiseMemberships}
+      remakeMemberships={remakeMemberships}
+    />
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, GitFork, Loader2, Plus, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { GitFork, Loader2, Plus, X } from "lucide-react";
+import { Modal } from "@/components/primitives/Modal";
 import { CreatableCombobox } from "@/components/primitives/CreatableCombobox";
 import { InfoHint } from "@/components/primitives/InfoHint";
 import { RemakeRoleSelect } from "@/components/remakes/RemakeRoleSelect";
@@ -35,6 +36,7 @@ export function MovieRemakePicker({
   const [open, setOpen] = useState(false);
   const [creatingName, setCreatingName] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [updatingRoleId, setUpdatingRoleId] = useState<number | null>(null);
   const [pendingGroup, setPendingGroup] = useState<{
     id?: number;
     name: string;
@@ -42,7 +44,6 @@ export function MovieRemakePicker({
   const [pendingRole, setPendingRole] = useState<RemakeRole>(DEFAULT_ROLE);
   const [error, setError] = useState<string | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const buildUrl = useCallback(
@@ -64,12 +65,12 @@ export function MovieRemakePicker({
     debounceMs: 220,
   });
 
-  const busy = creatingName != null || removingId != null;
+  const busy =
+    creatingName != null || removingId != null || updatingRoleId != null;
   const joinedIds = new Set(memberships.map((m) => m.groupId));
 
   const openDropdown = useCallback(() => {
     setOpen(true);
-    setTimeout(() => inputRef.current?.focus(), 40);
   }, []);
 
   const closeDropdown = useCallback(() => {
@@ -78,27 +79,11 @@ export function MovieRemakePicker({
     void runSearch("");
   }, [runSearch, setQuery]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        closeDropdown();
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeDropdown();
-    };
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open, closeDropdown]);
-
-  const attachToGroup = async (
-    payload: { groupId?: number; name?: string; role: RemakeRole },
-  ) => {
+  const attachToGroup = async (payload: {
+    groupId?: number;
+    name?: string;
+    role: RemakeRole;
+  }) => {
     setError(null);
     try {
       const data = await apiFetch<MovieRemakeMembership[]>(
@@ -119,6 +104,7 @@ export function MovieRemakePicker({
   };
 
   const pickGroup = (group: RemakeGroupLite) => {
+    setPendingRole(DEFAULT_ROLE);
     setPendingGroup({ id: group.id, name: group.name });
     closeDropdown();
   };
@@ -144,6 +130,7 @@ export function MovieRemakePicker({
 
   const updateRole = async (groupId: number, role: RemakeRole) => {
     setError(null);
+    setUpdatingRoleId(groupId);
     try {
       const data = await apiFetch<MovieRemakeMembership[]>(
         `/api/movies/${movieId}/remakes/${groupId}`,
@@ -157,6 +144,8 @@ export function MovieRemakePicker({
       setMemberships(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setUpdatingRoleId(null);
     }
   };
 
@@ -226,9 +215,13 @@ export function MovieRemakePicker({
                       />
                     </div>
                     {m.coMembers.length > 0 ? (
-                      <p className="font-mono-tech mt-1.5 text-xs text-faint">
-                        {m.coMembers.length}{" "}
-                        {m.coMembers.length === 1 ? "связанный фильм" : "связанных фильма"}
+                      <p className="mt-2 text-xs leading-relaxed text-muted">
+                        {m.coMembers
+                          .map(
+                            (member) =>
+                              `${member.movieTitle}${member.movieYear ? ` (${member.movieYear})` : ""}`,
+                          )
+                          .join(" · ")}
                       </p>
                     ) : null}
                   </div>
@@ -250,7 +243,7 @@ export function MovieRemakePicker({
             })}
           </ul>
         ) : (
-          <p className="px-1 py-2 text-sm text-faint">
+          <p className="px-1 py-2 text-sm text-muted">
             Не входит ни в одну группу ремейков
           </p>
         )}
@@ -274,7 +267,10 @@ export function MovieRemakePicker({
                 className="focus-ring cursor-pointer rounded-[var(--radius-sm)] border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {creatingName ? (
-                  <Loader2 className="inline h-4 w-4 animate-spin" aria-hidden />
+                  <Loader2
+                    className="inline h-4 w-4 animate-spin"
+                    aria-hidden
+                  />
                 ) : (
                   "Добавить"
                 )}
@@ -290,12 +286,12 @@ export function MovieRemakePicker({
             </div>
           </div>
         ) : (
-          <div className="relative mt-2" ref={containerRef}>
+          <div className="relative mt-2">
             <button
               type="button"
-              onClick={open ? closeDropdown : openDropdown}
-              aria-haspopup="listbox"
-              aria-expanded={open}
+              onClick={openDropdown}
+              aria-haspopup="dialog"
+
               className={`focus-ring flex min-h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-sm)] border px-3 text-sm transition-all duration-200 ${
                 open
                   ? "border-neural/50 bg-bg-surface shadow-[0_0_16px_rgba(139,92,246,0.25)]"
@@ -306,54 +302,61 @@ export function MovieRemakePicker({
                 <Plus className="h-4 w-4 text-neural/80" aria-hidden />
                 Добавить в группу ремейков
               </span>
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 text-neural/70 transition-transform duration-200 ${
-                  open ? "rotate-180" : ""
-                }`}
-                aria-hidden
-              />
             </button>
 
             {open ? (
-              <CreatableCombobox
-                open
-                query={query}
-                onQueryChange={onQueryChange}
-                loading={searching}
-                disabled={busy}
-                items={results
-                  .filter((r) => !joinedIds.has(r.id))
-                  .map((r) => ({
-                    id: r.id,
-                    label: r.name,
-                  }))}
-                onSelect={(item) => {
-                  const group = results.find((r) => r.id === item.id);
-                  if (group) pickGroup(group);
-                }}
-                canCreate={canCreate}
-                creating={creatingName === trimmedQuery}
-                onCreate={createGroup}
-                emptyMessage={
-                  trimmedQuery ? "Ничего не найдено" : "Нет доступных групп"
-                }
-                itemIcon={
-                  <GitFork
-                    className="h-4 w-4 shrink-0 text-neural/70"
-                    aria-hidden
-                  />
-                }
-                createIcon={<Plus className="h-4 w-4 shrink-0" aria-hidden />}
-                inputRef={inputRef}
-                className="surface-elevated absolute z-50 mt-2 max-h-72 w-full overflow-auto p-1 shadow-2xl"
-                searchInputClassName="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
-              />
+              <Modal
+                open={open}
+                onClose={closeDropdown}
+                preventCancel={busy}
+                title="Добавить в группу ремейков"
+                bodyClassName="relation-picker-body"
+              >
+                <CreatableCombobox
+                  open
+                  query={query}
+                  onQueryChange={onQueryChange}
+                  loading={searching}
+                  disabled={busy}
+                  items={results
+                    .filter((r) => !joinedIds.has(r.id))
+                    .map((r) => ({
+                      id: r.id,
+                      label: r.name,
+                    }))}
+                  onSelect={(item) => {
+                    const group = results.find((r) => r.id === item.id);
+                    if (group) pickGroup(group);
+                  }}
+                  canCreate={canCreate}
+                  creating={creatingName === trimmedQuery}
+                  onCreate={createGroup}
+                  emptyMessage={
+                    trimmedQuery ? "Ничего не найдено" : "Нет доступных групп"
+                  }
+                  itemIcon={
+                    <GitFork
+                      className="h-4 w-4 shrink-0 text-neural/70"
+                      aria-hidden
+                    />
+                  }
+                  createIcon={<Plus className="h-4 w-4 shrink-0" aria-hidden />}
+                  inputRef={inputRef}
+                  className="relation-picker-results"
+                  searchInputClassName="focus-ring min-h-9 w-full rounded-[var(--radius-sm)] border border-border bg-bg-surface py-1.5 pl-8 pr-3 text-sm text-text placeholder:text-muted/60"
+                />
+                {error && (
+                  <p role="alert" className="mt-3 text-sm text-danger">
+                    {error}
+                  </p>
+                )}
+              </Modal>
             ) : null}
           </div>
         )}
       </div>
 
-      {error ? (
+      {error && !open ? (
         <p className="text-xs text-danger" role="alert">
           {error}
         </p>

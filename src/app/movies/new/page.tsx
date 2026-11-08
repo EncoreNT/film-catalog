@@ -1,21 +1,12 @@
 import type { Metadata } from "next";
-import { EntityEditLayout } from "@/components/layout/EntityEditLayout";
-import { AddMovieForm } from "@/components/movies/AddMovieForm";
+import { getCatalogGenreFacets } from "@/lib/catalog/catalog-facets";
+import { MovieForm } from "@/components/movies/MovieForm";
 
 export const metadata: Metadata = {
   title: "Добавить фильм",
 };
 
-export default function NewMoviePage() {
-  return (
-    <EntityEditLayout
-      backHref="/"
-      backLabel="Назад к каталогу"
-      eyebrow="карточка фильма"
-      title="Добавить фильм"
-      fillViewport
-    >
-      <AddMovieForm />
-    </EntityEditLayout>
-  );
+export default async function NewMoviePage() {
+  const genrePopularity = await getCatalogGenreFacets();
+  return <MovieForm genrePopularity={genrePopularity} />;
 }

@@ -301,7 +301,7 @@ export function Select({
           aria-haspopup="listbox"
           aria-expanded={open}
           style={compact ? { minWidth: triggerMinWidth } : undefined}
-          className={`focus-ring flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-bg-elevated px-3 text-sm text-text transition-all duration-200 ${
+          className={`select-trigger focus-ring flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-bg-elevated px-3 text-sm text-text transition-all duration-200 ${
             compact ? "min-h-9 py-1.5" : "min-h-11 py-2"
           } ${
             disabled

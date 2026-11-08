@@ -54,6 +54,7 @@ export function Modal({
       <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
         <h2 id={titleId} className="font-display text-xl font-semibold">{title}</h2>
         <Button
+          type="button"
           variant="ghost"
           onClick={onClose}
           disabled={preventCancel}

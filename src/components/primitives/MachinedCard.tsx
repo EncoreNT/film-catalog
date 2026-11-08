@@ -9,7 +9,7 @@ interface MachinedCardProps {
    *  Use "calm" where the surrounding context already speaks the line/glow
    *  language (franchise forms) so the section stops reading as a boxed-in
    *  double frame. */
-  variant?: "machined" | "calm";
+  variant?: "machined" | "calm" | "open";
 }
 
 /* Double-bezel "machined glass" card — the same nested-shell language as the
@@ -31,6 +31,10 @@ export function MachinedCard({
   bodyClassName,
   variant = "machined",
 }: MachinedCardProps) {
+  if (variant === "open") {
+    return <section className={`${bodyClassName ?? ""} ${className ?? ""}`}>{children}</section>;
+  }
+
   if (variant === "calm") {
     return (
       <div

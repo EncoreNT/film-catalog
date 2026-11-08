@@ -65,8 +65,9 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | POST | `/api/scan` | Запуск скана → **NDJSON stream** |
 | POST | `/api/dev/hdr10plus-rescan` | Перепрогон HDR10+ по HDR/DV релизам → **NDJSON stream** |
 | PUT | `/api/scan` | Сохранить scanRoot (Win/WSL → runtime path) |
-| GET | `/api/storages` | Список внешних дисков (`ExternalStorage`) |
+| GET | `/api/storages` | Диски с `capacityBytes`, `_count.releases`, `usage.knownBytes` и `usage.unknownSizeCount` |
 | POST | `/api/storages` | Создать внешний диск |
+| PATCH | `/api/storages/[id]` | Задать или очистить `capacityBytes` (положительное целое число байтов либо null) |
 | GET | `/api/stats` | Archive metrics JSON |
 | POST | `/api/pick-directory` | Нативный диалог выбора папки → runtime path |
 | GET | `/api/disk-space?path=` | Свободное место; если `/mnt/x` не drvfs/9p — `{ unmounted: true, driveLetter }` |

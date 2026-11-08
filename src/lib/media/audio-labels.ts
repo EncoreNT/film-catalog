@@ -72,8 +72,11 @@ export interface PremiumAudio {
 }
 
 type AudioTrack = ReleaseWithTracks["audioTracks"][number];
+export type AudioSelectionTrack = Pick<AudioTrack,
+  "profile" | "channels" | "channelLayout" | "language" | "translationType" | "isDefault" | "streamIndex"
+>;
 
-function trackChannelCount(track: AudioTrack): number {
+function trackChannelCount(track: AudioSelectionTrack): number {
   if (track.channels != null) return track.channels;
   if (track.channelLayout && track.channelLayout !== "other") {
     const [wide, high] = track.channelLayout.split(".");
@@ -85,7 +88,7 @@ function trackChannelCount(track: AudioTrack): number {
 }
 
 /** Лучшая дорожка среди кандидатов: object-sound → каналы → isDefault → streamIndex. */
-function pickBestAudioTrack(tracks: AudioTrack[]): AudioTrack | null {
+function pickBestAudioTrack<T extends AudioSelectionTrack>(tracks: T[]): T | null {
   if (tracks.length === 0) return null;
   const sorted = [...tracks].sort((a, b) => {
     const aSpatial = isSpatialAudioProfile(a.profile) ? 1 : 0;
@@ -106,9 +109,9 @@ function pickBestAudioTrack(tracks: AudioTrack[]): AudioTrack | null {
  * Приоритет: (1) главная дорожка (`isDefault`), (2) русский дубляж,
  * (3) русский проф. многоголосный, (4) лучшая по качеству среди всех.
  */
-export function mainAudioTrack(
-  release: ReleaseWithTracks,
-): AudioTrack | null {
+export function mainAudioTrack<T extends AudioSelectionTrack>(
+  release: { audioTracks: T[] },
+): T | null {
   const tracks = release.audioTracks;
   if (tracks.length === 0) return null;
 

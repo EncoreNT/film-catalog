@@ -7,7 +7,6 @@ import { StoragePicker } from "@/components/shared/StoragePicker";
 import { ReleaseJobDialogProgress } from "@/components/releases/ReleaseJobDialogProgress";
 import { ReleasePathBlock } from "@/components/releases/ReleasePathBlock";
 import { ReleaseTransferDestinationForm } from "@/components/releases/ReleaseTransferDestinationForm";
-import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
 import { useTargetDiskSpace } from "@/hooks/useTargetDiskSpace";
 import { moveTargetStorageKind } from "@/lib/shared/storage-picker-state";
@@ -94,7 +93,7 @@ export function ReleaseMoveDialog({
     cancelMove,
   } = moveJobState;
 
-  const etaLabel = useMediaJobEtaLabel(moveJob);
+  const etaLabel = moveJobState.etaLabel;
 
   const diskSpace = useTargetDiskSpace({
     enabled: open,
@@ -368,7 +367,7 @@ export function ReleaseMoveDialog({
       preventCancel={busy && !moveActive}
       accent="neural"
       eyebrow="перемещение"
-      title={MOVE_RELEASE_DIALOG_TITLE}
+      title={moveActive ? "Перемещение релиза" : MOVE_RELEASE_DIALOG_TITLE}
       titleId="move-dialog-title"
       statusMeta={moveMeta}
       statusRunning={moveJob?.status === "RUNNING"}
@@ -376,7 +375,6 @@ export function ReleaseMoveDialog({
     >
       {moveActive ? (
           <ReleaseJobDialogProgress
-            accent="neural"
             activeDescription={
               activeSameDisk
                 ? MOVE_RELEASE_ACTIVE_RENAME

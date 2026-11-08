@@ -34,7 +34,9 @@ export function FranchiseCoverUpload({
       uploadPath={(id) => `/api/franchises/${id}/cover`}
       aspectClass="aspect-[16/9]"
       thumbnailClassName={
-        stacked ? "relative aspect-[16/9] w-full" : "relative w-40 aspect-[16/9]"
+        stacked
+          ? "relative aspect-[16/9] w-full"
+          : "relative w-40 aspect-[16/9]"
       }
       thumbnailSizes={stacked ? "100vw" : "160px"}
       dialogAspectClass="aspect-[16/9]"
@@ -50,11 +52,12 @@ export function FranchiseCoverUpload({
         </div>
       }
       dialogHint={
-        <p className="font-mono-tech text-center text-xs text-faint">формат 16:9</p>
+        <p className="font-mono-tech text-center text-xs text-faint">
+          формат 16:9
+        </p>
       }
       urlInputId="franchise-cover-url"
       urlPlaceholder="https://…/cover.jpg"
-      previewUsesRemoteImg={(src) => src.startsWith("blob:") || src.startsWith("http")}
       onFileChange={onFileChange}
       onUrlChange={onUrlChange}
       onUploaded={onUploaded}

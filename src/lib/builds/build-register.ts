@@ -17,6 +17,11 @@ export async function registerBuildOutput(
       externalStorageId: true,
       outputReleaseId: true,
       moviePartId: true,
+      sources: {
+        where: { role: "video" },
+        select: { release: { select: { fileDownloadedAt: true } } },
+        take: 1,
+      },
     },
   });
   if (!build) throw new Error("Сборка не найдена");
@@ -37,10 +42,15 @@ export async function registerBuildOutput(
       skipProbe: true,
     });
 
-    if (build.moviePartId != null) {
+    // A remux is not a new download: inherit the date from the video source.
+    const sourceRelease = build.sources[0]?.release;
+    if (build.moviePartId != null || sourceRelease) {
       await tx.release.update({
         where: { id: created.id },
-        data: { moviePartId: build.moviePartId },
+        data: {
+          moviePartId: build.moviePartId ?? undefined,
+          fileDownloadedAt: sourceRelease?.fileDownloadedAt,
+        },
       });
     }
 

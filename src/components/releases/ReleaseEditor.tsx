@@ -3,18 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  AlertCircle,
-  Check,
-  ScanSearch,
-  Trash2,
-} from "lucide-react";
+import { AlertCircle, Check, ScanSearch, Trash2 } from "lucide-react";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
 import { Field } from "@/components/primitives/Field";
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+
 import { Select } from "@/components/primitives/Select";
 import { DurationInput } from "@/components/primitives/DurationInput";
 import { TrackEditorSection } from "@/components/shared/TrackEditorSection";
@@ -44,7 +39,10 @@ import {
   applyProbeToTrackEditor,
   probeFilePath,
 } from "@/hooks/useProbeFile";
-import { releaseTabLabel } from "@/lib/media/spec-tags";
+
+import { SpotlightTier } from "@/components/layout/SpotlightTier";
+import { releaseFormTier } from "@/lib/releases/release-form-tier";
+import { formatBytes } from "@/lib/shared/format-bytes";
 import { apiFetch } from "@/lib/api/client";
 
 interface ReleaseEditorBaseProps {
@@ -63,9 +61,12 @@ interface ReleaseEditorCreateProps extends ReleaseEditorBaseProps {
   release?: never;
 }
 
-export type ReleaseEditorProps = ReleaseEditorEditProps | ReleaseEditorCreateProps;
+export type ReleaseEditorProps =
+  ReleaseEditorEditProps | ReleaseEditorCreateProps;
 
-function releaseToVideoState(release: ReleaseWithTracks | null): VideoFieldState {
+function releaseToVideoState(
+  release: ReleaseWithTracks | null,
+): VideoFieldState {
   const v = release?.videoTrack;
   return {
     codec: v?.codec ?? "",
@@ -86,6 +87,7 @@ function useReleaseFormState(release: ReleaseWithTracks | null) {
     selectedStorageId,
     setSelectedStorageId,
     externalStorages,
+    refreshStorages,
     createExternalStorage,
     validateStorage,
     resolveExternalStorageId,
@@ -114,7 +116,10 @@ function useReleaseFormState(release: ReleaseWithTracks | null) {
     initialAudio: (release?.audioTracks ?? []).map((track) => ({
       rowKey: `audio-${track.id}`,
       codec: track.codec ?? "",
-      profile: validateAudioProfileForCodec(track.codec ?? "", track.profile ?? "None"),
+      profile: validateAudioProfileForCodec(
+        track.codec ?? "",
+        track.profile ?? "None",
+      ),
       channelLayout: track.channelLayout ?? "",
       language: track.language ?? "",
       translationType: track.translationType ?? "",
@@ -149,6 +154,7 @@ function useReleaseFormState(release: ReleaseWithTracks | null) {
     selectedStorageId,
     setSelectedStorageId,
     externalStorages,
+    refreshStorages,
     createExternalStorage,
     validateStorage,
     resolveExternalStorageId,
@@ -184,8 +190,20 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmReread, setConfirmReread] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const [readFile, setReadFile] = useState(() => ({
+    path: normalizeFilePathInput(release?.filePath ?? ""),
+    size: release?.fileSize ?? null,
+  }));
+  const tier = releaseFormTier(form.video, form.audioRows);
+  const fileSizeLabel =
+    !form.fileFillError &&
+    readFile.path &&
+    readFile.path === normalizeFilePathInput(form.filePath)
+      ? formatBytes(readFile.size)
+      : null;
   const markDirty = () => setIsDirty(true);
 
   const handleFillFromFile = async () => {
@@ -201,11 +219,15 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     try {
       const { display } = commitFilePathInput(form.filePath);
       form.setFilePath(display);
-      const data = await probeFilePath(runtime, { title: movieTitle || "probe" });
-      applyParsedFilePathFields(runtime, {
+      const data = await probeFilePath(runtime, {
+        title: movieTitle || "probe",
+      });
+      setReadFile({ path: runtime, size: data.fileSize ?? null });
+      const parsed = applyParsedFilePathFields(runtime, {
         releaseType: form.releaseType,
         setReleaseType: form.setReleaseType,
       });
+      if (mode === "edit") form.setReleaseType(parsed.releaseType ?? "");
       applyProbeToTrackEditor(data, {
         setDurationSeconds: form.setDurationSeconds,
         setVideo: form.setVideo,
@@ -215,8 +237,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
       });
       markDirty();
       form.setFileFillError(null);
-      form.setFileFillMessage("Данные из файла заполнены — сохраните изменения");
-      setTimeout(() => form.setFileFillMessage(null), 4000);
+      form.setFileFillMessage("Данные из файла заполнены. Сохраните изменения");
     } catch (err) {
       form.setFileFillError(
         err instanceof Error ? err.message : "Ошибка чтения файла",
@@ -268,6 +289,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
         setIsDirty(false);
         form.setPendingFileMeta(null);
         form.setFileFillMessage(null);
+        void form.refreshStorages();
         router.refresh();
       } else {
         const created = await apiFetch<ReleaseWithTracks>(
@@ -329,15 +351,17 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     markDirty();
   };
 
-  const releaseLabel =
-    mode === "edit" && release ? releaseTabLabel(release) : "новый релиз";
-
   const sourceCard = (
-    <MachinedCard variant="calm" bodyClassName="space-y-5">
-      <CardSectionHeader label="источник" title={releaseLabel} />
+    <section className="release-editor-section release-source-section space-y-5">
+      <div className="release-editor-section-heading">
+        <h2>Файл и хранилище</h2>
+        <p>Укажите файл, чтобы заполнить параметры и дорожки.</p>
+      </div>
 
       <StoragePicker
         compact
+        fullWidth
+        showUsage
         storageKind={form.storageKind}
         onStorageKindChange={(value) => {
           form.setStorageKind(value);
@@ -382,9 +406,6 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
                 } else {
                   form.setFilePath(commitFilePathInput(trimmed).display);
                 }
-                form.setPendingFileMeta(null);
-                form.setFileFillMessage(null);
-                form.setFileFillError(null);
               })
             }
             aria-invalid={!!form.fileFillError}
@@ -397,15 +418,24 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             type="button"
             variant="secondary"
             loading={form.fillingFromFile}
-            onClick={handleFillFromFile}
+            onClick={() => {
+              if (mode === "edit") setConfirmReread(true);
+              else void handleFillFromFile();
+            }}
             disabled={!form.filePath.trim() || form.fillingFromFile}
             className="w-full"
           >
             <ScanSearch className="h-4 w-4" aria-hidden />
-            Заполнить из файла
+            {mode === "edit" ? "Перечитать из файла" : "Заполнить из файла"}
           </Button>
         </div>
         <div id="file-path-fill-feedback" className="pt-1">
+          {fileSizeLabel ? (
+            <p className="release-file-size">
+              <span>Размер файла</span>
+              <strong>{fileSizeLabel}</strong>
+            </p>
+          ) : null}
           {form.fileFillError ? (
             <p
               className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
@@ -415,7 +445,10 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
               <span>{form.fileFillError}</span>
             </p>
           ) : form.fileFillMessage ? (
-            <p className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+            <p
+              role="status"
+              className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent"
+            >
               <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span>{form.fileFillMessage}</span>
             </p>
@@ -423,23 +456,25 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             <p className="text-xs text-accent">
               Метаданные файла готовы к сохранению
             </p>
-          ) : form.filePath.trim() ? (
+          ) : fileSizeLabel ? null : form.filePath.trim() ? (
             <p className="text-xs text-faint">
-              файл не проверялся — путь сохранится как указано
+              Заполните данные из файла или укажите параметры вручную.
             </p>
           ) : (
             <p className="text-xs text-faint">
-              не указан — будет сброшен при сохранении
+              Можно заполнить параметры вручную без файла.
             </p>
           )}
         </div>
       </Field>
-    </MachinedCard>
+    </section>
   );
 
   const detailsCard = (
-    <MachinedCard variant="calm" bodyClassName="space-y-5">
-      <CardSectionHeader label="детали релиза" title="Параметры" />
+    <section className="release-editor-section release-identity-section space-y-5">
+      <div className="release-editor-section-heading">
+        <h2>Параметры релиза</h2>
+      </div>
 
       <DurationInput
         valueSeconds={form.durationSeconds}
@@ -447,7 +482,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
           form.setDurationSeconds(s);
           markDirty();
         }}
-        hint="Из ffprobe при сканировании."
+        hint="Заполняется из файла. При необходимости время можно изменить вручную."
       />
 
       <Select
@@ -457,7 +492,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
           form.setReleaseType(v);
           markDirty();
         }}
-        options={[{ value: "", label: "—" }, ...RELEASE_TYPES]}
+        options={[{ value: "", label: "Не указан" }, ...RELEASE_TYPES]}
         hint="BDRemux, BDRip, WEB-DL…"
       />
       <Select
@@ -471,26 +506,30 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
         preserveOrder
         hint="Театральная, режиссёрская, детская…"
       />
-    </MachinedCard>
+    </section>
   );
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex h-full min-h-0 flex-col pb-28 lg:pb-0"
+      className="release-editor-form"
+      data-tier={tier ?? "general"}
     >
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-3 lg:gap-8">
-        <div className="flex flex-col gap-6 lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1 scroll-subtle">
+      <SpotlightTier tier={tier ?? "general"} />
+      <fieldset
+        disabled={loading || actionLoading || form.fillingFromFile}
+        className="release-editor-grid"
+      >
+        <div className="release-editor-source">
           {sourceCard}
           {detailsCard}
         </div>
 
-        <div className="flex h-full min-h-0 flex-col overflow-hidden lg:col-span-2">
+        <div className="release-editor-tracks">
           <TrackEditorSection
             tabbed
-            layout="panel"
+            layout="editor"
             variant="balanced"
-            videoColumnsOnXl
             audioGridCols="adaptive"
             video={form.video}
             onVideoChange={patchVideo}
@@ -522,13 +561,28 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             minAudioRows={0}
           />
         </div>
-      </div>
+      </fieldset>
 
       <FormActionBar
         isDirty={isDirty}
         saving={loading}
         actionLoading={actionLoading}
         error={error}
+        idleMessage={mode === "create" && !isDirty ? "Новый релиз" : undefined}
+        secondaryActions={
+          mode === "edit" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmDelete(true)}
+              disabled={loading || actionLoading || form.fillingFromFile}
+              className="text-danger"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden />
+              Удалить релиз
+            </Button>
+          ) : undefined
+        }
       >
         <Link
           href={`/movies/${movieSlug}`}
@@ -536,26 +590,33 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
         >
           Отмена
         </Link>
-        {mode === "edit" && release ? (
-          <Button
-            type="button"
-            variant="danger"
-            onClick={() => setConfirmDelete(true)}
-            disabled={loading || actionLoading}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden />
-            Удалить релиз
-          </Button>
-        ) : null}
         <Button
           type="submit"
           variant="primary"
           loading={loading}
-          disabled={(mode === "edit" && !isDirty && !loading) || loading}
+          disabled={
+            (mode === "edit" && !isDirty) ||
+            loading ||
+            actionLoading ||
+            form.fillingFromFile
+          }
         >
           {mode === "create" ? "Создать релиз" : "Сохранить"}
         </Button>
       </FormActionBar>
+
+      <ConfirmDialog
+        open={confirmReread}
+        onClose={() => setConfirmReread(false)}
+        onConfirm={() => {
+          setConfirmReread(false);
+          void handleFillFromFile();
+        }}
+        title="Перечитать данные из файла?"
+        description="Продолжительность, тип релиза, параметры видео, аудиодорожки и субтитры будут заполнены заново. Текущие значения этих полей, включая ручные правки, будут заменены. Чтобы записать результат в каталог, нажмите «Сохранить»."
+        confirmLabel="Перечитать"
+        tone="accent"
+      />
 
       {mode === "edit" ? (
         <ConfirmDialog

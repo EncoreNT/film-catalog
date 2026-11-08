@@ -1,51 +1,38 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Minus, Plus, X } from "lucide-react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { InfoHint } from "./InfoHint";
+import "./year-input.css";
 
 export const MIN_YEAR = 1888;
-/** Latest accepted release year (allow upcoming releases). */
+/** Latest accepted release year for planned franchise slots. */
 export const MAX_YEAR = new Date().getFullYear() + 1;
-
-interface YearInputProps {
-  /** Stored year (source of truth). */
-  value: number | null;
-  onChange: (year: number | null) => void;
-  label?: string;
-  hint?: ReactNode;
-}
 
 export function clampYear(n: number): number {
   return Math.min(MAX_YEAR, Math.max(MIN_YEAR, n));
 }
 
-/** Decade label like "202x" from a year. */
-function decadeLabel(year: number): string {
-  const base = Math.floor(year / 10) * 10;
-  return `${base.toString().slice(0, 3)}x`;
-}
-
-interface Decade {
-  /** Decade start year, e.g. 2020. */
-  start: number;
-  label: string;
-  years: number[];
-}
-
-/** Build decades newest-first; each carries its in-range years. */
-function buildDecades(): Decade[] {
-  const decades: Decade[] = [];
-  const maxDecade = Math.floor(MAX_YEAR / 10) * 10;
-  for (let start = maxDecade; start >= MIN_YEAR; start -= 10) {
-    const years: number[] = [];
-    for (let y = start; y < start + 10 && y <= MAX_YEAR; y++) {
-      if (y >= MIN_YEAR) years.push(y);
-    }
-    if (years.length === 0) continue;
-    decades.push({ start, label: decadeLabel(start), years });
-  }
-  return decades;
+interface YearInputProps {
+  value: number | null;
+  onChange: (year: number | null) => void;
+  label?: string;
+  hint?: ReactNode;
+  id?: string;
+  minYear?: number;
+  maxYear?: number;
 }
 
 export function YearInput({
@@ -53,233 +40,216 @@ export function YearInput({
   onChange,
   label = "Год",
   hint,
+  id,
+  minYear = MIN_YEAR,
+  maxYear = MAX_YEAR,
 }: YearInputProps) {
-  const fieldId = useId();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [text, setText] = useState(() => (value != null ? String(value) : ""));
-  const [error, setError] = useState<string | null>(null);
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [expandedDecade, setExpandedDecade] = useState<number | null>(
-    () => (value != null ? Math.floor(value / 10) * 10 : null),
+  const [decade, setDecade] = useState(
+    () => Math.floor((value ?? new Date().getFullYear()) / 10) * 10,
   );
-
-  const decades = useMemo(() => buildDecades(), []);
-
-  const canDecrement = value == null || value > MIN_YEAR;
-  const canIncrement = value == null || value < MAX_YEAR;
-
-  const commit = (raw: string) => {
-    const digits = raw.replace(/[^\d]/g, "").slice(0, 4);
-    setText(digits);
-    if (digits === "") {
-      setError(null);
-      onChange(null);
-      return;
-    }
-    const n = parseInt(digits, 10);
-    if (n < MIN_YEAR || n > MAX_YEAR) {
-      setError(`Год должен быть от ${MIN_YEAR} до ${MAX_YEAR}.`);
-      // Still emit the clamped value so submit can't store an out-of-range year,
-      // but keep the user's text so they can fix it.
-      onChange(clampYear(n));
-      return;
-    }
-    setError(null);
-    onChange(n);
-  };
-
-  const step = (delta: number) => {
-    const base = value ?? new Date().getFullYear();
-    const next = clampYear(base + delta);
-    setText(String(next));
-    setError(null);
-    onChange(next);
-  };
-
-  const selectYear = (year: number) => {
-    setText(String(year));
-    setError(null);
+  const firstDecade = Math.floor(minYear / 10) * 10;
+  const lastDecade = Math.floor(maxYear / 10) * 10;
+  const invalid = value != null && (value < minYear || value > maxYear);
+  const error = invalid ? `Введите год от ${minYear} до ${maxYear}` : "";
+  const decades = Array.from(
+    { length: (lastDecade - firstDecade) / 10 + 1 },
+    (_, i) => firstDecade + i * 10,
+  );
+  const choose = (year: number | null) => {
     onChange(year);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
-  const clear = () => {
-    setText("");
-    setError(null);
-    onChange(null);
-    setOpen(false);
-  };
-
-  // Outside-click + Escape to close the dropdown.
   useEffect(() => {
     if (!open) return;
-    const onMouse = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    const dismiss = (event: Event) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onMouse);
-    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("focusin", dismiss);
     return () => {
-      document.removeEventListener("mousedown", onMouse);
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("focusin", dismiss);
     };
   }, [open]);
 
-  const hasValue = value != null;
-  const activeDecadeStart =
-    value != null ? Math.floor(value / 10) * 10 : null;
-  // Effective expanded decade: a manual expansion wins, otherwise follow the
-  // selected value so external value changes keep the right decade open.
-  const effectiveDecade =
-    expandedDecade ?? (value != null ? Math.floor(value / 10) * 10 : null);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const position = () => {
+      const root = rootRef.current;
+      const panel = panelRef.current;
+      if (!root || !panel) return;
+      const bounds = root.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      const viewportBottom =
+        viewportTop + (viewport?.height ?? window.innerHeight);
+      const below = viewportBottom - bounds.bottom - 20;
+      const above = bounds.top - viewportTop - 20;
+      const upward = below < panel.scrollHeight && above > below;
+      panel.dataset.side = upward ? "top" : "bottom";
+      panel.style.maxHeight = `${Math.max(80, upward ? above : below)}px`;
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    window.visualViewport?.addEventListener("resize", position);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+      window.visualViewport?.removeEventListener("resize", position);
+    };
+  }, [open, decade]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <label
-          htmlFor={fieldId}
-          className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-muted"
-        >
-          {label}
-        </label>
+    <div
+      ref={rootRef}
+      className="year-picker"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.preventDefault();
+          setOpen(false);
+          triggerRef.current?.focus();
+        }
+      }}
+    >
+      <div className="year-picker-label">
+        <label htmlFor={fieldId}>{label}</label>
         {hint ? <InfoHint text={hint} label={label} /> : null}
       </div>
-      <div className="relative" ref={containerRef}>
-        <div
-          className={`relative flex min-h-11 items-center gap-1 rounded-[var(--radius-sm)] border bg-bg-elevated/70 px-1.5 py-1 transition-[border-color,box-shadow] duration-200 before:pointer-events-none before:absolute before:inset-x-3 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent/45 before:to-transparent before:opacity-0 before:transition-opacity before:duration-200 focus-within:before:opacity-100 ${
-            open
-              ? "border-accent/40 shadow-[0_0_12px_rgba(232,176,90,0.12)]"
-              : "border-border-strong hover:border-border-strong focus-within:border-accent/40 focus-within:shadow-[0_0_10px_rgba(232,176,90,0.1)]"
-          } ${error ? "!border-danger/50" : ""}`}
-          aria-label={label}
+      <div className="year-picker-control" data-invalid={invalid}>
+        <CalendarDays size={19} aria-hidden />
+        <input
+          id={fieldId}
+          ref={(node) => {
+            node?.setCustomValidity(error);
+          }}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={4}
+          pattern="[0-9]{4}"
+          value={value ?? ""}
+          placeholder="Год"
+          aria-invalid={invalid}
+          aria-describedby={invalid ? `${fieldId}-error` : undefined}
+          onChange={(event) => {
+            const raw = event.target.value;
+            if (!/^\d{0,4}$/.test(raw)) return;
+            onChange(raw === "" ? null : Number(raw));
+          }}
+        />
+        <button
+          ref={triggerRef}
+          type="button"
+          className="focus-ring"
+          aria-label="Выбрать год"
+          aria-expanded={open}
+          aria-controls={`${fieldId}-choices`}
+          onClick={() => {
+            if (!open)
+              setDecade(
+                Math.floor(
+                  Math.min(
+                    maxYear,
+                    Math.max(minYear, value ?? new Date().getFullYear()),
+                  ) / 10,
+                ) * 10,
+              );
+            setOpen(!open);
+          }}
         >
-          <button
-            type="button"
-            onClick={() => step(-1)}
-            disabled={!canDecrement}
-            aria-label="Предыдущий год"
-            className="focus-ring flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-muted transition-colors hover:bg-bg-surface-hover hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <Minus className="h-4 w-4" aria-hidden />
-          </button>
-
-          <input
-            id={fieldId}
-            type="text"
-            inputMode="numeric"
-            value={text}
-            onChange={(e) => commit(e.target.value)}
-            onFocus={() => setOpen(true)}
-            onBlur={() => {
-              if (text !== "" && value != null) setText(String(value));
-            }}
-            placeholder="1994"
-            maxLength={4}
-            aria-invalid={error != null}
-            aria-describedby={error ? `${fieldId}-error` : undefined}
-            className="font-mono-tech min-w-0 flex-1 cursor-text rounded-[var(--radius-sm)] border-0 bg-transparent px-1 py-1 text-center text-base font-semibold tabular-nums text-text outline-none placeholder:text-muted/50 focus:outline-none focus-visible:outline-none"
-          />
-
-          <button
-            type="button"
-            onClick={() => step(1)}
-            disabled={!canIncrement}
-            aria-label="Следующий год"
-            className="focus-ring flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-muted transition-colors hover:bg-bg-surface-hover hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
-
-        {open ? (
-          <div
-            role="listbox"
-            aria-label={`${label} — десятилетия`}
-            className="surface-elevated absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-auto rounded-[var(--radius-sm)] border border-border-strong p-1 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
-          >
-            <div className="flex items-center justify-between px-2 pb-1 pt-2">
-              <span className="font-mono-tech text-[0.6rem] text-faint">
-                десятилетия
-              </span>
-              {hasValue ? (
-                <button
-                  type="button"
-                  onClick={clear}
-                  className="focus-ring font-mono-tech flex cursor-pointer items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.6rem] text-muted transition-colors hover:border-accent/40 hover:text-accent"
-                >
-                  <X className="h-3 w-3" aria-hidden />
-                  очистить
-                </button>
-              ) : null}
-            </div>
-            <div className="h-px w-full bg-border" aria-hidden />
-            <ul className="p-1">
-              {decades.map((decade) => {
-                const isExpanded = effectiveDecade === decade.start;
-                const decadeActive = activeDecadeStart === decade.start;
-                return (
-                  <li key={decade.start}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedDecade(isExpanded ? null : decade.start)
-                      }
-                      aria-expanded={isExpanded}
-                      className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm transition-colors ${
-                        decadeActive
-                          ? "bg-accent/8 text-accent-bright"
-                          : "text-text hover:bg-bg-surface-hover"
-                      }`}
-                    >
-                      <span className="font-mono-tech whitespace-nowrap">
-                        {decade.label}
-                      </span>
-                      <ChevronDown
-                        className={`h-3.5 w-3.5 shrink-0 text-muted transition-transform duration-200 ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
-                        aria-hidden
-                      />
-                    </button>
-                    {isExpanded ? (
-                      <ul className="grid grid-cols-5 gap-1 px-1 pb-1 pt-1">
-                        {decade.years.map((y) => {
-                          const active = y === value;
-                          return (
-                            <li key={y} role="option" aria-selected={active}>
-                              <button
-                                type="button"
-                                onClick={() => selectYear(y)}
-                                className={`font-mono-tech flex h-8 w-full cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-xs tabular-nums transition-colors ${
-                                  active
-                                    ? "border border-accent/35 bg-accent/10 text-accent-bright"
-                                    : "text-muted hover:bg-bg-surface-hover hover:text-text"
-                                }`}
-                              >
-                                {y}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : null}
+          <ChevronDown size={18} aria-hidden />
+        </button>
       </div>
-
-      {error ? (
-        <p id={`${fieldId}-error`} className="text-xs text-danger" role="alert">
+      {invalid && (
+        <p id={`${fieldId}-error`} className="year-picker-error" role="alert">
           {error}
         </p>
-      ) : null}
+      )}
+      {open && (
+        <div
+          ref={panelRef}
+          id={`${fieldId}-choices`}
+          className="year-picker-panel"
+          role="group"
+          aria-label="Выбор года"
+        >
+          <div className="year-picker-navigation">
+            <button
+              type="button"
+              className="focus-ring"
+              aria-label="Предыдущее десятилетие"
+              disabled={decade <= firstDecade}
+              onClick={() => setDecade(decade - 10)}
+            >
+              <ChevronLeft size={18} aria-hidden />
+            </button>
+            <select
+              aria-label="Десятилетие"
+              value={decade}
+              onChange={(event) => setDecade(Number(event.target.value))}
+              className="focus-ring"
+            >
+              {decades.map((start) => (
+                <option key={start} value={start}>
+                  {Math.max(minYear, start)}–{Math.min(maxYear, start + 9)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="focus-ring"
+              aria-label="Следующее десятилетие"
+              disabled={decade >= lastDecade}
+              onClick={() => setDecade(decade + 10)}
+            >
+              <ChevronRight size={18} aria-hidden />
+            </button>
+          </div>
+          <div className="year-picker-years">
+            {Array.from({ length: 10 }, (_, i) => decade + i)
+              .filter((year) => year >= minYear && year <= maxYear)
+              .map((year) => (
+                <button
+                  key={year}
+                  type="button"
+                  className="focus-ring"
+                  aria-pressed={value === year}
+                  onClick={() => choose(year)}
+                >
+                  {year}
+                </button>
+              ))}
+          </div>
+          <div className="year-picker-footer">
+            <button
+              type="button"
+              className="focus-ring"
+              onClick={() => choose(null)}
+            >
+              Без года
+            </button>
+            <button
+              type="button"
+              className="focus-ring"
+              onClick={() => {
+                setOpen(false);
+                triggerRef.current?.focus();
+              }}
+            >
+              Готово
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

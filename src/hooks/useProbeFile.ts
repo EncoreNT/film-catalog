@@ -1,5 +1,6 @@
 "use client";
 
+import { emptyVideoFieldState } from "@/lib/movies/movie-form-types";
 import type { ProbeResult } from "@/lib/media/ffprobe";
 import {
   probeToAudioRows,
@@ -12,18 +13,15 @@ import type {
   VideoFieldState,
 } from "@/lib/movies/movie-form-types";
 import type { MovieFileMetaPayload } from "@/lib/movies/build-movie-payload";
-import {
-  parseMoviePath,
-  type ParsedName,
-} from "@/lib/media/name-parser";
+import { parseMoviePath, type ParsedName } from "@/lib/media/name-parser";
 import { normalizeFilePathInput } from "@/lib/shared/display-path";
 
 export interface ProbeTrackEditor {
-  setDurationSeconds?: (seconds: number) => void;
+  setDurationSeconds?: (seconds: number | null) => void;
   setVideo: (updater: (current: VideoFieldState) => VideoFieldState) => void;
   setAudioRowsFromProbe: (rows: AudioFormRow[]) => void;
   setSubtitleRowsFromProbe: (rows: SubtitleFormRow[]) => void;
-  setPendingFileMeta?: (meta: MovieFileMetaPayload) => void;
+  setPendingFileMeta?: (meta: MovieFileMetaPayload | null) => void;
 }
 
 export interface ParsedFilePathFieldSetters {
@@ -81,16 +79,13 @@ export function applyProbeToTrackEditor(
   data: ProbeResult & Partial<MovieFileMetaPayload>,
   editor: ProbeTrackEditor,
 ): void {
-  if (data.durationSeconds != null) {
-    editor.setDurationSeconds?.(data.durationSeconds);
-  }
-  editor.setVideo((current) => ({ ...current, ...probeToVideoFields(data.video) }));
-  if (data.audio.length) {
-    editor.setAudioRowsFromProbe(probeToAudioRows(data.audio));
-  }
-  if (data.subtitles.length) {
-    editor.setSubtitleRowsFromProbe(probeToSubtitleRows(data.subtitles));
-  }
+  editor.setDurationSeconds?.(data.durationSeconds ?? null);
+  editor.setVideo(() => ({
+    ...emptyVideoFieldState(),
+    ...probeToVideoFields(data.video),
+  }));
+  editor.setAudioRowsFromProbe(probeToAudioRows(data.audio));
+  editor.setSubtitleRowsFromProbe(probeToSubtitleRows(data.subtitles));
   if (
     data.fileSize != null &&
     data.fileMtime != null &&
@@ -104,5 +99,7 @@ export function applyProbeToTrackEditor(
       fileDownloadedAt: data.fileDownloadedAt,
       fileHash: data.fileHash,
     });
+  } else {
+    editor.setPendingFileMeta?.(null);
   }
 }

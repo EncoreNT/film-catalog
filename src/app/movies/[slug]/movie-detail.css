@@ -366,7 +366,9 @@ body:has(.movie-detail-page) .projection-vignette { z-index: 1; }
   @keyframes movie-plaque-in {from {transform:translateY(3px);opacity:.68;} to {transform:translateY(0);opacity:1;}}
 }
 .movie-release-notes,.movie-characteristics,.movie-characteristics > span,.movie-tv-notice {display:flex;align-items:center;flex-wrap:wrap;}
-.movie-release-notes {justify-content:space-between;gap:6px 14px;margin:8px 0 10px;color:var(--film-subtle);font-size:var(--film-small);}
+.movie-release-notes {justify-content:space-between;gap:6px 14px;margin:0;padding-block:14px;color:var(--film-subtle);font-size:var(--film-small);}
+/* The notes own both sides of their spacing; the file must not add a second gap. */
+.movie-release-body:has(.movie-release-notes) .movie-file {margin-top:0;}
 .movie-characteristics {gap:5px 12px;}
 .movie-characteristics > span,.movie-tv-notice {gap:5px;}
 .movie-tv-notice > svg {color:var(--movie-tier);}
@@ -462,6 +464,7 @@ body:has(.movie-detail-page) .projection-vignette { z-index: 1; }
     column-gap:clamp(24px,2vw,64px); align-items:start;
   }
   .movie-release-main {display:block; grid-column:1; grid-row:1;}
+  .movie-release-main:has(.movie-release-notes) .movie-quality-row {margin-bottom:0;}
   .movie-release-rail {
     --rail-top:calc(var(--sticky-summary) + var(--movie-picker-height,0px) + 8px);
     display:block; grid-column:2; grid-row:1; min-width:0;

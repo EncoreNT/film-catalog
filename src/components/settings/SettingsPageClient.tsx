@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition, type Dispatch, type SetStateAction } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { PageHeader } from "@/components/primitives/PageHeader";
 import { SegmentedControl } from "@/components/primitives/SegmentedControl";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
@@ -11,10 +11,13 @@ import { ScannerSection } from "@/components/settings/ScannerSection";
 import { CatalogSection } from "@/components/settings/CatalogSection";
 import { BuildsSection } from "@/components/settings/BuildsSection";
 import { ExportSection } from "@/components/settings/ExportSection";
+import { StoragesSection } from "@/components/settings/StoragesSection";
+import type { StorageOption } from "@/lib/shared/storage-types";
 import type { AppSettingsSnapshot } from "@/lib/db/settings";
 import { apiFetch } from "@/lib/api/client";
 
-type SettingsTab = "raters" | "scanner" | "catalog" | "builds" | "export";
+type SettingsTab =
+  "raters" | "scanner" | "catalog" | "builds" | "export" | "storages";
 
 export type RaterView = {
   id: number;
@@ -25,13 +28,18 @@ export type RaterView = {
 interface SettingsPageClientProps {
   initialRaters: RaterView[];
   initialSettings: AppSettingsSnapshot;
+  initialStorages: StorageOption[];
+  initialTab: SettingsTab;
 }
 
 export function SettingsPageClient({
   initialRaters,
   initialSettings,
+  initialStorages,
+  initialTab,
 }: SettingsPageClientProps) {
-  const [tab, setTab] = useState<SettingsTab>("raters");
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
+  const [storages, setStorages] = useState(initialStorages);
   const [raters, setRaters] = useState(initialRaters);
   const [settings, setSettings] = useState(initialSettings);
   const [draft, setDraft] = useState(initialSettings);
@@ -67,7 +75,9 @@ export function SettingsPageClient({
         setSettings(saved);
         setDraft(saved);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Не удалось сохранить настройки");
+        setError(
+          err instanceof Error ? err.message : "Не удалось сохранить настройки",
+        );
       }
     });
   };
@@ -77,22 +87,38 @@ export function SettingsPageClient({
       <PageHeader
         eyebrow="система"
         title="Настройки"
-        subtitle="Оценщики, каталог, сборки и пути к данным."
+        subtitle="Оценщики, внешние диски, каталог, сборки и пути к данным."
       />
 
       <div className="mt-8 space-y-6">
-        <SegmentedControl
-          value={tab}
-          onChange={setTab}
-          ariaLabel="Разделы настроек"
-          options={[
-            { value: "raters", label: "Оценщики" },
-            { value: "scanner", label: "Сканер" },
-            { value: "catalog", label: "Каталог" },
-            { value: "builds", label: "Сборка" },
-            { value: "export", label: "Экспорт" },
-          ]}
-        />
+        <div className="[&>.segmented-control]:flex-wrap [&_.segmented-control>button]:basis-24">
+          <SegmentedControl
+            value={tab}
+            onChange={setTab}
+            ariaLabel="Разделы настроек"
+            options={[
+              { value: "raters", label: "Оценщики" },
+              { value: "storages", label: "Диски" },
+              { value: "scanner", label: "Сканер" },
+              { value: "catalog", label: "Каталог" },
+              { value: "builds", label: "Сборка" },
+              { value: "export", label: "Экспорт" },
+            ]}
+          />
+        </div>
+
+        {tab === "storages" ? (
+          <StoragesSection
+            storages={storages}
+            onStorageSaved={(saved) =>
+              setStorages((current) =>
+                current.map((storage) =>
+                  storage.id === saved.id ? saved : storage,
+                ),
+              )
+            }
+          />
+        ) : null}
 
         {tab === "raters" ? (
           <RatersSection raters={raters} onRatersChange={setRaters} />
@@ -151,9 +177,13 @@ export function SettingsPageClient({
         ) : null}
       </div>
 
-      {tab !== "raters" ? (
+      {tab !== "raters" && tab !== "storages" ? (
         <FormActionBar isDirty={isDirty} saving={pending} error={error}>
-          <Button type="button" onClick={handleSaveSettings} disabled={!isDirty || pending}>
+          <Button
+            type="button"
+            onClick={handleSaveSettings}
+            disabled={!isDirty || pending}
+          >
             Сохранить
           </Button>
         </FormActionBar>

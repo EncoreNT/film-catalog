@@ -1,0 +1,25 @@
+dialog:has(.relation-picker-body) {
+  background: var(--bg-elevated);
+  max-height: min(80dvh, 720px);
+}
+dialog:has(.relation-picker-body) h2 {
+  font-family: var(--font-manrope), sans-serif;
+}
+.relation-picker-results > div:first-child {
+  position: sticky;
+  top: -20px;
+  z-index: 1;
+  background: var(--bg-elevated);
+  padding-block: 4px 16px;
+}
+.relation-picker-results input {
+  min-height: 46px;
+}
+.relation-picker-results > button {
+  min-height: 48px;
+  padding-block: 12px;
+}
+.relation-picker-results > button span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

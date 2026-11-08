@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMediaJobEtaLabel } from "@/hooks/useMediaJobEta";
 import { apiFetch } from "@/lib/api/client";
 import type { SerializedMove } from "@/lib/releases/move-serialize";
 import { isMoveTerminal } from "@/lib/releases/move-display";
@@ -20,6 +21,7 @@ export function useReleaseMoveJob({
   const [activeExport, setActiveExport] = useState(false);
   const [activeBuild, setActiveBuild] = useState(false);
   const [loading, setLoading] = useState(false);
+  const etaLabel = useMediaJobEtaLabel(moveJob);
 
   const refreshMoveJob = useCallback(async (jobId: number) => {
     return apiFetch<SerializedMove>(
@@ -99,6 +101,7 @@ export function useReleaseMoveJob({
 
   return {
     moveJob,
+    etaLabel,
     setMoveJob,
     moveActive,
     activeExport,

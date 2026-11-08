@@ -1,17 +1,34 @@
 "use client";
 
-import { useRef, useState, type DragEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type ReactNode,
+} from "react";
 import Image from "next/image";
-import { ImagePlus, RefreshCw, Check, Upload } from "lucide-react";
+import {
+  Check,
+  ClipboardPaste,
+  ImagePlus,
+  Link2,
+  Loader2,
+  Pencil,
+  Upload,
+  X,
+} from "lucide-react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
-import { trimInput } from "@/lib/shared/text-trim";
 import { uploadCover } from "@/lib/api/client";
-
-type Source =
-  | { kind: "none" }
-  | { kind: "file"; file: File; previewUrl: string }
-  | { kind: "url"; url: string };
+import {
+  COVER_MAX_BYTES,
+  coverExtFromMime,
+  isCoverImageMime,
+} from "@/lib/covers/cover-formats";
+import { formatBytes } from "@/lib/shared/format-bytes";
+import "./image-cover-upload.css";
 
 export interface ImageCoverUploadProps {
   /** Existing entity id (edit mode). Omit in create mode to buffer the pick. */
@@ -29,12 +46,12 @@ export interface ImageCoverUploadProps {
   dialogMaxWidth: string;
   dialogSizes: string;
   label: string;
+  emptyLabel?: string;
+  showAction?: boolean;
   header?: ReactNode;
   dialogHint?: ReactNode;
   urlInputId: string;
   urlPlaceholder: string;
-  /** Franchise needs blob: previews as plain img; movie uses next/image for blobs. */
-  previewUsesRemoteImg?: (src: string) => boolean;
   onFileChange?: (file: File | null) => void;
   onUrlChange?: (url: string | null) => void;
   onUploaded?: () => void;
@@ -42,21 +59,10 @@ export interface ImageCoverUploadProps {
 
 function isValidHttpUrl(value: string): boolean {
   try {
-    const u = new URL(value.trim());
-    return /^https?:$/.test(u.protocol);
+    return /^https?:$/.test(new URL(value.trim()).protocol);
   } catch {
     return false;
   }
-}
-
-function useRemotePreview(
-  src: string | null,
-  sourceKind: Source["kind"],
-  previewUsesRemoteImg?: (src: string) => boolean,
-): boolean {
-  if (sourceKind === "url") return true;
-  if (src && previewUsesRemoteImg?.(src)) return true;
-  return false;
 }
 
 export function ImageCoverUpload({
@@ -72,383 +78,477 @@ export function ImageCoverUpload({
   dialogMaxWidth,
   dialogSizes,
   label,
+  emptyLabel,
+  showAction = false,
   header,
   dialogHint,
   urlInputId,
   urlPlaceholder,
-  previewUsesRemoteImg,
   onFileChange,
   onUrlChange,
   onUploaded,
 }: ImageCoverUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [source, setSource] = useState<Source>({ kind: "none" });
+  const urls = useRef(new Set<string>());
+  const session = useRef(0);
+  const [localSource, setLocalSource] = useState<string | null>(null);
   const [stored, setStored] = useState(hasCover);
   const [storedVersion, setStoredVersion] = useState(coverVersion);
-  const [uploading, setUploading] = useState(false);
-  const [uploaded, setUploaded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [readingClipboard, setReadingClipboard] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [draftPreviewUrl, setDraftPreviewUrl] = useState<string | null>(null);
   const [draftUrl, setDraftUrl] = useState("");
-  const [urlPreviewFailed, setUrlPreviewFailed] = useState(false);
-
+  const [error, setError] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const [dimensions, setDimensions] = useState<string | null>(null);
   const editMode = entityId != null;
   const version = storedVersion ?? coverVersion;
-
   const previewSrc =
-    source.kind === "file"
-      ? source.previewUrl
-      : source.kind === "url"
-        ? source.url
-        : stored && entityId != null && version != null
-          ? buildStoredUrl(entityId, version)
-          : null;
-  const previewIsRemote = useRemotePreview(
-    previewSrc,
-    source.kind,
-    previewUsesRemoteImg,
+    localSource ??
+    (stored && entityId != null && version != null
+      ? buildStoredUrl(entityId, version)
+      : null);
+  const validUrl = isValidHttpUrl(draftUrl);
+  const candidate = draftPreviewUrl ?? (validUrl ? draftUrl.trim() : null);
+  const dialogPreview = candidate ?? previewSrc;
+  const hasCandidate = !!draftFile || validUrl;
+
+  const revoke = useCallback(
+    (url: string | null) => {
+      if (url && urls.current.delete(url)) URL.revokeObjectURL(url);
+    },
+    [urls],
+  );
+  useEffect(
+    () => () => {
+      urls.current.forEach((url) => URL.revokeObjectURL(url));
+      urls.current.clear();
+      session.current += 1;
+    },
+    [urls],
   );
 
   const openDialog = () => {
-    setError(null);
+    session.current += 1;
+    revoke(draftPreviewUrl);
     setDraftFile(null);
     setDraftPreviewUrl(null);
     setDraftUrl("");
-    setUrlPreviewFailed(false);
+    setError(null);
+    setPreviewFailed(false);
+    setDimensions(null);
     setDragOver(false);
-    if (inputRef.current) inputRef.current.value = "";
     setDialogOpen(true);
   };
-
   const closeDialog = () => {
     if (uploading) return;
-    if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl);
+    session.current += 1;
+    revoke(draftPreviewUrl);
     setDraftFile(null);
     setDraftPreviewUrl(null);
     setDraftUrl("");
-    setUrlPreviewFailed(false);
     setError(null);
+    setReadingClipboard(false);
     setDialogOpen(false);
   };
+  const pickFile = useCallback(
+    (file: File | null) => {
+      if (!file || uploading) return;
+      session.current += 1;
+      setReadingClipboard(false);
+      if (!isCoverImageMime(file.type)) {
+        setError("Выберите изображение: JPG, PNG, WebP, GIF или AVIF.");
+        return;
+      }
+      if (file.size > COVER_MAX_BYTES) {
+        setError(
+          `Изображение слишком большое. Максимум ${formatBytes(COVER_MAX_BYTES, { unit: "short" })}.`,
+        );
+        return;
+      }
+      revoke(draftPreviewUrl);
+      const url = URL.createObjectURL(file);
+      urls.current.add(url);
+      setDraftFile(file);
+      setDraftPreviewUrl(url);
+      setDraftUrl("");
+      setError(null);
+      setPreviewFailed(false);
+      setDimensions(null);
+    },
+    [draftPreviewUrl, revoke, uploading, urls],
+  );
 
-  const pickDraftFile = (file: File | null) => {
-    if (!file) return;
-    setError(null);
-    setUrlPreviewFailed(false);
-    if (!file.type.startsWith("image/")) {
-      setError("Выберите изображение.");
+  useEffect(() => {
+    if (!dialogOpen || uploading) return;
+    const paste = (event: ClipboardEvent) => {
+      const file = Array.from(event.clipboardData?.items ?? [])
+        .find((item) => item.kind === "file" && item.type.startsWith("image/"))
+        ?.getAsFile();
+      if (file) {
+        event.preventDefault();
+        pickFile(file);
+      }
+    };
+    document.addEventListener("paste", paste);
+    return () => document.removeEventListener("paste", paste);
+  }, [dialogOpen, uploading, pickFile]);
+
+  const readClipboard = async () => {
+    if (!navigator.clipboard?.read) {
+      setError(
+        "Нажмите Ctrl+V или ⌘V в этом окне, чтобы вставить изображение.",
+      );
       return;
     }
-    if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl);
-    setDraftFile(file);
-    setDraftPreviewUrl(URL.createObjectURL(file));
-    setDraftUrl("");
+    const requestSession = session.current;
+    setReadingClipboard(true);
+    setError(null);
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find((mime) => mime.startsWith("image/"));
+        if (!type) continue;
+        const blob = await item.getType(type);
+        if (requestSession !== session.current) return;
+        pickFile(
+          new File([blob], `clipboard${coverExtFromMime(type) ?? ".png"}`, {
+            type,
+          }),
+        );
+        return;
+      }
+      if (requestSession === session.current)
+        setError(
+          "В буфере нет изображения. Скопируйте картинку или сделайте скриншот, затем вставьте снова.",
+        );
+    } catch {
+      if (requestSession === session.current)
+        setError(
+          "Браузер не разрешил чтение буфера. Нажмите Ctrl+V или ⌘V в этом окне.",
+        );
+    } finally {
+      if (requestSession === session.current) setReadingClipboard(false);
+    }
   };
-
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragOver(false);
-    pickDraftFile(event.dataTransfer.files[0] ?? null);
+    pickFile(event.dataTransfer.files[0] ?? null);
   };
-
-  const applySavedSource = (next: Source) => {
-    if (source.kind === "file") URL.revokeObjectURL(source.previewUrl);
-    setSource(next);
-    setUploaded(true);
-  };
-
-  const sendCover = async (body: BodyInit, contentType?: string) => {
-    if (entityId == null) return;
-    let updated: { updatedAt: string };
-    if (body instanceof FormData) {
-      const file = body.get("cover");
-      if (!(file instanceof File)) {
-        throw new Error("Не удалось загрузить обложку");
-      }
-      updated = await uploadCover(uploadPath(entityId), { kind: "file", file });
-    } else {
-      const payload = JSON.parse(String(body)) as { url: string };
-      updated = await uploadCover(uploadPath(entityId), {
-        kind: "url",
-        url: payload.url,
-      });
-    }
-    setStored(true);
-    setStoredVersion(updated.updatedAt);
-    onUploaded?.();
-  };
-
-  const handleSave = async () => {
+  const clearCandidate = () => {
+    session.current += 1;
+    setReadingClipboard(false);
+    revoke(draftPreviewUrl);
+    setDraftFile(null);
+    setDraftPreviewUrl(null);
+    setDraftUrl("");
     setError(null);
-
-    if (draftFile) {
-      setUploading(true);
-      try {
-        if (editMode) {
-          const formData = new FormData();
-          formData.append("cover", draftFile);
-          await sendCover(formData);
-          setSource({ kind: "none" });
-          if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl);
-        } else {
-          const previewUrl = draftPreviewUrl ?? URL.createObjectURL(draftFile);
-          applySavedSource({
-            kind: "file",
-            file: draftFile,
-            previewUrl,
-          });
-          onUrlChange?.(null);
-          onFileChange?.(draftFile);
-        }
-        setDraftFile(null);
-        setDraftPreviewUrl(null);
-        setDialogOpen(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Ошибка");
-      } finally {
-        setUploading(false);
-      }
-      return;
-    }
-
-    const url = draftUrl.trim();
-    if (!url) {
-      setError("Выберите файл или укажите ссылку на изображение.");
-      return;
-    }
-    if (!isValidHttpUrl(url)) {
-      setError("Некорректный URL обложки.");
-      return;
-    }
-
+    setPreviewFailed(false);
+    setDimensions(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+  const handleSave = async () => {
+    if (!hasCandidate || uploading) return;
+    setError(null);
     setUploading(true);
     try {
       if (editMode) {
-        await sendCover(JSON.stringify({ url }), "application/json");
-        setSource({ kind: "none" });
+        const result = await uploadCover(
+          uploadPath(entityId),
+          draftFile
+            ? { kind: "file", file: draftFile }
+            : { kind: "url", url: draftUrl.trim() },
+        );
+        setStored(true);
+        setStoredVersion(result.updatedAt);
+        setLocalSource(null);
+        revoke(draftPreviewUrl);
+        onUploaded?.();
       } else {
-        applySavedSource({ kind: "url", url });
-        onFileChange?.(null);
-        onUrlChange?.(url);
+        revoke(localSource);
+        setLocalSource(candidate);
+        onFileChange?.(draftFile);
+        onUrlChange?.(draftFile ? null : draftUrl.trim());
       }
+      session.current += 1;
+      setDraftFile(null);
+      setDraftPreviewUrl(null);
       setDraftUrl("");
+      setUploaded(true);
       setDialogOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Не удалось сохранить обложку. Повторите попытку.",
+      );
     } finally {
       setUploading(false);
     }
   };
 
-  const draftUrlValid = draftUrl.trim() ? isValidHttpUrl(draftUrl) : false;
-  const canSave = Boolean(draftFile || draftUrlValid);
-  const dialogPreviewSrc = draftPreviewUrl ?? (draftUrlValid ? draftUrl.trim() : null);
-  const dialogPreviewIsRemote = !draftPreviewUrl && draftUrlValid;
-
-  const thumbnailWrapperClass =
-    thumbnailClassName ?? `relative shrink-0 ${aspectClass}`;
-
   return (
     <>
-      <div className="flex shrink-0 flex-col gap-1.5">
+      <div className="cover-editor-trigger">
         {header}
-        <div className={thumbnailWrapperClass}>
+        <div
+          className={thumbnailClassName ?? `relative shrink-0 ${aspectClass}`}
+        >
           <button
             type="button"
             onClick={openDialog}
-            aria-label={previewSrc ? `${label}: заменить` : `${label}: загрузить`}
-            className="group focus-ring relative h-full w-full overflow-hidden rounded-[var(--radius-sm)] border border-border bg-bg-surface transition-colors hover:border-border-strong"
+            aria-label={
+              previewSrc ? `${label}: заменить` : `${label}: загрузить`
+            }
+            className="cover-editor-image focus-ring"
           >
             {previewSrc ? (
-              previewIsRemote ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewSrc}
-                  alt={label}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <Image
-                  src={previewSrc}
-                  alt={label}
-                  fill
-                  unoptimized
-                  sizes={thumbnailSizes}
-                  className="object-cover"
-                />
-              )
+              <Image
+                src={previewSrc}
+                alt={label}
+                fill
+                unoptimized
+                sizes={thumbnailSizes}
+                className="object-cover"
+              />
             ) : (
-              <span className="flex h-full w-full items-center justify-center text-faint transition-colors group-hover:text-muted">
-                <ImagePlus className="h-5 w-5" aria-hidden />
+              <span className="cover-editor-empty">
+                <ImagePlus size={emptyLabel ? 32 : 20} aria-hidden />
+                {emptyLabel && <span>{emptyLabel}</span>}
               </span>
             )}
-
-            <span
-              className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-bg-deep/70 text-center opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-              aria-hidden
-            >
-              {previewSrc ? (
-                <>
-                  <RefreshCw className="h-4 w-4 text-accent" />
-                  <span className="text-[0.65rem] font-medium text-text">Заменить</span>
-                </>
-              ) : (
-                <>
-                  <ImagePlus className="h-4 w-4 text-accent" />
-                  <span className="text-[0.65rem] font-medium text-text">Загрузить</span>
-                </>
-              )}
+            <span className="cover-editor-hover" aria-hidden>
+              <Pencil size={22} />
+              {previewSrc ? "Изменить обложку" : "Добавить обложку"}
             </span>
           </button>
-
-          {uploaded && !dialogOpen ? (
-            <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent/90">
-              <Check className="h-3 w-3 text-bg-deep" aria-hidden />
+          {uploaded && (
+            <span className="cover-editor-applied" role="status">
+              <Check size={14} />
+              <span className="sr-only">
+                {editMode ? "Обложка сохранена" : "Обложка выбрана"}
+              </span>
             </span>
-          ) : null}
+          )}
         </div>
+        {showAction && (
+          <button
+            type="button"
+            className="cover-editor-action focus-ring"
+            onClick={openDialog}
+          >
+            <ImagePlus size={17} aria-hidden />
+            {previewSrc ? "Изменить обложку" : "Добавить обложку"}
+          </button>
+        )}
       </div>
-
       <Modal
         open={dialogOpen}
         onClose={closeDialog}
+        preventCancel={uploading}
         title={previewSrc ? "Заменить обложку" : "Добавить обложку"}
+        size="wide"
+        bodyClassName="cover-dialog-body"
         footer={
           <>
-            <Button type="button" variant="ghost" onClick={closeDialog} disabled={uploading}>
+            <span className="cover-dialog-save-note">
+              {editMode
+                ? "Обложка сохраняется отдельно от остальных полей карточки."
+                : "Обложка сохранится при создании карточки."}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={closeDialog}
+              disabled={uploading}
+            >
               Отмена
             </Button>
             <Button
               type="button"
               variant="primary"
-              loading={uploading}
-              disabled={!canSave || uploading}
               onClick={() => void handleSave()}
+              loading={uploading}
+              disabled={!hasCandidate || uploading || readingClipboard}
             >
-              Сохранить
+              {editMode ? "Сохранить обложку" : "Выбрать обложку"}
             </Button>
           </>
         }
       >
-        <div className="space-y-5">
-          {dialogHint}
-
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                inputRef.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
+        <div
+          className="cover-workspace"
+          data-drag-over={dragOver}
+          onDragOver={(event) => {
+            if (event.dataTransfer.types.includes("Files")) {
+              event.preventDefault();
               setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            className={`focus-ring relative mx-auto flex ${dialogAspectClass} w-full ${dialogMaxWidth} cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-[var(--radius)] border-2 border-dashed bg-bg-surface/40 px-4 py-6 text-center transition-colors ${
-              dragOver
-                ? "border-accent/70 bg-accent/10"
-                : "border-border-strong hover:border-accent/50 hover:bg-bg-surface-hover"
-            }`}
-          >
-            {dialogPreviewSrc && !dialogPreviewIsRemote ? (
-              <Image
-                src={dialogPreviewSrc}
-                alt="Предпросмотр"
-                fill
-                unoptimized
-                sizes={dialogSizes}
-                className="object-cover"
-              />
-            ) : dialogPreviewSrc && dialogPreviewIsRemote ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={dialogPreviewSrc}
-                alt="Предпросмотр по ссылке"
-                className="absolute inset-0 h-full w-full object-cover"
-                onLoad={() => setUrlPreviewFailed(false)}
-                onError={() => setUrlPreviewFailed(true)}
-              />
-            ) : (
-              <>
-                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-accent">
-                  <Upload className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-text">
-                    Перетащите файл сюда
-                  </p>
-                  <p className="text-xs text-muted">или нажмите, чтобы выбрать</p>
-                </div>
-              </>
-            )}
-
-            {dialogPreviewSrc ? (
-              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-deep/90 to-transparent px-3 py-2">
-                <span className="font-mono-tech text-[0.65rem] text-muted">
-                  {draftFile ? draftFile.name : "предпросмотр по ссылке"}
-                </span>
-              </span>
-            ) : null}
-          </div>
-
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => pickDraftFile(e.target.files?.[0] ?? null)}
-            className="sr-only"
-            aria-hidden
-          />
-
-          <div className="relative flex items-center gap-3">
-            <span className="h-px flex-1 bg-border" aria-hidden />
-            <span className="font-mono-tech text-xs text-faint">или ссылка</span>
-            <span className="h-px flex-1 bg-border" aria-hidden />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor={urlInputId} className="font-mono-tech block text-xs text-muted">
-              URL изображения
-            </label>
-            <input
-              id={urlInputId}
-              value={draftUrl}
-              onChange={(e) => {
-                setDraftUrl(e.target.value);
-                setUrlPreviewFailed(false);
-                if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl);
-                setDraftFile(null);
-                setDraftPreviewUrl(null);
-                setError(null);
-              }}
-              onBlur={() => {
-                const trimmed = trimInput(draftUrl);
-                if (trimmed !== draftUrl) setDraftUrl(trimmed);
-              }}
-              placeholder={urlPlaceholder}
-              inputMode="url"
-              className="focus-ring min-h-11 w-full rounded-[var(--radius-sm)] border border-border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60"
-            />
-            {draftUrlValid && urlPreviewFailed ? (
-              <p className="text-xs text-muted">
-                Не удалось показать предпросмотр — ссылку всё равно можно сохранить.
-              </p>
-            ) : null}
-          </div>
-
-          {error ? (
-            <p className="text-sm text-danger" role="alert">
-              {error}
+            }
+          }}
+          onDragLeave={(event) => {
+            if (
+              !event.currentTarget.contains(event.relatedTarget as Node | null)
+            )
+              setDragOver(false);
+          }}
+          onDrop={onDrop}
+        >
+          <div className="cover-preview-column">
+            <p className="cover-preview-label">
+              {hasCandidate
+                ? "Новая обложка"
+                : previewSrc
+                  ? "Текущая обложка"
+                  : "Предпросмотр"}
             </p>
-          ) : null}
+            <div
+              className={`cover-preview ${dialogAspectClass} ${dialogMaxWidth}`}
+            >
+              {dialogPreview ? (
+                <Image
+                  key={dialogPreview}
+                  src={dialogPreview}
+                  alt={
+                    hasCandidate
+                      ? "Предпросмотр новой обложки"
+                      : "Текущая обложка"
+                  }
+                  fill
+                  unoptimized
+                  sizes={dialogSizes}
+                  className="object-cover"
+                  onLoad={(event) => {
+                    setPreviewFailed(false);
+                    setDimensions(
+                      `${event.currentTarget.naturalWidth} × ${event.currentTarget.naturalHeight}`,
+                    );
+                  }}
+                  onError={() => setPreviewFailed(true)}
+                />
+              ) : (
+                <div className="cover-preview-empty">
+                  <ImagePlus size={32} aria-hidden />
+                  <span>Здесь появится обложка</span>
+                </div>
+              )}
+              {previewFailed && (
+                <div className="cover-preview-error">
+                  Не удалось показать изображение. Проверьте ссылку или выберите
+                  другой файл.
+                </div>
+              )}
+            </div>
+            <p className="cover-preview-caption">
+              {dimensions ?? "Так обложка будет выглядеть в каталоге"}
+            </p>
+            {dialogHint}
+            {hasCandidate && (
+              <button
+                type="button"
+                className="cover-reset focus-ring"
+                disabled={uploading}
+                onClick={clearCandidate}
+              >
+                <X size={14} aria-hidden />
+                Сбросить выбор
+              </button>
+            )}
+          </div>
+          <div className="cover-source-column">
+            <p className="cover-source-intro">
+              Выберите изображение удобным способом
+            </p>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              tabIndex={-1}
+              aria-label="Файл обложки"
+              disabled={uploading}
+              onChange={(event) => {
+                pickFile(event.target.files?.[0] ?? null);
+                event.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className="cover-source-file focus-ring"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              <Upload size={24} aria-hidden />
+              <strong>
+                {draftFile ? "Выбрать другой файл" : "Выбрать файл"}
+              </strong>
+              <span>или перетащите изображение в это окно</span>
+              <small>
+                JPG, PNG, WebP и другие форматы · до{" "}
+                {formatBytes(COVER_MAX_BYTES, { unit: "short" })}
+              </small>
+            </button>
+            <button
+              type="button"
+              className="cover-source-paste focus-ring"
+              disabled={uploading || readingClipboard}
+              onClick={() => void readClipboard()}
+            >
+              {readingClipboard ? (
+                <Loader2 size={19} className="animate-spin" aria-hidden />
+              ) : (
+                <ClipboardPaste size={19} aria-hidden />
+              )}
+              <span>Вставить из буфера</span>
+              <kbd>Ctrl / ⌘ V</kbd>
+            </button>
+            <div className="cover-source-url">
+              <label htmlFor={urlInputId}>
+                <Link2 size={16} aria-hidden />
+                Ссылка на изображение
+              </label>
+              <input
+                id={urlInputId}
+                type="url"
+                spellCheck={false}
+                autoComplete="off"
+                value={draftUrl}
+                placeholder={urlPlaceholder}
+                disabled={uploading}
+                onKeyDown={(event) => {
+                  // This dialog lives inside entity forms. Enter in the URL
+                  // must not submit the underlying movie/franchise fields.
+                  if (event.key === "Enter") event.preventDefault();
+                }}
+                onChange={(event) => {
+                  session.current += 1;
+                  setReadingClipboard(false);
+                  revoke(draftPreviewUrl);
+                  setDraftFile(null);
+                  setDraftPreviewUrl(null);
+                  setDraftUrl(event.target.value);
+                  setError(null);
+                  setPreviewFailed(false);
+                  setDimensions(null);
+                }}
+              />
+              <p>Вставьте прямую ссылку на картинку для предпросмотра.</p>
+            </div>
+            {error && (
+              <p className="cover-source-error" role="alert">
+                {error}
+              </p>
+            )}
+            <p className="cover-source-footer">
+              {hasCandidate
+                ? "Проверьте предпросмотр и подтвердите выбор."
+                : "Можно вставить скриншот через Ctrl+V или ⌘V прямо в этом окне."}
+            </p>
+          </div>
         </div>
       </Modal>
     </>

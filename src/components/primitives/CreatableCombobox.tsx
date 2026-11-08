@@ -1,13 +1,9 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
 import { trimInput } from "@/lib/shared/text-trim";
+import "./creatable-combobox.css";
 
 export interface CreatableComboboxItem {
   id: string | number;
@@ -93,6 +89,10 @@ export function CreatableCombobox({
               if (trimmed !== query) onQueryChange(trimmed);
             }}
             placeholder={placeholder}
+            aria-label={placeholder}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.preventDefault();
+            }}
             disabled={disabled}
             className={searchInputClassName}
           />

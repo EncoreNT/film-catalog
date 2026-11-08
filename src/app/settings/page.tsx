@@ -1,11 +1,18 @@
 import { SettingsPageClient } from "@/components/settings/SettingsPageClient";
 import { getAppSettingsSnapshot } from "@/lib/db/settings";
 import { listRaters } from "@/lib/raters/rater-crud";
+import { listExternalStorages } from "@/lib/storages/storage-crud";
 
-export default async function SettingsPage() {
-  const [raters, settings] = await Promise.all([
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const [raters, settings, storages, query] = await Promise.all([
     listRaters(),
     getAppSettingsSnapshot(),
+    listExternalStorages(),
+    searchParams,
   ]);
 
   return (
@@ -16,6 +23,8 @@ export default async function SettingsPage() {
         sortOrder: rater.sortOrder,
       }))}
       initialSettings={settings}
+      initialStorages={storages}
+      initialTab={query.tab === "storages" ? "storages" : "raters"}
     />
   );
 }

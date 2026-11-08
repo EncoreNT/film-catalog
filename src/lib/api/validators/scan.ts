@@ -9,7 +9,19 @@ export const scanRequestSchema = scanRootSchema.extend({
   externalStorageId: z.number().int().nullable().optional(),
 });
 
+const storageCapacitySchema = z
+  .number()
+  .int()
+  .positive()
+  .max(Number.MAX_SAFE_INTEGER)
+  .nullable();
+
+export const externalStorageUpdateSchema = z.object({
+  capacityBytes: storageCapacitySchema,
+});
+
 export const externalStorageCreateSchema = z.object({
   name: z.string().min(1),
   path: z.string().nullable().optional(),
+  capacityBytes: storageCapacitySchema.optional(),
 });

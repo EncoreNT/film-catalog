@@ -20,10 +20,21 @@ export function formatDurationDelta(seconds: number): string {
 /** Build queue ETA with ~ prefix and «меньше минуты» for short waits. */
 export function formatBuildEtaSeconds(
   seconds: number | null | undefined,
+  precision: "seconds" | "minutes" | "ten-seconds" = "seconds",
 ): string | null {
   if (seconds == null || !Number.isFinite(seconds)) return null;
 
-  const total = Math.max(0, Math.floor(seconds));
+  if (precision === "ten-seconds") {
+    const rounded = Math.max(10, Math.round(seconds / 10) * 10);
+    const h = Math.floor(rounded / 3600);
+    const m = Math.floor((rounded % 3600) / 60);
+    const s = rounded % 60;
+    return `~${[h && `${h} ч`, m && `${m} мин`, s && `${s} с`].filter(Boolean).join(" ")}`;
+  }
+  if (precision === "minutes" && seconds < 60) return "меньше минуты";
+  const total = precision === "minutes"
+    ? Math.round(seconds / 60) * 60
+    : Math.max(0, Math.floor(seconds));
   if (total < 45) return "меньше минуты";
 
   const hours = Math.floor(total / 3600);
