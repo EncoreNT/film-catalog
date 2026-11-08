@@ -2,6 +2,11 @@ import { watchInstantFromISODate, watchISODateFromInstant } from "./movie-watch-
 
 export type WatchCalendarView = "year" | "month" | "fortnight" | "week";
 export type WatchCalendarMode = "calendar" | "recent";
+export type WatchCalendarLayout = "calendar" | "timeline";
+
+export function parseWatchCalendarLayout(value: string | string[] | undefined): WatchCalendarLayout {
+  return value === "timeline" ? "timeline" : "calendar";
+}
 export const WATCH_CALENDAR_MODES: { value: WatchCalendarMode; label: string }[] = [
   { value: "calendar", label: "Календарный" },
   { value: "recent", label: "Последние" },
@@ -156,11 +161,9 @@ export function watchCalendarLabel(date: string, view: WatchCalendarView, mode: 
   return `${format.format(start)}${firstYear} - ${format.format(end)}, ${end.getUTCFullYear()}`;
 }
 
-export function watchCalendarHref(date: string, view: WatchCalendarView, mode: WatchCalendarMode = "calendar", timeZone?: string): string {
-  if (mode === "recent") {
-    const params = new URLSearchParams({ mode, view });
-    if (timeZone) params.set("timeZone", timeZone);
-    return `/calendar?${params}`;
-  }
-  return `/calendar?date=${date}&view=${view}`;
+export function watchCalendarHref(date: string, view: WatchCalendarView, mode: WatchCalendarMode = "calendar", timeZone?: string, layout: WatchCalendarLayout = "calendar"): string {
+  const params = mode === "recent" ? new URLSearchParams({ mode, view }) : new URLSearchParams({ date, view });
+  if (mode === "recent" && timeZone) params.set("timeZone", timeZone);
+  if (layout === "timeline") params.set("layout", layout);
+  return `/calendar?${params}`;
 }

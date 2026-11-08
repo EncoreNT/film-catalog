@@ -6,10 +6,10 @@ import { movieCoverUrlFromMovie } from "@/lib/covers/cover-url";
 import { displayGenreName } from "@/lib/shared/dictionaries";
 import type { CalendarWatch } from "./watch-calendar";
 
-/** Only dated journal entries; ratings alone never invent a viewing date. */
-export async function getCalendarWatches(start: string, endExclusive: string): Promise<CalendarWatch[]> {
+/** Dated journal entries; omit range for the complete timeline history. */
+export async function getCalendarWatches(range?: { start: string; endExclusive: string }): Promise<CalendarWatch[]> {
   const watches = await prisma.movieWatch.findMany({
-    where: { watchedOn: { gte: watchInstantFromISODate(start), lt: watchInstantFromISODate(endExclusive) } },
+    where: range ? { watchedOn: { gte: watchInstantFromISODate(range.start), lt: watchInstantFromISODate(range.endExclusive) } } : undefined,
     orderBy: [{ watchedOn: "asc" }, { id: "asc" }],
     select: {
       id: true,

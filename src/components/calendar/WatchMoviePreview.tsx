@@ -12,10 +12,10 @@ export const dayFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
 });
 
-export function Poster({ movie }: { movie: CalendarWatch["movie"] }) {
+export function Poster({ movie, sizes = "180px", eager = false }: { movie: CalendarWatch["movie"]; sizes?: string; eager?: boolean }) {
   const [failed, setFailed] = useState(false);
   return movie.coverUrl && !failed
-    ? <ApiCoverImage src={movie.coverUrl} alt="" fill sizes="180px" onError={() => setFailed(true)} className="object-cover" />
+    ? <ApiCoverImage src={movie.coverUrl} alt="" fill sizes={sizes} loading={eager ? "eager" : "lazy"} draggable={false} onError={() => setFailed(true)} className="object-cover" />
     : <span className="watch-poster-fallback"><Film aria-hidden /><span>{movie.title.split(" / ")[0]}</span></span>;
 }
 

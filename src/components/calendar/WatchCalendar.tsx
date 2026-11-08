@@ -3,9 +3,10 @@
 import { useEffect, useState, useSyncExternalStore, useTransition, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, GalleryHorizontalEnd } from "lucide-react";
 import { Poster, MoviePreview, dayFormatter } from "./WatchMoviePreview";
 import { WatchCalendarYear } from "./WatchCalendarYear";
+import { WatchTimeline } from "./WatchTimeline";
 import { Button } from "@/components/primitives/Button";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 import { Modal } from "@/components/primitives/Modal";
@@ -15,7 +16,7 @@ import { WEEKDAYS_SHORT_RU, toISODate } from "@/lib/shared/calendar";
 import {
   buildWatchCalendar, shiftWatchCalendar, watchCalendarHref, watchCalendarLabel,
   WATCH_CALENDAR_MODES, WATCH_CALENDAR_VIEWS, RECENT_PERIOD_LABELS,
-  type CalendarWatch, type WatchCalendarView, type WatchCalendarMode,
+  type CalendarWatch, type WatchCalendarView, type WatchCalendarMode, type WatchCalendarLayout,
 } from "@/lib/movies/watch-calendar";
 
 const shortDayFormatter = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -27,10 +28,11 @@ function subscribeToLocalDay(onChange: () => void) {
 }
 const localDaySnapshot = () => toISODate(new Date());
 
-export function WatchCalendar({ date, view, mode, today: serverToday, useLocalToday, watches }: {
+export function WatchCalendar({ date, view, mode, layout, today: serverToday, useLocalToday, watches }: {
   date: string;
   view: WatchCalendarView;
   mode: WatchCalendarMode;
+  layout: WatchCalendarLayout;
   today: string;
   useLocalToday: boolean;
   watches: CalendarWatch[];
@@ -44,28 +46,33 @@ export function WatchCalendar({ date, view, mode, today: serverToday, useLocalTo
   const label = watchCalendarLabel(date, view, mode);
   const byDay = new Map<string, CalendarWatch[]>();
   for (const watch of watches) byDay.set(watch.watchedOn, [...(byDay.get(watch.watchedOn) ?? []), watch]);
-  const periodWatches = !recent && view === "month" ? watches.filter((watch) => watch.watchedOn.startsWith(date.slice(0, 7))) : watches;
+  const periodWatches = layout === "calendar" && !recent && view === "month" ? watches.filter((watch) => watch.watchedOn.startsWith(date.slice(0, 7))) : watches;
 
   useEffect(() => {
-    if ((recent || useLocalToday) && today !== serverToday) {
-      router.replace(watchCalendarHref(today, view, mode, Intl.DateTimeFormat().resolvedOptions().timeZone), { scroll: false });
+    if (layout === "calendar" && (recent || useLocalToday) && today !== serverToday) {
+      router.replace(watchCalendarHref(today, view, mode, Intl.DateTimeFormat().resolvedOptions().timeZone, layout), { scroll: false });
     }
-  }, [router, serverToday, today, useLocalToday, view, mode, recent]);
+  }, [router, serverToday, today, useLocalToday, view, mode, recent, layout]);
 
-  function navigate(nextDate: string, nextView = view, nextMode = mode) {
-    startTransition(() => router.push(watchCalendarHref(nextDate, nextView, nextMode, Intl.DateTimeFormat().resolvedOptions().timeZone), { scroll: false }));
+  function navigate(nextDate: string, nextView = view, nextMode = mode, nextLayout = layout) {
+    startTransition(() => router.push(watchCalendarHref(nextDate, nextView, nextMode, Intl.DateTimeFormat().resolvedOptions().timeZone, nextLayout), { scroll: false }));
   }
 
   return (
-    <section className="watch-calendar-page" aria-busy={pending}>
+    <section className="watch-calendar-page" data-layout={layout} aria-busy={pending}>
       <header className="watch-calendar-heading">
-        <div><h1>Календарь просмотров</h1><p>Ваши фильмы, день за днём</p></div>
+        <div><div className="watch-calendar-title-row"><h1>Календарь просмотров</h1>
+          <div className="watch-calendar-layouts" role="group" aria-label="Вид просмотров">
+            <button type="button" className="focus-ring" aria-pressed={layout === "calendar"} disabled={pending} onClick={() => navigate(date, view, mode, "calendar")}><CalendarDays size={15} aria-hidden />Календарь</button>
+            <button type="button" className="focus-ring" aria-pressed={layout === "timeline"} disabled={pending} onClick={() => navigate(date, view, mode, "timeline")}><GalleryHorizontalEnd size={15} aria-hidden />Лента</button>
+          </div>
+        </div><p>Ваши фильмы, день за днём</p></div>
         <div className="watch-calendar-summary" aria-live="polite">
-          <strong>{formatWatchCount(periodWatches.length)}</strong><span>за {recent ? `последние ${RECENT_PERIOD_LABELS[view]}` : view === "year" ? "год" : view === "month" ? "месяц" : view === "week" ? "неделю" : "две недели"}</span>
+          <strong>{formatWatchCount(periodWatches.length)}</strong><span>за {layout === "timeline" ? "всё время" : recent ? `последние ${RECENT_PERIOD_LABELS[view]}` : view === "year" ? "год" : view === "month" ? "месяц" : view === "week" ? "неделю" : "две недели"}</span>
         </div>
       </header>
 
-      <div className="watch-calendar-toolbar">
+      {layout === "calendar" && <div className="watch-calendar-toolbar">
         <div className="watch-calendar-period">
           {!recent && <>
           <div className="watch-calendar-arrows">
@@ -94,10 +101,10 @@ export function WatchCalendar({ date, view, mode, today: serverToday, useLocalTo
             disabled={pending} onClick={() => navigate(date, option.value)}>{recent ? RECENT_PERIOD_LABELS[option.value] : option.label}</button>)}
         </div>
         </div>
-      </div>
+      </div>}
 
-      <div className="watch-calendar-board" data-view={view} data-mode={mode} data-pending={pending}>
-        {view === "year" ? <WatchCalendarYear days={range.days} byDay={byDay} today={today} /> : <>
+      <div className="watch-calendar-board" data-view={view} data-mode={mode} data-layout={layout} data-pending={pending}>
+        {layout === "timeline" ? <WatchTimeline watches={periodWatches} /> : view === "year" ? <WatchCalendarYear days={range.days} byDay={byDay} today={today} /> : <>
         {!recent && <div className="watch-calendar-weekdays" aria-hidden>{WEEKDAYS_SHORT_RU.map((day) => <span key={day}>{day}</span>)}</div>}
         <div className="watch-calendar-grid" style={{ "--calendar-rows": range.rows, "--calendar-columns": range.columns } as CSSProperties}>
           {range.days.map((day, index) => {
@@ -132,7 +139,7 @@ export function WatchCalendar({ date, view, mode, today: serverToday, useLocalTo
       </div>
       <footer className="watch-calendar-footer" role="status">
         {pending ? "Загружаем просмотры…" : periodWatches.length === 0
-          ? "В этом периоде нет просмотров. Добавьте дату просмотра на странице фильма."
+          ? layout === "timeline" ? "Добавьте дату просмотра на странице фильма, чтобы начать историю." : "В этом периоде нет просмотров. Добавьте дату просмотра на странице фильма."
           : "Выберите постер, чтобы узнать больше о фильме."}
         {periodWatches.length === 0 && <Link href="/" className="focus-ring">В каталог <ArrowUpRight size={14} aria-hidden /></Link>}
       </footer>

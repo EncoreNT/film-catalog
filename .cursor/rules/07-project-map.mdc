@@ -23,6 +23,7 @@ alwaysApply: false
 | Merge / duplicates | `lib/merge/movie-merge.ts`, `lib/merge/duplicate-groups.ts` |
 | Raters / ratings | `lib/raters/rater-crud.ts`, `lib/movies/update-movie-rating.ts`, `lib/movies/movie-rating.ts` |
 | Watch journal | `lib/movies/movie-watch.ts`, `movie-watch-date.ts`; catalog date = `max(MovieWatch.watchedOn)` |
+| Viewing calendar / 3D timeline | `lib/movies/watch-calendar.ts`, `watch-calendar-query.ts`, `watch-timeline.ts`; `components/calendar/WatchCalendar.tsx`, `WatchTimeline.tsx` |
 | App settings | `lib/db/settings.ts`, `app/settings/page.tsx` |
 | External disk capacity / usage | `lib/storages/storage-crud.ts`, `storage-capacity.ts`; `components/shared/StorageUsage.tsx`; ADR-0026 |
 | Native file/folder selection | `lib/shared/native-path-picker.ts`, `components/shared/NativePathPickerButton.tsx`; Win/WSL paths → `lib/shared/display-path.ts` |

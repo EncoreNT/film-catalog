@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { buildWatchCalendar, groupWatchCalendarMonths, parseWatchCalendarQuery, shiftWatchCalendar, watchCalendarLabel, watchCalendarToday, watchCalendarHref } from "./watch-calendar";
+import { buildWatchCalendar, groupWatchCalendarMonths, parseWatchCalendarQuery, parseWatchCalendarLayout, shiftWatchCalendar, watchCalendarLabel, watchCalendarToday, watchCalendarHref } from "./watch-calendar";
 
 describe("watch calendar", () => {
+  it("preserves timeline layout alongside both period modes and defaults invalid layouts to the calendar", () => {
+    expect(parseWatchCalendarLayout("timeline")).toBe("timeline");
+    for (const value of [undefined, "bad", ["timeline", "calendar"]]) expect(parseWatchCalendarLayout(value)).toBe("calendar");
+    expect(watchCalendarHref("2026-11-09", "year", "recent", "Europe/Moscow", "timeline"))
+      .toBe("/calendar?mode=recent&view=year&timeZone=Europe%2FMoscow&layout=timeline");
+    expect(watchCalendarHref("2026-10-01", "month", "calendar", undefined, "timeline"))
+      .toBe("/calendar?date=2026-10-01&view=month&layout=timeline");
+    expect(watchCalendarHref("2026-10-01", "month", "calendar")).toBe("/calendar?date=2026-10-01&view=month");
+  });
   it("defaults to the latest twelve months while honoring explicit calendar mode", () => {
     const today = "2026-11-09";
     expect(parseWatchCalendarQuery({}, today)).toEqual({ date: today, view: "year", mode: "recent" });
