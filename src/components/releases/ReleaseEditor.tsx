@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, ScanSearch, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  ScanSearch,
+  Trash2,
+} from "lucide-react";
 import type { ReleaseWithTracks } from "@/lib/movies/movie-include";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
@@ -14,6 +20,7 @@ import { Select } from "@/components/primitives/Select";
 import { DurationInput } from "@/components/primitives/DurationInput";
 import { TrackEditorSection } from "@/components/shared/TrackEditorSection";
 import { StoragePicker } from "@/components/shared/StoragePicker";
+import { NativePathPickerButton } from "@/components/shared/NativePathPickerButton";
 import { useStoragePicker } from "@/hooks/useStoragePicker";
 import { useTrackEditor } from "@/hooks/useTrackEditor";
 import type { VideoFieldState } from "@/lib/movies/movie-form-types";
@@ -42,6 +49,7 @@ import {
 
 import { SpotlightTier } from "@/components/layout/SpotlightTier";
 import { releaseFormTier } from "@/lib/releases/release-form-tier";
+import { hasReleaseFilenameChanged } from "@/lib/releases/release-file-change";
 import { formatBytes } from "@/lib/shared/format-bytes";
 import { apiFetch } from "@/lib/api/client";
 
@@ -184,6 +192,25 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
   const { movieId, movieSlug, movieTitle, mode } = props;
   const release = mode === "edit" ? props.release : null;
   const router = useRouter();
+  const actionBarRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const bar = actionBarRef.current;
+    const page = bar?.closest<HTMLElement>(".release-editor-page");
+    if (!bar || !page) return;
+    const measure = () =>
+      page.style.setProperty(
+        "--editor-footer-height",
+        `${bar.getBoundingClientRect().height}px`,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      page.style.removeProperty("--editor-footer-height");
+    };
+  }, []);
+  const [pickingFile, setPickingFile] = useState(false);
 
   const form = useReleaseFormState(release);
   const [loading, setLoading] = useState(false);
@@ -198,6 +225,10 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     size: release?.fileSize ?? null,
   }));
   const tier = releaseFormTier(form.video, form.audioRows);
+  const filenameChanged = hasReleaseFilenameChanged(
+    readFile.path,
+    form.filePath,
+  );
   const fileSizeLabel =
     !form.fileFillError &&
     readFile.path &&
@@ -222,7 +253,6 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
       const data = await probeFilePath(runtime, {
         title: movieTitle || "probe",
       });
-      setReadFile({ path: runtime, size: data.fileSize ?? null });
       const parsed = applyParsedFilePathFields(runtime, {
         releaseType: form.releaseType,
         setReleaseType: form.setReleaseType,
@@ -235,6 +265,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
         setSubtitleRowsFromProbe: form.setSubtitleRowsFromProbe,
         setPendingFileMeta: form.setPendingFileMeta,
       });
+      setReadFile({ path: runtime, size: data.fileSize ?? null });
       markDirty();
       form.setFileFillError(null);
       form.setFileFillMessage("Данные из файла заполнены. Сохраните изменения");
@@ -384,58 +415,95 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
         placeholder="D:\Movies\film.mkv или /mnt/d/Movies/film.mkv"
         hint={FILE_PATH_INPUT_HINT}
       >
-        <div className="flex flex-col gap-2">
-          <input
-            id="путь-к-файлу"
-            className={`focus-ring min-h-11 min-w-0 w-full rounded-[var(--radius)] border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${
-              form.fileFillError ? "border-danger/50" : "border-border"
-            }`}
-            value={form.filePath}
-            onChange={(e) => {
-              form.setFilePath(e.target.value);
-              form.setPendingFileMeta(null);
-              form.setFileFillMessage(null);
-              form.setFileFillError(null);
-              markDirty();
-            }}
-            onBlur={(e) =>
-              trimOnInputBlur(e, (ev) => {
-                const trimmed = ev.target.value.trim();
-                if (!trimmed) {
-                  form.setFilePath("");
-                } else {
-                  form.setFilePath(commitFilePathInput(trimmed).display);
-                }
-              })
-            }
-            aria-invalid={!!form.fileFillError}
-            aria-describedby={
-              form.fileFillError ? "file-path-fill-feedback" : undefined
-            }
-            placeholder="D:\Movies\film.mkv или /mnt/d/Movies/film.mkv"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            loading={form.fillingFromFile}
-            onClick={() => {
-              if (mode === "edit") setConfirmReread(true);
-              else void handleFillFromFile();
-            }}
-            disabled={!form.filePath.trim() || form.fillingFromFile}
-            className="w-full"
-          >
-            <ScanSearch className="h-4 w-4" aria-hidden />
-            {mode === "edit" ? "Перечитать из файла" : "Заполнить из файла"}
-          </Button>
+        <div className="release-file-controls">
+          <div className="release-file-path-input">
+            <input
+              id="путь-к-файлу"
+              className={`focus-ring min-h-11 min-w-0 w-full rounded-[var(--radius)] border bg-bg-elevated px-3 py-2 text-sm text-text placeholder:text-muted/60 ${
+                form.fileFillError ? "border-danger/50" : "border-border"
+              }`}
+              value={form.filePath}
+              disabled={pickingFile || form.fillingFromFile}
+              onChange={(e) => {
+                form.setFilePath(e.target.value);
+                form.setPendingFileMeta(null);
+                form.setFileFillMessage(null);
+                form.setFileFillError(null);
+                markDirty();
+              }}
+              onBlur={(e) =>
+                trimOnInputBlur(e, (ev) => {
+                  const trimmed = ev.target.value.trim();
+                  if (!trimmed) {
+                    form.setFilePath("");
+                  } else {
+                    form.setFilePath(commitFilePathInput(trimmed).display);
+                  }
+                })
+              }
+              aria-invalid={!!form.fileFillError}
+              aria-describedby={
+                form.fileFillError || filenameChanged
+                  ? "file-path-fill-feedback"
+                  : undefined
+              }
+              placeholder="D:\Movies\film.mkv или /mnt/d/Movies/film.mkv"
+            />
+            <NativePathPickerButton
+              kind="file"
+              onPick={(_runtime, display) => {
+                form.setFilePath(display);
+                form.setPendingFileMeta(null);
+                form.setFileFillMessage(null);
+                form.setFileFillError(null);
+                markDirty();
+              }}
+              onError={form.setFileFillError}
+              onPickingChange={setPickingFile}
+              disabled={form.fillingFromFile}
+              className="shrink-0 !min-h-11 !px-3"
+              textClassName="sr-only"
+            />
+          </div>
+          <div className="release-file-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              loading={form.fillingFromFile}
+              onClick={() => {
+                if (mode === "edit") setConfirmReread(true);
+                else void handleFillFromFile();
+              }}
+              disabled={
+                !form.filePath.trim() || form.fillingFromFile || pickingFile
+              }
+            >
+              <ScanSearch className="h-4 w-4" aria-hidden />
+              {mode === "edit" ? "Перечитать из файла" : "Заполнить из файла"}
+            </Button>
+            {fileSizeLabel ? (
+              <p className="release-file-size">
+                <span>Размер файла</span>
+                <strong>{fileSizeLabel}</strong>
+              </p>
+            ) : null}
+          </div>
         </div>
-        <div id="file-path-fill-feedback" className="pt-1">
-          {fileSizeLabel ? (
-            <p className="release-file-size">
-              <span>Размер файла</span>
-              <strong>{fileSizeLabel}</strong>
+        <div id="file-path-fill-feedback" className="space-y-2 pt-1">
+          {filenameChanged && (
+            <p
+              role="status"
+              className="flex items-start gap-2 rounded-[var(--radius)] border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent"
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <span>
+                Имя файла изменилось. Дорожки могут не совпадать с новым файлом.{" "}
+                {mode === "edit"
+                  ? "Перечитайте данные из файла."
+                  : "Заполните данные из файла заново."}
+              </span>
             </p>
-          ) : null}
+          )}
           {form.fileFillError ? (
             <p
               className="flex items-start gap-2 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
@@ -456,7 +524,7 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             <p className="text-xs text-accent">
               Метаданные файла готовы к сохранению
             </p>
-          ) : fileSizeLabel ? null : form.filePath.trim() ? (
+          ) : fileSizeLabel || filenameChanged ? null : form.filePath.trim() ? (
             <p className="text-xs text-faint">
               Заполните данные из файла или укажите параметры вручную.
             </p>
@@ -517,53 +585,58 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
     >
       <SpotlightTier tier={tier ?? "general"} />
       <fieldset
-        disabled={loading || actionLoading || form.fillingFromFile}
-        className="release-editor-grid"
+        disabled={
+          loading || actionLoading || form.fillingFromFile || pickingFile
+        }
+        className="release-editor-fields"
       >
-        <div className="release-editor-source">
-          {sourceCard}
-          {detailsCard}
-        </div>
+        <div className="release-editor-grid">
+          <div className="release-editor-source">
+            {sourceCard}
+            {detailsCard}
+          </div>
 
-        <div className="release-editor-tracks">
-          <TrackEditorSection
-            tabbed
-            layout="editor"
-            variant="balanced"
-            audioGridCols="adaptive"
-            video={form.video}
-            onVideoChange={patchVideo}
-            audioRows={form.audioRows}
-            onUpdateAudio={patchAudio}
-            onAddAudio={() => {
-              form.addAudioRow();
-              markDirty();
-            }}
-            onRemoveAudio={(index) => {
-              form.removeAudioRow(index);
-              markDirty();
-            }}
-            onSetMainAudio={(index) => {
-              form.setMainAudioTrack(index);
-              markDirty();
-            }}
-            subtitleRows={form.subtitleRows}
-            onUpdateSubtitle={patchSubtitle}
-            onAddSubtitle={() => {
-              form.addSubtitleRow();
-              markDirty();
-            }}
-            onRemoveSubtitle={(index) => {
-              form.removeSubtitleRow(index);
-              markDirty();
-            }}
-            mainTrackStyle="star"
-            minAudioRows={0}
-          />
+          <div className="release-editor-tracks">
+            <TrackEditorSection
+              tabbed
+              layout="editor"
+              variant="balanced"
+              audioGridCols="adaptive"
+              video={form.video}
+              onVideoChange={patchVideo}
+              audioRows={form.audioRows}
+              onUpdateAudio={patchAudio}
+              onAddAudio={() => {
+                form.addAudioRow();
+                markDirty();
+              }}
+              onRemoveAudio={(index) => {
+                form.removeAudioRow(index);
+                markDirty();
+              }}
+              onSetMainAudio={(index) => {
+                form.setMainAudioTrack(index);
+                markDirty();
+              }}
+              subtitleRows={form.subtitleRows}
+              onUpdateSubtitle={patchSubtitle}
+              onAddSubtitle={() => {
+                form.addSubtitleRow();
+                markDirty();
+              }}
+              onRemoveSubtitle={(index) => {
+                form.removeSubtitleRow(index);
+                markDirty();
+              }}
+              mainTrackStyle="star"
+              minAudioRows={0}
+            />
+          </div>
         </div>
       </fieldset>
 
       <FormActionBar
+        ref={actionBarRef}
         isDirty={isDirty}
         saving={loading}
         actionLoading={actionLoading}
@@ -575,7 +648,9 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
               type="button"
               variant="ghost"
               onClick={() => setConfirmDelete(true)}
-              disabled={loading || actionLoading || form.fillingFromFile}
+              disabled={
+                loading || actionLoading || form.fillingFromFile || pickingFile
+              }
               className="text-danger"
             >
               <Trash2 className="h-4 w-4" aria-hidden />
@@ -598,7 +673,8 @@ export function ReleaseEditor(props: ReleaseEditorProps) {
             (mode === "edit" && !isDirty) ||
             loading ||
             actionLoading ||
-            form.fillingFromFile
+            form.fillingFromFile ||
+            pickingFile
           }
         >
           {mode === "create" ? "Создать релиз" : "Сохранить"}

@@ -56,12 +56,12 @@ export function StorageUsage({
         {used}
         {total && <span className="text-muted"> из {total}</span>}
       </p>
-      <p className="text-faint leading-relaxed">
-        {percent == null
-          ? "Ёмкость диска не задана."
-          : "Только файлы из каталога. Другие данные не учтены."}
-        {unknownSizeCount > 0 && ` Без размера: ${unknownSizeCount} релизов.`}
-      </p>
+      {(percent == null || unknownSizeCount > 0) && (
+        <p className="text-faint leading-relaxed">
+          {percent == null && "Ёмкость диска не задана."}
+          {unknownSizeCount > 0 && ` Без размера: ${unknownSizeCount} релизов.`}
+        </p>
+      )}
       {exceeded && (
         <p className="text-danger">
           Объём файлов превышает ёмкость. Проверьте ёмкость и привязку релизов к

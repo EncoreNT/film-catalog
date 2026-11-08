@@ -70,6 +70,7 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | PATCH | `/api/storages/[id]` | Задать или очистить `capacityBytes` (положительное целое число байтов либо null) |
 | GET | `/api/stats` | Archive metrics JSON |
 | POST | `/api/pick-directory` | Нативный диалог выбора папки → runtime path |
+| POST | `/api/pick-file` | Нативный выбор файла → `{ path, pathDisplay }` (WSL/Windows); отмена → `{ cancelled: true }` |
 | GET | `/api/disk-space?path=` | Свободное место; если `/mnt/x` не drvfs/9p — `{ unmounted: true, driveLetter }` |
 | POST | `/api/wsl-drive/mount` | Явно смонтировать Windows-диск из пути (`F:\\` / `/mnt/f/...`); без автомонтирования |
 

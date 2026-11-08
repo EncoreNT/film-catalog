@@ -6,6 +6,7 @@ import { Film, Plus, ScanLine, Settings2 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Каталог" },
+  { href: "/calendar", label: "Календарь" },
   { href: "/franchises", label: "Франшизы" },
   { href: "/builds", label: "Сборки" },
 ] as const;

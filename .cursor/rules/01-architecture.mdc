@@ -91,6 +91,7 @@ film-catalog/
 | URL | Файл | Назначение |
 |-----|------|------------|
 | `/` | `app/page.tsx` | Каталог: фильтры, табы DRAFT/CATALOG/EXCLUDED, пагинация |
+| `/calendar` | `app/calendar/page.tsx` | Календарь журнала просмотров: месяц, две недели, неделя; `?date=YYYY-MM-DD&view=month\|fortnight\|week` |
 | `/movies/[slug]` | `app/movies/[slug]/page.tsx` | Карточка фильма: specs, tracks, rating, franchises |
 | `/movies/[slug]/edit` | `app/movies/[slug]/edit/page.tsx` | Редактирование фильма |
 | `/franchises` | `app/franchises/page.tsx` | Список франшиз |

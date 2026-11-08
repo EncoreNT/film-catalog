@@ -25,6 +25,7 @@ alwaysApply: false
 | Watch journal | `lib/movies/movie-watch.ts`, `movie-watch-date.ts`; catalog date = `max(MovieWatch.watchedOn)` |
 | App settings | `lib/db/settings.ts`, `app/settings/page.tsx` |
 | External disk capacity / usage | `lib/storages/storage-crud.ts`, `storage-capacity.ts`; `components/shared/StorageUsage.tsx`; ADR-0026 |
+| Native file/folder selection | `lib/shared/native-path-picker.ts`, `components/shared/NativePathPickerButton.tsx`; Win/WSL paths → `lib/shared/display-path.ts` |
 | Franchises | `lib/franchises/franchise-slots.ts`, `franchise-summary.ts` |
 | Remakes | `lib/remakes/remake-members.ts`, `remake-membership.ts`, `remake-catalog-badges.ts` |
 | Prisma includes | `lib/movies/movie-include.ts`, `lib/franchises/franchise-include.ts`, `lib/remakes/remake-include.ts` |

@@ -48,14 +48,9 @@ export function HoverTooltip({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visible, setVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [placement, setPlacement] = useState<TooltipPlacement>("top");
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const [positioned, setPositioned] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const cancelHide = useCallback(() => {
     if (hideTimerRef.current) {
@@ -137,13 +132,18 @@ export function HoverTooltip({
   useEffect(() => {
     if (!visible) return;
     const onScrollOrResize = () => updatePosition();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") hide();
+    };
+    window.addEventListener("keydown", onKeyDown);
     window.addEventListener("scroll", onScrollOrResize, true);
     window.addEventListener("resize", onScrollOrResize);
     return () => {
+      window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("scroll", onScrollOrResize, true);
       window.removeEventListener("resize", onScrollOrResize);
     };
-  }, [visible, updatePosition]);
+  }, [visible, updatePosition, hide]);
 
   const transform =
     placement === "top"
@@ -162,7 +162,7 @@ export function HoverTooltip({
       >
         {children}
       </span>
-      {mounted && visible && !disabled
+      {visible && !disabled
         ? createPortal(
             <div
               ref={tooltipRef}

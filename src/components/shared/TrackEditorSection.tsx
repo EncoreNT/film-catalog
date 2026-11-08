@@ -92,6 +92,13 @@ export function TrackEditorSection({
 }: TrackEditorSectionProps) {
   const tabId = useId();
   const isEditor = layout === "editor";
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const rowIsOpen = (key: string, initiallyOpen: boolean) =>
+    expandedRows[key] ?? initiallyOpen;
+  const setRowOpen = (key: string, open: boolean) =>
+    setExpandedRows((current) =>
+      current[key] === open ? current : { ...current, [key]: open },
+    );
   const languageLabel = (value: string) =>
     LANGUAGES.find((option) => option.value === value)?.label ?? value;
   const showVideo = sections.includes("video");
@@ -366,7 +373,11 @@ export function TrackEditorSection({
                 .filter(Boolean)
                 .join(" / ")}
               primary={track.isDefault}
-              initialOpen={index === 0 || !track.codec}
+              open={rowIsOpen(
+                `audio:${track.rowKey}`,
+                index === 0 || !track.codec,
+              )}
+              onOpenChange={(open) => setRowOpen(`audio:${track.rowKey}`, open)}
             >
               {fields}
             </TrackEditorRow>
@@ -473,7 +484,13 @@ export function TrackEditorSection({
                 track.forced ? "Принудительные" : "Полные",
               ].join(" / ")}
               primary={track.isDefault}
-              initialOpen={index === 0 || !track.language}
+              open={rowIsOpen(
+                `subtitle:${track.rowKey}`,
+                index === 0 || !track.language,
+              )}
+              onOpenChange={(open) =>
+                setRowOpen(`subtitle:${track.rowKey}`, open)
+              }
             >
               {fields}
             </TrackEditorRow>
@@ -537,6 +554,32 @@ export function TrackEditorSection({
     ? activeTab
     : (tabItems[0]?.id ?? "video");
 
+  const activeRows =
+    resolvedTab === "audio"
+      ? audioRows.map((track, index) => ({
+          key: `audio:${track.rowKey}`,
+          initiallyOpen: index === 0 || !track.codec,
+        }))
+      : resolvedTab === "subtitle"
+        ? subtitleRows.map((track, index) => ({
+            key: `subtitle:${track.rowKey}`,
+            initiallyOpen: index === 0 || !track.language,
+          }))
+        : [];
+  const allOpen = activeRows.every((row) =>
+    rowIsOpen(row.key, row.initiallyOpen),
+  );
+  const allClosed = activeRows.every(
+    (row) => !rowIsOpen(row.key, row.initiallyOpen),
+  );
+  const setAllOpen = (open: boolean) => {
+    setExpandedRows((current) => {
+      const next = { ...current };
+      for (const row of activeRows) next[row.key] = open;
+      return next;
+    });
+  };
+
   if (tabbed && tabItems.length > 0) {
     const isPanel = layout === "panel";
     const trackPanel = (
@@ -567,67 +610,99 @@ export function TrackEditorSection({
           />
         ) : null}
         {notice ? <div className="shrink-0">{notice}</div> : null}
-        <div
-          className={`track-editor-tabs ${showSectionTitle && !isPanel ? "mt-5" : notice ? "mt-1" : ""} flex shrink-0 gap-1 border-b border-border`}
-          role="tablist"
-          aria-label="Дорожки"
-        >
-          {tabItems.map((tab) => {
-            const active = tab.id === resolvedTab;
-            return (
-              <button
-                key={tab.id}
+        <div className={isEditor ? "track-editor-toolbar" : "contents"}>
+          <div
+            className={`track-editor-tabs ${showSectionTitle && !isPanel ? "mt-5" : notice ? "mt-1" : ""} flex shrink-0 gap-1 border-b border-border`}
+            role="tablist"
+            aria-label="Дорожки"
+          >
+            {tabItems.map((tab) => {
+              const active = tab.id === resolvedTab;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  id={`${tabId}-tab-${tab.id}`}
+                  aria-selected={active}
+                  aria-controls={`${tabId}-panel-${tab.id}`}
+                  tabIndex={active ? 0 : -1}
+                  onKeyDown={(event) => {
+                    const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+                    if (!keys.includes(event.key)) return;
+                    event.preventDefault();
+                    const current = tabItems.findIndex(
+                      (item) => item.id === tab.id,
+                    );
+                    const next =
+                      event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? tabItems.length - 1
+                          : (current +
+                              (event.key === "ArrowRight" ? 1 : -1) +
+                              tabItems.length) %
+                            tabItems.length;
+                    setActiveTab(tabItems[next].id);
+                    document
+                      .getElementById(`${tabId}-tab-${tabItems[next].id}`)
+                      ?.focus();
+                  }}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`focus-ring font-mono-tech relative inline-flex items-center px-3 py-2 text-xs font-medium transition-colors ${
+                    active ? "text-accent" : "text-muted hover:text-text"
+                  }`}
+                >
+                  {tab.label}
+                  {active ? (
+                    <motion.span
+                      layoutId={`${tabId}-underline`}
+                      className="pointer-events-none absolute inset-x-2 bottom-[-1px] h-[2px] rounded-full bg-gradient-to-r from-transparent via-accent to-accent-bright shadow-[0_0_10px_var(--accent-glow)]"
+                      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+          {isEditor && activeRows.length > 0 && (
+            <div
+              className="track-editor-bulk-actions"
+              role="group"
+              aria-label="Раскрытие дорожек"
+            >
+              <Button
                 type="button"
-                role="tab"
-                id={`${tabId}-tab-${tab.id}`}
-                aria-selected={active}
-                aria-controls={`${tabId}-panel-${tab.id}`}
-                tabIndex={active ? 0 : -1}
-                onKeyDown={(event) => {
-                  const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
-                  if (!keys.includes(event.key)) return;
-                  event.preventDefault();
-                  const current = tabItems.findIndex(
-                    (item) => item.id === tab.id,
-                  );
-                  const next =
-                    event.key === "Home"
-                      ? 0
-                      : event.key === "End"
-                        ? tabItems.length - 1
-                        : (current +
-                            (event.key === "ArrowRight" ? 1 : -1) +
-                            tabItems.length) %
-                          tabItems.length;
-                  setActiveTab(tabItems[next].id);
-                  document
-                    .getElementById(`${tabId}-tab-${tabItems[next].id}`)
-                    ?.focus();
-                }}
-                onClick={() => setActiveTab(tab.id)}
-                className={`focus-ring font-mono-tech relative inline-flex items-center px-3 py-2 text-xs font-medium transition-colors ${
-                  active ? "text-accent" : "text-muted hover:text-text"
-                }`}
+                variant="ghost"
+                disabled={allOpen}
+                aria-controls={`${tabId}-panel-${resolvedTab}`}
+                onClick={() => setAllOpen(true)}
               >
-                {tab.label}
-                {active ? (
-                  <motion.span
-                    layoutId={`${tabId}-underline`}
-                    className="pointer-events-none absolute inset-x-2 bottom-[-1px] h-[2px] rounded-full bg-gradient-to-r from-transparent via-accent to-accent-bright shadow-[0_0_10px_var(--accent-glow)]"
-                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                    aria-hidden
-                  />
-                ) : null}
-              </button>
-            );
-          })}
+                Раскрыть все
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={allClosed}
+                aria-controls={`${tabId}-panel-${resolvedTab}`}
+                onClick={() => setAllOpen(false)}
+              >
+                Свернуть все
+              </Button>
+            </div>
+          )}
         </div>
         <div
+          key={isEditor ? resolvedTab : undefined}
           role="tabpanel"
+          tabIndex={isEditor ? 0 : undefined}
           id={`${tabId}-panel-${resolvedTab}`}
           aria-labelledby={`${tabId}-tab-${resolvedTab}`}
           className={
-            isPanel
+            isEditor
+              ? "track-editor-scroll-body scroll-subtle focus-ring"
+              : isPanel
               ? "scroll-subtle min-h-0 flex-1 overflow-y-auto pt-5 pr-1 sm:pt-6"
               : "pt-5 sm:pt-6"
           }

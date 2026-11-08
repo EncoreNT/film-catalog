@@ -1,9 +1,10 @@
 "use client";
 
 import { Check, Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 interface FormActionBarProps {
+  ref?: Ref<HTMLDivElement>;
   /** When set, left status shows dirty/saved. Omit when the form has no dirty tracking. */
   isDirty?: boolean;
   /** Overrides dirty/saved idle text (not shown while loading or when error is set). */
@@ -16,6 +17,7 @@ interface FormActionBarProps {
 }
 
 export function FormActionBar({
+  ref,
   isDirty,
   idleMessage,
   saving = false,
@@ -72,7 +74,10 @@ export function FormActionBar({
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-deep/80 backdrop-blur-xl">
+    <div
+      ref={ref}
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-deep/80 backdrop-blur-xl"
+    >
       <div
         className={`container-wide flex flex-wrap items-center gap-3 px-6 py-3 lg:px-10 xl:px-14 2xl:px-20 3xl:px-24 ${status || secondaryActions ? "justify-between" : "justify-end"}`}
       >

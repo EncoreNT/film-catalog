@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Star } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 /** A readable track inventory with editing kept beside its summary. */
 export function TrackEditorRow({
@@ -9,20 +9,30 @@ export function TrackEditorRow({
   language,
   description,
   primary,
-  initialOpen,
+  open,
+  onOpenChange,
   children,
 }: {
   title: string;
   language: string;
   description: string;
   primary: boolean;
-  initialOpen: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   children: ReactNode;
 }) {
-  const [startOpen] = useState(initialOpen);
   return (
-    <details className="track-editor-row" open={startOpen}>
-      <summary>
+    <details
+      className="track-editor-row"
+      open={open}
+      onToggle={(event) => onOpenChange(event.currentTarget.open)}
+    >
+      <summary
+        onClick={(event) => {
+          event.preventDefault();
+          onOpenChange(!open);
+        }}
+      >
         <span className="track-editor-language">
           {language || "Язык не указан"}
         </span>

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
-import { FolderOpen, LoaderCircle } from "lucide-react";
-import { Button } from "@/components/primitives/Button";
+import { useId, useState } from "react";
+import { FolderOpen } from "lucide-react";
+import { NativePathPickerButton } from "./NativePathPickerButton";
 import { Field, UnderlineLines } from "@/components/primitives/Field";
-import { parseApiError } from "@/lib/api/client";
 import {
   commitFilePathInput,
   FILE_PATH_INPUT_HINT,
@@ -35,12 +34,14 @@ export function FolderPathField({
   const fallbackId = useId();
   const fieldId = id ?? fallbackId;
   const [input, setInput] = useState(value);
+  const [previousValue, setPreviousValue] = useState(value);
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (value !== previousValue) {
+    setPreviousValue(value);
     setInput(value);
-  }, [value]);
+  }
 
   const commitInput = (raw: string) => {
     const trimmed = raw.trim();
@@ -53,56 +54,25 @@ export function FolderPathField({
     onChange(runtime, display);
   };
 
-  const handlePick = async () => {
-    setPicking(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/pick-directory", { method: "POST" });
-      const data = (await res.json()) as {
-        cancelled?: boolean;
-        path?: string;
-        pathDisplay?: string;
-        error?: string;
-      };
-      if (data.cancelled) return;
-      if (!res.ok) {
-        throw new Error(await parseApiError(res, "Не удалось выбрать папку"));
-      }
-      if (!data.path || !data.pathDisplay) {
-        throw new Error("Сервер не вернул путь к папке");
-      }
-      setInput(data.pathDisplay);
-      onChange(data.path, data.pathDisplay);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось выбрать папку");
-    } finally {
-      setPicking(false);
-    }
-  };
-
   const browseButton = (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={() => void handlePick()}
-      disabled={disabled || picking}
-      title="Выбрать папку"
-      aria-label="Выбрать папку"
+    <NativePathPickerButton
+      kind="directory"
+      onPick={(runtime, display) => {
+        setInput(display);
+        onChange(runtime, display);
+      }}
+      onError={setError}
+      onPickingChange={setPicking}
+      disabled={disabled}
+      textClassName={
+        layout === "toolbar" ? "hidden md:inline" : "hidden sm:inline"
+      }
       className={
         layout === "toolbar"
           ? "!min-h-9 shrink-0 gap-1.5 !rounded-l-none !rounded-r-[var(--radius-sm)] !border-0 !border-l !border-border !px-2.5 font-mono-tech text-[11px] uppercase tracking-[0.14em] text-muted hover:bg-bg-surface hover:text-accent"
           : "!min-h-11 shrink-0 gap-1.5 !px-2 font-mono-tech text-[11px] uppercase tracking-[0.14em] text-muted hover:text-accent"
       }
-    >
-      {picking ? (
-        <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
-      ) : (
-        <FolderOpen className="h-3.5 w-3.5" aria-hidden />
-      )}
-      <span className={layout === "toolbar" ? "hidden md:inline" : "hidden sm:inline"}>
-        Обзор
-      </span>
-    </Button>
+    />
   );
 
   if (layout === "toolbar") {
