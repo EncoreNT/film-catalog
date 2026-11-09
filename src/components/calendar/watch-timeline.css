@@ -13,13 +13,13 @@
 .watch-timeline-date-slide { grid-area: 1 / 1; backface-visibility: hidden; transition: transform 250ms var(--ease-in-out), opacity 200ms var(--ease); }
 .watch-timeline-date p { color: var(--text-muted); font-size: 12px; text-transform: capitalize; letter-spacing: .02em; }
 .watch-timeline-date h2 { margin-top: 8px; font-size: clamp(25px, 2.5vw, 44px); font-weight: 550; letter-spacing: -.045em; line-height: 1.2; }
-.watch-timeline-scene { width: 100%; max-width: 1600px; align-self: center; position: relative; flex: 1; min-height: 0; container-type: size; perspective: 1400px; perspective-origin: 50% 45%; touch-action: pan-y; outline-offset: -4px; }
+.watch-timeline-scene { width: 100%; align-self: center; position: relative; flex: 1; min-height: 0; container-type: size; overflow: hidden; touch-action: pan-y; outline-offset: -4px; }
 .watch-timeline-scene:focus-visible { outline: 1px solid var(--catalog-active-border); border-radius: 12px; }
 .watch-timeline-scene::before { content: ""; position: absolute; left: 16%; right: 16%; top: 80%; height: 22%; pointer-events: none; border-radius: 50%; background: radial-gradient(ellipse, var(--accent-soft), transparent 68%); transform: rotateX(65deg); }
-/* Date, posters and rail retain date keys and share timing, so rapid input retargets all three. */
-.watch-timeline-day { position: absolute; top: 50%; left: 50%; width: 48%; height: 100%; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; transition: transform 250ms var(--ease-in-out), opacity 200ms var(--ease); }
+/* Stable day keys let posters, intervals and genre clouds retarget a running transition. */
+.watch-timeline-day { position: absolute; top: 50%; left: 50%; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; transition: transform 250ms var(--ease-in-out), opacity 200ms var(--ease); }
 .watch-timeline-day[aria-hidden=true] { pointer-events: none; }
-.watch-timeline-cards { display: flex; align-items: flex-start; justify-content: center; gap: clamp(12px, 2cqw, 28px); width: 100%; padding: 16px 8px 24px; }
+.watch-timeline-cards { display: flex; align-items: flex-start; justify-content: center; gap: clamp(12px, 2cqw, 28px); width: 100%; padding: 16px 0 24px; }
 .watch-timeline-cards[data-overflow=true] { justify-content: flex-start; overflow-x: auto; scrollbar-width: thin; }
 .watch-timeline-card { flex: 0 0 auto; width: min(23cqw, calc((100cqh - 104px) * .6667), 360px); min-width: 0; }
 .watch-timeline-cover { display: block; position: relative; }
@@ -30,20 +30,26 @@
 .watch-timeline-card h3 { min-height: 2.8em; font-size: clamp(12px, 1vw, 16px); font-weight: 600; line-height: 1.4; text-wrap: balance; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .watch-timeline-card figcaption > div { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 6px; color: var(--text-muted); font-size: 12px; }
 .watch-timeline-rating { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); }
-.watch-timeline-thread { position: relative; flex-shrink: 0; width: 100%; max-width: 1600px; align-self: center; height: 86px; overflow: hidden; }
-.watch-timeline-rail-day { position: absolute; top: 0; left: 50%; width: 64%; height: 100%; pointer-events: none; transition: transform 250ms var(--ease-in-out); }
-.watch-timeline-rail-day[aria-hidden=true] .watch-timeline-stop { pointer-events: none; }
-.watch-timeline-wire { position: absolute; top: 25px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--catalog-active-border) 18%, var(--accent) 50%, var(--catalog-active-border) 82%, transparent); }
-.watch-timeline-stop { position: absolute; top: 0; left: 50%; pointer-events: auto; transition: opacity 200ms var(--ease); display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 100px; min-height: 72px; padding: 20px 8px 4px; transform: translateX(-50%); font-size: 12px; color: var(--text-muted); border-radius: 8px; }
-button.watch-timeline-stop { cursor: pointer; }
-.watch-timeline-rail-day[data-current=true] .watch-timeline-stop { color: var(--text-primary); }
-.watch-timeline-dot { position: relative; display: block; width: 11px; height: 11px; border: 1px solid var(--accent); border-radius: 50%; background: var(--bg-deep); }
-.watch-timeline-dot::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; background: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); opacity: 0; transition: opacity 200ms var(--ease); }
-.watch-timeline-rail-day[data-current=true] .watch-timeline-dot::after { opacity: 1; }
-.watch-timeline-gap { position: absolute; left: 25%; transition: opacity 200ms var(--ease); top: 25px; transform: translate(-50%, -50%); padding: 4px 12px; border-radius: 4px; background: var(--bg-deep); color: var(--accent); font-family: var(--font-jetbrains), monospace; font-size: 12px; white-space: nowrap; }
-.watch-timeline-end { position: absolute; pointer-events: none; transition: opacity 200ms var(--ease); top: 48px; font-size: 11px; color: var(--text-muted); transform: translateX(-50%); white-space: nowrap; }
-.watch-timeline-end--first { left: 18%; }
-.watch-timeline-end--last { left: 82%; }
+.watch-timeline[data-ready=false] .watch-timeline-scene { visibility: hidden; }
+.watch-timeline-bridge { position: absolute; top: calc(50% - 44px); left: 50%; z-index: 5; width: 100%; height: 1px; font: 12px var(--font-jetbrains), monospace; pointer-events: none; transition: transform 250ms var(--ease-in-out), opacity 200ms var(--ease); }
+.watch-timeline-bridge-line { position: absolute; inset: 0; border-top: 1px dashed var(--text-faint); transition: clip-path 250ms var(--ease-in-out); }
+.watch-timeline-bridge-label { position: absolute; left: 0; top: 0; color: var(--text-muted); font: inherit; white-space: nowrap; transition: transform 250ms var(--ease-in-out); }
+.watch-timeline-thread { position: relative; flex-shrink: 0; width: 100%; align-self: center; padding: 25px 24px 16px; overflow: clip; }
+.watch-timeline-wire { position: absolute; top: 14px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--catalog-active-border) 18%, var(--accent) 50%, var(--catalog-active-border) 82%, transparent); }
+.watch-timeline-genre-cloud { display: grid; min-height: 72px; }
+.watch-timeline-genres { grid-area: 1 / 1; align-self: start; justify-self: center; position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 8px 28px; transition: transform 250ms var(--ease-in-out), opacity 200ms var(--ease); }
+.watch-timeline-genre-jump { position: absolute; inset: -14px -8px -4px; z-index: 1; cursor: pointer; border-radius: 6px; }
+.watch-timeline-genres[data-current=false] { gap: 4px 14px; }
+.watch-timeline-genres[data-current=false] .watch-timeline-genre { font-size: 12px; }
+.watch-timeline-genres[data-current=false] .watch-timeline-genre[data-shared=true] { font-size: 14px; color: var(--text-primary); }
+.watch-timeline-genre-more { font-size: 11px; line-height: 32px; color: var(--text-muted); }
+.watch-timeline-genres[aria-hidden=true] { pointer-events: none; }
+.watch-timeline-genre { display: inline-flex; justify-content: center; font-size: 15px; line-height: 32px; color: var(--text-primary); }
+.watch-timeline-genre-dot { position: absolute; top: -13.5px; width: 5px; height: 5px; background: var(--bg-deep); border: 1px solid var(--accent); border-radius: 50%; }
+.watch-timeline-genre[data-shared=true] { color: var(--accent); font-size: 20px; font-weight: 550; }
+.watch-timeline-genre[data-shared=true] .watch-timeline-genre-dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.watch-timeline-genre-empty, .watch-timeline-genre-label { color: var(--text-muted); font-size: 11px; text-align: center; }
+.watch-timeline-genre-label { margin-top: 10px; }
 .watch-timeline-nav { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 0 0 12px; }
 .watch-timeline-nav > button { min-height: 44px; font-size: 12px; border-radius: 9px; transition: color 150ms var(--ease); }
 .watch-timeline-nav > button:first-child, .watch-timeline-nav > button:last-child { border: 1px solid var(--catalog-control-border); background: var(--catalog-control-bg); color: var(--text-primary); padding-inline: 18px; }
@@ -53,9 +59,9 @@ button.watch-timeline-stop { cursor: pointer; }
 .watch-timeline-empty svg { color: var(--accent); }
 .watch-timeline-empty h2 { font-size: clamp(19px, 2vw, 28px); font-weight: 550; }
 .watch-timeline-empty p { max-width: 440px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
-.watch-timeline[data-instant=true] :is(.watch-timeline-day, .watch-timeline-date-slide, .watch-timeline-rail-day, .watch-timeline-stop, .watch-timeline-gap, .watch-timeline-end, figcaption), .watch-timeline[data-instant=true] .watch-timeline-dot::after { transition: none; }
+.watch-timeline[data-instant=true] :is(.watch-timeline-day, .watch-timeline-date-slide, .watch-timeline-bridge, .watch-timeline-bridge-line, .watch-timeline-bridge-label, .watch-timeline-genres, figcaption) { transition: none; }
 @media (hover: hover) and (pointer: fine) {
-  .watch-calendar-layouts button:hover, button.watch-timeline-stop:hover, .watch-timeline-latest:hover { color: var(--accent); }
+  .watch-calendar-layouts button:hover, .watch-timeline-latest:hover { color: var(--accent); }
   .watch-timeline-day[data-current=true] .watch-timeline-poster:hover { transform: translateY(-3px); }
   .watch-timeline-day[data-current=true] .watch-timeline-poster:active { transform: scale(.98); }
 }
@@ -63,7 +69,7 @@ button.watch-timeline-stop { cursor: pointer; }
   .watch-timeline-date { padding: 0 0 4px; }
   .watch-timeline-date h2 { font-size: 26px; margin-top: 4px; }
   .watch-timeline-date p { font-size: 11px; }
-  .watch-timeline-thread { height: 68px; }
+  .watch-timeline-thread { padding-bottom: 8px; }
   .watch-timeline-nav { padding-bottom: 0; }
 }
 @media (max-height: 649px), (max-width: 767px) {
@@ -74,25 +80,22 @@ button.watch-timeline-stop { cursor: pointer; }
   .watch-calendar-title-row { gap: 14px; }
   .watch-calendar-layouts button { min-height: 38px; }
   .watch-timeline-date { padding: 12px 0; }
-  .watch-timeline-scene { perspective: 900px; height: 360px; }
-  .watch-timeline-day { width: 90%; }
+  .watch-timeline-scene { height: 360px; }
   .watch-timeline-cards { gap: 12px; }
   .watch-timeline-card { width: min(38cqw, 205px); }
   .watch-timeline-card figcaption { margin-top: 12px; }
   .watch-timeline-card h3 { font-size: 12px; }
   .watch-timeline-card figcaption > div { font-size: 11px; gap: 10px; }
-  .watch-timeline-stop { min-width: 70px; font-size: 10px; padding-inline: 2px; }
-  .watch-timeline-rail-day { width: 80%; }
-  .watch-timeline-gap { font-size: 10px; padding-inline: 6px; }
-  .watch-timeline-end { font-size: 9px; white-space: normal; width: 70px; text-align: center; }
-  .watch-timeline-end--first { left: 10%; }
-  .watch-timeline-end--last { left: 90%; }
+  .watch-timeline-bridge { font-size: 9px; }
+  .watch-timeline-thread { padding-inline: 12px; }
+  .watch-timeline-genres { gap: 8px 20px; }
+  .watch-timeline-genre { font-size: 12px; }
+  .watch-timeline-genre[data-shared=true] { font-size: 15px; }
   .watch-timeline-nav { gap: 8px; }
   .watch-timeline-nav > button:first-child, .watch-timeline-nav > button:last-child { padding-inline: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .watch-timeline-day, .watch-timeline-date-slide { transition: opacity 150ms var(--ease); }
-  .watch-timeline-rail-day { transition: none; }
-  .watch-timeline-card figcaption, .watch-timeline-poster { transition: none; }
+  .watch-timeline-day, .watch-timeline-date-slide, .watch-timeline-bridge, .watch-timeline-genres { transition: opacity 150ms var(--ease); }
+  .watch-timeline-card figcaption, .watch-timeline-poster, .watch-timeline-bridge-line, .watch-timeline-bridge-label { transition: none; }
   .watch-timeline-day[data-current=true] .watch-timeline-poster:hover, .watch-timeline-day[data-current=true] .watch-timeline-poster:active { transform: none; }
 }

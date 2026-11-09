@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { ChevronLeft, ChevronRight, Film, Star } from "lucide-react";
 import { Button } from "@/components/primitives/Button";
 import { HoverTooltip } from "@/components/primitives/HoverTooltip";
 import { Modal } from "@/components/primitives/Modal";
 import { formatRatingDisplay } from "@/lib/movies/movie-rating";
 import { formatWatchCount, watchInstantFromISODate } from "@/lib/movies/movie-watch-date";
+import { layoutWatchTimeline } from "@/lib/layout/watch-timeline-layout";
 import { buildWatchTimeline } from "@/lib/movies/watch-timeline";
 import { formatCountRu } from "@/lib/shared/russian-plural";
 import type { CalendarWatch } from "@/lib/movies/watch-calendar";
@@ -18,10 +19,12 @@ const weekdayFormat = new Intl.DateTimeFormat("ru-RU", { weekday: "long", timeZo
 export function WatchTimeline({ watches }: { watches: CalendarWatch[] }) {
   const days = useMemo(() => buildWatchTimeline(watches), [watches]);
   const [activeIndex, setActiveIndex] = useState(() => Math.max(0, days.length - 1));
-  const [instant, setInstant] = useState(false);
+  const [instant, setInstant] = useState(true);
   const [selected, setSelected] = useState<CalendarWatch | null>(null);
   const gesture = useRef<{ x: number; y: number } | null>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
+  const measuredWidth = useRef(0);
+  const [sceneSize, setSceneSize] = useState({ width: 0, height: 0 });
   const suppressClickUntil = useRef(0);
   const active = days[activeIndex];
   const previous = days[activeIndex - 1];
@@ -30,6 +33,21 @@ export function WatchTimeline({ watches }: { watches: CalendarWatch[] }) {
   const visibleDays = days.slice(windowStart, activeIndex + 4).map((day, position) => ({
     day, index: windowStart + position, offset: windowStart + position - activeIndex,
   }));
+
+  const layout = layoutWatchTimeline(visibleDays.map(({ day }) => ({ count: day.watches.length, gapDays: day.gapDays })), activeIndex - windowStart, sceneSize.width || 1200, sceneSize.height || 650);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const observer = new ResizeObserver(([entry]) => {
+      // A viewport resize is layout, not navigation; do not sweep the days across the screen.
+      if (entry.contentRect.width !== measuredWidth.current) setInstant(true);
+      measuredWidth.current = entry.contentRect.width;
+      setSceneSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(scene);
+    return () => observer.disconnect();
+  }, [days.length]);
 
   function select(index: number, immediately = false) {
     setInstant(immediately);
@@ -68,7 +86,7 @@ export function WatchTimeline({ watches }: { watches: CalendarWatch[] }) {
     <p>Добавьте дату просмотра на странице фильма.</p>
   </div>;
 
-  return <section className="watch-timeline" data-instant={instant} aria-label="Лента просмотров" aria-roledescription="карусель" onKeyDown={onKeyDown}>
+  return <section className="watch-timeline" data-instant={instant} data-ready={sceneSize.width > 0} aria-label="Лента просмотров" aria-roledescription="карусель" onKeyDown={onKeyDown}>
     <header className="watch-timeline-date">
       {visibleDays.map(({ day, offset }) => <div key={day.iso} className="watch-timeline-date-slide" data-date={day.iso} aria-hidden={offset !== 0}
         style={{ transform: `translateY(${Math.max(-2, Math.min(2, offset)) * 105}%) rotateX(${-Math.sign(offset) * 25}deg)`, opacity: offset === 0 ? 1 : 0 }}>
@@ -81,27 +99,28 @@ export function WatchTimeline({ watches }: { watches: CalendarWatch[] }) {
     <div ref={sceneRef} className="watch-timeline-scene focus-ring" tabIndex={0} aria-label="Дни просмотров. Стрелки влево и вправо переключают день."
       onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { gesture.current = null; }}
       onClickCapture={(event) => { if (Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); } }}>
-      {visibleDays.map(({ day, index, offset }) => {
+      {visibleDays.map(({ day, index, offset }, position) => {
         const distance = Math.abs(offset);
         const current = offset === 0;
-        const x = offset === 0 ? 0 : Math.sign(offset) * (37 + (distance - 1) * 28);
+        const panel = layout.panels[position];
         const dateLabel = dayFormatter.format(watchInstantFromISODate(day.iso));
         return <article key={day.iso} className="watch-timeline-day" data-current={current} data-offset={offset} data-date={day.iso}
-          aria-label={dateLabel} aria-hidden={distance > 1 ? true : undefined} inert={distance > 1 ? true : undefined}
+          aria-label={dateLabel} aria-hidden={distance > 2 ? true : undefined} inert={distance > 2 ? true : undefined}
           style={{
-            transform: `translate(-50%, -50%) translateX(${x}cqw) translateZ(${-distance * 230}px) rotateY(${-Math.sign(offset) * Math.min(distance, 2) * 26}deg)`,
-            opacity: distance === 0 ? 1 : distance === 1 ? .6 : distance === 2 ? .2 : 0,
+            width: panel.width,
+            transform: `translate(-50%, -50%) translateX(${panel.x}px) perspective(1400px) translateZ(${-panel.depth}px) rotateY(${panel.angle}deg)`,
+            opacity: distance === 0 ? 1 : distance === 1 ? .7 : distance === 2 ? .45 : .15,
             zIndex: 4 - distance,
           }}>
-          <div className="watch-timeline-cards scroll-subtle" data-overflow={day.watches.length > 2 && current}
+          <div className="watch-timeline-cards scroll-subtle" style={{ gap: layout.cardGap }} data-overflow={day.watches.length > 2 && current}
             tabIndex={day.watches.length > 2 && current ? 0 : undefined}
             aria-label={day.watches.length > 2 && current ? "Фильмы дня, прокручиваемая область" : undefined}>
-            {(current ? day.watches : day.watches.slice(0, 2)).map((watch, movieIndex) => <figure className="watch-timeline-card" key={watch.id}>
+            {(current ? day.watches : day.watches.slice(0, 2)).map((watch, movieIndex) => <figure className="watch-timeline-card" key={watch.id} style={{ width: layout.cardWidth }}>
               <HoverTooltip className="watch-timeline-cover" disabled={!current || selected != null} content={<MoviePreview watch={watch} compact />}>
-                <button type="button" className="watch-timeline-poster focus-ring" tabIndex={distance > 1 || (!current && movieIndex > 0) ? -1 : 0}
+                <button type="button" className="watch-timeline-poster focus-ring" tabIndex={distance > 2 || (!current && movieIndex > 0) ? -1 : 0}
                   aria-label={current ? `${watch.movie.title}, ${watch.movie.rating == null ? "без оценки" : `оценка ${formatRatingDisplay(watch.movie.rating)} из 10`}` : `Перейти к просмотрам: ${dateLabel}`}
                   onClick={(event) => current ? setSelected(watch) : select(index, event.detail === 0)}>
-                  <Poster movie={watch.movie} sizes="(max-width: 767px) 42vw, 320px" eager={distance <= 1} />
+                  <Poster movie={watch.movie} sizes="(max-width: 767px) 42vw, 320px" eager={distance <= 2} />
                   <span className="watch-timeline-poster-edge" aria-hidden />
                 </button>
               </HoverTooltip>
@@ -113,27 +132,58 @@ export function WatchTimeline({ watches }: { watches: CalendarWatch[] }) {
           </div>
         </article>;
       })}
+      {visibleDays.map(({ day, offset }, position) => {
+        const preceding = layout.panels[position - 1];
+        if (!preceding || day.gapDays == null) return null;
+        const visible = offset >= -1 && offset <= 2;
+        const length = layout.panels[position].gapBefore - 16;
+        const label = formatCountRu(day.gapDays, ["день", "дня", "дней"]);
+        const halfLabel = `${label.length / 2}ch + 6px`;
+        return <div key={`gap-${day.iso}`} className="watch-timeline-bridge" role="img" aria-hidden={!visible}
+          aria-label={`${formatCountRu(day.gapDays, ["день", "дня", "дней"])} между просмотрами ${dateFormat.format(watchInstantFromISODate(visibleDays[position - 1].day.iso))} и ${dateFormat.format(watchInstantFromISODate(day.iso))}`}
+          style={{ transform: `translate(${preceding.right + 8}px, -50%)`, opacity: visible ? 1 : 0 }}>
+          <span className="watch-timeline-bridge-line" aria-hidden style={{ clipPath: `inset(0 max(0px, calc(100% - ${length / 2}px + ${halfLabel})) 0 0)` }} />
+          <span className="watch-timeline-bridge-line" aria-hidden style={{ clipPath: `inset(0 max(0px, calc(100% - ${length}px)) 0 max(0px, calc(${length / 2}px + ${halfLabel})))` }} />
+          <span className="watch-timeline-bridge-label" style={{ transform: `translateX(${length / 2}px) translate(-50%, -50%)` }}>{label}</span>
+        </div>;
+      })}
     </div>
 
-    <div className="watch-timeline-thread" aria-label="Интервалы между днями просмотров">
+    <div className="watch-timeline-thread" aria-label="Жанры текущего и соседних дней">
       <div className="watch-timeline-wire" aria-hidden />
-      {visibleDays.map(({ day, index, offset }) => <div key={day.iso} className="watch-timeline-rail-day" data-date={day.iso} data-current={offset === 0}
-        aria-hidden={Math.abs(offset) > 1} inert={Math.abs(offset) > 1 ? true : undefined}
-        style={{ transform: `translateX(${offset * 50 - 50}%)` }}>
-        <button type="button" className="watch-timeline-stop focus-ring" tabIndex={Math.abs(offset) > 1 ? -1 : 0}
-          style={{ opacity: Math.abs(offset) <= 1 ? 1 : 0 }} aria-current={offset === 0 ? "step" : undefined}
-          onClick={(event) => select(index, event.detail === 0)} aria-label={`Просмотры: ${dayFormatter.format(watchInstantFromISODate(day.iso))}`}>
-          <span className="watch-timeline-dot" aria-hidden />
-          <time dateTime={day.iso}>{dateFormat.format(watchInstantFromISODate(day.iso))}</time>
-        </button>
-        {day.gapDays != null && <span className="watch-timeline-gap" aria-hidden={offset < 0 || offset > 1}
-          style={{ opacity: offset === 0 || offset === 1 ? 1 : 0 }}
-          aria-label={`${formatCountRu(day.gapDays, ["день", "дня", "дней"])} между просмотрами`}>
-          {formatCountRu(day.gapDays, ["день", "дня", "дней"])}
-        </span>}
-      </div>)}
-      <span className="watch-timeline-end watch-timeline-end--first" aria-hidden={!!previous} style={{ opacity: previous ? 0 : 1 }}>Первый просмотр</span>
-      <span className="watch-timeline-end watch-timeline-end--last" aria-hidden={!!next} style={{ opacity: next ? 0 : 1 }}>Последний просмотр</span>
+      <div className="watch-timeline-genre-cloud">
+        {visibleDays.map(({ day, index, offset }, position) => {
+          const counts = new Map<string, number>();
+          for (const watch of day.watches) for (const genre of new Set(watch.movie.genres)) counts.set(genre, (counts.get(genre) ?? 0) + 1);
+          const genres = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ru"));
+          const panel = layout.panels[position];
+          const centre = (panel.left + panel.right) / 2;
+          const leftPanel = layout.panels[position - 1];
+          const rightPanel = layout.panels[position + 1];
+          const spacing = Math.min(leftPanel ? centre - (leftPanel.left + leftPanel.right) / 2 : Infinity,
+            rightPanel ? (rightPanel.left + rightPanel.right) / 2 - centre : Infinity);
+          const mobile = sceneSize.width < 768;
+          const cloudWidth = mobile ? sceneSize.width * .7 : Math.max(100, Math.min(500, spacing - 28));
+          const preview = offset !== 0;
+          const shownGenres = preview ? genres.slice(0, 3) : genres;
+          const distance = Math.abs(offset);
+          const cloudCentre = mobile ? offset * sceneSize.width * .8 : centre;
+          const hidden = distance > 2 || Math.abs(cloudCentre) - cloudWidth / 2 >= sceneSize.width / 2;
+          return <div key={day.iso} className="watch-timeline-genres" data-current={!preview} data-date={day.iso}
+            aria-hidden={hidden} inert={hidden ? true : undefined}
+            style={{ width: cloudWidth, opacity: distance === 0 ? 1 : distance === 1 ? .7 : distance === 2 ? .55 : 0,
+              transform: `translateX(${cloudCentre}px)` }}>
+            {preview && !hidden && <button type="button" className="watch-timeline-genre-jump focus-ring"
+              aria-label={`Жанры и просмотры: ${dayFormatter.format(watchInstantFromISODate(day.iso))}`}
+              onClick={event => select(index, event.detail === 0)} />}
+            {genres.length ? shownGenres.map(([genre, count]) => <span key={genre} className="watch-timeline-genre" data-shared={count > 1}
+              title={count > 1 ? `${genre} — ${formatCountRu(count, ["фильм", "фильма", "фильмов"])}` : undefined}><span className="watch-timeline-genre-dot" aria-hidden />{genre}</span>)
+              : <span className="watch-timeline-genre-empty">Жанры пока не указаны</span>}
+            {preview && genres.length > shownGenres.length && <span className="watch-timeline-genre-more">+{genres.length - shownGenres.length}</span>}
+          </div>;
+        })}
+      </div>
+      <p className="watch-timeline-genre-label">Жанры просмотров</p>
     </div>
 
     <nav className="watch-timeline-nav" aria-label="Навигация по дням просмотров">
