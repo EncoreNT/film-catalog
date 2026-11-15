@@ -75,5 +75,6 @@ docs/adr/0002-franchise-slots-model.md
 
 | [0025](0025-shared-transfer-eta.md) | Shared transfer ETA across strip and dialog | Accepted |
 | [0026](0026-external-storage-capacity.md) | External storage capacity and catalog usage | Accepted |
+| [0027](0027-kinorium-poster-picker.md) | Kinorium poster picker without an API key | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

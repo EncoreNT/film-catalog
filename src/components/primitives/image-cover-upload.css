@@ -162,6 +162,23 @@ dialog:has(.cover-workspace) h2 {
   flex-direction: column;
   gap: 18px;
 }
+.cover-source-switch {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--border-strong);
+}
+.cover-source-switch button {
+  min-height: 44px;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.cover-source-switch button[aria-pressed="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 .cover-source-intro {
   font-size: 15px;
   font-weight: 600;

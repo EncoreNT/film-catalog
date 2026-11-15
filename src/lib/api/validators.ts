@@ -7,3 +7,4 @@ export * from "@/lib/api/validators/bdmv";
 export * from "@/lib/api/validators/rater";
 export * from "@/lib/api/validators/settings";
 export * from "@/lib/api/validators/wsl-drive";
+export * from "@/lib/api/validators/kinorium";

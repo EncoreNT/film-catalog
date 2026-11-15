@@ -196,6 +196,12 @@ Upload: POST multipart → saveCoverBuffer / franchise cover route
 Extract: maybeExtractCover из MKV attachment (scanner + create movie)
 ```
 
+Kinorium (ADR-0027): `CoverUpload` → `KinoriumPosterPicker` → read-only
+`/api/covers/kinorium/*` → `lib/covers/kinorium-client.ts` / `kinorium-parser.ts`.
+Поиск без API-ключа, галерея best-effort; капча не обходится. Кэш только в памяти.
+Выбранный оригинал скачивается через разрешённые CDN в File, затем проходит обычный
+предпросмотр и multipart upload. Новых сущностей/полей/миграций нет.
+
 ## Поток: франшизы
 
 ```

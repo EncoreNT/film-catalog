@@ -313,6 +313,9 @@ export function MovieForm({
             <CoverUpload
               layout="poster"
               movieId={movie?.id}
+              movieTitle={title}
+              originalTitle={originalTitle}
+              movieYear={year}
               hasCover={!!movie?.coverPath}
               coverVersion={movie?.updatedAt}
               onUploaded={() => router.refresh()}
@@ -327,7 +330,7 @@ export function MovieForm({
             />
           </div>
           <p className="movie-editor-poster-note">
-            Файл, ссылка или изображение из буфера.
+            Kinorium, файл, ссылка или изображение из буфера.
             {movie
               ? " Обложка сохраняется отдельно."
               : " Обложку можно добавить позже."}

@@ -30,6 +30,22 @@ import {
 import { formatBytes } from "@/lib/shared/format-bytes";
 import "./image-cover-upload.css";
 
+interface CoverSourceContext {
+  onSelect: (file: File) => void;
+  disabled: boolean;
+  onBusyChange: (busy: boolean) => void;
+  selectedFile: File | null;
+}
+
+function CoverSourceContent({
+  render,
+  ...context
+}: CoverSourceContext & {
+  render: (context: CoverSourceContext) => ReactNode;
+}) {
+  return render(context);
+}
+
 export interface ImageCoverUploadProps {
   /** Existing entity id (edit mode). Omit in create mode to buffer the pick. */
   entityId?: number;
@@ -55,6 +71,11 @@ export interface ImageCoverUploadProps {
   onFileChange?: (file: File | null) => void;
   onUrlChange?: (url: string | null) => void;
   onUploaded?: () => void;
+  /** Domain source feeds the same preview/confirmation flow as a local file. */
+  additionalSource?: {
+    label: string;
+    render: (context: CoverSourceContext) => ReactNode;
+  };
 }
 
 function isValidHttpUrl(value: string): boolean {
@@ -87,6 +108,7 @@ export function ImageCoverUpload({
   onFileChange,
   onUrlChange,
   onUploaded,
+  additionalSource,
 }: ImageCoverUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const urls = useRef(new Set<string>());
@@ -105,6 +127,8 @@ export function ImageCoverUpload({
   const [error, setError] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [dimensions, setDimensions] = useState<string | null>(null);
+  const [source, setSource] = useState<"upload" | "additional">("upload");
+  const [sourceBusy, setSourceBusy] = useState(false);
   const editMode = entityId != null;
   const version = storedVersion ?? coverVersion;
   const previewSrc =
@@ -142,6 +166,8 @@ export function ImageCoverUpload({
     setPreviewFailed(false);
     setDimensions(null);
     setDragOver(false);
+    setSource("upload");
+    setSourceBusy(false);
     setDialogOpen(true);
   };
   const closeDialog = () => {
@@ -184,7 +210,7 @@ export function ImageCoverUpload({
   );
 
   useEffect(() => {
-    if (!dialogOpen || uploading) return;
+    if (!dialogOpen || uploading || sourceBusy) return;
     const paste = (event: ClipboardEvent) => {
       const file = Array.from(event.clipboardData?.items ?? [])
         .find((item) => item.kind === "file" && item.type.startsWith("image/"))
@@ -196,7 +222,7 @@ export function ImageCoverUpload({
     };
     document.addEventListener("paste", paste);
     return () => document.removeEventListener("paste", paste);
-  }, [dialogOpen, uploading, pickFile]);
+  }, [dialogOpen, uploading, sourceBusy, pickFile]);
 
   const readClipboard = async () => {
     if (!navigator.clipboard?.read) {
@@ -238,6 +264,7 @@ export function ImageCoverUpload({
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragOver(false);
+    if (sourceBusy) return;
     pickFile(event.dataTransfer.files[0] ?? null);
   };
   const clearCandidate = () => {
@@ -374,7 +401,9 @@ export function ImageCoverUpload({
               variant="primary"
               onClick={() => void handleSave()}
               loading={uploading}
-              disabled={!hasCandidate || uploading || readingClipboard}
+              disabled={
+                !hasCandidate || uploading || readingClipboard || sourceBusy
+              }
             >
               {editMode ? "Сохранить обложку" : "Выбрать обложку"}
             </Button>
@@ -451,7 +480,7 @@ export function ImageCoverUpload({
               <button
                 type="button"
                 className="cover-reset focus-ring"
-                disabled={uploading}
+                disabled={uploading || sourceBusy}
                 onClick={clearCandidate}
               >
                 <X size={14} aria-hidden />
@@ -460,84 +489,124 @@ export function ImageCoverUpload({
             )}
           </div>
           <div className="cover-source-column">
-            <p className="cover-source-intro">
-              Выберите изображение удобным способом
-            </p>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              tabIndex={-1}
-              aria-label="Файл обложки"
-              disabled={uploading}
-              onChange={(event) => {
-                pickFile(event.target.files?.[0] ?? null);
-                event.target.value = "";
-              }}
-            />
-            <button
-              type="button"
-              className="cover-source-file focus-ring"
-              disabled={uploading}
-              onClick={() => inputRef.current?.click()}
-            >
-              <Upload size={24} aria-hidden />
-              <strong>
-                {draftFile ? "Выбрать другой файл" : "Выбрать файл"}
-              </strong>
-              <span>или перетащите изображение в это окно</span>
-              <small>
-                JPG, PNG, WebP и другие форматы · до{" "}
-                {formatBytes(COVER_MAX_BYTES, { unit: "short" })}
-              </small>
-            </button>
-            <button
-              type="button"
-              className="cover-source-paste focus-ring"
-              disabled={uploading || readingClipboard}
-              onClick={() => void readClipboard()}
-            >
-              {readingClipboard ? (
-                <Loader2 size={19} className="animate-spin" aria-hidden />
-              ) : (
-                <ClipboardPaste size={19} aria-hidden />
-              )}
-              <span>Вставить из буфера</span>
-              <kbd>Ctrl / ⌘ V</kbd>
-            </button>
-            <div className="cover-source-url">
-              <label htmlFor={urlInputId}>
-                <Link2 size={16} aria-hidden />
-                Ссылка на изображение
-              </label>
-              <input
-                id={urlInputId}
-                type="url"
-                spellCheck={false}
-                autoComplete="off"
-                value={draftUrl}
-                placeholder={urlPlaceholder}
-                disabled={uploading}
-                onKeyDown={(event) => {
-                  // This dialog lives inside entity forms. Enter in the URL
-                  // must not submit the underlying movie/franchise fields.
-                  if (event.key === "Enter") event.preventDefault();
-                }}
-                onChange={(event) => {
-                  session.current += 1;
-                  setReadingClipboard(false);
-                  revoke(draftPreviewUrl);
-                  setDraftFile(null);
-                  setDraftPreviewUrl(null);
-                  setDraftUrl(event.target.value);
-                  setError(null);
-                  setPreviewFailed(false);
-                  setDimensions(null);
-                }}
-              />
-              <p>Вставьте прямую ссылку на картинку для предпросмотра.</p>
-            </div>
+            {additionalSource && (
+              <div
+                className="cover-source-switch"
+                role="group"
+                aria-label="Источник обложки"
+              >
+                <button
+                  type="button"
+                  className="focus-ring"
+                  aria-pressed={source === "upload"}
+                  disabled={uploading}
+                  onClick={() => setSource("upload")}
+                >
+                  Файл или ссылка
+                </button>
+                <button
+                  type="button"
+                  className="focus-ring"
+                  aria-pressed={source === "additional"}
+                  disabled={uploading}
+                  onClick={() => setSource("additional")}
+                >
+                  {additionalSource.label}
+                </button>
+              </div>
+            )}
+            {source === "additional" && additionalSource ? (
+              dialogOpen && (
+                <CoverSourceContent
+                  render={additionalSource.render}
+                  onSelect={pickFile}
+                  disabled={uploading}
+                  onBusyChange={setSourceBusy}
+                  selectedFile={draftFile}
+                />
+              )
+            ) : (
+              <>
+                <p className="cover-source-intro">
+                  Выберите изображение удобным способом
+                </p>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-label="Файл обложки"
+                  disabled={uploading}
+                  onChange={(event) => {
+                    pickFile(event.target.files?.[0] ?? null);
+                    event.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  className="cover-source-file focus-ring"
+                  disabled={uploading}
+                  onClick={() => inputRef.current?.click()}
+                >
+                  <Upload size={24} aria-hidden />
+                  <strong>
+                    {draftFile ? "Выбрать другой файл" : "Выбрать файл"}
+                  </strong>
+                  <span>или перетащите изображение в это окно</span>
+                  <small>
+                    JPG, PNG, WebP и другие форматы · до{" "}
+                    {formatBytes(COVER_MAX_BYTES, { unit: "short" })}
+                  </small>
+                </button>
+                <button
+                  type="button"
+                  className="cover-source-paste focus-ring"
+                  disabled={uploading || readingClipboard}
+                  onClick={() => void readClipboard()}
+                >
+                  {readingClipboard ? (
+                    <Loader2 size={19} className="animate-spin" aria-hidden />
+                  ) : (
+                    <ClipboardPaste size={19} aria-hidden />
+                  )}
+                  <span>Вставить из буфера</span>
+                  <kbd>Ctrl / ⌘ V</kbd>
+                </button>
+                <div className="cover-source-url">
+                  <label htmlFor={urlInputId}>
+                    <Link2 size={16} aria-hidden />
+                    Ссылка на изображение
+                  </label>
+                  <input
+                    id={urlInputId}
+                    type="url"
+                    spellCheck={false}
+                    autoComplete="off"
+                    value={draftUrl}
+                    placeholder={urlPlaceholder}
+                    disabled={uploading}
+                    onKeyDown={(event) => {
+                      // This dialog lives inside entity forms. Enter in the URL
+                      // must not submit the underlying movie/franchise fields.
+                      if (event.key === "Enter") event.preventDefault();
+                    }}
+                    onChange={(event) => {
+                      session.current += 1;
+                      setReadingClipboard(false);
+                      revoke(draftPreviewUrl);
+                      setDraftFile(null);
+                      setDraftPreviewUrl(null);
+                      setDraftUrl(event.target.value);
+                      setError(null);
+                      setPreviewFailed(false);
+                      setDimensions(null);
+                    }}
+                  />
+                  <p>Вставьте прямую ссылку на картинку для предпросмотра.</p>
+                </div>
+              </>
+            )}
             {error && (
               <p className="cover-source-error" role="alert">
                 {error}
@@ -546,7 +615,9 @@ export function ImageCoverUpload({
             <p className="cover-source-footer">
               {hasCandidate
                 ? "Проверьте предпросмотр и подтвердите выбор."
-                : "Можно вставить скриншот через Ctrl+V или ⌘V прямо в этом окне."}
+                : source === "upload"
+                  ? "Можно вставить скриншот через Ctrl+V или ⌘V прямо в этом окне."
+                  : "Изображение сохранится в каталоге после подтверждения."}
             </p>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { movieCoverUrl } from "@/lib/covers/cover-url";
 import { ImageCoverUpload } from "./ImageCoverUpload";
+import { KinoriumPosterPicker } from "@/components/movies/KinoriumPosterPicker";
 
 interface CoverUploadProps {
   /** Existing movie id (edit mode). Omit in create mode to buffer the pick. */
@@ -17,6 +18,9 @@ interface CoverUploadProps {
   hint?: ReactNode;
   /** Full-width cover for stacked movie edit sidebar. */
   layout?: "inline" | "stacked" | "poster";
+  movieTitle?: string;
+  originalTitle?: string;
+  movieYear?: number | null;
 }
 
 export function CoverUpload({
@@ -28,6 +32,9 @@ export function CoverUpload({
   onUploaded,
   label = "Обложка",
   layout = "inline",
+  movieTitle,
+  originalTitle,
+  movieYear,
 }: CoverUploadProps) {
   const stacked = layout === "stacked";
 
@@ -64,6 +71,17 @@ export function CoverUpload({
       onFileChange={onFileChange}
       onUrlChange={onUrlChange}
       onUploaded={onUploaded}
+      additionalSource={{
+        label: "Kinorium",
+        render: (context) => (
+          <KinoriumPosterPicker
+            title={movieTitle}
+            originalTitle={originalTitle}
+            year={movieYear}
+            {...context}
+          />
+        ),
+      }}
     />
   );
 }
