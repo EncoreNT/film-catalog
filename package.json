@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "kinorium:browser:install": "playwright install --with-deps chromium",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:backfill-match-keys": "tsx scripts/backfill-match-keys.ts",
@@ -32,6 +33,7 @@
     "lucide-react": "^1.21.0",
     "motion": "^12.41.0",
     "next": "16.2.9",
+    "playwright": "^1.65.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"

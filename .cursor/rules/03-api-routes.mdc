@@ -39,6 +39,7 @@ Create/update flow: optional ffprobe → sync genres → maybeExtractCover (non-
 | GET | `/api/covers/[id]` | Binary cover; ETag + 304; invalid ext → clear coverPath |
 | GET | `/api/covers/kinorium/search?q=&year=` | Поиск Kinorium без ключа; read-only, кэш в памяти |
 | GET | `/api/covers/kinorium/[id]` | Галерея постеров или статус blocked/unavailable; read-only |
+| POST | `/api/covers/kinorium/[id]/browser` | Видимый Chromium с отдельным профилем; ручная капча, ожидание до 3 мин; same-origin, отмена через request.signal; без записей в БД |
 | GET | `/api/covers/kinorium/image?url=` | Скачивание оригинала только с разрешённых CDN Kinorium; read-only, без редиректов |
 
 ## Franchises

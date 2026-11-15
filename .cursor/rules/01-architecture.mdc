@@ -196,9 +196,13 @@ Upload: POST multipart → saveCoverBuffer / franchise cover route
 Extract: maybeExtractCover из MKV attachment (scanner + create movie)
 ```
 
-Kinorium (ADR-0027): `CoverUpload` → `KinoriumPosterPicker` → read-only
+Kinorium (ADR-0027): `CoverUpload` → `KinoriumPosterPicker` →
 `/api/covers/kinorium/*` → `lib/covers/kinorium-client.ts` / `kinorium-parser.ts`.
-Поиск без API-ключа, галерея best-effort; капча не обходится. Кэш только в памяти.
+Поиск без API-ключа, галерея best-effort. При блокировке явный POST `…/[id]/browser`
+открывает видимый Chromium через `kinorium-browser.ts`: пользователь проходит
+капчу вручную, постеры возвращаются в picker, окно закрывается. Одно окно за раз,
+таймаут 3 минуты, отмена закрывает процесс. Профиль `data/kinorium-browser/` отдельно
+от личного Chrome и SQLite; кэш результатов только в памяти.
 Выбранный оригинал скачивается через разрешённые CDN в File, затем проходит обычный
 предпросмотр и multipart upload. Новых сущностей/полей/миграций нет.
 

@@ -73,6 +73,7 @@ export function KinoriumPosterPicker({
   const [movie, setMovie] = useState<KinoriumMovie | null>(null);
   const [gallery, setGallery] = useState<KinoriumGallery | null>(null);
   const [loading, setLoading] = useState(false);
+  const [browserLoading, setBrowserLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [selection, setSelection] = useState<{
     url: string;
@@ -101,6 +102,7 @@ export function KinoriumPosterPicker({
       const controller = new AbortController();
       request.current = controller;
       setLoading(true);
+      setBrowserLoading(false);
       setError(null);
       setSearched(false);
       setMovies([]);
@@ -204,6 +206,26 @@ export function KinoriumPosterPicker({
     }
   };
 
+  const openBrowser = async () => {
+    if (!movie) return;
+    const controller = beginRequest();
+    setBrowserLoading(true);
+    setError(null);
+    try {
+      const result = await apiFetch<KinoriumGallery>(
+        `/api/covers/kinorium/${movie.id}/browser`,
+        { method: "POST", signal: controller.signal },
+        "Не удалось открыть галерею в браузере.",
+      );
+      if (!controller.signal.aborted) setGallery(result);
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setError(error instanceof Error ? error.message : "Не удалось загрузить галерею.");
+    } finally {
+      if (!controller.signal.aborted) setBrowserLoading(false);
+    }
+  };
+
   const busy = disabled || downloading !== null;
   const posters = mergeKinoriumPosters(
     movie?.poster ?? null,
@@ -223,6 +245,7 @@ export function KinoriumPosterPicker({
               onClick={() => {
                 request.current?.abort();
                 setLoading(false);
+                setBrowserLoading(false);
                 setMovie(null);
                 setGallery(null);
                 setError(null);
@@ -257,21 +280,34 @@ export function KinoriumPosterPicker({
               Загружаем галерею…
             </p>
           )}
-          {gallery?.status === "blocked" && (
-            <p className="kinorium-notice" role="status">
-              Kinorium закрыл галерею проверкой браузера.
-              {movie.poster
-                ? " Основной постер доступен для выбора."
-                : " Откройте постеры на сайте."}
-            </p>
-          )}
-          {gallery?.status === "unavailable" && (
-            <p className="kinorium-notice" role="status">
-              Не удалось загрузить галерею.
-              {movie.poster
-                ? " Можно выбрать основной постер или открыть сайт."
-                : " Попробуйте открыть сайт."}
-            </p>
+          {(gallery?.status === "blocked" || gallery?.status === "unavailable") && (
+            <div className="kinorium-browser-fallback">
+              <p className="kinorium-notice" role="status">
+                {browserLoading
+                  ? "В отдельном окне Kinorium пройдите проверку, если она появится. Постеры загрузятся сюда автоматически; окно закроется. Ждём до трёх минут."
+                  : "Галерея недоступна напрямую. Откройте её в отдельном окне и пройдите проверку браузера, если потребуется."}
+              </p>
+              {browserLoading ? (
+                <Button type="button" variant="ghost" onClick={() => {
+                  request.current?.abort();
+                  setBrowserLoading(false);
+                }}>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  Отменить ожидание
+                </Button>
+              ) : (
+                <Button type="button" variant="secondary" disabled={busy || loading}
+                  onClick={() => void openBrowser()}>
+                  <ExternalLink size={16} aria-hidden />
+                  Загрузить через браузер
+                </Button>
+              )}
+              {!browserLoading && (
+                <p className="kinorium-hint">
+                  Окно откроется на компьютере, где запущен каталог.
+                </p>
+              )}
+            </div>
           )}
           {gallery?.status === "empty" && (
             <p className="kinorium-notice">Дополнительных постеров нет.</p>

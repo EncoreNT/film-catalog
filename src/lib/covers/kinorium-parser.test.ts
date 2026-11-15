@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   kinoriumImageUrl,
   parseKinoriumGallery,
@@ -121,6 +122,21 @@ describe("Kinorium request validation", () => {
 });
 
 describe("Kinorium gallery parser", () => {
+  it("parses real gallery markup, using HD only when the page advertises it", () => {
+    const html = readFileSync(new URL("./fixtures/kinorium-gallery.html", import.meta.url), "utf8");
+    const gallery = parseKinoriumGallery(html);
+    expect(gallery.status).toBe("available");
+    expect(gallery.posters).toHaveLength(3);
+    expect(gallery.posters[0]).toMatchObject({
+      id: "51663170", width: 1364, height: 2042,
+      url: "https://images.kinorium.com/movie/poster/776186/w1500_51663170.jpg",
+    });
+    expect(gallery.posters[1]).toMatchObject({
+      width: 2000, height: 3000,
+      url: "https://images.kinorium.com/movie/poster/776186/original_51615399.jpg",
+      previewUrl: "https://images.kinorium.com/movie/poster/776186/h280_51615399.jpg",
+    });
+  });
   // Contract fixture based on the site's photoGallery script, not a downloaded gallery.
   const poster = `<div class="gallery_page__item"><img data-id="12" data-image_type="poster"
     data-photo="https://images.kinorium.com/movie/poster/w1500/776186_12.jpg"
