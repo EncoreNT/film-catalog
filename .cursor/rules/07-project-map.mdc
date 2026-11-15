@@ -20,6 +20,7 @@ alwaysApply: false
 | BDMV remux | `lib/media/bdmv/*`, `lib/builds/bdmv-*.ts`, ADR-0020 |
 | Export / move jobs | `lib/releases/export-*`, `lib/releases/move-*`, `lib/media-jobs/*`, ADR-0007/8/10 |
 | Covers | `lib/covers/cover-url.ts`, `lib/covers/cover-storage.ts` |
+| Kinorium image resize / compression | `lib/covers/prepare-kinorium-poster.ts`; ADR-0028 |
 | Kinorium poster search / gallery | `lib/covers/kinorium-client.ts`, `kinorium-parser.ts`, `kinorium-browser.ts` (видимое окно / ручная капча); `components/movies/KinoriumPosterPicker.tsx`; ADR-0027 |
 | Merge / duplicates | `lib/merge/movie-merge.ts`, `lib/merge/duplicate-groups.ts` |
 | Raters / ratings | `lib/raters/rater-crud.ts`, `lib/movies/update-movie-rating.ts`, `lib/movies/movie-rating.ts` |

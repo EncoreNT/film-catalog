@@ -1,15 +1,17 @@
 import { NextRequest } from "next/server";
 import { jsonError } from "@/lib/api/api-utils";
 import { kinorium, KinoriumError } from "@/lib/covers/kinorium-client";
+import { prepareKinoriumPoster } from "@/lib/covers/prepare-kinorium-poster";
 
 export const runtime = "nodejs";
 
-/** Same-origin download preserves original bytes and avoids CDN CORS restrictions. */
+/** Resize on the server so the browser and catalog receive only the display copy. */
 export async function GET(request: NextRequest) {
   try {
-    const { buffer, mime } = await kinorium.image(
+    const original = await kinorium.image(
       request.nextUrl.searchParams.get("url") ?? "",
     );
+    const { buffer, mime } = await prepareKinoriumPoster(original.buffer);
     return new Response(new Uint8Array(buffer), {
       headers: {
         "Content-Type": mime,

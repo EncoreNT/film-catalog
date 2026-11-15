@@ -1,4 +1,5 @@
-import { COVER_EXT_BY_MIME, COVER_MAX_BYTES } from "./cover-formats";
+import { COVER_EXT_BY_MIME } from "./cover-formats";
+import { formatBytes } from "@/lib/shared/format-bytes";
 import {
   kinoriumImageUrl,
   parseKinoriumGallery,
@@ -22,6 +23,9 @@ export class KinoriumError extends Error {
 
 const ORIGIN = "https://ru.kinorium.com";
 const TIMEOUT_MS = 12_000;
+const IMAGE_TIMEOUT_MS = 90_000;
+// Print originals are read only for processing; the catalog receives a small WebP.
+export const KINORIUM_IMAGE_MAX_BYTES = 100 * 1024 * 1024;
 const CACHE_LIMIT = 60;
 
 /** A small process-local cache. Nothing is persisted to SQLite or disk. */
@@ -43,7 +47,16 @@ export function createKinoriumClient(fetcher: typeof fetch = fetch) {
 
   async function read(url: string, maxBytes: number, image = false) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(
+      () => controller.abort(),
+      image ? IMAGE_TIMEOUT_MS : TIMEOUT_MS,
+    );
+    const sizeError = () => new KinoriumError(
+      image
+        ? `Постер слишком большой. Максимум ${formatBytes(maxBytes, { unit: "binary" })}.`
+        : "Ответ Kinorium слишком большой.",
+      413,
+    );
     try {
       const response = await fetcher(url, {
         redirect: "error",
@@ -76,7 +89,7 @@ export function createKinoriumClient(fetcher: typeof fetch = fetch) {
       }
       if (Number(response.headers.get("content-length")) > maxBytes) {
         await response.body?.cancel();
-        throw new KinoriumError("Ответ Kinorium слишком большой.", 413);
+        throw sizeError();
       }
       if (!response.body)
         throw new KinoriumError("Kinorium вернул пустой ответ.");
@@ -90,7 +103,7 @@ export function createKinoriumClient(fetcher: typeof fetch = fetch) {
           size += value.byteLength;
           if (size > maxBytes) {
             await reader.cancel();
-            throw new KinoriumError("Ответ Kinorium слишком большой.", 413);
+            throw sizeError();
           }
           chunks.push(value);
         }
@@ -102,7 +115,9 @@ export function createKinoriumClient(fetcher: typeof fetch = fetch) {
       if (error instanceof KinoriumError) throw error;
       throw new KinoriumError(
         controller.signal.aborted
-          ? "Kinorium не ответил вовремя. Повторите поиск."
+          ? image
+            ? "Не удалось скачать постер за отведённое время. Повторите попытку."
+            : "Kinorium не ответил вовремя. Повторите поиск."
           : "Не удалось подключиться к Kinorium. Повторите попытку.",
       );
     } finally {
@@ -153,7 +168,7 @@ export function createKinoriumClient(fetcher: typeof fetch = fetch) {
       const allowed = kinoriumImageUrl(url);
       if (!allowed)
         throw new KinoriumError("Недопустимая ссылка на постер Kinorium.", 400);
-      return read(allowed, COVER_MAX_BYTES, true);
+      return read(allowed, KINORIUM_IMAGE_MAX_BYTES, true);
     },
   };
 }

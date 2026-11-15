@@ -1,6 +1,6 @@
 # ADR-0027: Выбор постеров Kinorium без API-ключа
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0028 (подготовка изображений; остальные решения сохранены)
 - **Date:** 2026-11-15
 
 ## Context

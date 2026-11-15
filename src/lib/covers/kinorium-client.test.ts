@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createKinoriumClient } from "./kinorium-client";
-import { COVER_MAX_BYTES } from "./cover-formats";
+import { createKinoriumClient, KINORIUM_IMAGE_MAX_BYTES } from "./kinorium-client";
 
 afterEach(() => vi.useRealTimers());
 
@@ -77,7 +76,7 @@ describe("Kinorium client", () => {
         new Response("captcha", { headers: { "Content-Type": "text/html" } }),
       )
       .mockResolvedValueOnce(
-        new Response(new Uint8Array(COVER_MAX_BYTES + 1), {
+        new Response(new Uint8Array(KINORIUM_IMAGE_MAX_BYTES + 1), {
           headers: { "Content-Type": "image/jpeg" },
         }),
       );
@@ -85,6 +84,61 @@ describe("Kinorium client", () => {
     const url = "https://images.kinorium.com/movie/original/1.jpg";
     await expect(client.image(url)).rejects.toThrow("вместо изображения");
     await expect(client.image(url)).rejects.toMatchObject({ status: 413 });
+  });
+
+  it("downloads the 62 MiB print poster as input for server-side resizing", async () => {
+    // Regression: Frozen's 5250 × 7874 original is 65,333,544 bytes.
+    const bytes = new Uint8Array(65_333_544);
+    bytes.set([255, 216, 255, 224]);
+    bytes[bytes.length - 1] = 217;
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(bytes, {
+        headers: {
+          "Content-Type": "image/jpeg",
+          "Content-Length": String(bytes.length),
+        },
+      }),
+    );
+    const image = await createKinoriumClient(fetcher).image(
+      "https://images.kinorium.com/movie/poster/646017/original_50081040.jpg",
+    );
+    expect(image.buffer.equals(Buffer.from(bytes))).toBe(true);
+  });
+
+  it("rejects oversized declared images before reading their body with a useful limit", async () => {
+    const cancel = vi.fn();
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      new ReadableStream({ cancel }),
+      { headers: {
+        "Content-Type": "image/jpeg",
+        "Content-Length": String(KINORIUM_IMAGE_MAX_BYTES + 1),
+      } },
+    ));
+    await expect(createKinoriumClient(fetcher).image(
+      "https://images.kinorium.com/movie/original/1.jpg",
+    )).rejects.toMatchObject({ status: 413, message: expect.stringContaining("100 МиБ") });
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("gives large images more time than search, with a bounded body download", async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (_url, options) =>
+      new Response(new ReadableStream({
+        start(controller) {
+          options?.signal?.addEventListener("abort", () => controller.error(new Error("aborted")));
+        },
+      }), { headers: { "Content-Type": "image/jpeg" } }),
+    );
+    const pending = createKinoriumClient(fetcher).image(
+      "https://images.kinorium.com/movie/original/1.jpg",
+    );
+    let settled = false;
+    void pending.then(() => { settled = true; }, () => { settled = true; });
+    const assertion = expect(pending).rejects.toThrow("Не удалось скачать постер");
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(75_001);
+    await assertion;
   });
 
   it("times out through the response body, not just until headers arrive", async () => {

@@ -173,7 +173,8 @@ export function KinoriumPosterPicker({
     setError(null);
     try {
       const response = await fetch(
-        `/api/covers/kinorium/image?${new URLSearchParams({ url: poster.url })}`,
+        // Separate optimized responses from previously cached original downloads.
+        `/api/covers/kinorium/image?${new URLSearchParams({ url: poster.url, v: "webp-2400-85" })}`,
         {
           signal: controller.signal,
         },
@@ -274,6 +275,11 @@ export function KinoriumPosterPicker({
                 .join(" · ")}
             </p>
           </div>
+          <p className="kinorium-hint">
+            Размеры под постерами — на сайте. Для каталога подготовим WebP до 2400
+            пикселей по длинной стороне, сохранив пропорции. Небольшие изображения
+            не увеличиваем.
+          </p>
           {loading && (
             <p className="kinorium-status" role="status">
               <Loader2 size={16} className="animate-spin" />
