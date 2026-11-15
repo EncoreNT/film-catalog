@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition, type Dispatch, type SetStateAction } from "react";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+import { useState, useTransition, type Dispatch, type SetStateAction } from "react";
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from "lucide-react";
+import { SettingsSection } from "./SettingsSection";
 import { Field } from "@/components/primitives/Field";
 import { Button } from "@/components/primitives/Button";
 import { ConfirmDialog } from "@/components/primitives/ConfirmDialog";
@@ -28,29 +28,16 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
     draftNamesFromRaters(raters),
   );
 
-  useEffect(() => {
-    setDraftNames((current) => {
-      const next = { ...current };
-      for (const rater of raters) {
-        if (!(rater.id in next)) {
-          next[rater.id] = rater.name;
-        }
-      }
-      for (const id of Object.keys(next).map(Number)) {
-        if (!raters.some((rater) => rater.id === id)) {
-          delete next[id];
-        }
-      }
-      return next;
-    });
-  }, [raters]);
-
   const savedNameFor = (id: number) =>
     raters.find((rater) => rater.id === id)?.name ?? "";
 
   const handleRename = (id: number, name: string) => {
     const trimmed = name.trim();
-    if (!trimmed || trimmed === savedNameFor(id)) return;
+    if (!trimmed) {
+      setDraftNames((current) => ({ ...current, [id]: savedNameFor(id) }));
+      return;
+    }
+    if (trimmed === savedNameFor(id)) return;
 
     startTransition(async () => {
       setError(null);
@@ -111,6 +98,11 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
           "Не удалось удалить оценщика",
         );
         onRatersChange((prev) => prev.filter((rater) => rater.id !== id));
+        setDraftNames((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
         setDeleteId(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Не удалось удалить оценщика");
@@ -118,14 +110,14 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
     });
   };
 
-  const handleDrop = (targetId: number) => {
-    if (dragId == null || dragId === targetId) return;
+  const handleReorder = (sourceId: number | null, targetId: number) => {
+    if (sourceId == null || sourceId === targetId || pending) return;
     const ids = raters.map((rater) => rater.id);
-    const fromIndex = ids.indexOf(dragId);
+    const fromIndex = ids.indexOf(sourceId);
     const toIndex = ids.indexOf(targetId);
     if (fromIndex < 0 || toIndex < 0) return;
     ids.splice(fromIndex, 1);
-    ids.splice(toIndex, 0, dragId);
+    ids.splice(toIndex, 0, sourceId);
     startTransition(async () => {
       setError(null);
       try {
@@ -148,31 +140,27 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
   };
 
   return (
-    <MachinedCard variant="calm">
-      <CardSectionHeader
-        label="оценщики"
-        title="Кто оценивает фильмы"
-        className="mb-5"
-      />
-      <p className="mb-5 text-sm text-muted">
-        Каждый оценщик ставит свою оценку. В каталоге показывается средняя и отдельные
-        оценки с именами. Имя сохраняется при выходе из поля или по Enter.
-      </p>
-
-      <div className="space-y-3">
-        {raters.map((rater) => (
+    <SettingsSection title="Оценщики" description="Личные оценки каждого зрителя и общий рейтинг фильмов. Порядок в списке задаёт порядок оценок.">
+      <div className="settings-raters">
+      <div className="settings-rater-list">
+        {raters.length === 0 && <p className="settings-empty">Добавьте первого оценщика, чтобы ставить оценки фильмам.</p>}
+        {raters.map((rater, index) => (
           <div
             key={rater.id}
-            draggable
-            onDragStart={() => setDragId(rater.id)}
             onDragOver={(event) => event.preventDefault()}
-            onDrop={() => handleDrop(rater.id)}
-            className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-border bg-bg-elevated/50 px-3 py-2"
+            onDrop={(event) => { event.preventDefault(); handleReorder(dragId, rater.id); }}
+            data-dragging={dragId === rater.id}
+            className="settings-rater-row"
           >
-            <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-faint" aria-hidden />
+            <span className="settings-rater-grip" draggable={!pending}
+              onDragStart={(event) => { event.dataTransfer.setData("text/plain", String(rater.id)); setDragId(rater.id); }}
+              onDragEnd={() => setDragId(null)} aria-hidden>
+              <GripVertical size={17} />
+            </span>
             <div className="min-w-0 flex-1">
-              <Field label="Имя">
+              <Field label="Имя" id={`rater-name-${rater.id}`}>
                 <input
+                  id={`rater-name-${rater.id}`}
                   className="min-h-10 w-full rounded-[var(--radius-sm)] border border-border bg-bg-deep/60 px-3 text-sm text-text outline-none focus:border-accent/60"
                   value={draftNames[rater.id] ?? rater.name}
                   disabled={pending}
@@ -191,6 +179,12 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
                 />
               </Field>
             </div>
+            <div className="settings-rater-order">
+              <Button type="button" variant="ghost" aria-label={`Поднять ${rater.name}`} disabled={pending || index === 0}
+                onClick={() => handleReorder(rater.id, raters[index - 1].id)}><ArrowUp size={15} aria-hidden /></Button>
+              <Button type="button" variant="ghost" aria-label={`Опустить ${rater.name}`} disabled={pending || index === raters.length - 1}
+                onClick={() => handleReorder(rater.id, raters[index + 1].id)}><ArrowDown size={15} aria-hidden /></Button>
+            </div>
             <Button
               type="button"
               variant="ghost"
@@ -204,10 +198,11 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
         ))}
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="settings-rater-add">
         <div className="min-w-0 flex-1">
-          <Field label="Новый оценщик">
+          <Field label="Новый оценщик" id="new-rater-name">
             <input
+              id="new-rater-name"
               className="min-h-10 w-full rounded-[var(--radius-sm)] border border-border bg-bg-deep/60 px-3 text-sm text-text outline-none focus:border-accent/60"
               value={newName}
               onChange={(event) => setNewName(event.target.value)}
@@ -222,14 +217,16 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
             />
           </Field>
         </div>
-        <Button type="button" onClick={handleAdd} disabled={pending || !newName.trim()}>
+        <Button type="button" variant="primary" onClick={handleAdd} disabled={pending || !newName.trim()}>
           <Plus className="h-4 w-4" aria-hidden />
           Добавить
         </Button>
       </div>
+      <p className="settings-help">Имя сохраняется по Enter или при выходе из поля. Меняйте порядок стрелками или перетаскиванием.</p>
+      </div>
 
       {pending ? (
-        <p className="font-mono-tech mt-4 text-xs text-faint">сохранение…</p>
+        <p role="status" className="settings-help">Сохранение…</p>
       ) : null}
       {error ? (
         <p className="mt-4 text-sm text-danger" role="alert">
@@ -242,9 +239,10 @@ export function RatersSection({ raters, onRatersChange }: RatersSectionProps) {
         title="Удалить оценщика?"
         description="Оценки этого человека будут удалены из всех фильмов."
         confirmLabel="Удалить"
+        loading={pending}
         onConfirm={() => deleteId != null && handleDelete(deleteId)}
         onClose={() => setDeleteId(null)}
       />
-    </MachinedCard>
+    </SettingsSection>
   );
 }

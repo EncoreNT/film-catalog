@@ -489,7 +489,7 @@ Hash префикса — практичный компромисс скорос
 - MKV attachment через `mkvmerge` и `mkvextract`;
 - копирование при merge.
 
-Максимальный размер upload — 10 МиБ. Постеры Kinorium предварительно уменьшаются
+Максимальный размер upload — 10 МБ. Постеры Kinorium предварительно уменьшаются
 на сервере до 2400 px по длинной стороне и WebP quality 85 (ADR-0028).
 Поддерживаются JPG/JPEG, PNG, WebP, GIF, AVIF
 и BMP. Ответ API использует ETag, `304 Not Modified` и суточный browser cache.

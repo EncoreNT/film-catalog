@@ -1,4 +1,4 @@
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+import { SettingsSection } from "./SettingsSection";
 import { FolderPathField } from "@/components/shared/FolderPathField";
 
 interface ExportSectionProps {
@@ -8,14 +8,16 @@ interface ExportSectionProps {
 
 export function ExportSection({ value, onChange }: ExportSectionProps) {
   return (
-    <MachinedCard variant="calm">
-      <CardSectionHeader label="экспорт" title="Папка экспорта TV-ready" className="mb-5" />
+    <SettingsSection title="Экспорт" description="Куда копировать релизы, подготовленные для просмотра на телевизоре.">
+      <div className="settings-path-field">
       <FolderPathField
         label="Целевая папка"
         value={value}
         onChange={onChange}
         hint="Папка по умолчанию для экспорта релизов."
       />
-    </MachinedCard>
+        <p className="settings-help">Папка используется по умолчанию. При экспорте отдельного релиза можно выбрать другую.</p>
+      </div>
+    </SettingsSection>
   );
 }

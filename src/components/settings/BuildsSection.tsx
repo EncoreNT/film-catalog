@@ -1,4 +1,4 @@
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+import { SettingsSection, SettingsRow } from "./SettingsSection";
 import { Field } from "@/components/primitives/Field";
 import { Select } from "@/components/primitives/Select";
 import { AC3_BITRATES, EAC3_BITRATES } from "@/lib/builds/build-presets";
@@ -21,41 +21,44 @@ export function BuildsSection({
   onDefaultEac3BitrateChange,
 }: BuildsSectionProps) {
   return (
-    <MachinedCard variant="calm">
-      <CardSectionHeader label="сборка" title="MKV-сборки" className="mb-5" />
-      <p className="mb-5 text-sm text-muted">
-        Параллельность transcode применяется к новым задачам без перезапуска worker.
-      </p>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Параллельных transcode">
-          <input
+    <SettingsSection title="Сборка MKV" description="Параметры обработки звука для новых сборок. Изменения применяются без перезапуска.">
+      <SettingsRow title="Одновременная обработка" description="Чем больше задач, тем выше нагрузка на процессор при перекодировании звука.">
+        <div className="settings-number-field">
+          <Field label="Параллельных задач" id="build-concurrency"
             type="number"
             min={1}
             max={8}
-            className="min-h-10 w-full rounded-[var(--radius-sm)] border border-border bg-bg-deep/60 px-3 text-sm text-text outline-none focus:border-accent/60"
+            step={1}
             value={transcodeConcurrency}
             onChange={(event) => onTranscodeConcurrencyChange(Number(event.target.value))}
           />
-        </Field>
+          <p className="settings-help">От 1 до 8</p>
+        </div>
+      </SettingsRow>
+      <SettingsRow title="Качество звука" description="Битрейт по умолчанию. Для конкретной сборки его можно изменить в редакторе.">
+        <div className="settings-bitrate-fields">
         <Select
-          label="AC-3 битрейт по умолчанию"
+          label="AC-3"
+          preserveOrder
           value={String(defaultAc3Bitrate)}
           onChange={(value) => onDefaultAc3BitrateChange(Number(value))}
           options={AC3_BITRATES.map((bitrate) => ({
             value: String(bitrate),
-            label: `${bitrate} kbps`,
+            label: `${bitrate} кбит/с`,
           }))}
         />
         <Select
-          label="E-AC-3 битрейт по умолчанию"
+          label="E-AC-3"
+          preserveOrder
           value={String(defaultEac3Bitrate)}
           onChange={(value) => onDefaultEac3BitrateChange(Number(value))}
           options={EAC3_BITRATES.map((bitrate) => ({
             value: String(bitrate),
-            label: `${bitrate} kbps`,
+            label: `${bitrate} кбит/с`,
           }))}
         />
-      </div>
-    </MachinedCard>
+        </div>
+      </SettingsRow>
+    </SettingsSection>
   );
 }

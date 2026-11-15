@@ -21,7 +21,7 @@ describe("isMediaJobTerminal", () => {
 });
 
 describe("mediaJobSpeedLabel", () => {
-  it("formats MiB/s", () => {
+  it("formats MB/s", () => {
     expect(mediaJobSpeedLabel(50 * 1024 * 1024)).toBe("50 МБ/с");
   });
 });

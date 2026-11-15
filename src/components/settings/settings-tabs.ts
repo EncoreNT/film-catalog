@@ -1,11 +1,11 @@
 export const SETTINGS_TABS = [
-  { value: "raters", label: "Оценщики" },
-  { value: "storages", label: "Диски" },
-  { value: "posters", label: "Качество постеров" },
-  { value: "scanner", label: "Сканер" },
-  { value: "catalog", label: "Каталог" },
-  { value: "builds", label: "Сборка" },
-  { value: "export", label: "Экспорт" },
+  { value: "catalog", label: "Каталог", group: "Коллекция" },
+  { value: "raters", label: "Оценщики", group: "Коллекция" },
+  { value: "posters", label: "Качество постеров", group: "Коллекция" },
+  { value: "storages", label: "Диски", group: "Файлы и обработка" },
+  { value: "scanner", label: "Сканер", group: "Файлы и обработка" },
+  { value: "builds", label: "Сборка", group: "Файлы и обработка" },
+  { value: "export", label: "Экспорт", group: "Файлы и обработка" },
 ] as const;
 
 export type SettingsTab = typeof SETTINGS_TABS[number]["value"];

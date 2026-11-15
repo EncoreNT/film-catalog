@@ -20,6 +20,7 @@ alwaysApply: false
 | BDMV remux | `lib/media/bdmv/*`, `lib/builds/bdmv-*.ts`, ADR-0020 |
 | Export / move jobs | `lib/releases/export-*`, `lib/releases/move-*`, `lib/media-jobs/*`, ADR-0007/8/10 |
 | Covers | `lib/covers/cover-url.ts`, `lib/covers/cover-storage.ts` |
+| Cover deletion / shared references | `lib/covers/cleanup-covers.ts`, `cover-mutation.ts`; cleanup after DB commit under mutation lock, checks Movie + Franchise; ADR-0031 |
 | Poster quality / JSON index | `lib/covers/poster-quality.ts`, `poster-metadata.ts`, `poster-quality-report.ts`; `components/settings/PosterQualitySection.tsx`; ADR-0029 |
 | Kinorium image resize / compression | `lib/covers/prepare-kinorium-poster.ts`; ADR-0028 |
 | Kinorium poster search / gallery | `lib/covers/kinorium-client.ts`, `kinorium-parser.ts`, `kinorium-browser.ts` (видимое окно / ручная капча); `components/movies/KinoriumPosterPicker.tsx`; ADR-0027 |

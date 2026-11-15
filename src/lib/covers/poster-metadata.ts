@@ -145,7 +145,7 @@ export function createPosterMetadataStore(coversDir: string) {
         const files = previous?.files ?? {};
         const base = path.parse(filename).name;
         for (const key of Object.keys(files)) {
-          if (path.parse(key).name === base) delete files[key];
+          if (path.parse(key).name === base && !(await stat(path.join(coversDir, key)).catch(() => null))) delete files[key];
         }
         const metadata = await inspect(filename);
         if (metadata) files[filename] = metadata;

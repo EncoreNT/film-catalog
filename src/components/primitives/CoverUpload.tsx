@@ -13,6 +13,7 @@ interface CoverUploadProps {
   onFileChange?: (file: File | null) => void;
   onUrlChange?: (url: string | null) => void;
   onUploaded?: () => void;
+  renderTrigger?: (open: () => void) => ReactNode;
   label?: string;
   /** Kept for API symmetry; not rendered here. */
   hint?: ReactNode;
@@ -35,6 +36,7 @@ export function CoverUpload({
   movieTitle,
   originalTitle,
   movieYear,
+  renderTrigger,
 }: CoverUploadProps) {
   const stacked = layout === "stacked";
 
@@ -71,6 +73,7 @@ export function CoverUpload({
       onFileChange={onFileChange}
       onUrlChange={onUrlChange}
       onUploaded={onUploaded}
+      renderTrigger={renderTrigger}
       additionalSource={{
         label: "Kinorium",
         render: (context) => (

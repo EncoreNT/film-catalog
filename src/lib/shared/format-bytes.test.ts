@@ -6,9 +6,11 @@ import {
 } from "@/lib/shared/format-bytes";
 
 describe("formatBytes", () => {
-  it("labels binary disk capacity explicitly and distinguishes zero from unknown", () => {
-    expect(formatBytes(2_000_000_000_000, { unit: "binary" })).toBe("1,82 ТиБ");
-    expect(formatBytes(500_000_000_000, { unit: "binary" })).toBe("465,66 ГиБ");
+  it("uses familiar byte labels with unchanged binary values and distinguishes zero from unknown", () => {
+    expect(formatBytes(2_000_000_000_000, { unit: "binary" })).toBe("1,82 ТБ");
+    expect(formatBytes(500_000_000_000, { unit: "binary" })).toBe("465,66 ГБ");
+    expect(formatBytes(1536, { unit: "binary" })).toBe("1,5 КБ");
+    expect(formatBytes(10 * 1024 ** 2, { unit: "binary" })).toBe("10 МБ");
     expect(formatBytes(0, { unit: "binary" })).toBe("0 Б");
     expect(formatBytes(null, { unit: "binary" })).toBeNull();
   });

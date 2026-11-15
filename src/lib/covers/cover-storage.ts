@@ -1,4 +1,5 @@
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { withCoverMutation } from "@/lib/covers/cover-mutation";
+import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db/prisma";
 import { dataPath } from "@/lib/db/data-path";
@@ -6,6 +7,7 @@ import { assertCoverImageExtension } from "@/lib/covers/cover-formats-mkv";
 import { COVER_IMAGE_EXTENSION_LIST } from "@/lib/covers/cover-formats";
 import { extractFirstMkvAttachment } from "@/lib/covers/mkv";
 import { recordPosterMetadata } from "./poster-metadata";
+import { cleanupUnreferencedCovers } from "./cleanup-covers";
 
 const COVERS_DIR = dataPath("covers");
 
@@ -15,17 +17,9 @@ export async function removeStaleEntityCovers(
   keepExt: string,
 ): Promise<void> {
   const keep = keepExt.toLowerCase();
-  await Promise.all(
-    COVER_IMAGE_EXTENSION_LIST.map(async (ext) => {
-      if (ext === keep) return;
-      try {
-        await unlink(path.join(COVERS_DIR, `${baseName}${ext}`));
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code !== "ENOENT") throw err;
-      }
-    }),
-  );
+  await cleanupUnreferencedCovers(COVER_IMAGE_EXTENSION_LIST
+    .filter((ext) => ext !== keep)
+    .map((ext) => `covers/${baseName}${ext}`));
 }
 
 /**
@@ -40,7 +34,6 @@ export async function saveEntityCoverBuffer(
   assertCoverImageExtension(ext);
   const normalizedExt = ext.toLowerCase();
   await mkdir(COVERS_DIR, { recursive: true });
-  await removeStaleEntityCovers(baseName, normalizedExt);
   const coverFileName = `${baseName}${normalizedExt}`;
   await writeFile(path.join(COVERS_DIR, coverFileName), buffer);
   await recordPosterMetadata(coverFileName);
@@ -57,16 +50,26 @@ export async function saveCoverBuffer(
   buffer: Buffer,
   ext: string,
 ): Promise<string> {
-  const relativeCoverPath = await saveEntityCoverBuffer(
-    String(movieId),
-    buffer,
-    ext,
-  );
-  await prisma.movie.update({
-    where: { id: movieId },
-    data: { coverPath: relativeCoverPath },
+  return withCoverMutation(async () => {
+    const previous = await prisma.movie.findUniqueOrThrow({ where: { id: movieId }, select: { coverPath: true } });
+    const relativeCoverPath = await saveEntityCoverBuffer(
+      String(movieId),
+      buffer,
+      ext,
+    );
+    try {
+      await prisma.movie.update({
+        where: { id: movieId },
+        data: { coverPath: relativeCoverPath },
+      });
+    } catch (error) {
+      await cleanupUnreferencedCovers([relativeCoverPath]);
+      throw error;
+    }
+    await cleanupUnreferencedCovers([previous.coverPath]);
+    await removeStaleEntityCovers(String(movieId), ext);
+    return relativeCoverPath;
   });
-  return relativeCoverPath;
 }
 
 /**

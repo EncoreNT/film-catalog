@@ -86,7 +86,7 @@ describe("Kinorium client", () => {
     await expect(client.image(url)).rejects.toMatchObject({ status: 413 });
   });
 
-  it("downloads the 62 MiB print poster as input for server-side resizing", async () => {
+  it("downloads the 62 MB print poster as input for server-side resizing", async () => {
     // Regression: Frozen's 5250 × 7874 original is 65,333,544 bytes.
     const bytes = new Uint8Array(65_333_544);
     bytes.set([255, 216, 255, 224]);
@@ -116,7 +116,7 @@ describe("Kinorium client", () => {
     ));
     await expect(createKinoriumClient(fetcher).image(
       "https://images.kinorium.com/movie/original/1.jpg",
-    )).rejects.toMatchObject({ status: 413, message: expect.stringContaining("100 МиБ") });
+    )).rejects.toMatchObject({ status: 413, message: expect.stringContaining("100 МБ") });
     expect(cancel).toHaveBeenCalledOnce();
   });
 

@@ -1,4 +1,4 @@
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+import { SettingsSection, SettingsRow } from "./SettingsSection";
 import { Field } from "@/components/primitives/Field";
 import { Select } from "@/components/primitives/Select";
 
@@ -27,19 +27,21 @@ export function CatalogSection({
   onDefaultSortChange,
 }: CatalogSectionProps) {
   return (
-    <MachinedCard variant="calm">
-      <CardSectionHeader label="каталог" title="Отображение списка" className="mb-5" />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Фильмов на странице">
-          <input
+    <SettingsSection title="Каталог" description="Настройте плотность списка и порядок фильмов при открытии каталога.">
+      <SettingsRow title="Размер страницы" description="Больше фильмов на странице, меньше переключений между страницами.">
+        <div className="settings-number-field">
+          <Field label="Фильмов на странице" id="catalog-page-size"
             type="number"
             min={1}
             max={100}
-            className="min-h-10 w-full rounded-[var(--radius-sm)] border border-border bg-bg-deep/60 px-3 text-sm text-text outline-none focus:border-accent/60"
+            step={1}
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
           />
-        </Field>
+          <p className="settings-help">От 1 до 100</p>
+        </div>
+      </SettingsRow>
+      <SettingsRow title="Порядок фильмов" description="Применяется, если вы не выбрали другую сортировку в самом каталоге.">
         <Select
           label="Сортировка по умолчанию"
           value={defaultSort}
@@ -49,7 +51,7 @@ export function CatalogSection({
             label: option.label,
           }))}
         />
-      </div>
-    </MachinedCard>
+      </SettingsRow>
+    </SettingsSection>
   );
 }

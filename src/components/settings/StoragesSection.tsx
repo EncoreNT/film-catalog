@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import { HardDrive } from "lucide-react";
-import {
-  MachinedCard,
-  CardSectionHeader,
-} from "@/components/primitives/MachinedCard";
+import { SettingsSection } from "./SettingsSection";
 import { Field } from "@/components/primitives/Field";
 import { Button } from "@/components/primitives/Button";
 import { StorageUsage } from "@/components/shared/StorageUsage";
@@ -74,23 +71,24 @@ function StorageCapacityRow({
   return (
     <form
       onSubmit={save}
-      className="grid min-w-0 gap-5 border-t border-border py-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,1fr)] lg:gap-12"
+      className="settings-storage-row"
       aria-label={`Ёмкость диска ${storage.name}`}
     >
-      <div className="min-w-0">
-        <h3 className="mb-4 flex items-start gap-2 font-medium text-text">
+      <div className="settings-storage-identity">
+        <h3>
           <HardDrive
             className="mt-0.5 h-4 w-4 shrink-0 text-accent"
             aria-hidden
           />
           <span className="break-words">{storage.name}</span>
         </h3>
-        <StorageUsage storage={storage} />
       </div>
-      <div className="min-w-0 space-y-3">
+      <div className="settings-storage-usage"><StorageUsage storage={storage} /></div>
+      <div className="settings-storage-capacity">
+        <div className="settings-capacity-actions">
         <fieldset disabled={pending}>
           <Field label="Ёмкость на упаковке" id={inputId}>
-            <div className="flex overflow-hidden rounded-[var(--radius)] border border-border bg-bg-elevated focus-within:border-accent/60">
+            <div className="settings-capacity-input">
               <input
                 id={inputId}
                 inputMode="decimal"
@@ -98,9 +96,7 @@ function StorageCapacityRow({
                 onChange={(event) =>
                   changeDraft(event.target.value, draft.unit)
                 }
-                placeholder={
-                  draft.unit === "tb" ? "Например, 2" : "Например, 500"
-                }
+                placeholder="Не задана"
                 aria-invalid={invalid}
                 aria-describedby={`${inputId}-help`}
                 className="focus-ring min-h-11 w-full min-w-0 bg-transparent px-3 text-sm text-text outline-none"
@@ -123,6 +119,11 @@ function StorageCapacityRow({
             </div>
           </Field>
         </fieldset>
+          <Button type="submit" variant={dirty && !invalid ? "primary" : "secondary"}
+            disabled={pending || !dirty || invalid}>
+            {pending ? "Сохранение…" : "Сохранить"}
+          </Button>
+        </div>
         <p
           id={`${inputId}-help`}
           className={`text-xs ${invalid ? "text-danger" : "text-muted"}`}
@@ -131,22 +132,13 @@ function StorageCapacityRow({
             ? "Введите положительное число, например 2 или 0,5."
             : capacityBytes == null
               ? "Оставьте пустым, если ёмкость неизвестна."
-              : `В двоичных единицах: ${formatBytes(capacityBytes, { unit: "binary" })}.`}
+              : `≈ ${formatBytes(capacityBytes, { unit: "binary" })}`}
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={pending || !dirty || invalid}
-          >
-            {pending ? "Сохранение…" : "Сохранить ёмкость"}
-          </Button>
           {saved && (
             <span role="status" className="text-xs text-muted">
               Сохранено
             </span>
           )}
-        </div>
         {error && (
           <p role="alert" className="text-sm text-danger">
             {error}
@@ -165,23 +157,9 @@ export function StoragesSection({
   onStorageSaved: (storage: StorageOption) => void;
 }) {
   return (
-    <MachinedCard variant="calm">
-      <CardSectionHeader
-        label="хранилище"
-        title="Внешние диски"
-        className="mb-3"
-      />
-      <p className="mb-2 max-w-3xl text-sm leading-relaxed text-muted">
-        Укажите ёмкость с упаковки. Заполненность считается по размерам файлов в
-        каталоге, без обращения к диску.
-      </p>
-      <p className="mb-6 max-w-3xl text-xs leading-relaxed text-faint">
-        1 ТБ = 1 000 ГБ. Диск на 2 ТБ содержит примерно 1,82 ТиБ — разница в
-        единицах измерения, а не потеря места. Место, занятое другими данными,
-        неизвестно.
-      </p>
+    <SettingsSection title="Внешние диски" description="Ёмкость и заполненность вашей коллекцией. Укажите объём с упаковки каждого диска.">
       {storages.length === 0 ? (
-        <p className="py-4 text-sm text-muted">
+        <p className="settings-empty">
           Внешних дисков пока нет. Добавьте диск при создании релиза или
           сканировании файлов.
         </p>
@@ -194,6 +172,10 @@ export function StoragesSection({
           />
         ))
       )}
-    </MachinedCard>
+      <aside className="settings-note">
+        <p>Учитываются только файлы в каталоге. Место, занятое другими данными, неизвестно.</p>
+        <p>Ёмкость вводится как на упаковке. Размеры файлов и заполненность рассчитываются через 1024 и отображаются в привычных ГБ/ТБ, поэтому число может отличаться от маркировки.</p>
+      </aside>
+    </SettingsSection>
   );
 }

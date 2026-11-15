@@ -16,9 +16,9 @@ export const POSTER_QUALITY_GROUPS: {
   title: string;
   description: string;
 }[] = [
-  { id: "low", title: "Низкое", description: "Меньше 600 × 900 — стоит заменить" },
+  { id: "low", title: "Низкое", description: "Меньше 600 × 900, стоит заменить" },
   { id: "medium", title: "Среднее", description: "От 600 × 900 до 1200 × 1800" },
-  { id: "high", title: "Высокое", description: "От 1200 × 1800 — достаточно для крупного просмотра" },
+  { id: "high", title: "Высокое", description: "От 1200 × 1800, достаточно для крупного просмотра" },
   { id: "missing", title: "Без постера", description: "Обложка не назначена или файл отсутствует" },
   { id: "unreadable", title: "Не удалось прочитать", description: "Проверьте файл или загрузите другую обложку" },
 ];

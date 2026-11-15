@@ -71,6 +71,8 @@ export interface ImageCoverUploadProps {
   onFileChange?: (file: File | null) => void;
   onUrlChange?: (url: string | null) => void;
   onUploaded?: () => void;
+  /** Reuse the editor from a list action without rendering a second thumbnail. */
+  renderTrigger?: (open: () => void) => ReactNode;
   /** Domain source feeds the same preview/confirmation flow as a local file. */
   additionalSource?: {
     label: string;
@@ -84,6 +86,13 @@ function isValidHttpUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function CoverTrigger({ render, onOpen }: {
+  render: (open: () => void) => ReactNode;
+  onOpen: () => void;
+}) {
+  return render(onOpen);
 }
 
 export function ImageCoverUpload({
@@ -109,6 +118,7 @@ export function ImageCoverUpload({
   onUrlChange,
   onUploaded,
   additionalSource,
+  renderTrigger,
 }: ImageCoverUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const urls = useRef(new Set<string>());
@@ -321,7 +331,7 @@ export function ImageCoverUpload({
 
   return (
     <>
-      <div className="cover-editor-trigger">
+      {renderTrigger ? <CoverTrigger render={renderTrigger} onOpen={openDialog} /> : <div className="cover-editor-trigger">
         {header}
         <div
           className={thumbnailClassName ?? `relative shrink-0 ${aspectClass}`}
@@ -373,7 +383,7 @@ export function ImageCoverUpload({
             {previewSrc ? "Изменить обложку" : "Добавить обложку"}
           </button>
         )}
-      </div>
+      </div>}
       <Modal
         open={dialogOpen}
         onClose={closeDialog}

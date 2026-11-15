@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
-import { PageHeader } from "@/components/primitives/PageHeader";
-import { SegmentedControl } from "@/components/primitives/SegmentedControl";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowUpRight, HardDrive, Image, ListFilter, ScanLine, SlidersHorizontal, Upload, Users, Wrench } from "lucide-react";
 import { FormActionBar } from "@/components/primitives/FormActionBar";
 import { Button } from "@/components/primitives/Button";
 import { RatersSection } from "@/components/settings/RatersSection";
@@ -13,10 +13,16 @@ import { BuildsSection } from "@/components/settings/BuildsSection";
 import { ExportSection } from "@/components/settings/ExportSection";
 import { StoragesSection } from "@/components/settings/StoragesSection";
 import { PosterQualitySection } from "./PosterQualitySection";
-import { SETTINGS_TABS, type SettingsTab } from "./settings-tabs";
+import { SETTINGS_TABS, settingsTab, type SettingsTab } from "./settings-tabs";
 import type { StorageOption } from "@/lib/shared/storage-types";
 import type { AppSettingsSnapshot } from "@/lib/db/settings";
 import { apiFetch } from "@/lib/api/client";
+import "./settings.css";
+
+const TAB_ICONS = {
+  raters: Users, storages: HardDrive, posters: Image, scanner: ScanLine,
+  catalog: ListFilter, builds: SlidersHorizontal, export: Upload,
+};
 
 export type RaterView = {
   id: number;
@@ -37,7 +43,8 @@ export function SettingsPageClient({
   initialStorages,
   initialTab,
 }: SettingsPageClientProps) {
-  const [tab, setTab] = useState<SettingsTab>(initialTab);
+  const searchParams = useSearchParams();
+  const tab = settingsTab(searchParams.get("tab") ?? initialTab);
   const [storages, setStorages] = useState(initialStorages);
   const [raters, setRaters] = useState(initialRaters);
   const [settings, setSettings] = useState(initialSettings);
@@ -49,6 +56,13 @@ export function SettingsPageClient({
     () => JSON.stringify(draft) !== JSON.stringify(settings),
     [draft, settings],
   );
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDirty]);
 
   const handleSaveSettings = () => {
     setError(null);
@@ -82,29 +96,62 @@ export function SettingsPageClient({
   };
 
   return (
-    <div className="pb-24">
-      <PageHeader
-        eyebrow="система"
-        title="Настройки"
-        subtitle="Оценщики, постеры, внешние диски, каталог, сборки и пути к данным."
-      />
+    <div className="settings-page">
+      <header className="settings-page-header">
+        <h1>Настройки</h1>
+        <p>Ваш каталог, диски и обработка файлов.</p>
+      </header>
 
-      <div className="mt-8 space-y-6">
-        <div className="[&>.segmented-control]:flex-wrap [&_.segmented-control>button]:basis-24">
-          <SegmentedControl
-            value={tab}
-            onChange={(value) => {
-              setTab(value);
+      <div className="settings-layout">
+        <aside className="settings-sidebar">
+          <div className="settings-mobile-nav">
+            <label htmlFor="settings-section-select" className="sr-only">Раздел настроек</label>
+            <select id="settings-section-select" value={tab} onChange={(event) => {
               const url = new URL(window.location.href);
-              url.searchParams.set("tab", value);
-              window.history.replaceState(null, "", url);
-            }}
-            ariaLabel="Разделы настроек"
-            options={[...SETTINGS_TABS]}
-          />
-        </div>
+              url.searchParams.set("tab", event.target.value);
+              window.history.pushState(null, "", url);
+            }}>
+              {["Коллекция", "Файлы и обработка"].map((group) => (
+                <optgroup label={group} key={group}>
+                  {SETTINGS_TABS.filter((item) => item.group === group).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <nav aria-label="Разделы настроек" className="settings-nav">
+            {["Коллекция", "Файлы и обработка"].map((group) => (
+              <div className="settings-nav-group" key={group}>
+                <p className="settings-nav-label">{group}</p>
+                {SETTINGS_TABS.filter((item) => item.group === group).map((item) => {
+                  const Icon = TAB_ICONS[item.value];
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("tab", item.value);
+                  return (
+                    <a key={item.value} href={`/settings?${params}`} className="settings-nav-link focus-ring"
+                      aria-current={tab === item.value ? "page" : undefined}
+                      onClick={(event) => {
+                        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                        event.preventDefault();
+                        if (tab !== item.value) window.history.pushState(null, "", event.currentTarget.href);
+                      }}>
+                      <Icon size={17} aria-hidden />
+                      <span>{item.label}</span>
+                      {item.value === "raters" || item.value === "storages" ? (
+                        <span className="settings-nav-count">{item.value === "raters" ? raters.length : storages.length}</span>
+                      ) : null}
+                    </a>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+          <Link href="/dev" className="settings-tools-link focus-ring">
+            <Wrench size={15} aria-hidden /> Перепрогон HDR10+ <ArrowUpRight size={13} aria-hidden />
+          </Link>
+        </aside>
 
-        {tab === "storages" ? (
+        <div className="settings-content">
+        <div hidden={tab !== "storages"}>
           <StoragesSection
             storages={storages}
             onStorageSaved={(saved) =>
@@ -115,12 +162,13 @@ export function SettingsPageClient({
               )
             }
           />
-        ) : null}
+        </div>
 
-        {tab === "raters" ? (
+        <div hidden={tab !== "raters"}>
           <RatersSection raters={raters} onRatersChange={setRaters} />
-        ) : null}
+        </div>
         {tab === "posters" ? <PosterQualitySection /> : null}
+        <fieldset disabled={pending} className="settings-fields" hidden={["raters", "storages", "posters"].includes(tab)}>
         {tab === "scanner" ? (
           <ScannerSection
             value={draft.scanRootDisplay ?? ""}
@@ -173,12 +221,16 @@ export function SettingsPageClient({
             }
           />
         ) : null}
+        </fieldset>
+        </div>
       </div>
 
-      {tab !== "raters" && tab !== "storages" && tab !== "posters" ? (
+      {isDirty || (tab !== "raters" && tab !== "storages" && tab !== "posters") ? (
         <FormActionBar isDirty={isDirty} saving={pending} error={error}>
+          {isDirty && <Button type="button" variant="ghost" disabled={pending} onClick={() => { setDraft(settings); setError(null); }}>Отменить</Button>}
           <Button
             type="button"
+            variant="primary"
             onClick={handleSaveSettings}
             disabled={!isDirty || pending}
           >
@@ -187,11 +239,6 @@ export function SettingsPageClient({
         </FormActionBar>
       ) : null}
 
-      <p className="mt-10 text-xs text-faint">
-        <Link href="/dev" className="hover:text-muted">
-          Перепрогон HDR10+
-        </Link>
-      </p>
     </div>
   );
 }

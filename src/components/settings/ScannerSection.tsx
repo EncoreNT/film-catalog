@@ -1,4 +1,4 @@
-import { MachinedCard, CardSectionHeader } from "@/components/primitives/MachinedCard";
+import { SettingsSection } from "./SettingsSection";
 import { FolderPathField } from "@/components/shared/FolderPathField";
 
 interface ScannerSectionProps {
@@ -8,14 +8,16 @@ interface ScannerSectionProps {
 
 export function ScannerSection({ value, onChange }: ScannerSectionProps) {
   return (
-    <MachinedCard variant="calm">
-      <CardSectionHeader label="сканер" title="Папка для сканирования" className="mb-5" />
+    <SettingsSection title="Сканер" description="Откуда добавлять видеофайлы в каталог. Путь будет подставлен при следующем сканировании.">
+      <div className="settings-path-field">
       <FolderPathField
         label="Корневая папка"
         value={value}
         onChange={onChange}
         hint="Папка с видеофайлами для импорта в каталог."
       />
-    </MachinedCard>
+        <p className="settings-help">Выберите папку на компьютере или вставьте путь вручную. Сохранение пути не запускает сканирование.</p>
+      </div>
+    </SettingsSection>
   );
 }

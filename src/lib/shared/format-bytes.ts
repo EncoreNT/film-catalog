@@ -1,7 +1,7 @@
 export type FormatBytesUnit = "gb" | "short" | "archive" | "binary";
 
 export interface FormatBytesOptions {
-  /** Decimal places for GiB output (default depends on unit). */
+  /** Decimal places (default depends on output style). */
   precision?: number;
   /** Output style. */
   unit?: FormatBytesUnit;
@@ -9,11 +9,14 @@ export interface FormatBytesOptions {
 
 /**
  * Unified byte formatter.
+ * UI convention: familiar КБ/МБ/ГБ/ТБ labels with the existing 1024-based
+ * calculations. These display labels intentionally follow the catalog convention,
+ * not strict SI prefix semantics (ADR-0030).
  *
  * - `gb` — file sizes with 2 decimals (default for release files)
  * - `short` — deficit labels: 1 decimal GB or rounded MB
- * - `archive` — totals: TiB above 1 TiB, rounded GiB above 100 GiB
- * - `binary` — explicit binary unit labels (ГиБ/ТиБ), including zero
+ * - `archive` — totals: TB above 1 TB, rounded GB above 100 GB
+ * - `binary` — automatic unit selection (Б through ТБ), including zero
  */
 export function formatBytes(
   bytes: number | null | undefined,
@@ -31,7 +34,7 @@ export function formatBytes(
             : bytes >= 1024
               ? 1
               : 0;
-    const labels = ["Б", "КиБ", "МиБ", "ГиБ", "ТиБ"];
+    const labels = ["Б", "КБ", "МБ", "ГБ", "ТБ"];
     return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: options.precision ?? 2 }).format(bytes / 1024 ** power)} ${labels[power]}`;
   }
   if (bytes == null || bytes <= 0) return null;

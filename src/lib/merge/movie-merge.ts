@@ -1,13 +1,11 @@
-import { copyFile, access } from "fs/promises";
-import { recordPosterMetadata } from "@/lib/covers/poster-metadata";
-import path from "path";
+import { withCoverMutation } from "@/lib/covers/cover-mutation";
+import { cleanupUnreferencedCovers } from "@/lib/covers/cleanup-covers";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { movieInclude } from "@/lib/movies/movie-include";
 import { adoptMovieWatches } from "@/lib/movies/movie-watch";
-import { dataPath } from "@/lib/db/data-path";
 
-type Db = Prisma.TransactionClient | typeof prisma;
+type Db = typeof prisma;
 
 export interface MergeFieldChoice {
   description?: "canonical" | "other";
@@ -59,32 +57,6 @@ export function planMerge(
   };
 }
 
-async function adoptCoverFromOther(
-  tx: Prisma.TransactionClient,
-  canonicalId: number,
-  otherCoverPath: string,
-) {
-  const ext = path.extname(otherCoverPath);
-  const destRelative = `covers/${canonicalId}${ext}`;
-  const srcAbs = dataPath(otherCoverPath.replace(/^covers\//, "covers/"));
-  const destAbs = dataPath(destRelative.replace(/^covers\//, "covers/"));
-
-  try {
-    await access(srcAbs);
-    await copyFile(srcAbs, destAbs);
-    await recordPosterMetadata(path.basename(destAbs));
-    await tx.movie.update({
-      where: { id: canonicalId },
-      data: { coverPath: destRelative },
-    });
-  } catch {
-    await tx.movie.update({
-      where: { id: canonicalId },
-      data: { coverPath: otherCoverPath },
-    });
-  }
-}
-
 async function mergeMovieRatings(
   tx: Prisma.TransactionClient,
   canonicalId: number,
@@ -118,127 +90,123 @@ export async function mergeMovies(
   choices: MergeFieldChoice = {},
   db: Db = prisma,
 ) {
-  if (canonicalId === otherId) {
-    throw new Error("Нельзя объединить фильм с самим собой");
-  }
-
-  const run = async (tx: Prisma.TransactionClient) => {
-    const [canonical, other] = await Promise.all([
-      tx.movie.findUnique({
-        where: { id: canonicalId },
-        include: { _count: { select: { releases: true } } },
-      }),
-      tx.movie.findUnique({
-        where: { id: otherId },
-        include: { _count: { select: { releases: true } } },
-      }),
-    ]);
-
-    if (!canonical || !other) {
-      throw new Error("Фильм не найден");
+  return withCoverMutation(async () => {
+    if (canonicalId === otherId) {
+      throw new Error("Нельзя объединить фильм с самим собой");
     }
 
-    await tx.release.updateMany({
-      where: { movieId: otherId },
-      data: { movieId: canonicalId },
-    });
+    const oldCovers: (string | null)[] = [];
+    const run = async (tx: Prisma.TransactionClient) => {
+      const [canonical, other] = await Promise.all([
+        tx.movie.findUnique({
+          where: { id: canonicalId },
+          include: { _count: { select: { releases: true } } },
+        }),
+        tx.movie.findUnique({
+          where: { id: otherId },
+          include: { _count: { select: { releases: true } } },
+        }),
+      ]);
 
-    const otherGenres = await tx.movieGenre.findMany({
-      where: { movieId: otherId },
-    });
-    for (const mg of otherGenres) {
-      await tx.movieGenre.upsert({
-        where: {
-          movieId_genreId: { movieId: canonicalId, genreId: mg.genreId },
-        },
-        create: {
-          movieId: canonicalId,
-          genreId: mg.genreId,
-          sortOrder: mg.sortOrder,
-        },
-        update: {},
-      });
-    }
-    await tx.movieGenre.deleteMany({ where: { movieId: otherId } });
+      if (!canonical || !other) {
+        throw new Error("Фильм не найден");
+      }
 
-    const otherSlots = await tx.franchiseSlot.findMany({
-      where: { movieId: otherId },
-    });
-    for (const slot of otherSlots) {
-      const conflict = await tx.franchiseSlot.findFirst({
-        where: { franchiseId: slot.franchiseId, movieId: canonicalId },
+      oldCovers.push(canonical.coverPath, other.coverPath);
+
+      await tx.release.updateMany({
+        where: { movieId: otherId },
+        data: { movieId: canonicalId },
       });
-      if (!conflict) {
-        await tx.franchiseSlot.update({
-          where: { id: slot.id },
-          data: { movieId: canonicalId },
-        });
-      } else {
-        await tx.franchiseSlot.update({
-          where: { id: slot.id },
-          data: { movieId: null },
+
+      const otherGenres = await tx.movieGenre.findMany({
+        where: { movieId: otherId },
+      });
+      for (const mg of otherGenres) {
+        await tx.movieGenre.upsert({
+          where: {
+            movieId_genreId: { movieId: canonicalId, genreId: mg.genreId },
+          },
+          create: {
+            movieId: canonicalId,
+            genreId: mg.genreId,
+            sortOrder: mg.sortOrder,
+          },
+          update: {},
         });
       }
-    }
+      await tx.movieGenre.deleteMany({ where: { movieId: otherId } });
 
-    await mergeMovieRatings(tx, canonicalId, otherId);
-    await adoptMovieWatches(tx, canonicalId, otherId);
+      const otherSlots = await tx.franchiseSlot.findMany({
+        where: { movieId: otherId },
+      });
+      for (const slot of otherSlots) {
+        const conflict = await tx.franchiseSlot.findFirst({
+          where: { franchiseId: slot.franchiseId, movieId: canonicalId },
+        });
+        if (!conflict) {
+          await tx.franchiseSlot.update({
+            where: { id: slot.id },
+            data: { movieId: canonicalId },
+          });
+        } else {
+          await tx.franchiseSlot.update({
+            where: { id: slot.id },
+            data: { movieId: null },
+          });
+        }
+      }
 
-    const pick = <T>(
-      field: keyof MergeFieldChoice,
-      canonicalVal: T,
-      otherVal: T,
-    ): T => {
-      const choice = choices[field];
-      if (choice === "other") return otherVal;
-      return canonicalVal ?? otherVal;
+      await mergeMovieRatings(tx, canonicalId, otherId);
+      await adoptMovieWatches(tx, canonicalId, otherId);
+
+      const pick = <T>(
+        field: keyof MergeFieldChoice,
+        canonicalVal: T,
+        otherVal: T,
+      ): T => {
+        const choice = choices[field];
+        if (choice === "other") return otherVal;
+        return canonicalVal ?? otherVal;
+      };
+
+      const nextDescription = pick(
+        "description",
+        canonical.description,
+        other.description,
+      );
+
+      let nextCoverPath = canonical.coverPath;
+      if (choices.coverPath === "other" && other.coverPath) {
+        nextCoverPath = other.coverPath;
+      } else if (!canonical.coverPath && other.coverPath) {
+        nextCoverPath = other.coverPath;
+      } else if (
+        choices.coverPath !== "canonical" &&
+        !canonical.coverPath &&
+        other.coverPath
+      ) {
+        nextCoverPath = other.coverPath;
+      }
+
+      await tx.movie.update({
+        where: { id: canonicalId },
+        data: {
+          description: nextDescription,
+          coverPath: nextCoverPath,
+        },
+      });
+
+      await tx.movie.delete({ where: { id: otherId } });
+
+      return tx.movie.findUnique({
+        where: { id: canonicalId },
+        include: movieInclude,
+      });
     };
 
-    const nextDescription = pick(
-      "description",
-      canonical.description,
-      other.description,
-    );
-
-    let nextCoverPath = canonical.coverPath;
-    if (choices.coverPath === "other" && other.coverPath) {
-      nextCoverPath = other.coverPath;
-    } else if (!canonical.coverPath && other.coverPath) {
-      nextCoverPath = other.coverPath;
-    } else if (
-      choices.coverPath !== "canonical" &&
-      !canonical.coverPath &&
-      other.coverPath
-    ) {
-      nextCoverPath = other.coverPath;
-    }
-
-    await tx.movie.update({
-      where: { id: canonicalId },
-      data: {
-        description: nextDescription,
-        coverPath: nextCoverPath,
-      },
-    });
-
-    if (
-      !canonical.coverPath &&
-      other.coverPath &&
-      (choices.coverPath === "other" || !choices.coverPath)
-    ) {
-      await adoptCoverFromOther(tx, canonicalId, other.coverPath);
-    }
-
-    await tx.movie.delete({ where: { id: otherId } });
-
-    return tx.movie.findUnique({
-      where: { id: canonicalId },
-      include: movieInclude,
-    });
-  };
-
-  if ("$transaction" in db) {
-    return db.$transaction(run);
-  }
-  return run(db as Prisma.TransactionClient);
+    const movie = await db.$transaction(run);
+    await cleanupUnreferencedCovers(oldCovers, db);
+    return movie;
+  });
 }
