@@ -208,6 +208,14 @@ Kinorium (ADR-0027): `CoverUpload` → `KinoriumPosterPicker` →
 увеличения и обрезки. В File, предпросмотр и обычный multipart upload попадает
 только готовая копия (ADR-0028). Старые обложки не меняются. Новых сущностей/полей/миграций нет.
 
+Качество постеров (ADR-0029): `poster-metadata.ts` хранит производные размеры,
+формат и размер файлов в `data/covers/poster-metadata.json`. Атомарная запись с
+межпроцессной блокировкой, refresh по size/mtime/ctime, без записи в SQLite.
+`saveEntityCoverBuffer` и копирование обложки при merge обновляют индекс.
+`poster-quality-report.ts` соединяет его с Movie read-only; группы по разрешению
+вычисляются в `poster-quality.ts`. Первичное заполнение: `npm run posters:index`
+или открытие `/settings?tab=posters`. Сами изображения не изменяются.
+
 ## Поток: франшизы
 
 ```

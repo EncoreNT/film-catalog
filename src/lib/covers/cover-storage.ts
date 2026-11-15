@@ -5,6 +5,7 @@ import { dataPath } from "@/lib/db/data-path";
 import { assertCoverImageExtension } from "@/lib/covers/cover-formats-mkv";
 import { COVER_IMAGE_EXTENSION_LIST } from "@/lib/covers/cover-formats";
 import { extractFirstMkvAttachment } from "@/lib/covers/mkv";
+import { recordPosterMetadata } from "./poster-metadata";
 
 const COVERS_DIR = dataPath("covers");
 
@@ -42,6 +43,7 @@ export async function saveEntityCoverBuffer(
   await removeStaleEntityCovers(baseName, normalizedExt);
   const coverFileName = `${baseName}${normalizedExt}`;
   await writeFile(path.join(COVERS_DIR, coverFileName), buffer);
+  await recordPosterMetadata(coverFileName);
   return `covers/${coverFileName}`;
 }
 

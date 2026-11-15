@@ -77,5 +77,6 @@ docs/adr/0002-franchise-slots-model.md
 | [0026](0026-external-storage-capacity.md) | External storage capacity and catalog usage | Accepted |
 | [0027](0027-kinorium-poster-picker.md) | Kinorium poster picker without an API key | Superseded by ADR-0028 (images) |
 | [0028](0028-kinorium-display-posters.md) | Resize and compress Kinorium posters for display | Accepted |
+| [0029](0029-poster-quality-metadata.md) | Poster quality with a JSON metadata index outside SQLite | Accepted |
 
 После Accepted — при необходимости обновить `.cursor/rules/` (особенно `01-architecture`, `02-data-model`).

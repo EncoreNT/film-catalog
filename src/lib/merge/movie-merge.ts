@@ -1,4 +1,5 @@
 import { copyFile, access } from "fs/promises";
+import { recordPosterMetadata } from "@/lib/covers/poster-metadata";
 import path from "path";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -71,6 +72,7 @@ async function adoptCoverFromOther(
   try {
     await access(srcAbs);
     await copyFile(srcAbs, destAbs);
+    await recordPosterMetadata(path.basename(destAbs));
     await tx.movie.update({
       where: { id: canonicalId },
       data: { coverPath: destRelative },

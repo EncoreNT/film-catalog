@@ -12,12 +12,11 @@ import { CatalogSection } from "@/components/settings/CatalogSection";
 import { BuildsSection } from "@/components/settings/BuildsSection";
 import { ExportSection } from "@/components/settings/ExportSection";
 import { StoragesSection } from "@/components/settings/StoragesSection";
+import { PosterQualitySection } from "./PosterQualitySection";
+import { SETTINGS_TABS, type SettingsTab } from "./settings-tabs";
 import type { StorageOption } from "@/lib/shared/storage-types";
 import type { AppSettingsSnapshot } from "@/lib/db/settings";
 import { apiFetch } from "@/lib/api/client";
-
-type SettingsTab =
-  "raters" | "scanner" | "catalog" | "builds" | "export" | "storages";
 
 export type RaterView = {
   id: number;
@@ -87,23 +86,21 @@ export function SettingsPageClient({
       <PageHeader
         eyebrow="система"
         title="Настройки"
-        subtitle="Оценщики, внешние диски, каталог, сборки и пути к данным."
+        subtitle="Оценщики, постеры, внешние диски, каталог, сборки и пути к данным."
       />
 
       <div className="mt-8 space-y-6">
         <div className="[&>.segmented-control]:flex-wrap [&_.segmented-control>button]:basis-24">
           <SegmentedControl
             value={tab}
-            onChange={setTab}
+            onChange={(value) => {
+              setTab(value);
+              const url = new URL(window.location.href);
+              url.searchParams.set("tab", value);
+              window.history.replaceState(null, "", url);
+            }}
             ariaLabel="Разделы настроек"
-            options={[
-              { value: "raters", label: "Оценщики" },
-              { value: "storages", label: "Диски" },
-              { value: "scanner", label: "Сканер" },
-              { value: "catalog", label: "Каталог" },
-              { value: "builds", label: "Сборка" },
-              { value: "export", label: "Экспорт" },
-            ]}
+            options={[...SETTINGS_TABS]}
           />
         </div>
 
@@ -123,6 +120,7 @@ export function SettingsPageClient({
         {tab === "raters" ? (
           <RatersSection raters={raters} onRatersChange={setRaters} />
         ) : null}
+        {tab === "posters" ? <PosterQualitySection /> : null}
         {tab === "scanner" ? (
           <ScannerSection
             value={draft.scanRootDisplay ?? ""}
@@ -177,7 +175,7 @@ export function SettingsPageClient({
         ) : null}
       </div>
 
-      {tab !== "raters" && tab !== "storages" ? (
+      {tab !== "raters" && tab !== "storages" && tab !== "posters" ? (
         <FormActionBar isDirty={isDirty} saving={pending} error={error}>
           <Button
             type="button"

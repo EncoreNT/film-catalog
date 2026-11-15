@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { access, mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import sharp from "sharp";
 import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -65,5 +66,16 @@ describe("removeStaleEntityCovers", () => {
     expect(await fileExists(path.join(coversDir, "franchise-3.jpg"))).toBe(
       true,
     );
+  });
+
+  it("updates the JSON dimensions when a saved cover is replaced", async () => {
+    const { saveEntityCoverBuffer } = await import("@/lib/covers/cover-storage");
+    const low = await sharp({ create: { width: 300, height: 450, channels: 3, background: "#8192a3" } }).jpeg().toBuffer();
+    await saveEntityCoverBuffer("2", low, ".jpg");
+    const high = await sharp({ create: { width: 1600, height: 2400, channels: 3, background: "#8192a3" } }).webp().toBuffer();
+    await saveEntityCoverBuffer("2", high, ".webp");
+    const metadata = JSON.parse(await readFile(path.join(tempRoot, "covers", "poster-metadata.json"), "utf8"));
+    expect(metadata.files["2.jpg"]).toBeUndefined();
+    expect(metadata.files["2.webp"]).toMatchObject({ status: "ready", width: 1600, height: 2400, bytes: high.length });
   });
 });

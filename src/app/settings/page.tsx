@@ -2,6 +2,7 @@ import { SettingsPageClient } from "@/components/settings/SettingsPageClient";
 import { getAppSettingsSnapshot } from "@/lib/db/settings";
 import { listRaters } from "@/lib/raters/rater-crud";
 import { listExternalStorages } from "@/lib/storages/storage-crud";
+import { settingsTab } from "@/components/settings/settings-tabs";
 
 export default async function SettingsPage({
   searchParams,
@@ -24,7 +25,7 @@ export default async function SettingsPage({
       }))}
       initialSettings={settings}
       initialStorages={storages}
-      initialTab={query.tab === "storages" ? "storages" : "raters"}
+      initialTab={settingsTab(query.tab)}
     />
   );
 }
