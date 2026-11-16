@@ -12,6 +12,10 @@ const IMAGE_HOSTS = new Set([
   "ru-images.kinorium.com",
   "ua-images.kinorium.com",
   "en-images.kinorium.com",
+  "images-s.kinorium.com",
+  "ru-images-s.kinorium.com",
+  "ua-images-s.kinorium.com",
+  "en-images-s.kinorium.com",
 ]);
 
 /** Also used before server downloads. Never turn this into a generic URL proxy. */

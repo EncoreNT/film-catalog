@@ -37,6 +37,35 @@ function fakeBrowser() {
 afterEach(() => vi.useRealTimers());
 
 describe("Kinorium visible browser", () => {
+  it("keeps waiting after a navigation failure so a manual reload can recover", async () => {
+    const browser = fakeBrowser();
+    browser.page.goto.mockRejectedValue(new Error("net::ERR_CONNECTION_CLOSED"));
+    browser.page.content.mockResolvedValue(html.replaceAll("images.kinorium.com", "images-s.kinorium.com"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const gallery = await createKinoriumBrowser(async () => browser.context).gallery(776186, new AbortController().signal);
+      expect(gallery.status).toBe("available");
+      expect(browser.page.waitForFunction).toHaveBeenCalled();
+      expect(browser.page.goto).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ waitUntil: "commit" }));
+      expect(browser.close).toHaveBeenCalledTimes(1);
+    } finally { warn.mockRestore(); }
+  });
+
+  it("shares the busy guard across recreated services without retaining an old parser closure", async () => {
+    const browser = fakeBrowser();
+    browser.waitForUser();
+    const state = { busy: false };
+    const first = createKinoriumBrowser(async () => browser.context, 10000, state);
+    const next = createKinoriumBrowser(async () => fakeBrowser().context, 10000, state);
+    const abort = new AbortController();
+    const pending = first.gallery(776186, abort.signal);
+    const rejected = expect(pending).rejects.toMatchObject({ status: 499 });
+    await vi.waitFor(() => expect(browser.page.waitForFunction).toHaveBeenCalled());
+    await expect(next.gallery(776186, new AbortController().signal)).rejects.toMatchObject({ status: 409 });
+    abort.abort();
+    await rejected;
+    await expect(next.gallery(776186, new AbortController().signal)).resolves.toMatchObject({ status: "available" });
+  });
   it("reads the requested gallery and closes the browser, retaining its disk profile", async () => {
     const browser = fakeBrowser();
     const client = createKinoriumBrowser(async () => browser.context);

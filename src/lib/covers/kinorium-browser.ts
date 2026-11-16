@@ -19,19 +19,19 @@ async function launchBrowser(): Promise<BrowserContext> {
 export function createKinoriumBrowser(
   launch: () => Promise<BrowserContext> = launchBrowser,
   timeoutMs = WAIT_MS,
+  state = { busy: false },
 ) {
-  let busy = false;
 
   return {
     async gallery(id: number, requestSignal: AbortSignal): Promise<KinoriumGallery> {
       if (requestSignal.aborted)
         throw new KinoriumError("Загрузка галереи отменена.", 499);
-      if (busy)
+      if (state.busy)
         throw new KinoriumError(
           "Окно Kinorium уже открыто. Завершите выбор или закройте его.",
           409,
         );
-      busy = true;
+      state.busy = true;
       let context: BrowserContext | undefined;
       let page: Page | undefined;
       let closing: Promise<void> | undefined;
@@ -49,8 +49,17 @@ export function createKinoriumBrowser(
         signal.throwIfAborted();
         page = context.pages()[0] ?? (await context.newPage());
         const url = new URL(kinoriumGalleryUrl(id));
-        await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 30_000 });
         await page.bringToFront();
+        try {
+          // Readiness is the gallery DOM below, not DOMContentLoaded (ads and a
+          // truncated response can prevent that event even on a visible page).
+          await page.goto(url.href, { waitUntil: "commit", timeout: 30_000 });
+        } catch (error) {
+          signal.throwIfAborted();
+          if (page.isClosed()) throw error;
+          // Keep the window alive: the user can reload after a connection error.
+          console.warn("Kinorium: переход прерван; ждём обновления страницы в открытом окне.", error);
+        }
         // Let the user complete the site's check. Never interact with the CAPTCHA.
         await page.waitForFunction(
           ({ origin, pathname }) =>
@@ -78,7 +87,7 @@ export function createKinoriumBrowser(
         if (requestSignal.aborted)
           throw new KinoriumError("Загрузка галереи отменена.", 499);
         if (timeout.signal.aborted)
-          throw new KinoriumError("Время ожидания истекло. Откройте окно Kinorium ещё раз.", 408);
+          throw new KinoriumError("Галерея не загрузилась за три минуты. Повторите попытку; если страница загрузится не полностью, обновите её в открытом окне.", 408);
         if (error instanceof KinoriumError) throw error;
         if (!context)
           throw new KinoriumError(
@@ -92,7 +101,7 @@ export function createKinoriumBrowser(
         clearTimeout(timer);
         signal.removeEventListener("abort", close);
         await close();
-        busy = false;
+        state.busy = false;
       }
     },
   };
@@ -100,7 +109,9 @@ export function createKinoriumBrowser(
 
 // Keep the profile lock across Next.js development module reloads, too.
 const globalBrowser = globalThis as unknown as {
-  kinoriumBrowser?: ReturnType<typeof createKinoriumBrowser>;
+  kinoriumBrowserState?: { busy: boolean };
 };
-export const kinoriumBrowser =
-  globalBrowser.kinoriumBrowser ??= createKinoriumBrowser();
+// Retain the lock, not the service closure: HMR must pick up parser fixes.
+export const kinoriumBrowser = createKinoriumBrowser(
+  launchBrowser, WAIT_MS, globalBrowser.kinoriumBrowserState ??= { busy: false },
+);

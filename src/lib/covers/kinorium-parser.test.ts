@@ -27,6 +27,15 @@ const film = {
 };
 
 describe("Kinorium search parser", () => {
+  it("keeps the main poster from the current -s CDN search response", () => {
+    const payload = JSON.parse(readFileSync(new URL("./fixtures/kinorium-search-faun.json", import.meta.url), "utf8"));
+    const [movie] = parseKinoriumSearch(payload, "Лабиринт Фавна", 2006);
+    expect(movie.poster).toEqual({
+      id: "main-345572", width: 1080, height: 1620,
+      url: "https://ru-images-s.kinorium.com/movie/original/345572.jpg?1678830675",
+      previewUrl: "https://ru-images-s.kinorium.com/movie/300/345572.jpg?1678830675",
+    });
+  });
   it("does not label a fallback rendition with dimensions of an unadvertised original", () => {
     const [movie] = parseKinoriumSearch(
       { list: [{ ...film, face: { ...film.face, sizes: undefined } }] },
@@ -157,6 +166,12 @@ describe("Kinorium gallery parser", () => {
     });
   });
 
+  it("accepts -s CDN gallery images with the same path restrictions", () => {
+    const result = parseKinoriumGallery(poster.replaceAll("images.kinorium.com", "images-s.kinorium.com"));
+    expect(result.status).toBe("available");
+    expect(result.posters[0].url).toBe("https://images-s.kinorium.com/movie/poster/776186_12.jpg?x=1&y=2");
+  });
+
   it("ignores actors, video thumbnails, shots and foreign image hosts", () => {
     const result = parseKinoriumGallery(
       poster.replace('data-image_type="poster"', 'data-image_type="shot"') +
@@ -193,10 +208,18 @@ describe("Kinorium gallery parser", () => {
 });
 
 describe("Kinorium image allowlist", () => {
+  it.each(["images-s", "ru-images-s", "en-images-s", "ua-images-s"])("accepts the exact CDN host %s", (host) => {
+    const url = `https://${host}.kinorium.com/movie/original/345572.jpg`;
+    expect(kinoriumImageUrl(url)).toBe(url);
+  });
   it.each([
     "http://ru-images.kinorium.com/movie/original/1.jpg",
     "https://localhost/movie/1.jpg",
     "https://ru-images.kinorium.com.evil.example/movie/1.jpg",
+    "https://ru-images-s.kinorium.com.evil.example/movie/1.jpg",
+    "https://arbitrary.kinorium.com/movie/1.jpg",
+    "https://ru-images-s.kinorium.com:3000/movie/1.jpg",
+    "https://ru-images-s.kinorium.com/captcha/1.jpg",
     "https://ru-images.kinorium.com@evil.example/movie/1.jpg",
     "https://user:pass@ru-images.kinorium.com/movie/1.jpg",
     "https://ru-images.kinorium.com:3000/movie/1.jpg",
