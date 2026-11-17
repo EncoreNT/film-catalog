@@ -123,7 +123,35 @@ body:has(.settings-page) .spotlight-lit-mask { opacity: 0.18; }
   padding: 24px 0;
   border-top: 1px solid var(--border-hairline);
 }
-.settings-storage-identity h3 { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 550; line-height: 1.6; }
+.settings-storage-identity h3 { font-size: 14px; font-weight: 550; line-height: 1.6; }
+.settings-page .settings-storage-toggle {
+  display: inline-flex; align-items: flex-start; gap: 10px; max-width: 100%; min-height: 44px;
+  text-align: left; white-space: normal; cursor: pointer;
+}
+.settings-storage-toggle > svg { margin-top: 3px; }
+.settings-storage-toggle-label { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; font-weight: 500; color: var(--settings-muted); }
+.settings-storage-toggle:hover .settings-storage-toggle-label,
+.settings-storage-toggle[aria-expanded="true"] .settings-storage-toggle-label { color: var(--accent); }
+.settings-storage-toggle[aria-expanded="true"] .settings-storage-toggle-label svg { transform: rotate(180deg); }
+.settings-storage-files { grid-column: 1 / -1; min-width: 0; padding-left: clamp(10px, 2vw, 26px); border-left: 2px solid var(--settings-line); font-size: 13px; }
+.settings-storage-files table { width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; }
+.settings-storage-files th { color: var(--settings-muted); font-size: 12px; font-weight: 500; }
+.settings-storage-files th[aria-sort] { color: var(--accent); }
+.settings-storage-files th button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+.settings-storage-files td { padding-block: 10px; border-top: 1px solid var(--border-hairline); overflow-wrap: anywhere; }
+.settings-storage-files td:first-child { padding-right: 12px; }
+.settings-storage-files :is(th, td):last-child { width: 115px; text-align: right; }
+.settings-storage-files td:last-child { font-size: 12px; font-variant-numeric: tabular-nums; }
+.settings-storage-files .segmented-control { margin-bottom: 8px; }
+.settings-storage-files .settings-storage-folder td { padding-block: 0; }
+.settings-storage-files .settings-storage-folder button {
+  display: flex; align-items: center; gap: 7px; width: 100%; min-height: 44px;
+  white-space: normal; text-align: left; cursor: pointer;
+}
+.settings-storage-folder button:hover { color: var(--accent); }
+.settings-storage-folder svg { flex-shrink: 0; }
+.settings-storage-folder small { color: var(--settings-muted); font-variant-numeric: tabular-nums; }
+.settings-storage-filename { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; font-size: 11px; color: var(--settings-muted); }
 .settings-storage-identity, .settings-storage-usage, .settings-storage-capacity { min-width: 0; }
 .settings-storage-usage .font-mono-tech { font-size: 11px; }
 .settings-storage-usage [role="meter"] { height: 4px; }
@@ -132,7 +160,14 @@ body:has(.settings-page) .spotlight-lit-mask { opacity: 0.18; }
 .settings-capacity-actions > button { padding-inline: 12px; font-size: 12px; }
 .settings-capacity-input { display: flex; border: 1px solid var(--settings-line); border-radius: 8px; background: var(--bg-elevated); }
 .settings-page .settings-capacity-input input { width: 100%; min-width: 0; min-height: 42px; border: 0; background: transparent; border-radius: 8px 0 0 8px; }
-.settings-page .settings-capacity-input select { min-height: 42px; border: 0; border-left: 1px solid var(--settings-line); border-radius: 0 8px 8px 0; padding-inline: 8px; font-size: 12px; }
+.settings-page .settings-capacity-input .select-trigger {
+  --select-trigger-min-width: 3.75rem;
+  min-height: 42px; padding-inline: 10px; border: 0; border-left: 1px solid var(--settings-line);
+  border-radius: 0 7px 7px 0; background: transparent; font-size: 12px; font-weight: 600;
+}
+.settings-capacity-input .select-trigger:is(:hover, [aria-expanded="true"]):enabled {
+  background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--accent);
+}
 .settings-storage-capacity > p { margin-top: 8px; font-size: 11px; line-height: 1.6; }
 .settings-raters { max-width: 700px; }
 .settings-rater-row { display: flex; gap: 12px; align-items: flex-end; padding: 16px 0; border-top: 1px solid var(--border-hairline); }

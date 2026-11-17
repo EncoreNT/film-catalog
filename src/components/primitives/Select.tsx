@@ -74,6 +74,7 @@ export function Select({
   const [menuCoords, setMenuCoords] = useState<MenuCoords | null>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const fieldId = id ?? label.toLowerCase().replace(/\s+/g, "-");
@@ -191,7 +192,10 @@ export function Select({
       close();
     };
     const esc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        close();
+        buttonRef.current?.focus({ preventScroll: true });
+      }
     };
     document.addEventListener("mousedown", handler);
     document.addEventListener("keydown", esc);
@@ -200,6 +204,13 @@ export function Select({
       document.removeEventListener("keydown", esc);
     };
   }, [open, close]);
+
+  useLayoutEffect(() => {
+    if (open && portalTarget && !showSearch) {
+      const selectedButton = listRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"] button');
+      (selectedButton ?? listRef.current?.querySelector("button"))?.focus({ preventScroll: true });
+    }
+  }, [open, portalTarget, showSearch]);
 
   const listbox = open && menuCoords ? (
     <div
@@ -238,7 +249,20 @@ export function Select({
           </div>
         </div>
       ) : null}
-      <ul ref={listRef} role="listbox" aria-label={label} className="scroll-subtle min-h-0 overflow-auto overscroll-contain">
+      <ul ref={listRef} role="listbox" aria-label={label} className="scroll-subtle min-h-0 overflow-auto overscroll-contain"
+        onKeyDown={(event) => {
+          if (event.key === "Tab") {
+            buttonRef.current?.focus({ preventScroll: true });
+            close();
+            return;
+          }
+          if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+          event.preventDefault();
+          const buttons = Array.from(event.currentTarget.querySelectorAll("button"));
+          const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+          const next = index + (event.key === "ArrowDown" ? 1 : -1);
+          buttons[(next + buttons.length) % buttons.length]?.focus();
+        }}>
       {filtered.length === 0 ? (
         <li className="px-3 py-2 text-sm text-muted">Ничего не найдено</li>
       ) : null}
@@ -251,6 +275,7 @@ export function Select({
               onClick={() => {
                 onChange(opt.value);
                 close();
+                buttonRef.current?.focus({ preventScroll: true });
               }}
               className={`flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm transition-colors ${
                 active
@@ -282,12 +307,19 @@ export function Select({
       )}
       <div className="relative" ref={triggerRef}>
         <button
+          ref={buttonRef}
           id={fieldId}
           type="button"
           disabled={disabled}
           aria-disabled={disabled}
           aria-label={compact ? label : undefined}
           title={compact ? label : undefined}
+          onKeyDown={(event) => {
+            if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+              event.preventDefault();
+              event.currentTarget.click();
+            }
+          }}
           onClick={() => {
             if (disabled) return;
             if (open) {
@@ -300,7 +332,7 @@ export function Select({
           }}
           aria-haspopup="listbox"
           aria-expanded={open}
-          style={compact ? { minWidth: triggerMinWidth } : undefined}
+          style={compact ? { minWidth: `var(--select-trigger-min-width, ${triggerMinWidth})` } : undefined}
           className={`select-trigger focus-ring flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border bg-bg-elevated px-3 text-sm text-text transition-all duration-200 ${
             compact ? "min-h-9 py-1.5" : "min-h-11 py-2"
           } ${

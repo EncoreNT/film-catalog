@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import {
   createExternalStorage,
   listExternalStorages,
+  listStorageFiles,
   updateStorageCapacity,
 } from "./storage-crud";
 
@@ -23,6 +24,7 @@ it("accounts for every disk's registered files, unknown sizes and changed assign
   const first = await createExternalStorage({
     name: `storage-test-a-${key}`,
     capacityBytes: 2_000_000_000_000,
+    path: "F:\\Коллекция",
   });
   storageIds.push(first.id);
   const second = await createExternalStorage({ name: `storage-test-b-${key}` });
@@ -37,7 +39,7 @@ it("accounts for every disk's registered files, unknown sizes and changed assign
         status,
         releases: {
           create: [
-            { externalStorageId: first.id, fileSize: 50_000_000_000 },
+            { externalStorageId: first.id, fileSize: 50_000_000_000, filePath: `/mnt/f/Коллекция/Фильмы/4K/${key}-${status}.mkv` },
             { externalStorageId: first.id, fileSize: null },
             { externalStorageId: null, fileSize: 999_000_000_000 },
           ],
@@ -47,6 +49,15 @@ it("accounts for every disk's registered files, unknown sizes and changed assign
     movieIds.push(movie.id);
   }
   let storages = await listExternalStorages();
+  const files = await listStorageFiles(first.id);
+  expect(files).toHaveLength(6);
+  expect(files?.find(file => file.fileSize !== null)?.folders).toEqual(["Фильмы", "4K"]);
+  expect(files?.find(file => file.fileSize === null)?.folders).toBeNull();
+  for (const status of ["CATALOG", "DRAFT", "EXCLUDED"]) {
+    expect(files?.filter(file => file.slug === `${key}-${status}`).map(file => file.fileSize))
+      .toEqual(expect.arrayContaining([50_000_000_000, null]));
+  }
+  expect(await listStorageFiles(second.id)).toEqual([]);
   expect(storages.find((s) => s.id === first.id)).toMatchObject({
     capacityBytes: 2_000_000_000_000,
     usage: { knownBytes: 150_000_000_000, unknownSizeCount: 3 },
@@ -65,6 +76,9 @@ it("accounts for every disk's registered files, unknown sizes and changed assign
     data: { externalStorageId: second.id },
   });
   await updateStorageCapacity(first.id, null);
+  expect(await listStorageFiles(second.id)).toMatchObject([
+    { slug: `${key}-CATALOG`, fileSize: 50_000_000_000, folders: ["Коллекция", "Фильмы", "4K"] },
+  ]);
   await updateStorageCapacity(second.id, 500_000_000_000);
   storages = await listExternalStorages();
   expect(storages.find((s) => s.id === first.id)).toMatchObject({
